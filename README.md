@@ -26,7 +26,9 @@ Build image and "test":
 ```
 docker build -t autocog:latest .
 docker run --rm -it autocog:latest python3 -c "import autocog.llama; print(autocog.llama.__doc__)"
-docker run --rm -v $(pwd)/models:/workspace/autocog/models -v $(pwd)/tests:/workspace/autocog/tests -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/roundtrip_tokenization.py /workspace/autocog/models/stories260K.gguf
+docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/roundtrip_tokenization.py /workspace/autocog/models/stories260K.gguf
+docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/compilation/compile_sta_to_ftas.py /workspace/autocog/share/library/mcq/select.sta '{"topic":"a topic", "question":"my question", "choices" : [ "a", "b", "c", "d" ] }'
+docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/execute_sta_with_llama_cpp.py /workspace/autocog/share/library/mcq/select.sta '{"topic":"a topic", "question":"my question", "choices" : [ "a", "b", "c", "d" ] }' /workspace/autocog/models/stories260K.gguf
 ```
 
 Fast rebuild (in mounted:

@@ -119,7 +119,7 @@ class ConcreteState(BaseModel):
             prompt += fmt
         if syntax.prompt_with_index:
             idx = self.indices[-1]
-            if not prompt_zero_index:
+            if not syntax.prompt_zero_index:
                 idx += 1
             idx = f'[{idx}]' if field.is_list() else ''
             prompt += idx

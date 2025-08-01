@@ -9,7 +9,8 @@
 #include "evaluator.hxx"
 
 // Wrapper functions for Python integration
-pybind11::dict evaluate_fta_python(uintptr_t ctx_ptr, const pybind11::dict& fta_dict, const pybind11::dict& config_dict = pybind11::dict()) {
+pybind11::dict evaluate_fta_python(uintptr_t ptr, const pybind11::dict& fta_dict) {
+    auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
     autocog::llama::FTA fta(fta_dict);
     autocog::llama::FTT ftt;
 
@@ -40,5 +41,7 @@ PYBIND11_MODULE(llama, module) {
       for (auto item : py_tokens) tokens.push_back(item.cast<autocog::llama::TokenID>());
       return model->detokenize(tokens, spec_rm, spec_unp);
   });
+    
+  module.def("evaluate", &evaluate_fta_python);
 }
 

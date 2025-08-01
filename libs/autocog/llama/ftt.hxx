@@ -16,6 +16,8 @@ class FTT {
   private:
     std::vector<TokenID> tokens;
     std::vector<float> probas;
+    bool pruned = false;
+
     std::vector<FTT> children;
 };
 

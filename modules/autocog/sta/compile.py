@@ -305,7 +305,7 @@ def compile_prompt(ast: AstPrompt, program: IrProgram, ctx:Context):
 
     return prompt
 
-def compile(arch:"CogArch", tag:str, source:str):
+def compile_source_to_program_and_stas(source:str):
     program = IrProgram()
     ctx = Context()
 
@@ -323,4 +323,9 @@ def compile(arch:"CogArch", tag:str, source:str):
         sta.build_concrete()
         stas.update({ptag:sta})
 
+    return (program, stas)
+
+def compile(arch:"CogArch", tag:str, source:str):
+    (program, stas) = compile_source_to_program_and_stas(source)
     return CogAutomaton(tag=tag, arch=arch, program=program, prompts=stas)
+
