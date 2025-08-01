@@ -8,15 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find required packages
 find_package(pybind11 REQUIRED)
 
-# Add llama.cpp as subdirectory
-add_subdirectory(../../../vendors/llama llama_cpp EXCLUDE_FROM_ALL)
-
 # Source files
 set(SOURCES
     fta.cxx
     ftt.cxx
+    model.cxx
     evaluator.cxx
-    tokenizer.cxx
     python_bindings.cxx
 )
 
@@ -24,11 +21,9 @@ set(SOURCES
 pybind11_add_module(autocog_llama ${SOURCES})
 
 set_target_properties(autocog_llama PROPERTIES OUTPUT_NAME "llama")
+
 # Include directories
-target_include_directories(autocog_llama PRIVATE
-    ../..
-    ../../../vendors/llama
-)
+target_include_directories(autocog_llama PRIVATE ../.. )
 
 # Link against llama.cpp
 target_link_libraries(autocog_llama PRIVATE llama)

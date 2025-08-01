@@ -13,7 +13,7 @@ namespace llama {
 struct Vocab {
   std::vector<bool> mask;
 
-  void select(unsigned num, std::vector<float> const & input, std::vector<std::pair<TokenID, float>> const & output) const;
+  void topk(unsigned k, std::vector<float> const & input, std::vector<std::pair<TokenID, float>> const & output) const;
 };
 
 enum class ActionKind {

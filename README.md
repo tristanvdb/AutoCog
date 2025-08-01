@@ -25,7 +25,8 @@ The libraries have [their own documentation](./share/library/README.md).
 Build image and "test":
 ```
 docker build -t autocog:latest .
-	docker run --rm -it autocog:latest python3 -c "import autocog.llama; print(autocog.llama.__doc__)"
+docker run --rm -it autocog:latest python3 -c "import autocog.llama; print(autocog.llama.__doc__)"
+docker run --rm -v $(pwd)/models:/workspace/autocog/models -v $(pwd)/tests:/workspace/autocog/tests -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/roundtrip_tokenization.py /workspace/autocog/models/stories260K.gguf
 ```
 
 Fast rebuild (in mounted:

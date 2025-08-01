@@ -14,13 +14,30 @@ RUN apt-get update && \
         python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv /venv
-ENV PATH="/venv/bin:$PATH"
+# LLama.cpp
 
-RUN pip install --upgrade pip setuptools wheel pybind11 numpy
+COPY vendors/llama /tmp/llama_cpp
+
+RUN cd /tmp/llama_cpp && \
+      cmake -DLLAMA_BUILD_COMMON=OFF -B build && \
+      make -C build -j$(nproc) install
+
+ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+
+# Venv
+
+RUN python3 -m venv /opt
+ENV PATH="/opt/bin:$PATH"
+ENV PYTHONPATH="/opt/bin:$PATH"
+RUN pip install --upgrade pip
+
+# Autocog
 
 COPY . /workspace/autocog
-WORKDIR /workspace/autocog
 
-RUN pip install -e .
+RUN rm -rf /workspace/autocog/vendors && \
+    pip install /workspace/autocog && \
+    rm -rf /workspace/autocog
+
+WORKDIR /workspace
 

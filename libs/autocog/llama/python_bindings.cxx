@@ -5,8 +5,8 @@
 
 #include "fta.hxx"
 #include "ftt.hxx"
+#include "model.hxx"
 #include "evaluator.hxx"
-#include "tokenizer.hxx"
 
 // Wrapper functions for Python integration
 pybind11::dict evaluate_fta_python(uintptr_t ctx_ptr, const pybind11::dict& fta_dict, const pybind11::dict& config_dict = pybind11::dict()) {
@@ -18,35 +18,27 @@ pybind11::dict evaluate_fta_python(uintptr_t ctx_ptr, const pybind11::dict& fta_
     return ftt.pydict();
 }
 
-// Tokenizer wrapper functions
-std::vector<int> tokenize_python(uintptr_t model_ptr, const std::string& text, bool add_special = true) {
-    // TODO: Implementation
-    return {};
-}
+PYBIND11_MODULE(llama, module) {
+  module.doc() = "AutoCog's llama.cpp integration module";
 
-std::string detokenize_python(uintptr_t model_ptr, const std::vector<int>& tokens) {
-    // TODO: Implementation
-    return "";
-}
-
-PYBIND11_MODULE(llama, m) {
-  m.doc() = "AutoCog llama.cpp integration module";
-
-  m.def("evaluate_fta", &evaluate_fta_python,
-        "Evaluate Finite Thoughts Automata",
-        pybind11::arg("ctx_ptr"), pybind11::arg("fta_dict"), pybind11::arg("config_dict") = pybind11::dict());
-
-  m.def("tokenize", &tokenize_python,
-        "Tokenize text using llama.cpp tokenizer",
-        pybind11::arg("model_ptr"), pybind11::arg("text"), pybind11::arg("add_special") = true);
+  module.def("create", [](const std::string& model_path, int n_ctx=4096) {
+      auto model = new autocog::llama::Model(model_path, n_ctx);
+      return reinterpret_cast<uintptr_t>(model);
+  });
     
-  m.def("detokenize", &detokenize_python,
-        "Detokenize tokens using llama.cpp tokenizer",
-        pybind11::arg("model_ptr"), pybind11::arg("tokens"));
-
-  pybind11::enum_<autocog::llama::ActionKind>(m, "ActionKind")
-      .value("Text",       autocog::llama::ActionKind::Text       )
-      .value("Completion", autocog::llama::ActionKind::Completion )
-      .value("Choice",     autocog::llama::ActionKind::Choice     );
+  module.def("tokenize", [](uintptr_t ptr, const std::string & text, bool add_bos = false, bool special = false) {
+      auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
+      auto tokens = model->tokenize(text, add_bos, special);
+      pybind11::list result;
+      for (auto token : tokens) result.append(token);
+      return result;
+  });
+    
+  module.def("detokenize", [](uintptr_t ptr, const pybind11::list & py_tokens, bool spec_rm = false, bool spec_unp = false) {
+      auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
+      autocog::llama::TokenSequence tokens;
+      for (auto item : py_tokens) tokens.push_back(item.cast<autocog::llama::TokenID>());
+      return model->detokenize(tokens, spec_rm, spec_unp);
+  });
 }
 

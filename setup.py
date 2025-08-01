@@ -63,18 +63,7 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", "."] + build_args, cwd=build_temp
         )
 
-def check_submodules():
-    """Check if git submodules are initialized"""
-    llama_cpp_path = Path(__file__).parent / "vendors/llama"
-    if not llama_cpp_path.exists() or not any(llama_cpp_path.iterdir()):
-        print("Error: llama.cpp submodule not found.")
-        print("Please run: git submodule update --init --recursive")
-        sys.exit(1)
-
 def main():
-    # Check submodules
-    check_submodules()
-
     # Define the extension
     ext_modules = [
         CMakeExtension("autocog.llama", sourcedir="libs/autocog/llama"),
@@ -89,3 +78,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
