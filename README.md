@@ -25,7 +25,7 @@ The libraries have [their own documentation](./share/library/README.md).
 Build image and "test":
 ```
 docker build -t autocog:latest .
-docker run --rm -it autocog:latest python3 -c "import autocog.llama ; print(autocog.llama)"
+	docker run --rm -it autocog:latest python3 -c "import autocog.llama; print(autocog.llama.__doc__)"
 ```
 
 Fast rebuild (in mounted:

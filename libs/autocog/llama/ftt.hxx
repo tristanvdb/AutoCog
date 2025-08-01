@@ -1,22 +1,21 @@
 #ifndef __AUTOCOG_LLAMA_FTT__HXX_
 #define __AUTOCOG_LLAMA_FTT__HXX_
 
-#include <vector>
-#include <optional>
+#include "autocog/llama/types.hxx"
+
+#include <pybind11/pybind11.h>
 
 namespace autocog {
 namespace llama {
 
-using TokenID = unsigned;
-using probability_t = float;
-
 class FTT {
   public:
     FTT() = default;
+    pybind11::dict pydict() const;
 
   private:
     std::vector<TokenID> tokens;
-    std::vector<probability_t> probas;
+    std::vector<float> probas;
     std::vector<FTT> children;
 };
 
