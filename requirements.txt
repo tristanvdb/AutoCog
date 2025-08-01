@@ -1,4 +1,0 @@
-numpy
-pydantic>=2
-typing_extensions
-parsimonious

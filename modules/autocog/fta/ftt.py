@@ -217,7 +217,7 @@ class FiniteTokenTree(BaseModel):
                 label = label.replace('\n',r'\l')
                 # label = json.dumps(label.replace(r'\n',r'\l'))[1:-1]
                 # label = 'text'
-                dotstr += f'n_{tree.id}' + '[shape=record, label="{' + label + '\l|finalized=' + str(tree.finalized) + '\l' + ( "" if tree.probas is None else tree.probas.toGraphVizRecord() ) + '}"];\n'
+                dotstr += f'n_{tree.id}' + '[shape=record, label="{' + label + '\\l|finalized=' + str(tree.finalized) + '\\l' + ( "" if tree.probas is None else tree.probas.toGraphVizRecord() ) + '}"];\n'
             if tree.parent is not None:
                 dotstr += f'n_{tree.parent.id} -> n_{tree.id};\n'
         return dotstr

@@ -18,6 +18,21 @@ We broke down the documentation into a few files:
 
 The libraries have [their own documentation](./share/library/README.md).
 
+## Develop Command Cheat Sheet
+
+### C++ module: autocog.llama
+
+Build image and "test":
+```
+docker build -t autocog:latest .
+docker run --rm -it autocog:latest python3 -c "import autocog.llama ; print(autocog.llama)"
+```
+
+Fast rebuild (in mounted:
+```
+docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest python setup.py build_ext --inplace
+```
+
 ## Contributing
 
 Contributions are welcome!

@@ -126,7 +126,7 @@ int_literal__    = int_literal / int_infinty
 int_literal     = ~r'\d+'
 int_infinty      = "INF"
 
-WS = ~"\s*"
+WS = ~r'\s*'
 
 # Keywords
 

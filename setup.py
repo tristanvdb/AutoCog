@@ -1,25 +1,91 @@
-import io, os, glob
-from setuptools import find_packages, setup
+#!/usr/bin/env python3
 
-def read(path):
-    return io.open(os.path.join(os.path.dirname(__file__), path), encoding="utf8").read().strip()
+import os
+import sys
+import subprocess
+from pathlib import Path
+from pybind11.setup_helpers import Pybind11Extension, build_ext
+from pybind11 import get_cmake_dir
+import pybind11
 
-def read_requirements(path):
-    return list(map(lambda l: l.strip(), filter(lambda l: not l.startswith(('"', "#", "-", "git+")), read(path).split("\n"))))
+from setuptools import setup, Extension
 
-setup(
-  name="AutoCog",
-  version=read("VERSION"),
-  description="Automaton & Cognition: programming models for language models",
-  url="https://github.com/LLNL/autocog/",
-  long_description=read("README.md"),
-  long_description_content_type="text/markdown",
-  packages=find_packages(exclude=["share", "tests"]),
-  install_requires=read_requirements("requirements.txt"),
-  data_files=[
-      ( 'share/autocog/library/mcq',        glob.glob("share/library/mcq/*") ),
-      ( 'share/autocog/library/dfl',        glob.glob("share/library/dfl/*") ),
-      ( 'share/autocog/library/elementary', glob.glob("share/library/elementary/*") ),
-      ( 'share/autocog/library/tools',      glob.glob("share/library/tools/*") )
-  ],
-)
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=""):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
+
+class CMakeBuild(build_ext):
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        
+        if not extdir.endswith(os.path.sep):
+            extdir += os.path.sep
+
+        debug = int(os.environ.get("DEBUG", 0)) if self.debug is None else self.debug
+        cfg = "Debug" if debug else "Release"
+
+        cmake_args = [
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DCMAKE_BUILD_TYPE={cfg}",
+            f"-Dpybind11_DIR={get_cmake_dir()}",
+        ]
+
+        build_args = []
+        if "CMAKE_ARGS" in os.environ:
+            cmake_args += [item for item in os.environ["CMAKE_ARGS"].split(" ") if item]
+
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
+        if self.compiler.compiler_type != "msvc":
+            if not cmake_generator or cmake_generator == "Ninja":
+                try:
+                    import ninja
+                    ninja_executable_path = os.path.join(ninja.BIN_DIR, "ninja")
+                    cmake_args += [
+                        "-GNinja",
+                        f"-DCMAKE_MAKE_PROGRAM:FILEPATH={ninja_executable_path}",
+                    ]
+                except ImportError:
+                    pass
+
+        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
+            if hasattr(self, "parallel") and self.parallel:
+                build_args += [f"-j{self.parallel}"]
+
+        build_temp = Path(self.build_temp) / ext.name
+        build_temp.mkdir(parents=True, exist_ok=True)
+        
+        subprocess.check_call(
+            ["cmake", ext.sourcedir] + cmake_args, cwd=build_temp
+        )
+        subprocess.check_call(
+            ["cmake", "--build", "."] + build_args, cwd=build_temp
+        )
+
+def check_submodules():
+    """Check if git submodules are initialized"""
+    llama_cpp_path = Path(__file__).parent / "vendors/llama"
+    if not llama_cpp_path.exists() or not any(llama_cpp_path.iterdir()):
+        print("Error: llama.cpp submodule not found.")
+        print("Please run: git submodule update --init --recursive")
+        sys.exit(1)
+
+def main():
+    # Check submodules
+    check_submodules()
+
+    # Define the extension
+    ext_modules = [
+        CMakeExtension("autocog.llama", sourcedir="libs/autocog/llama"),
+    ]
+
+    # Minimal setup - most configuration is in pyproject.toml
+    setup(
+        ext_modules=ext_modules,
+        cmdclass={"build_ext": CMakeBuild},
+        zip_safe=False,
+    )
+
+if __name__ == "__main__":
+    main()
