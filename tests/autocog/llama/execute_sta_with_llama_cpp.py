@@ -4,7 +4,9 @@ import sys, json
 from autocog.sta.compile import compile_source_to_program_and_stas
 from autocog.sta.syntax import Syntax
 from autocog.sta.runtime import Frame
+
 from autocog.fta.automaton import FiniteThoughtAutomaton as FTA
+from autocog.fta.actions import Choose, Text, Complete
 
 import autocog.llama
 from autocog.llama import tokenize, detokenize
@@ -45,10 +47,36 @@ actions = {
 ##        }
 }
 
-for action in fta.actions.values():
-    ## tokenize(model, text, False, False)
-#    print(action)
-    actions.update({})
+for act in fta.actions.values():
+    action = { "successors" : act.successors }
+    if isinstance(act, Text):
+        action.update({
+          "__type__" : "Text",
+          "threshold" : 1. if act.threshold is None else act.threshold,
+          "tokens" : tokenize(model, act.text, False, False)
+        })
+    elif isinstance(act, Choose):
+        action.update({
+          "__type__" : "Text",
+          "threshold" : 1. if act.threshold is None else act.threshold,
+          "width" : 1 if act.width is None else act.width,
+          "choices" : [
+            tokenize(model, choice[0], False, False) for choice in act.choices
+          ]
+    	})
+    elif isinstance(act, Complete):
+        action.update({
+          "__type__" : "Text",
+          "threshold" : 1. if act.threshold is None else act.threshold,
+          "length" : 1 if act.length is None else act.length,
+          "beams" : 1 if act.beams is None else act.beams,
+          "ahead" : 1 if act.ahead is None else act.ahead,
+          "stop" : tokenize(model, act.stop, False, False),
+#         "vocab" : "TODO",
+        })
+    else:
+        raise Exception()
+    actions.update({ act.uid : action })
 
 ftt = autocog.llama.evaluate(model, { 'actions' : actions })
 

@@ -1,5 +1,6 @@
 
 #include "autocog/llama/fta.hxx"
+#include "autocog/llama/model.hxx"
 
 #include <map>
 #include <string>
@@ -49,7 +50,7 @@ Choice & FTA::insert(float threshold_, unsigned width_) {
 
 // TODO review
 
-FTA::FTA(pybind11::dict const & pydata) {
+FTA::FTA(Model * model, pybind11::dict const & pydata) {
     // Get the actions dictionary from Python FTA
     if (!pydata.contains("actions")) {
         throw std::runtime_error("FTA dictionary missing 'actions' field");
@@ -99,22 +100,21 @@ FTA::FTA(pybind11::dict const & pydata) {
             Completion* completion_action = static_cast<Completion*>(action.get());
             
             // Set stop tokens
-            if (action_dict.contains("stop_tokens")) {
-                auto py_stop = action_dict["stop_tokens"].cast<pybind11::list>();
-                completion_action->stop.clear();
-                for (auto token : py_stop) {
-                    completion_action->stop.push_back(token.cast<TokenID>());
-                }
+            if (!action_dict.contains("stops")) {
+              throw std::runtime_error("Completion missing 'stops' field: " + uid);
+            } else {
+              auto py_stop = action_dict["stop"].cast<pybind11::list>();
+              completion_action->stop.clear();
+              for (auto token : py_stop) {
+                completion_action->stop.push_back(token.cast<TokenID>());
+              }
             }
             
             // Set vocabulary mask
-            if (action_dict.contains("vocab_mask")) {
-                auto py_mask = action_dict["vocab_mask"].cast<pybind11::list>();
-                completion_action->vocab.mask.clear();
-                completion_action->vocab.mask.reserve(py_mask.size());
-                for (auto val : py_mask) {
-                    completion_action->vocab.mask.push_back(val.cast<bool>());
-                }
+            completion_action->vocab.mask.reserve(model->vocab_size());
+            completion_action->vocab.mask.assign(model->vocab_size(), true);
+            if (action_dict.contains("vocab")) {
+              throw std::runtime_error("Setting the vocabulary from PY desc is not implemented yet!");
             }
             
         } else if (action_type == "Choice") {

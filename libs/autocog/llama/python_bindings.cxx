@@ -11,7 +11,7 @@
 // Wrapper functions for Python integration
 pybind11::dict evaluate_fta_python(uintptr_t ptr, const pybind11::dict& fta_dict) {
     auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
-    autocog::llama::FTA fta(fta_dict);
+    autocog::llama::FTA fta(model, fta_dict);
     autocog::llama::FTT ftt;
 
     // TODO: Implementation

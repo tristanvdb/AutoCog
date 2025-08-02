@@ -10,6 +10,8 @@
 namespace autocog {
 namespace llama {
 
+class Model;
+
 struct Vocab {
   std::vector<bool> mask;
 
@@ -81,7 +83,7 @@ class FTA {
     Choice & insert(float threshold_, unsigned width_);
 
     FTA() = default;
-    FTA(pybind11::dict const & pydata);
+    FTA(Model * model, pybind11::dict const & pydata);
 
   private:
     std::vector<std::unique_ptr<Action>> actions;
