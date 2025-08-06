@@ -8,18 +8,46 @@
 namespace autocog { namespace llama {
 
 Action::Action(
-  ActionKind const kind_, NodeID const id_, float threshold_
-) : kind(kind_), id(id_), threshold(threshold_), successors() {}
+  ActionKind const kind_,
+  ActionID const id_,
+  float threshold_
+) :
+  kind(kind_),
+  id(id_),
+  threshold(threshold_),
+  successors()
+{}
 
-Text::Text(NodeID const id_, float threshold_) : Action(ActionKind::Text, id_, threshold_) {}
+Text::Text(
+  ActionID const id_,
+  float threshold_
+) :
+  Action(ActionKind::Text, id_, threshold_)
+{}
 
 Completion::Completion(
-  NodeID const id_, float threshold_, unsigned length_, unsigned beams_, unsigned ahead_
-) : Action(ActionKind::Completion, id_, threshold_), length(length_), beams(beams_), ahead(ahead_) {}
+  ActionID const id_,
+  float threshold_,
+  unsigned length_,
+  unsigned beams_,
+  unsigned ahead_
+) :
+  Action(ActionKind::Completion, id_, threshold_),
+  length(length_),
+  beams(beams_),
+  ahead(ahead_)
+{}
 
-Choice::Choice(NodeID const id_, float threshold_, unsigned width_) : Action(ActionKind::Choice, id_, threshold_), width(width_) {}
+Choice::Choice(
+  ActionID const id_,
+  float threshold_,
+  unsigned width_
+) :
+  Action(ActionKind::Choice, id_, threshold_),
+  width(width_)
+{}
 
-Action const & FTA::action(NodeID const & id) const {
+Action const & FTA::action(ActionID const id) const {
   Action const & action = *(this->actions.at(id));
   if (action.id != id) {
     throw std::runtime_error("Action's ID does not match position in FTA::actions!");
@@ -28,21 +56,21 @@ Action const & FTA::action(NodeID const & id) const {
 }
 
 Text & FTA::insert(float threshold_) {
-  NodeID id = this->actions.size();
+  ActionID id = this->actions.size();
   Text * action = new Text(id, threshold_);
   this->actions.push_back(std::unique_ptr<Action>(action));
   return *action;
 }
 
 Completion & FTA::insert(float threshold_, unsigned length_, unsigned beams_, unsigned ahead_) {
-  NodeID id = this->actions.size();
+  ActionID id = this->actions.size();
   Completion * action = new Completion(id, threshold_, length_, beams_, ahead_);
   this->actions.push_back(std::unique_ptr<Action>(action));
   return *action;
 }
 
 Choice & FTA::insert(float threshold_, unsigned width_) {
-  NodeID id = this->actions.size();
+  ActionID id = this->actions.size();
   Choice * action = new Choice(id, threshold_, width_);
   this->actions.push_back(std::unique_ptr<Action>(action));
   return *action;
@@ -50,7 +78,7 @@ Choice & FTA::insert(float threshold_, unsigned width_) {
 
 // TODO review
 
-FTA::FTA(Model * model, pybind11::dict const & pydata) {
+FTA::FTA(Model const & model, pybind11::dict const & pydata) {
     // Get the actions dictionary from Python FTA
     if (!pydata.contains("actions")) {
         throw std::runtime_error("FTA dictionary missing 'actions' field");
@@ -59,7 +87,7 @@ FTA::FTA(Model * model, pybind11::dict const & pydata) {
     auto py_actions = pydata["actions"].cast<pybind11::dict>();
     
     // First pass: create all actions and build ID mapping
-    std::map<std::string, NodeID> uid_to_id;
+    std::map<std::string, ActionID> uid_to_id;
     
     for (auto item : py_actions) {
         std::string uid = item.first.cast<std::string>();
@@ -72,7 +100,7 @@ FTA::FTA(Model * model, pybind11::dict const & pydata) {
         std::string action_type = action_dict["__type__"].cast<std::string>();
         float threshold = action_dict.contains("threshold") ? action_dict["threshold"].cast<float>() : 0.0f;
         
-        NodeID node_id = actions.size();  // Assign sequential IDs
+        ActionID node_id = actions.size();  // Assign sequential IDs
         uid_to_id[uid] = node_id;
         
         std::unique_ptr<Action> action;
@@ -100,8 +128,8 @@ FTA::FTA(Model * model, pybind11::dict const & pydata) {
             Completion* completion_action = static_cast<Completion*>(action.get());
             
             // Set stop tokens
-            if (!action_dict.contains("stops")) {
-              throw std::runtime_error("Completion missing 'stops' field: " + uid);
+            if (!action_dict.contains("stop")) {
+              throw std::runtime_error("Completion missing 'stop' field: " + uid);
             } else {
               auto py_stop = action_dict["stop"].cast<pybind11::list>();
               completion_action->stop.clear();
@@ -111,8 +139,8 @@ FTA::FTA(Model * model, pybind11::dict const & pydata) {
             }
             
             // Set vocabulary mask
-            completion_action->vocab.mask.reserve(model->vocab_size());
-            completion_action->vocab.mask.assign(model->vocab_size(), true);
+            completion_action->vocab.mask.reserve(model.vocab_size());
+            completion_action->vocab.mask.assign(model.vocab_size(), true);
             if (action_dict.contains("vocab")) {
               throw std::runtime_error("Setting the vocabulary from PY desc is not implemented yet!");
             }
@@ -151,7 +179,7 @@ FTA::FTA(Model * model, pybind11::dict const & pydata) {
         std::string uid = item.first.cast<std::string>();
         auto action_dict = item.second.cast<pybind11::dict>();
         
-        NodeID node_id = uid_to_id[uid];
+        ActionID node_id = uid_to_id[uid];
         Action* action = actions[node_id].get();
         
         // Add successors

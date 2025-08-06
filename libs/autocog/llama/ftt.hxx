@@ -8,17 +8,22 @@
 namespace autocog {
 namespace llama {
 
-class FTT {
-  public:
-    FTT() = default;
-    pybind11::dict pydict() const;
+struct FTT {
+  ActionID const action;
+  TokenSequence const tokens;
+  ProbaSequence const probas;
+  float const probability;
 
-  private:
-    std::vector<TokenID> tokens;
-    std::vector<float> probas;
-    bool pruned = false;
+  std::vector<FTT> children;
+  bool pruned{false};
 
-    std::vector<FTT> children;
+  FTT(ActionID const action_, TokenSequence const & tokens_, ProbaSequence const & probas_, float probability_);
+
+  FTT & add(ActionID const action_, TokenSequence const & tokens_, ProbaSequence const & probas_, float probability_);
+
+  pybind11::dict pydict() const;
+
+  
 };
 
 } }

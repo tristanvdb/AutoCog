@@ -3,6 +3,25 @@
 
 namespace autocog { namespace llama {
 
+FTT::FTT(
+  ActionID const action_,
+  TokenSequence const & tokens_,
+  ProbaSequence const & probas_,
+  float probability_
+) :
+  action(action_),
+  tokens(tokens_),
+  probas(probas_),
+  probability(probability_),
+  children(),
+  pruned(false)
+{}
+
+FTT & FTT::add(ActionID const action_, TokenSequence const & tokens_, ProbaSequence const & probas_, float probability_) {
+  this->children.emplace_back(action_, tokens_, probas_, probability_);
+  return this->children.back();
+}
+
 // TODO review code below
 
 pybind11::dict FTT::pydict() const {

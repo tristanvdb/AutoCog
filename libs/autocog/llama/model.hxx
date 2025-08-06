@@ -10,14 +10,20 @@ namespace llama {
 
 class Model {
   private:
+    ModelID const id;
     llama_model * model;
     std::vector<llama_context *> contexts;
+    std::vector<TokenSequence> tokens;
 
     llama_context * get_context(ContextID const id = 0) const;
+    TokenSequence & get_tokens(ContextID const id = 0);
+    void check_context_id(ContextID const id = 0) const;
+
     const llama_vocab * get_vocab() const;
 
   public:
-    Model(std::string const & model_path, int n_ctx);
+    Model();
+    Model(ModelID const id, std::string const & model_path, int n_ctx);
     ~Model();
 
     ContextID fork_context(ContextID const id = 0);
@@ -29,8 +35,9 @@ class Model {
     TokenID bos_token() const;
     TokenID eos_token() const;
 
-    std::vector<float> get_logits(ContextID const id = 0);
-    bool eval_tokens(const TokenSequence& tokens, ContextID const id = 0);
+    TokenSequence const & get_tokens_const(ContextID const id = 0) const;
+    unsigned set_tokens(TokenSequence const & tokens, ContextID const id = 0);
+    unsigned eval_sequences(TokenSequence const & tokens, ProbaSequence & probas, ContextID const id = 0);
 };
 
 } }

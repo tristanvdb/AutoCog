@@ -7,11 +7,14 @@
 namespace autocog {
 namespace llama {
 
+using EvalID = unsigned;
+using ModelID = unsigned;
 using ContextID = unsigned;
-using NodeID = unsigned;
+using ActionID = unsigned;
 using TokenID = llama_token;
 
 using TokenSequence = std::vector<TokenID>;
+using ProbaSequence = std::vector<float>;
 
 } }
 

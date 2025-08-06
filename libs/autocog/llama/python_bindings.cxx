@@ -1,47 +1,142 @@
 
+#include "fta.hxx"
+#include "ftt.hxx"
+#include "model.hxx"
+#include "evaluation.hxx"
+#include "manager.hxx"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
-#include "fta.hxx"
-#include "ftt.hxx"
-#include "model.hxx"
-#include "evaluator.hxx"
+#include <optional>
 
-// Wrapper functions for Python integration
-pybind11::dict evaluate_fta_python(uintptr_t ptr, const pybind11::dict& fta_dict) {
-    auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
-    autocog::llama::FTA fta(model, fta_dict);
-    autocog::llama::FTT ftt;
+namespace autocog {
+namespace llama {
 
-    // TODO: Implementation
+static FTA convert_pydict_to_fta(ModelID const id, pybind11::dict const & fta_dict) {
+  Model & model = Manager::get_model(id);
 
-    return ftt.pydict();
+  FTA fta(model, fta_dict); // TODO move from class
+
+  return fta;
 }
 
+static pybind11::dict convert_ftt_to_pydict(ModelID const id, FTT const & ftt) {
+  Model & model = Manager::get_model(id);
+
+  return ftt.pydict(); // TODO move from class
+}
+
+} }
+
 PYBIND11_MODULE(llama, module) {
+  using namespace autocog::llama;
+
+  Manager::initialize();
+
   module.doc() = "AutoCog's llama.cpp integration module";
 
-  module.def("create", [](const std::string& model_path, int n_ctx=4096) {
-      auto model = new autocog::llama::Model(model_path, n_ctx);
-      return reinterpret_cast<uintptr_t>(model);
-  });
+  module.def("create",
+    [](std::string const & model_path, int n_ctx) {
+      return Manager::add_model(model_path, n_ctx);
+    },
+    "Instantiate a GGML model with llama.cpp",
+    pybind11::arg("model_path"),
+    pybind11::arg("n_ctx") = 4096
+  );
     
-  module.def("tokenize", [](uintptr_t ptr, const std::string & text, bool add_bos = false, bool special = false) {
-      auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
-      auto tokens = model->tokenize(text, add_bos, special);
+  module.def("tokenize",
+    [](ModelID model, const std::string & text, bool add_bos, bool special) {
+      auto tokens = Manager::get_model(model).tokenize(text, add_bos, special);
       pybind11::list result;
       for (auto token : tokens) result.append(token);
       return result;
-  });
+    },
+    "Tokenize text using llama.cpp",
+    pybind11::arg("model"),
+    pybind11::arg("text"), 
+    pybind11::arg("add_bos") = false,
+    pybind11::arg("special") = false
+  );
     
-  module.def("detokenize", [](uintptr_t ptr, const pybind11::list & py_tokens, bool spec_rm = false, bool spec_unp = false) {
-      auto model = reinterpret_cast<autocog::llama::Model*>(ptr);
-      autocog::llama::TokenSequence tokens;
-      for (auto item : py_tokens) tokens.push_back(item.cast<autocog::llama::TokenID>());
-      return model->detokenize(tokens, spec_rm, spec_unp);
-  });
+  module.def("detokenize",
+    [](ModelID model, const pybind11::list & py_tokens, bool spec_rm, bool spec_unp) {
+      TokenSequence tokens;
+      for (auto item : py_tokens) tokens.push_back(item.cast<TokenID>());
+      return Manager::get_model(model).detokenize(tokens, spec_rm, spec_unp);
+    },
+    "Detokenize tokens to text",
+    pybind11::arg("model"),
+    pybind11::arg("tokens"),
+    pybind11::arg("spec_rm") = false,
+    pybind11::arg("spec_unp") = false
+  );
     
-  module.def("evaluate", &evaluate_fta_python);
+  module.def("evaluate",
+    [](ModelID model, pybind11::dict const & fta_dict) {
+      FTA fta = convert_pydict_to_fta(model, fta_dict);
+      EvalID eval = Manager::add_eval(model, fta);
+      Manager::get_eval(eval).advance(std::nullopt);
+      pybind11::dict ftt = convert_ftt_to_pydict(model, Manager::get_eval(eval).get());
+      Manager::rm_eval(eval);
+      return ftt;
+    },
+    "Evaluate a FTA using a model and return the FTT."
+  );
+
+#ifdef ASYNC_EXEC
+  module.def("instantiate",
+    [](ModelID model, pybind11::dict const & fta) {
+      FTA fta_ = convert_pydict_to_fta(model, fta);
+      // TODO
+    },
+    "Instantiate a FTA using a model and return the EvalID.",
+    pybind11::arg("model"),
+    pybind11::arg("fta")
+  );
+
+  module.def("advance", 
+    [](EvalID eval, std::optional<unsigned> max_token_eval) {
+      // TODO
+    },
+    "Advance a FTA evaluation with an optional (soft) limit on the number of token evaluation, return the number of evaluated tokens.",
+    pybind11::arg("eval"),
+    pybind11::arg("max_token_eval") = std::nullopt
+  );
+
+  module.def("advance_bg", 
+    [](EvalID eval, std::optional<unsigned> max_token_eval) {
+      // TODO
+    },
+    "Signal an evaluation to run in the background, return nothing immediately.",
+    pybind11::arg("eval"),
+    pybind11::arg("max_token_eval") = std::nullopt
+  );
+
+  module.def("finished", 
+    [](EvalID eval) {
+      // TODO
+    },
+    "Check if a FTA evaluation is finished.",
+    pybind11::arg("eval")
+  );
+
+  module.def("retrieve", 
+    [](EvalID eval) {
+      // TODO
+    },
+    "Retrieve the FTT being generated by an evaluation.",
+    pybind11::arg("eval")
+  );
+
+  module.def("release", 
+    [](EvalID eval) {
+      // TODO
+    },
+    "Wait for the evaluation to finish, retrieve the generated FTT, then remove the evaluation.",
+    pybind11::arg("eval")
+  );
+#endif /* ASYNC_EXEC */
 }
 

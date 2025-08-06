@@ -57,7 +57,7 @@ for act in fta.actions.values():
         })
     elif isinstance(act, Choose):
         action.update({
-          "__type__" : "Text",
+          "__type__" : "Choice",
           "threshold" : 1. if act.threshold is None else act.threshold,
           "width" : 1 if act.width is None else act.width,
           "choices" : [
@@ -66,7 +66,7 @@ for act in fta.actions.values():
     	})
     elif isinstance(act, Complete):
         action.update({
-          "__type__" : "Text",
+          "__type__" : "Completion",
           "threshold" : 1. if act.threshold is None else act.threshold,
           "length" : 1 if act.length is None else act.length,
           "beams" : 1 if act.beams is None else act.beams,
@@ -77,6 +77,8 @@ for act in fta.actions.values():
     else:
         raise Exception()
     actions.update({ act.uid : action })
+
+# print(json.dumps(actions,indent=4))
 
 ftt = autocog.llama.evaluate(model, { 'actions' : actions })
 

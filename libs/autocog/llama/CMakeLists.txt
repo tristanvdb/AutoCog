@@ -13,7 +13,11 @@ set(SOURCES
     fta.cxx
     ftt.cxx
     model.cxx
-    evaluator.cxx
+    manager.cxx
+    evaluation.cxx
+    evaluation-choice.cxx
+    evaluation-completion.cxx
+    evaluation-text.cxx
     python_bindings.cxx
 )
 
