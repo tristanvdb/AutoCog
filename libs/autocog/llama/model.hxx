@@ -36,8 +36,25 @@ class Model {
     TokenID eos_token() const;
 
     TokenSequence const & get_tokens_const(ContextID const id = 0) const;
-    unsigned set_tokens(TokenSequence const & tokens, ContextID const id = 0);
-    unsigned eval_sequences(TokenSequence const & tokens, ProbaSequence & probas, ContextID const id = 0);
+
+    unsigned set_tokens(
+      TokenSequence const & tokens,
+      ContextID const id = 0
+    );
+
+    unsigned eval_sequences(
+      TokenSequence const & tokens,
+      ProbaSequence & probas,
+      ContextID const id = 0
+    );
+
+    unsigned eval_topk_tokens(
+      std::vector<bool> const & vocab_mask,
+      size_t max_candidates,
+      std::vector<TokenID> & topk_tokens,
+      std::vector<float> & topk_probas,
+      ContextID const id
+    );
 };
 
 } }

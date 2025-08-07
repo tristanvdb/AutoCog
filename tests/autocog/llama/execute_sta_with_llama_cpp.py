@@ -56,6 +56,9 @@ for act in fta.actions.values():
           "tokens" : tokenize(model, act.text, False, False)
         })
     elif isinstance(act, Choose):
+        if len(act.successors) == 1:
+            action.update({ "successors" : [ act.successors[0] ] * len(act.choices) })
+        assert len(act.successors) == 0 or len(action['successors']) == len(act.choices)
         action.update({
           "__type__" : "Choice",
           "threshold" : 1. if act.threshold is None else act.threshold,

@@ -37,15 +37,12 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
     Action const & action = this->fta.action(state.action); 
     switch (action.kind) {
       case ActionKind::Text:
-        std::cerr << "Executing Text       #" << action.id << std::endl;
         num_token_eval += this->evaluate_text(state);
         break;
       case ActionKind::Completion:
-        std::cerr << "Executing Completion #" << action.id << std::endl;
         num_token_eval += this->evaluate_completion(state);
         break;
       case ActionKind::Choice:
-        std::cerr << "Executing Choice     #" << action.id << std::endl;
         num_token_eval += this->evaluate_choice(state);
         break;
     }

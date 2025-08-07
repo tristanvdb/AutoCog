@@ -1,0 +1,22 @@
+format sentence {
+    is text<5>;
+    annotate f"a well formed sentence in english";
+}
+
+format boolean {
+    is enum("true","false");
+    annotate f"a boolean";
+}
+
+prompt main {
+    is {
+        statement is sentence;
+        correct is boolean;
+    }
+    channel {
+        to .statement from ?statement;
+    }
+    return {
+        from .correct;
+    }
+}

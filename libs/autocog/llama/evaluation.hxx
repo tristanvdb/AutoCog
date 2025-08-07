@@ -16,6 +16,8 @@ class Text;
 class Completion;
 class Choice;
 
+class Beam;
+
 struct PathState {
   ActionID const action;            //< Action to be evaluated next
   FTT & parent;                     //< Previous FTT in the path, reslts of exploring this state will be added to that tree 
@@ -52,6 +54,13 @@ class Evaluation {
     ~Evaluation();
     unsigned advance(std::optional<unsigned> max_token_eval);
     FTT const & get() const;
+
+  friend void add_beams_to_ftt(
+    std::vector<Beam> const & beams,
+    Completion const & action,
+    PathState & state,
+    Evaluation * eval
+  );
 };
 
 } }

@@ -2,6 +2,7 @@
 
 #include <llama.h>
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace autocog { namespace llama {
@@ -213,6 +214,70 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   }
   loc_tokens.insert(loc_tokens.end(), new_tokens.begin(), new_tokens.end());
   return new_tokens.size();
+}
+
+unsigned Model::eval_topk_tokens(
+  std::vector<bool> const & vocab_mask,
+  size_t max_candidates,
+  std::vector<TokenID> & topk_tokens,
+  std::vector<float> & topk_probas,
+  ContextID const id
+) {
+
+  check_context_id(id);
+  if (this->id == 0) {
+    throw std::runtime_error("Using model #0 (RNG) is not implemented yet!");
+  }
+
+  size_t vocab_size = this->vocab_size();
+  if (vocab_mask.size() != vocab_size) {
+     throw std::runtime_error("vocab_mask size (" + std::to_string(vocab_mask.size()) + ") does not match vocabulary size (" + std::to_string(vocab_size) + ")");
+  }
+
+  llama_context * ctx = this->get_context(id);
+  TokenSequence const & current_tokens = this->get_tokens_const(id);
+
+  topk_tokens.clear();
+  topk_probas.clear();
+
+  llama_batch batch = llama_batch_get_one(
+    const_cast<TokenID*>(current_tokens.data()), 
+    current_tokens.size()
+  );
+
+  if (llama_decode(ctx, batch) != 0) {
+    throw std::runtime_error("Failed to decode for token evaluation");
+  }
+
+  float * logits = llama_get_logits(ctx);
+
+  // Collect valid candidates based on mask
+  std::vector<std::pair<TokenID, float>> candidates;
+  for (TokenID tid = 0; tid < vocab_size; ++tid) {
+    if (vocab_mask[tid]) {
+      candidates.emplace_back(tid, logits[tid]);
+    }
+  }
+    
+  // Handle edge case: no valid candidates
+  if (candidates.empty()) {
+    throw std::runtime_error("Failed to find candidate token. Cannot have an empty vocabularity mask (all false).");
+  }
+    
+  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
+    return a.second > b.second;
+  });
+    
+  size_t k = std::min(max_candidates, candidates.size());
+  topk_tokens.reserve(k);
+  topk_probas.reserve(k);
+    
+  for (size_t i = 0; i < k; ++i) {
+    topk_tokens.push_back(candidates[i].first);
+    topk_probas.push_back(candidates[i].second);  // Raw logits from llama.cpp
+  }
+    
+  return 1;
 }
 
 } }
