@@ -53,6 +53,7 @@ class FiniteThoughtAutomaton(BaseModel):
                 pred.successors.clear()
                 pred.successors.extend(curr.successors)
                 del self.actions[cuid]
+        return self
 
     def greedy_rec(self, ptree:FiniteTokenTree, lm:LM, tokens:List[Token], action:Action):
         todos = []

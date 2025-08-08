@@ -2,6 +2,7 @@
 
 #include <llama.h>
 
+#include <cmath>
 #include <algorithm>
 #include <stdexcept>
 
@@ -176,6 +177,43 @@ static unsigned run_batch_full(llama_context * ctx, TokenSequence const & tokens
   return tokens.size();
 }
 
+static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
+  // Find max logit for numerical stability
+  float max_logit = *std::max_element(logit, logit + vocab_size);
+
+  // Compute log-sum-exp for normalization
+  float log_sum_exp = 0.0f;
+  for (unsigned i = 0; i < vocab_size; ++i) {
+    log_sum_exp += std::exp(logit[i] - max_logit);
+  }
+  return max_logit + std::log(log_sum_exp);
+}
+
+static void retrieve_logprobs(llama_context * ctx, unsigned vocab_size, std::vector<float> & logprobs) {
+  float * logits = llama_get_logits(ctx);
+  float log_sum_exp = logit_to_log_sum_exp(logits, vocab_size);
+  logprobs.resize(vocab_size);
+  for (unsigned tok = 0; tok < vocab_size; tok++) {
+    logprobs[tok] = log_sum_exp - logits[tok];
+  }
+}
+
+static void sample_logprobs(llama_context * ctx, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
+  float * logits = llama_get_logits(ctx);
+  float log_sum_exp = logit_to_log_sum_exp(logits, mask.size());
+
+  for (unsigned tok = 0; tok < mask.size(); tok++) {
+    if (mask[tok]) {
+      candidates.emplace_back(tok, log_sum_exp - logits[tok]);
+    }
+  }
+}
+
+static float retrieve_logprob(llama_context * ctx, unsigned vocab_size, TokenID token) {
+  float * logits = llama_get_logits(ctx);
+  return logit_to_log_sum_exp(logits, vocab_size) - logits[token];
+}
+
 unsigned Model::set_tokens(TokenSequence const & tokens_, ContextID const id) {
   if (this->id == 0) {
     return tokens_.size();
@@ -187,16 +225,16 @@ unsigned Model::set_tokens(TokenSequence const & tokens_, ContextID const id) {
   return run_batch_full(this->get_context(id), loc_tokens);
 }
 
-unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence & probas, ContextID const id) {
+unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence & logprobs, ContextID const id) {
   if (this->id == 0) {
     throw std::runtime_error("Using model #0 (RNG) is not implemented yet!");
-    // TODO fill `probas` with random float in [0,1]
+    // TODO fill `logprobs` with random vales
     return new_tokens.size();
   }
 
   TokenSequence & loc_tokens = this->get_tokens(id);
   llama_pos token_pos = loc_tokens.size();
-  probas.clear();
+  logprobs.clear();
 
   for (auto token: new_tokens) {
 
@@ -207,8 +245,7 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
       throw std::runtime_error("Failed to decode token");
     }
 
-    float tok_probas = llama_get_logits(this->get_context(id))[token];
-    probas.push_back(tok_probas);
+    logprobs.push_back(retrieve_logprob(this->get_context(id), this->vocab_size(), token));
 
     token_pos++;
   }
@@ -220,7 +257,7 @@ unsigned Model::eval_topk_tokens(
   std::vector<bool> const & vocab_mask,
   size_t max_candidates,
   std::vector<TokenID> & topk_tokens,
-  std::vector<float> & topk_probas,
+  std::vector<float> & topk_lobprobs,
   ContextID const id
 ) {
 
@@ -238,7 +275,7 @@ unsigned Model::eval_topk_tokens(
   TokenSequence const & current_tokens = this->get_tokens_const(id);
 
   topk_tokens.clear();
-  topk_probas.clear();
+  topk_lobprobs.clear();
 
   llama_batch batch = llama_batch_get_one(
     const_cast<TokenID*>(current_tokens.data()), 
@@ -249,32 +286,25 @@ unsigned Model::eval_topk_tokens(
     throw std::runtime_error("Failed to decode for token evaluation");
   }
 
-  float * logits = llama_get_logits(ctx);
-
-  // Collect valid candidates based on mask
   std::vector<std::pair<TokenID, float>> candidates;
-  for (TokenID tid = 0; tid < vocab_size; ++tid) {
-    if (vocab_mask[tid]) {
-      candidates.emplace_back(tid, logits[tid]);
-    }
-  }
-    
+  sample_logprobs(ctx, vocab_mask, candidates);
+
   // Handle edge case: no valid candidates
   if (candidates.empty()) {
     throw std::runtime_error("Failed to find candidate token. Cannot have an empty vocabularity mask (all false).");
   }
     
   std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-    return a.second > b.second;
+    return a.second < b.second;
   });
     
   size_t k = std::min(max_candidates, candidates.size());
   topk_tokens.reserve(k);
-  topk_probas.reserve(k);
+  topk_lobprobs.reserve(k);
     
   for (size_t i = 0; i < k; ++i) {
     topk_tokens.push_back(candidates[i].first);
-    topk_probas.push_back(candidates[i].second);  // Raw logits from llama.cpp
+    topk_lobprobs.push_back(candidates[i].second);
   }
     
   return 1;

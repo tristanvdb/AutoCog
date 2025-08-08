@@ -6,19 +6,40 @@
 
 #include <llama.h>
 
-#include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
 
+#if VERBOSE
+#  include <iostream>
+#endif
+
+#define DEBUG_Evaluation_evaluate_choice VERBOSE && 1
+
 namespace autocog { namespace llama {
 
+struct ChoiceResult {
+  size_t index;
+  ProbaSequence logprobs;
+  float proba;
+
+  ChoiceResult(
+    size_t index_, ProbaSequence logprobs_, float proba_
+  ) :
+    index(index_), logprobs(logprobs_), proba(proba_)
+  {}
+};
+
 unsigned Evaluation::evaluate_choice(PathState & state) {
-  auto [model, ctx] = this->restore_context(state);
+#if DEBUG_Evaluation_evaluate_choice
+  std::cerr << "Executing Choice     #" << state.action << std::endl;
+#endif
   Choice const & action = this->fta.action(state.action).as<Choice>();
-  std::cerr << "Executing Choice     #" << action.id << std::endl;
+#if DEBUG_Evaluation_evaluate_choice
+  std::cerr << " - name: " << action.name << std::endl;
   std::cerr << " - width: " << action.width << std::endl;
   std::cerr << " - number of choices: " << action.choices.size() << std::endl;
+#endif
   
   if (action.choices.empty()) {
     throw std::runtime_error("Choice action has no choices");
@@ -29,97 +50,55 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   }
   
   unsigned num_token_eval = 0;
-  
-  // Structure to hold choice evaluation results
-  struct ChoiceResult {
-    size_t index;
-    TokenSequence tokens;
-    ProbaSequence probas;
-    float total_probability;
-  };
   std::vector<ChoiceResult> results;
   
   // Evaluate ALL choices in full
-  for (size_t i = 0; i < action.choices.size(); ++i) {
-    TokenSequence const & choice_tokens = action.choices[i];
-    std::cerr << " - choice[" << i << "]:" << std::endl;
-    std::cerr << "   - number of tokens: " << choice_tokens.size() << std::endl;
+  for (size_t idx = 0; idx < action.choices.size(); ++idx) {
+    auto [model, ctx] = this->restore(state);
+#if DEBUG_Evaluation_evaluate_choice
+    std::cerr << " - Model   #" << model.id << std::endl;
+    std::cerr << " - Context #" << ctx << std::endl;
+    std::cerr << " - choice[" << idx << "]:" << std::endl;
+    std::cerr << "   - number of tokens: " << action.choices[idx].size() << std::endl;
+#endif
     
     // Save current state to restore after evaluation
     TokenSequence saved_tokens = model.get_tokens_const(ctx);
-    
-    // Evaluate this choice
-    ProbaSequence probas;
-    num_token_eval += model.eval_sequences(choice_tokens, probas, ctx);
-    
-    // Calculate total probability for this choice
-    // TODO: In the future, support different probability strategies:
-    // - product (current): p_total = p1 * p2 * ... * pn
-    // - average: p_total = (p1 + p2 + ... + pn) / n
-    // - min: p_total = min(p1, p2, ..., pn)
-    // - weighted: custom weighting function
-    // This could be specified as a parameter in the Choice action
-    float total_prob = 1.0f;
-    for (float p : probas) {
-      total_prob *= p;  // Product strategy (default)
-    }
-    std::cerr << "   - probability: " << total_prob << std::endl;
-    
-    results.push_back({i, choice_tokens, probas, total_prob});
-    
-    // Restore context state for next choice evaluation
-    model.set_tokens(saved_tokens, ctx);
+
+    ProbaSequence logprobs;
+    num_token_eval += model.eval_sequences(action.choices[idx], logprobs, ctx);
+
+    float proba = 0.;
+    for (float lpb : logprobs) proba += lpb;
+    proba = std::exp(-proba/logprobs.size());
+#if DEBUG_Evaluation_evaluate_choice
+    std::cerr << "   - proba: " << proba << std::endl;
+#endif
+
+    results.emplace_back(idx, logprobs, proba);
+
+    state.context.reset(); // TODO remove once context saving/restore/rewind is implemented
   }
-  
-  // Sort by probability (descending)
+
   std::sort(results.begin(), results.end(), 
     [](const ChoiceResult& a, const ChoiceResult& b) {
-      return a.total_probability > b.total_probability;
+      return a.proba > b.proba;
     });
-  
-  // Select top 'width' choices that are above threshold
-  std::vector<size_t> selected_indices;
-  
-  for (const auto& result : results) {
-    if (result.total_probability >= action.threshold) {
-      selected_indices.push_back(result.index);
-      if (selected_indices.size() >= action.width) {
-        break;
-      }
+
+  unsigned count = 0;
+  for (const auto & result : results) {
+    auto & choice_tokens = action.choices[result.index];
+    FTT & child = state.parent.add(action.id, choice_tokens, result.logprobs);
+    child.pruned = ( count > action.width ) || (count > 0 && result.proba < action.threshold);
+    if (!child.pruned) {
+      this->enqueue(action.successors[result.index], child, state);
     }
+    count++;
   }
-  
-  // If none above threshold, pick the best one
-  if (selected_indices.empty() && !results.empty()) {
-    selected_indices.push_back(results[0].index);
-  }
-  
-  // Add selected choices to FTT and enqueue their corresponding successors
-  for (size_t idx : selected_indices) {
-    // Find the result for this index
-    auto it = std::find_if(results.begin(), results.end(),
-      [idx](const ChoiceResult& r) { return r.index == idx; });
-    
-    if (it != results.end()) {
-      // Add this choice to the FTT
-      FTT& child = state.parent.add(action.id, it->tokens, it->probas, it->total_probability);
-      
-      // Mark as pruned if below threshold (for tracking purposes)
-      if (it->total_probability < action.threshold) {
-        child.pruned = true;
-        // Note: We still enqueue it since it was the best available
-      }
-      
-      // Enqueue the corresponding successor action for this specific choice
-      ActionID next_action = action.successors[idx];
-      
-      // Prepare tokens for next action (current context + chosen tokens)
-      TokenSequence next_tokens = model.get_tokens_const(ctx);
-      next_tokens.insert(next_tokens.end(), it->tokens.begin(), it->tokens.end());
-      
-      this->enqueue(next_action, child, next_tokens, state);
-    }
-  }
+
+#if DEBUG_Evaluation_evaluate_choice
+  std::cerr << " > evaluated: " << num_token_eval << std::endl;
+#endif
   
   return num_token_eval;
 }

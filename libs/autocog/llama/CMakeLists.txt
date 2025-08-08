@@ -35,15 +35,12 @@ target_link_libraries(autocog_llama PRIVATE llama)
 # Compiler flags
 target_compile_features(autocog_llama PRIVATE cxx_std_17)
 
-# Optimization flags
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(autocog_llama PRIVATE
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-O3 -march=native>
-        $<$<CXX_COMPILER_ID:MSVC>:/O2>
-    )
-endif()
+#target_compile_options(autocog_llama PRIVATE
+#    $<$<CXX_COMPILER_ID:GNU,Clang>:-O3 -march=native -g>
+#    $<$<CXX_COMPILER_ID:MSVC>:/O2>
+#)
+target_compile_options(autocog_llama PRIVATE -O0 -g3 -ggdb -fno-omit-frame-pointer -DVERBOSE=1)
 
-# Enable warnings
 target_compile_options(autocog_llama PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
     $<$<CXX_COMPILER_ID:MSVC>:/W4>

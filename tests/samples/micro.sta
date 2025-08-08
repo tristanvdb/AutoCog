@@ -1,5 +1,5 @@
 format sentence {
-    is text<10, beams=5, width=3>;
+    is text<5, beams=2, width=2>;
     annotate f"a well formed sentence in english";
 }
 

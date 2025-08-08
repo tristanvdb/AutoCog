@@ -9,6 +9,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
+#include <iostream>
 #include <optional>
 
 namespace autocog {
@@ -75,12 +76,20 @@ PYBIND11_MODULE(llama, module) {
     
   module.def("evaluate",
     [](ModelID model, pybind11::dict const & fta_dict) {
+      std::cerr << "IN evaluate (pybind): START" << std::endl;
       FTA fta = convert_pydict_to_fta(model, fta_dict);
+      std::cerr << "IN evaluate (pybind): FTA" << std::endl;
       EvalID eval = Manager::add_eval(model, fta);
+      std::cerr << "IN evaluate (pybind): EVAL" << std::endl;
       Manager::get_eval(eval).advance(std::nullopt);
-      pybind11::dict ftt = convert_ftt_to_pydict(model, Manager::get_eval(eval).get());
+      std::cerr << "IN evaluate (pybind): FTT" << std::endl;
+      FTT const & ftt = Manager::get_eval(eval).get();
+      std::cerr << "IN evaluate (pybind): RES" << std::endl;
+      pybind11::dict res = convert_ftt_to_pydict(model, ftt);
+      std::cerr << "IN evaluate (pybind): CLEAN" << std::endl;
       Manager::rm_eval(eval);
-      return ftt;
+      std::cerr << "IN evaluate (pybind): DONE" << std::endl;
+      return res;
     },
     "Evaluate a FTA using a model and return the FTT."
   );

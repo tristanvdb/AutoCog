@@ -5,26 +5,46 @@
 #include "autocog/llama/fta.hxx"
 #include "autocog/llama/ftt.hxx"
 
-#include <iostream>
 #include <stdexcept>
+
+#if VERBOSE
+#  include <iostream>
+#endif
+
+#define DEBUG_Evaluation_evaluate_text VERBOSE && 1
 
 namespace autocog { namespace llama {
 
 unsigned Evaluation::evaluate_text(PathState & state) {
-  auto [model,ctx] = this->restore_context(state);
+#if DEBUG_Evaluation_evaluate_text
+  std::cerr << "Executing Text       #" << state.action << std::endl;
+#endif
   Text const & action = this->fta.action(state.action).as<Text>();
-  std::cerr << "Executing Text       #" << action.id << std::endl;
+#if DEBUG_Evaluation_evaluate_text
+  std::cerr << " - name: " << action.name << std::endl;
   std::cerr << " - number of tokens: " << action.tokens.size() << std::endl;
+#endif
 
-  ProbaSequence probas(action.tokens.size(), 1.);
-  unsigned num_token_eval = model.eval_sequences(action.tokens, probas, ctx);
+  unsigned num_token_eval = 0;
+  ProbaSequence logprobs(action.tokens.size(), 0.);
+  if (this->config.evaluate_text) {
+    auto [model,ctx] = this->restore(state);
+#if DEBUG_Evaluation_evaluate_text
+    std::cerr << " - Model   #" << model.id << std::endl;
+    std::cerr << " - Context #" << ctx << std::endl;
+#endif
+    num_token_eval += model.eval_sequences(action.tokens, logprobs, ctx);
+  }
+#if DEBUG_Evaluation_evaluate_text
+  std::cerr << " > evaluated: " << num_token_eval << std::endl;
+#endif
 
-  float probability = 1.;
-  for (auto proba: probas) probability *= proba;
-  std::cerr << " - probability: " << probability << std::endl;
-  state.parent.add(action.id, action.tokens, probas, probability);
-
-  this->enqueue(action.successors[0], state.parent.children.back(), model.get_tokens_const(), state);
+  auto & child = state.parent.add(action.id, action.tokens, logprobs);
+  if (action.successors.size() == 1) {
+    this->enqueue(action.successors[0], child, state);
+  } else if (action.successors.size() > 1) {
+    throw std::runtime_error("Text action should never have more than 1 successor.");
+  }
   
   return num_token_eval;
 }

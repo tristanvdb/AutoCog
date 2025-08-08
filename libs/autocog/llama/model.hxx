@@ -9,8 +9,10 @@ namespace autocog {
 namespace llama {
 
 class Model {
-  private:
+  public:
     ModelID const id;
+
+  private:
     llama_model * model;
     std::vector<llama_context *> contexts;
     std::vector<TokenSequence> tokens;
@@ -44,7 +46,7 @@ class Model {
 
     unsigned eval_sequences(
       TokenSequence const & tokens,
-      ProbaSequence & probas,
+      ProbaSequence & logprobs,
       ContextID const id = 0
     );
 
@@ -52,7 +54,7 @@ class Model {
       std::vector<bool> const & vocab_mask,
       size_t max_candidates,
       std::vector<TokenID> & topk_tokens,
-      std::vector<float> & topk_probas,
+      std::vector<float> & topk_logprobs,
       ContextID const id
     );
 };

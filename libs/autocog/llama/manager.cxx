@@ -49,7 +49,8 @@ Model & Manager::get_model(ModelID id) {
 EvalID Manager::add_eval(ModelID const model, FTA const & fta) {
   auto & manager = instance();
   EvalID id = manager.next_eval_id++;
-  manager.evaluations.try_emplace(id, model, fta);
+  EvaluationConfig config;
+  manager.evaluations.try_emplace(id, config, model, fta);
   return id;
 }
 

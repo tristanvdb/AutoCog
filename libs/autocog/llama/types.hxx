@@ -4,6 +4,10 @@
 #include <llama.h>
 #include <vector>
 
+#ifndef VERBOSE
+#  define VERBOSE 0
+#endif
+
 namespace autocog {
 namespace llama {
 

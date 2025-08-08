@@ -385,7 +385,7 @@ class Automaton(BaseModel):
                     path = [ ( p.name, i if p.is_list() else None ) for (p,i) in zip(successor.abstract.parents(), successor.indices) ]
                     fta.create(uid=uid, cls=Text, text=frame.read(path))
                 elif isinstance(fmt, IrCompletion):
-                    fta.create(uid=uid, cls=Complete, length=fmt.length, stop='\n')
+                    fta.create(uid=uid, cls=Complete, length=fmt.length, threshold=fmt.threshold, beams=fmt.beams, ahead=fmt.ahead, width=fmt.width, stop='\n')
                 elif isinstance(fmt, IrEnum):
                     fta.create(uid=uid, cls=Choose, choices=fmt.values, width=fmt.width)
                 elif isinstance(fmt, IrChoice):

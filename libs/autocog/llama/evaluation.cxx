@@ -5,7 +5,12 @@
 #include "autocog/llama/ftt.hxx"
 #include "autocog/llama/fta.hxx"
 
-#include <iostream>
+#if VERBOSE
+#  include <iostream>
+#endif
+
+#define DEBUG_Evaluation_enqueue VERBOSE && 0
+#define DEBUG_Evaluation_advance VERBOSE && 1
 
 namespace autocog { namespace llama {
 
@@ -16,7 +21,12 @@ PathState::PathState(ActionID const action_, FTT & parent_, TokenSequence const 
   context(context_)
 {}
 
-Evaluation::Evaluation(ModelID const model_, FTA const & fta_) :
+float PathState::proba() const {
+  return this->parent.proba();
+}
+
+Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, FTA const & fta_) :
+  config(config_),
   model(model_),
   fta(fta_),
   queue(),
@@ -31,10 +41,22 @@ Evaluation::~Evaluation() {
 unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
   if (this->root == nullptr) this->initial();
 
+  unsigned num_action_eval = 0;
   unsigned num_token_eval = 0;
   while (!queue.empty() && (max_token_eval == std::nullopt || num_token_eval < max_token_eval)) {
     PathState & state = queue.front();
-    Action const & action = this->fta.action(state.action); 
+#if DEBUG_Evaluation_advance
+    std::cerr << "Evaluation::advance" << std::endl;
+    std::cerr << "  queue.size()         = " << queue.size() << std::endl;
+    std::cerr << "  num_action_eval      = " << num_action_eval << std::endl;
+    std::cerr << "  num_token_eval       = " << num_token_eval << std::endl;
+    std::cerr << "  state.action         = " << state.action << std::endl;
+    std::cerr << "  state.tokens.size()  = " << state.tokens.size() << std::endl;
+    std::cerr << "  state.proba()        = " << state.proba() << std::endl;
+    std::cerr << "  state.parent.length  = " << state.parent.length << std::endl;
+    std::cerr << "  state.parent.logprob = " << state.parent.logprob << std::endl;
+#endif
+    Action const & action = this->fta.action(state.action);
     switch (action.kind) {
       case ActionKind::Text:
         num_token_eval += this->evaluate_text(state);
@@ -47,6 +69,7 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
         break;
     }
     queue.pop();
+    num_action_eval++;
   }
 
   return num_token_eval;
@@ -63,15 +86,28 @@ void Evaluation::initial() {
   if (tokens[0] != bos) {
     tokens.insert(tokens.begin(), bos);
   }
-  ProbaSequence probas(init.tokens.size(), 1.);
-  float probability = 1.;
-  for (auto proba: probas) probability *= proba;
-
-  this->root = new FTT(0, init.tokens, probas, probability);
+  this->root = FTT::make_root(init.tokens);
   this->queue.emplace(init.successors[0], *(this->root), init.tokens, std::nullopt);
 }
 
-std::pair<Model &, ContextID> Evaluation::restore_context(PathState & state) const {
+void Evaluation::enqueue(
+  ActionID const action,
+  FTT & parent,
+  PathState const & state
+) {
+#if DEBUG_Evaluation_enqueue
+  std::cerr << ">> Evaluation::enqueue <<" << std::endl;
+#endif
+  std::optional<ContextID> ctx = state.context;
+  ctx.reset(); // TODO context saving logic
+  
+  std::vector<TokenID> tokens(state.tokens.begin(), state.tokens.end());
+  tokens.insert(tokens.end(), parent.tokens.begin(), parent.tokens.end());
+
+  this->queue.emplace(action, parent, tokens, ctx);
+}
+
+std::pair<Model &, ContextID> Evaluation::restore(PathState & state) const {
   Model & model = Manager::get_model(this->model);
   if (state.context) {
     throw std::runtime_error("Context saving is not implemented yet, this should not happen");
@@ -81,29 +117,6 @@ std::pair<Model &, ContextID> Evaluation::restore_context(PathState & state) con
     state.context = 0;
   }
   return std::pair<Model &, ContextID>(model, state.context.value());
-}
-
-void Evaluation::enqueue(ActionID const action, FTT & parent, std::vector<TokenID> const & tokens, PathState const & state) {
-  std::optional<ContextID> ctx = state.context;
-  ctx.reset(); // TODO context saving logic
-  this->queue.emplace(action, parent, tokens, ctx);
-}
-
-std::vector<float> softmax(float * logits, int vocab_size) {
-    std::vector<float> result(logits, logits + vocab_size);
-    
-    // Apply softmax
-    float max_logit = *std::max_element(result.begin(), result.end());
-    float sum = 0.0f;
-    for (float& logit : result) {
-        logit = std::exp(logit - max_logit);
-        sum += logit;
-    }
-    for (float& prob : result) {
-        prob /= sum;
-    }
-    
-    return result;
 }
 
 } }

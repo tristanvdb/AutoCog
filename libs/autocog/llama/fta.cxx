@@ -10,40 +10,46 @@ namespace autocog { namespace llama {
 Action::Action(
   ActionKind const kind_,
   ActionID const id_,
-  float threshold_
+  std::string const & name_
 ) :
   kind(kind_),
   id(id_),
-  threshold(threshold_),
+  name(name_),
   successors()
 {}
 
 Text::Text(
   ActionID const id_,
-  float threshold_
+  std::string const & name_
 ) :
-  Action(ActionKind::Text, id_, threshold_)
+  Action(ActionKind::Text, id_, name_)
 {}
 
 Completion::Completion(
   ActionID const id_,
+  std::string const & name_,
   float threshold_,
   unsigned length_,
   unsigned beams_,
-  unsigned ahead_
+  unsigned ahead_,
+  unsigned width_
 ) :
-  Action(ActionKind::Completion, id_, threshold_),
+  Action(ActionKind::Completion, id_, name_),
+  threshold(threshold_),
   length(length_),
   beams(beams_),
-  ahead(ahead_)
+  ahead(ahead_),
+  width(width_)
 {}
 
 Choice::Choice(
   ActionID const id_,
+  std::string const & name_,
   float threshold_,
   unsigned width_
 ) :
-  Action(ActionKind::Choice, id_, threshold_),
+  Action(ActionKind::Choice, id_, name_),
+  threshold(threshold_),
   width(width_)
 {}
 
@@ -55,27 +61,6 @@ Action const & FTA::action(ActionID const id) const {
   return action;
 }
 
-Text & FTA::insert(float threshold_) {
-  ActionID id = this->actions.size();
-  Text * action = new Text(id, threshold_);
-  this->actions.push_back(std::unique_ptr<Action>(action));
-  return *action;
-}
-
-Completion & FTA::insert(float threshold_, unsigned length_, unsigned beams_, unsigned ahead_) {
-  ActionID id = this->actions.size();
-  Completion * action = new Completion(id, threshold_, length_, beams_, ahead_);
-  this->actions.push_back(std::unique_ptr<Action>(action));
-  return *action;
-}
-
-Choice & FTA::insert(float threshold_, unsigned width_) {
-  ActionID id = this->actions.size();
-  Choice * action = new Choice(id, threshold_, width_);
-  this->actions.push_back(std::unique_ptr<Action>(action));
-  return *action;
-}
-
 // TODO review
 
 FTA::FTA(Model const & model, pybind11::dict const & pydata) {
@@ -84,21 +69,23 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
         throw std::runtime_error("FTA dictionary missing 'actions' field");
     }
     
-    auto py_actions = pydata["actions"].cast<pybind11::dict>();
+    auto py_actions = pydata["actions"].cast<pybind11::list>();
     
     // First pass: create all actions and build ID mapping
     std::map<std::string, ActionID> uid_to_id;
-    
+
     for (auto item : py_actions) {
-        std::string uid = item.first.cast<std::string>();
-        auto action_dict = item.second.cast<pybind11::dict>();
-        
+        auto action_dict = item.cast<pybind11::dict>();
+
+        if (!action_dict.contains("uid")) {
+          throw std::runtime_error("Action missing 'uid' field.");
+        }
+        auto uid = action_dict["uid"].cast<std::string>();
         if (!action_dict.contains("__type__")) {
-            throw std::runtime_error("Action missing '__type__' field: " + uid);
+          throw std::runtime_error("Action missing '__type__' field: " + uid);
         }
         
         std::string action_type = action_dict["__type__"].cast<std::string>();
-        float threshold = action_dict.contains("threshold") ? action_dict["threshold"].cast<float>() : 0.0f;
         
         ActionID node_id = actions.size();  // Assign sequential IDs
         uid_to_id[uid] = node_id;
@@ -106,25 +93,23 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
         std::unique_ptr<Action> action;
         
         if (action_type == "Text") {
-            action = std::make_unique<Text>(node_id, threshold);
-            Text* text_action = static_cast<Text*>(action.get());
+          action = std::make_unique<Text>(node_id, uid);
+          Text * text_action = static_cast<Text*>(action.get());
+
+          auto py_tokens = action_dict["tokens"].cast<pybind11::list>();
+          text_action->tokens.clear();
+          for (auto token : py_tokens) {
+            text_action->tokens.push_back(token.cast<TokenID>());
+          }
             
-            // Set tokens
-            if (action_dict.contains("tokens")) {
-                auto py_tokens = action_dict["tokens"].cast<pybind11::list>();
-                text_action->tokens.clear();
-                for (auto token : py_tokens) {
-                    text_action->tokens.push_back(token.cast<TokenID>());
-                }
-            }
+        } else if (action_type == "Complete") {
+            float threshold = action_dict["threshold"].cast<float>();
+            unsigned length = action_dict["length"].cast<unsigned>();
+            unsigned beams = action_dict["beams"].cast<unsigned>();
+            unsigned ahead = action_dict["ahead"].cast<unsigned>();
+            unsigned width = action_dict["width"].cast<unsigned>();
             
-        } else if (action_type == "Completion") {
-            // Extract parameters with defaults
-            unsigned length = action_dict.contains("length") ? action_dict["length"].cast<unsigned>() : 1;
-            unsigned beams = action_dict.contains("beams") ? action_dict["beams"].cast<unsigned>() : 1;
-            unsigned ahead = action_dict.contains("ahead") ? action_dict["ahead"].cast<unsigned>() : 1;
-            
-            action = std::make_unique<Completion>(node_id, threshold, length, beams, ahead);
+            action = std::make_unique<Completion>(node_id, uid, threshold, length, beams, ahead, width);
             Completion* completion_action = static_cast<Completion*>(action.get());
             
             // Set stop tokens
@@ -145,9 +130,10 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
               throw std::runtime_error("Setting the vocabulary from PY desc is not implemented yet!");
             }
             
-        } else if (action_type == "Choice") {
-            unsigned width = action_dict.contains("width") ? action_dict["width"].cast<unsigned>() : 1;
-            action = std::make_unique<Choice>(node_id, threshold, width);
+        } else if (action_type == "Choose") {
+            float threshold = action_dict["threshold"].cast<float>();
+            unsigned width = action_dict["width"].cast<unsigned>();
+            action = std::make_unique<Choice>(node_id, uid, threshold, width);
             Choice* choice_action = static_cast<Choice*>(action.get());
             
             // Set choices
@@ -176,8 +162,8 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
     
     // Second pass: set up successors using the UID mapping
     for (auto item : py_actions) {
-        std::string uid = item.first.cast<std::string>();
-        auto action_dict = item.second.cast<pybind11::dict>();
+        auto action_dict = item.cast<pybind11::dict>();
+        auto uid = action_dict["uid"].cast<std::string>();
         
         ActionID node_id = uid_to_id[uid];
         Action* action = actions[node_id].get();

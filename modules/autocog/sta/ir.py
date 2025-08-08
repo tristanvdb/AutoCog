@@ -128,17 +128,29 @@ class Program(BaseModel):
 
 class Completion(Format):
     length: Optional[int]
+    threshold: Optional[float]
+    beams: Optional[int]
+    ahead: Optional[int]
+    width: Optional[int]
     within: Optional[List[str]] = None
 
     def str(self):
-        res = 'text'
+        res = []
         if self.length is not None:
-            res += f'({self.length})'
-        return res
+            res.append(f'length={self.length}')
+        if self.threshold is not None:
+            res.append(f'threshold={self.threshold}')
+        if self.beams is not None:
+            res.append(f'beams={self.beams}')
+        if self.ahead is not None:
+            res.append(f'ahead={self.ahead}')
+        if self.width is not None:
+            res.append(f'width={self.width}')
+        return 'text<' + ','.join(res) + '>'
 
 class Enum(Format):
     values: List[str]
-    width: int = 0
+    width: Optional[int] = None
 
     def str(self):
         str = '","'.join(self.values)
@@ -147,7 +159,7 @@ class Enum(Format):
 class Choice(Format):
     path: Path
     mode: str
-    width: int = 0
+    width: Optional[int] = None
 
     def str(self):
         return f'{self.mode}({self.path.str()})'

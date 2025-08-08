@@ -84,15 +84,22 @@ class Choose(Action):
 
 class Complete(Action):
     length: int = 1
-    beams:  int = 1
-    ahead:  int = 1
     stop:   str = ''
+    threshold: Optional[float]
+    beams:  Optional[int]
+    ahead:  Optional[int]
+    width:  Optional[int]
 
     seeds:  Optional[List[str]]
     vocab:  Vocab
 
-    def __init__(self, uid:str, length:int, stop: str='', seeds: Optional[List[str]] = None, successors: List[str]=[]):
-        super().__init__(uid=uid, successors=successors, length=length, stop=stop, seeds=seeds, vocab=Vocab())
+    def __init__(self, uid:str,
+                       length:int, stop: str='',
+                       threshold=None, beams=None, ahead=None, width=None,
+                       seeds: Optional[List[str]] = None,
+                       successors: List[str]=[]
+                ):
+        super().__init__(uid=uid, successors=successors, length=length, stop=stop, threshold=threshold, beams=beams, ahead=ahead, width=width, seeds=seeds, vocab=Vocab())
 
     def prepare(self, lm):
         if self.seeds is not None:

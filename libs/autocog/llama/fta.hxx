@@ -27,12 +27,11 @@ enum class ActionKind {
 struct Action {
   ActionKind const kind;
   ActionID const id;
-
-  float const threshold; //< Probability threshold for pruning
+  std::string const name;
 
   std::vector<ActionID> successors;
     
-  Action(ActionKind const kind_, ActionID const id_, float threshold_);
+  Action(ActionKind const kind_, ActionID const id_, std::string const & name_);
 
   template <class T>
   T const & as() const {
@@ -48,39 +47,38 @@ struct Text : public Action {
 
   TokenSequence tokens;
 
-  Text(ActionID const id_, float threshold_);
+  Text(ActionID const id_, std::string const & name_);
 };
 
 struct Completion : public Action {
   static constexpr ActionKind Kind = ActionKind::Completion;
 
-  unsigned const length;
-  unsigned const beams;
-  unsigned const ahead;
+  float const threshold; //< Probability threshold for pruning
+  unsigned const length; // Maximum length of the completion
+  unsigned const beams;  // Number of concurrent exploration beams
+  unsigned const ahead;  // Look ahead parameter for beam search
+  unsigned const width;  // Maximum number of beams to select
 
   Vocab vocab;
   TokenSequence stop;
 
-  Completion(ActionID const id_, float threshold_, unsigned length_, unsigned beams_, unsigned ahead_);
+  Completion(ActionID const id_, std::string const & name_, float threshold_, unsigned length_, unsigned beams_, unsigned ahead_, unsigned width_);
 };
 
 struct Choice : public Action {
   static constexpr ActionKind Kind = ActionKind::Choice;
 
-  unsigned const width;  // Maximum number of choices to explore
+  float const threshold; //< Probability threshold for pruning
+  unsigned const width;  // Maximum number of choices to select
 
   std::vector<TokenSequence> choices;  // Each choice is a token sequence
 
-  Choice(ActionID const id_, float threshold_, unsigned width_);
+  Choice(ActionID const id_, std::string const & name_, float threshold_, unsigned width_);
 };
 
 class FTA {
   public:
     Action const & action(ActionID const id) const;
-
-    Text & insert(float threshold_);
-    Completion & insert(float threshold_, unsigned length_, unsigned beams_, unsigned ahead_);
-    Choice & insert(float threshold_, unsigned width_);
 
     FTA() = default;
     FTA(Model const & model, pybind11::dict const & pydata);

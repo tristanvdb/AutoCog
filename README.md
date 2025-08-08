@@ -25,15 +25,15 @@ The libraries have [their own documentation](./share/library/README.md).
 Build image and "test":
 ```
 docker build -t autocog:latest .
-docker run --rm -it autocog:latest python3 -c "import autocog.llama; print(autocog.llama.__doc__)"
-docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/roundtrip_tokenization.py /workspace/autocog/models/stories260K.gguf
-docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/compilation/compile_sta_to_ftas.py /workspace/autocog/share/library/mcq/select.sta '{"topic":"a topic", "question":"my question", "choices" : [ "a", "b", "c", "d" ] }'
-docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/execute_sta_with_llama_cpp.py /workspace/autocog/share/library/mcq/select.sta '{"topic":"a topic", "question":"my question", "choices" : [ "a", "b", "c", "d" ] }' /workspace/autocog/models/stories260K.gguf
+docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/execute_sta_with_llama_cpp.py /workspace/autocog/tests/samples/mini.sta '{}' /workspace/autocog/models/SmolLM3-Q4_K_M.gguf
 ```
 
-Fast rebuild (in mounted:
+In container:
 ```
-docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest python setup.py build_ext --inplace
+docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest bash
+apt update && apt install -y gdb vim
+pip install -e .
+python3 tests/autocog/llama/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
 ```
 
 ## Contributing

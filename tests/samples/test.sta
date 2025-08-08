@@ -1,6 +1,11 @@
 format sentence {
-    is text<10, beams=5, width=3>;
+    is text<20, beams=5, width=5>;
     annotate f"a well formed sentence in english";
+}
+
+format thought {
+    is text<10, beams=2, width=2>;
+    annotate f"show your thinking";
 }
 
 format boolean {
@@ -11,6 +16,7 @@ format boolean {
 prompt main {
     is {
         statement is sentence;
+        work[1:5] is thought;
         correct is boolean;
     }
     channel {
@@ -22,6 +28,7 @@ prompt main {
     annotate {
         _ as "You are verifying whether statements are true or false.";
         .statement as "the statement that you must verify";
+        .thought   as "up to five items that show what you consider to make that decision";
         .correct   as "your decision whether it is true or false";
     }
 }

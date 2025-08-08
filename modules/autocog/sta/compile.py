@@ -66,14 +66,24 @@ def resolve_type(type: Union[AstRecord,AstTypeRef,AstEnumType], path:List[str], 
 
         if type.name == 'text':
             length = None
-            if len(type.arguments) == 1:
-                arg = type.arguments[0]
-                if arg.name is not None and arg.name != 'length':
-                    raise Exception(f"Builtin format `text` expect only `length` arguments (got: {args})")
-                length = arg.value.eval(values=values)
-            elif len(type.arguments) > 1:
-                raise Exception(f"Builtin format `text` expect single `length` arguments (got: {args})")
-            fmt = IrCompletion(name=pathname, length=length)
+            threshold = None
+            beams = None
+            ahead = None
+            width = None
+            for arg in type.arguments:
+                if arg.name is None or arg.name == 'length':
+                    length = arg.value.eval(values=values)
+                elif arg.name == 'beams':
+                    beams = arg.value.eval(values=values)
+                elif arg.name == 'ahead':
+                    ahead = arg.value.eval(values=values)
+                elif arg.name == 'width':
+                    width = arg.value.eval(values=values)
+                elif arg.name == 'threshold':
+                    threshold = arg.value.eval(values=values)
+                else:
+                    raise Exception(f"Builtin format `text` does not expect `{arg.name}` arguments (got: {type.arguments})")
+            fmt = IrCompletion(name=pathname, length=length, threshold=threshold, beams=beams, ahead=ahead, width=width)
             program.formats.update({ pathname : fmt })
             return fmt
 
