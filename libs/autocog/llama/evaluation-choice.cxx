@@ -14,7 +14,7 @@
 #  include <iostream>
 #endif
 
-#define DEBUG_Evaluation_evaluate_choice VERBOSE && 1
+#define DEBUG_Evaluation_evaluate_choice VERBOSE && 0
 
 namespace autocog { namespace llama {
 

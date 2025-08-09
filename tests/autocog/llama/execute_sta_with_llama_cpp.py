@@ -1,5 +1,5 @@
 
-import sys, json, html, math, graphviz
+import sys, json, html, math, string, graphviz
 
 from autocog.sta.compile import compile_source_to_program_and_stas
 from autocog.sta.syntax import Syntax
@@ -12,16 +12,20 @@ import autocog.llama
 from autocog.llama import tokenize, detokenize
 
 fta_defaults = {
-  "Text" : {},
+  "Text" : {
+    "evaluate" : True
+  },
   "Choose" : {
-    "threshold" : 0e-10,
-    "width" : 3
+    "threshold" : 0e-3,
+    "width" : 1
   },
   "Complete" : {
-    "threshold" : 0e-8,
-    "width" : 3,
+    "threshold" : 0e-3,
+    "width" : 2,
     "beams" : 2,
-    "ahead" : 1
+    "ahead" : 1,
+    "diversity" : 1.,
+    "repetition" : .2
   }
 }
 
@@ -46,7 +50,10 @@ def main(argv):
 
     model = autocog.llama.create(model_path, 4096) if len(model_path) > 0 else 0
 
-    ftt = cxx_to_ftt(model, autocog.llama.evaluate(model, fta_to_cxx(model, fta, fta_defaults)))
+    safe_mask = create_safe_vocab_mask(model)
+    char_mask = create_single_char_vocab(model)
+
+    ftt = cxx_to_ftt(model, autocog.llama.evaluate(model, fta_to_cxx(model, fta, fta_defaults, safe_mask, char_mask)))
 
 #    print(json.dumps(ftt, indent=4))
     paths = extract_paths_from_ftt(ftt)
@@ -60,17 +67,87 @@ def main(argv):
         ftt, 
         output_filename='ftt', 
         format='svg',
-        max_text_length=40,
+        max_text_length=100,
         show_text_preview=True
     )
 
-def fta_to_cxx(model, fta, defaults):
+def create_safe_vocab_mask(model):
+    """Create vocab mask that excludes problematic tokens"""
+    import autocog.llama
+    
+    vocab_size = autocog.llama.vocab_size(model)
+    mask = [True] * vocab_size
+    
+    problematic_count = 0
+    
+    for token_id in range(vocab_size):
+        try:
+            # Test detokenize single token
+            text = autocog.llama.detokenize(model, [token_id], False, False)
+            
+            # Flag problematic tokens
+            is_problematic = (
+                '\n' in text or          # Newlines
+                '\r' in text or          # Carriage returns  
+                '\t' in text or          # Tabs
+                len(text) == 0 or        # Empty tokens
+                any(ord(c) < 32 for c in text if c not in [' ']) or  # Control characters
+                any(ord(c) > 126 for c in text)  # Non-ASCII
+            )
+            
+            if is_problematic:
+                mask[token_id] = False
+                problematic_count += 1
+                
+        except Exception:
+            # If detokenization fails, exclude the token
+            mask[token_id] = False
+            problematic_count += 1
+    
+    print(f"Excluded {problematic_count}/{vocab_size} problematic tokens")
+    return mask
+    
+def create_single_char_vocab(model):
+    vocab_size = autocog.llama.vocab_size(model)
+    mask = [False] * vocab_size
+    
+    # Define character sets to include
+    chars_to_test = (
+        string.ascii_letters +      # a-z, A-Z
+        string.digits +             # 0-9
+        string.punctuation +        # .,!? etc.
+        ' ' + '\n'                  # spaces
+    )
+    
+    single_char_count = 0
+    
+    for char in chars_to_test:
+        try:
+            # Tokenize the single character
+            tokens = autocog.llama.tokenize(model, char, False, False)
+            
+            # Check if it tokenizes to exactly one token
+            if len(tokens) == 1:
+                token_id = tokens[0]
+                if 0 <= token_id < vocab_size:  # Validate range
+                    mask[token_id] = True
+                    single_char_count += 1
+                    
+        except Exception:
+            # Skip characters that can't be tokenized
+            pass
+    
+    print(f"Found {single_char_count} single-character tokens from {len(chars_to_test)} tested characters")
+    return mask
+
+def fta_to_cxx(model, fta, defaults, safe_mask, char_mask):
     actions = []
     for act in fta.actions.values():
         action = { "uid" : act.uid, "successors" : act.successors }
         if isinstance(act, Text):
             action.update({
               "__type__"  : "Text",
+              "evaluate"  : defaults["Text"]["evaluate"] if act.evaluate is None else act.evaluate,
               "tokens"    : tokenize(model, act.text, False, False)
             })
         elif isinstance(act, Choose):
@@ -91,7 +168,7 @@ def fta_to_cxx(model, fta, defaults):
               "__type__"  : "Complete",
               "length"    : act.length,
               "stop"      : tokenize(model, act.stop, False, False),
-#             "vocab"     : "TODO",
+              "vocab"     : safe_mask,
               "threshold" : defaults["Complete"]["threshold"] if act.threshold is None else act.threshold,
               "beams"     : defaults["Complete"]["beams"] if act.beams is None else act.beams,
               "ahead"     : defaults["Complete"]["ahead"] if act.ahead is None else act.ahead,
@@ -103,16 +180,12 @@ def fta_to_cxx(model, fta, defaults):
     return { 'actions' : actions }
 
 def cxx_to_ftt(model, ftt):
-#    print(f'#{ftt["action"]}: {ftt["tokens"]}')
     return {
       "action" : ftt["action"],
       "text" : detokenize(model, ftt["tokens"], False, False),
       "length" : ftt["length"],
       "logprobs" : ftt["logprobs"],
-      "logprob" : ftt["logprob"],
-      "probability" : math.exp(-ftt["logprob"]),
-      "normprob" : math.exp(-ftt["logprob"]/ftt["length"]),
-      "probabilities" : [ math.exp(-lpb) for lpb in ftt["logprobs"] ],
+      "probability" : math.exp(-ftt["logprob"]/ftt["length"]),
       "children" : [ cxx_to_ftt(model, child) for child in ftt["children"] ],
       "pruned" : ftt["pruned"],
     }
@@ -130,9 +203,7 @@ def extract_paths_from_ftt(ftt, current_path=""):
             paths.extend(child_paths)
     return paths
 
-
-def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='png', 
-                            max_text_length=30, show_text_preview=True):
+def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='png', max_text_length=30, show_text_preview=True):
     """
     Detailed version with HTML-like labels for better formatting.
     """
@@ -147,17 +218,31 @@ def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='p
         """Format text for display in node, handling newlines and long text."""
         if not text:
             return "[empty]"
-        
-        # Replace newlines with spaces for display
-        text = text.replace('\n', ' ').replace('\r', '')
-        
-        # Escape HTML characters
-        text = html.escape(text)
-        
-        # Truncate if needed
+
         if len(text) > max_len:
             text = text[:max_len] + "..."
-        
+
+        # HTML entity escaping
+        text = text.replace('&', '＆')   # Must be first
+        text = text.replace('<', '‹')
+        text = text.replace('>', '›')
+        text = text.replace('"', '&quot;')
+        text = text.replace("'", '&#39;')
+
+        # GraphViz special characters
+        text = text.replace('\\', '\\\\')
+        text = text.replace('{', '\\{')
+        text = text.replace('}', '\\}')
+        text = text.replace('|', '\\|')
+
+        # Handle newlines and control characters
+        text = text.replace('\n', '↵')
+        text = text.replace('\r', '⏎')
+        text = text.replace('\t', '→')
+
+        # Remove remaining control characters
+        text = ''.join(c if ord(c) >= 32 or c in ['\n', '\r', '\t'] else f'\\x{ord(c):02x}' for c in text)
+
         return text
     
     def add_node_recursive(node, parent_id=None, depth=0, is_best=True):

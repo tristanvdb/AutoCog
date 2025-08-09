@@ -20,9 +20,11 @@ Action::Action(
 
 Text::Text(
   ActionID const id_,
-  std::string const & name_
+  std::string const & name_,
+  bool const eval
 ) :
-  Action(ActionKind::Text, id_, name_)
+  Action(ActionKind::Text, id_, name_),
+  evaluate(eval)
 {}
 
 Completion::Completion(
@@ -32,14 +34,18 @@ Completion::Completion(
   unsigned length_,
   unsigned beams_,
   unsigned ahead_,
-  unsigned width_
+  unsigned width_,
+  std::optional<float> repetition_,
+  std::optional<float> diversity_
 ) :
   Action(ActionKind::Completion, id_, name_),
   threshold(threshold_),
   length(length_),
   beams(beams_),
   ahead(ahead_),
-  width(width_)
+  width(width_),
+  repetition(repetition_),
+  diversity(diversity_)
 {}
 
 Choice::Choice(
@@ -93,7 +99,10 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
         std::unique_ptr<Action> action;
         
         if (action_type == "Text") {
-          action = std::make_unique<Text>(node_id, uid);
+          bool evaluate = false;
+          if (action_dict.contains("evaluate")) evaluate = action_dict["evaluate"].cast<bool>();
+
+          action = std::make_unique<Text>(node_id, uid, evaluate);
           Text * text_action = static_cast<Text*>(action.get());
 
           auto py_tokens = action_dict["tokens"].cast<pybind11::list>();
@@ -108,8 +117,12 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
             unsigned beams = action_dict["beams"].cast<unsigned>();
             unsigned ahead = action_dict["ahead"].cast<unsigned>();
             unsigned width = action_dict["width"].cast<unsigned>();
-            
-            action = std::make_unique<Completion>(node_id, uid, threshold, length, beams, ahead, width);
+            std::optional<float> repetition = std::nullopt;
+            if (action_dict.contains("repetition") && !action_dict["repetition"].is_none()) repetition = action_dict["repetition"].cast<float>();
+            std::optional<float> diversity = std::nullopt;
+            if (action_dict.contains("diversity") && !action_dict["diversity"].is_none()) repetition = action_dict["diversity"].cast<float>();
+
+            action = std::make_unique<Completion>(node_id, uid, threshold, length, beams, ahead, width, repetition, diversity);
             Completion* completion_action = static_cast<Completion*>(action.get());
             
             // Set stop tokens
@@ -124,12 +137,12 @@ FTA::FTA(Model const & model, pybind11::dict const & pydata) {
             }
             
             // Set vocabulary mask
+            completion_action->vocab.mask.clear();
             completion_action->vocab.mask.reserve(model.vocab_size());
-            completion_action->vocab.mask.assign(model.vocab_size(), true);
-            if (action_dict.contains("vocab")) {
-              throw std::runtime_error("Setting the vocabulary from PY desc is not implemented yet!");
+            for (auto tok_msk : action_dict["vocab"]) {
+              completion_action->vocab.mask.push_back(tok_msk.cast<bool>());
             }
-            
+
         } else if (action_type == "Choose") {
             float threshold = action_dict["threshold"].cast<float>();
             unsigned width = action_dict["width"].cast<unsigned>();

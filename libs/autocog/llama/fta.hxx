@@ -45,24 +45,35 @@ struct Action {
 struct Text : public Action {
   static constexpr ActionKind Kind = ActionKind::Text;
 
+  bool const evaluate; //< whether to evaluate the probability using the model (else p=1.)
+
   TokenSequence tokens;
 
-  Text(ActionID const id_, std::string const & name_);
+  Text(ActionID const id_, std::string const & name_, bool const eval);
 };
 
 struct Completion : public Action {
   static constexpr ActionKind Kind = ActionKind::Completion;
 
   float const threshold; //< Probability threshold for pruning
-  unsigned const length; // Maximum length of the completion
-  unsigned const beams;  // Number of concurrent exploration beams
-  unsigned const ahead;  // Look ahead parameter for beam search
-  unsigned const width;  // Maximum number of beams to select
+  unsigned const length; //< Maximum length of the completion
+  unsigned const beams;  //< Number of concurrent exploration beams
+  unsigned const ahead;  //< Look ahead parameter for beam search
+  unsigned const width;  //< Maximum number of beams to select
+  
+  std::optional<float> const repetition; //< Penalize repeting pattern
+  std::optional<float> const diversity;  //< Encourage diversity across beams
 
   Vocab vocab;
   TokenSequence stop;
 
-  Completion(ActionID const id_, std::string const & name_, float threshold_, unsigned length_, unsigned beams_, unsigned ahead_, unsigned width_);
+  Completion(
+    ActionID const id_, std::string const & name_,
+    float threshold_, unsigned length_,
+    unsigned beams_, unsigned ahead_, unsigned width_,
+    std::optional<float> repetition_,
+    std::optional<float> diversity_
+  );
 };
 
 struct Choice : public Action {

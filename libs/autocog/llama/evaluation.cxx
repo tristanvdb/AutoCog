@@ -109,13 +109,12 @@ void Evaluation::enqueue(
 
 std::pair<Model &, ContextID> Evaluation::restore(PathState & state) const {
   Model & model = Manager::get_model(this->model);
-  if (state.context) {
-    throw std::runtime_error("Context saving is not implemented yet, this should not happen");
-  } else {
-    // for now we always use context 0 and reset it before evaluation any action
-    model.set_tokens(state.tokens, 0);
-    state.context = 0;
+
+  if (!state.context) {
+    state.context = 0; // TODO look at existing context for the largest prefix? 
   }
+  model.set_tokens(state.tokens, state.context.value());
+
   return std::pair<Model &, ContextID>(model, state.context.value());
 }
 

@@ -11,7 +11,7 @@
 #  include <iostream>
 #endif
 
-#define DEBUG_Evaluation_evaluate_text VERBOSE && 1
+#define DEBUG_Evaluation_evaluate_text VERBOSE && 0
 
 namespace autocog { namespace llama {
 
@@ -27,7 +27,7 @@ unsigned Evaluation::evaluate_text(PathState & state) {
 
   unsigned num_token_eval = 0;
   ProbaSequence logprobs(action.tokens.size(), 0.);
-  if (this->config.evaluate_text) {
+  if (action.evaluate) {
     auto [model,ctx] = this->restore(state);
 #if DEBUG_Evaluation_evaluate_text
     std::cerr << " - Model   #" << model.id << std::endl;

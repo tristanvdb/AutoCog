@@ -11,8 +11,6 @@ from .vocab import Vocab, Token
 class Action(BaseModel):
     uid: str
     successors: List[str] = []
-    width: Optional[int] = None
-    threshold: Optional[float] = None
 
     def __init__(self, uid:Optional[str]=None, **kwargs):
         if uid is None:
@@ -41,6 +39,7 @@ class Action(BaseModel):
 class Text(Action):
     text: str
     tokens: List[Token] = []
+    evaluate: Optional[bool] = None
 
     def __init__(self, uid:str, text:str, successors: List[str]=[]):
         super().__init__(uid=uid, successors=successors, text=text)
@@ -63,8 +62,11 @@ class Text(Action):
 class Choose(Action):
     choices: List[Tuple[str,List[Token]]]
 
-    def __init__(self, uid:str, choices:List[str], successors: List[str]=[], width:Optional[int]=None):
-        super().__init__(uid=uid, successors=successors, choices=[ ( c, [] ) for c in choices ], width=None if width == 0 else width)
+    width: Optional[int] = None
+    threshold: Optional[float] = None
+
+    def __init__(self, uid:str, choices:List[str], successors: List[str]=[], width:Optional[int]=None, threshold: Optional[float]=None):
+        super().__init__(uid=uid, successors=successors, choices=[ ( c, [] ) for c in choices ], width=None if width == 0 else width, threshold=threshold)
 
     def prepare(self, lm):
         for choice in self.choices:
@@ -85,10 +87,11 @@ class Choose(Action):
 class Complete(Action):
     length: int = 1
     stop:   str = ''
+
     threshold: Optional[float]
-    beams:  Optional[int]
-    ahead:  Optional[int]
-    width:  Optional[int]
+    beams:     Optional[int]
+    ahead:     Optional[int]
+    width:     Optional[int]
 
     seeds:  Optional[List[str]]
     vocab:  Vocab
@@ -116,3 +119,4 @@ class Complete(Action):
 
     def toGraphVizLabel(self):
         return f"length={self.length}\nvocab={self.vocab.toGraphVizLabel() if self.vocab is not None else ''}\nstop={self.stop}\n"
+

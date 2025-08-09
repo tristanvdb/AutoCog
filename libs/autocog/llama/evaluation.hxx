@@ -27,7 +27,7 @@ struct PathState {
 };
 
 struct EvaluationConfig {
-  bool evaluate_text{false};
+  bool evaluate_text{true};
 };
 
 class Evaluation {

@@ -1,11 +1,11 @@
 format sentence {
-    is text<10, beams=5, width=3>;
-    annotate f"a well formed sentence in english";
+    is text<10, beams=3, width=3>;
+    annotate f"Single well formed sentence in correct english";
 }
 
 format boolean {
-    is enum("true","false");
-    annotate f"a boolean";
+    is enum("True","False");
+    annotate f"A boolean value to specify True or False";
 }
 
 prompt main {

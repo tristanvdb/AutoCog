@@ -47,6 +47,10 @@ PYBIND11_MODULE(llama, module) {
     pybind11::arg("n_ctx") = 4096
   );
     
+  module.def("vocab_size", [](ModelID model) {
+    return Manager::get_model(model).vocab_size();
+  }, "Get vocabulary size");
+
   module.def("tokenize",
     [](ModelID model, const std::string & text, bool add_bos, bool special) {
       auto tokens = Manager::get_model(model).tokenize(text, add_bos, special);
