@@ -82,7 +82,10 @@ class Automaton(Cog):
             fta = sta.instantiate(syntax=self.arch.syntax, frame=frame, branches=__page.branches[ptag], inputs=inputs)
             __page.ftas[ptag].append(fta)
             fta.simplify()
-            ftt = fta.greedy(lm=self.arch.lm)
+            if hasattr(self.arch.lm, 'evaluate'):
+                ftt = fta.execute(lm=self.arch.lm)
+            else:
+                ftt = fta.greedy(lm=self.arch.lm)
             __page.ftts[ptag].append(ftt)
             next = sta.parse(lm=self.arch.lm, syntax=self.arch.syntax, stacks=__page.stacks, ftt=ftt)
             if isinstance(next, Return):
@@ -106,3 +109,4 @@ class Automaton(Cog):
         for (tag,prompt) in self.prompts:
             dotstr += prompt.toGraphViz_abstract()
         return dotstr
+

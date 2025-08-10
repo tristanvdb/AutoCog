@@ -141,6 +141,9 @@ class FiniteThoughtAutomaton(BaseModel):
         assert root.finalized
         return root
 
+    def execute(self, lm):
+    	raise NotImplementedError()
+
     def toGraphViz(self, label_with_uid:bool=False):
         dotstr = ""
         for act in self.actions.values():

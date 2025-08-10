@@ -1,14 +1,14 @@
 
 from ..sta.syntax import Syntax, syntax_kwargs as SyntaxKwargs
 from ..lm import RLM
-from ..lm import Llama
+from ..lm import LlamaCXX
 
 def loader(models_path=None, syntax=None, n_ctx=4096, **syntax_kwargs):
     if models_path is None or models_path == '':
         models_path = ''
         lm = RLM()
     elif models_path.endswith('.gguf'):
-        lm = Llama(model_path=models_path, n_ctx=n_ctx)
+        lm = LlamaCXX(model_path=models_path, n_ctx=n_ctx)
     else:
         raise Exception(f'Unrecognized model file extension: {models_path.split(".")[-1]}')
 

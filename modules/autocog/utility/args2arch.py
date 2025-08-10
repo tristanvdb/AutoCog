@@ -26,7 +26,7 @@ def argparser():
 
     parser.add_argument('--command',  help="""Command to be executed by the architecture as a dictionary. `__tag` identify the cog while `__entry` identify the entry point in this cog (defaults to `main`). All other field will be forwarded as keyworded args. Example: `{ "__tag" : "writer", "__entry" : "main", **kwarg }` (inlined JSON or path to a file). Any command argument can be a list of dictionary.""", action='append')
 
-    parser.add_argument('--libdir',   help="""Directory where results are stored.""", action='append', default=[])
+    parser.add_argument('--libdir',   help="""Directory where libraries are stored.""", action='append', default=[])
 
     parser.add_argument('--output',   help="""Directory where results are stored.""", default=os.getcwd())
     parser.add_argument('--prefix',   help="""String to identify this instance of AutoCog""", default='autocog')

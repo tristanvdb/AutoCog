@@ -15,7 +15,7 @@ from .utility import PromptPipe
     
 class Orchestrator(BaseModel):
     pages: List[Page]
-    cogs: Dict[str,Cog] = {}
+    cogs: Dict[str,"Cog"] = {}
 
     def __init__(self):
         super().__init__(pages=[ Page.root() ])
@@ -55,3 +55,4 @@ class Async(Orchestrator):
             gather = asyncio.gather
 
         return await gather(*super().coroutines(jobs, parent))
+

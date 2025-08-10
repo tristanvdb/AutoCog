@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+bdir=$(realpath $(dirname "${BASH_SOURCE[0]}")/../../..)
+
 model=$1
 [ -z $model ] && model=none
 
@@ -25,6 +27,6 @@ for cog in $COGS; do
         kind=$(basename $model | cut -d. -f1)
         quant=$(basename $model | cut -d. -f2)
     fi
-    python3 -m autocog --model "$model_path" --prefix $tag-$kind-$quant --cog $cog --command data.json \
+    python3 -m autocog --model "$model_path" --prefix $tag-$kind-$quant --cog $cog --command $bdir/tests/cli/mcq/data.json --libdir $bdir/share/library \
                        --syntax '{ "prompt_with_format" : false, "prompt_with_index" : false, "prompt_indent" : "  " }'
 done

@@ -8,7 +8,7 @@ except:
     llama_cpp = "Package `llama_cpp` needed for LLaMa wrapper (pip install git+https://github.com/tristanvdb/llama-cpp-python@choice-dev)"
     print(f"Warning: {llama_cpp}")
 
-class Llama(LM):
+class LlamaPY(LM):
     model: Any
 
     def __init__(self, model_path:str, logits_all=True, verbose=False, n_ctx=2048, **kwargs):
@@ -51,3 +51,4 @@ class Llama(LM):
     def impl_greedy(self, prompt: Union[str,List[int]]) -> List[float]:
         output = self.model.create_completion(prompt, max_tokens=1, logprobs=-1, full_logprobs=True)
         return output['choices'][0]['logprobs'][0]
+

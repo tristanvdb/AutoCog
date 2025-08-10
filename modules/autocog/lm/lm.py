@@ -50,3 +50,4 @@ class LM(BaseModel):
         params = f"retries={self.retries}, delta={self.delta}s, growth={self.growth}x"
         errors = '\n - '.join(list(set(map(str,errors))))
         raise Exception(f"Persisting exception when calling {self.__class__.__name__}.greedy()\n  => {params}\n - {errors}")
+    	

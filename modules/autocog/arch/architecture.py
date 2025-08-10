@@ -109,3 +109,4 @@ class CognitiveArchitecture(BaseModel):
                 dotstr += cog.toGraphViz() + "\n"
                 dotstr += "}\n"
         return dotstr
+
