@@ -9,6 +9,12 @@
 namespace autocog {
 namespace llama {
 
+void quiet_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
+    if (level == GGML_LOG_LEVEL_ERROR) {
+        fprintf(stderr, "%s", text);
+    }
+}
+
 Manager & Manager::instance() {
   static Manager __instance;
   return __instance;
@@ -24,6 +30,9 @@ void Manager::cleanup() {
 }
 
 void Manager::initialize() {
+#if VERBOSE == 0
+  llama_log_set(quiet_log_callback, nullptr);
+#endif
   llama_backend_init();
 
   auto & manager = instance();

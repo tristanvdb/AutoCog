@@ -10,7 +10,7 @@
 #endif
 
 #define DEBUG_Evaluation_enqueue VERBOSE && 0
-#define DEBUG_Evaluation_advance VERBOSE && 1
+#define DEBUG_Evaluation_advance VERBOSE && 0
 
 namespace autocog { namespace llama {
 
@@ -45,11 +45,10 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
   unsigned num_token_eval = 0;
   while (!queue.empty() && (max_token_eval == std::nullopt || num_token_eval < max_token_eval)) {
     PathState & state = queue.front();
+#if VERBOSE
+    std::cerr << "Evaluation::advance [ Q=" << queue.size() << ", A=" << num_action_eval << ", T=" << num_token_eval << " ]" << std::endl;
+#endif
 #if DEBUG_Evaluation_advance
-    std::cerr << "Evaluation::advance" << std::endl;
-    std::cerr << "  queue.size()         = " << queue.size() << std::endl;
-    std::cerr << "  num_action_eval      = " << num_action_eval << std::endl;
-    std::cerr << "  num_token_eval       = " << num_token_eval << std::endl;
     std::cerr << "  state.action         = " << state.action << std::endl;
     std::cerr << "  state.tokens.size()  = " << state.tokens.size() << std::endl;
     std::cerr << "  state.proba()        = " << state.proba() << std::endl;

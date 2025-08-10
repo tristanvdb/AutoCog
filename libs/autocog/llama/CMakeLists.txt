@@ -39,7 +39,9 @@ target_compile_features(autocog_llama PRIVATE cxx_std_17)
 #    $<$<CXX_COMPILER_ID:GNU,Clang>:-O3 -march=native -g>
 #    $<$<CXX_COMPILER_ID:MSVC>:/O2>
 #)
-target_compile_options(autocog_llama PRIVATE -O0 -g3 -ggdb -fno-omit-frame-pointer -DVERBOSE=1)
+#target_compile_options(autocog_llama PRIVATE -O0 -g3 -ggdb -fno-omit-frame-pointer -DVERBOSE=1)
+#target_compile_options(autocog_llama PRIVATE -O3 -DVERBOSE=1)
+target_compile_options(autocog_llama PRIVATE -O3)
 
 target_compile_options(autocog_llama PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>

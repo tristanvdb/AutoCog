@@ -11,7 +11,8 @@ RUN apt-get update && \
         python3 \
         python3-pip \
         python3-dev \
-        python3-venv && \
+        python3-venv \
+        graphviz && \
     rm -rf /var/lib/apt/lists/*
 
 # LLama.cpp
@@ -29,7 +30,8 @@ ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 RUN python3 -m venv /opt
 ENV PATH="/opt/bin:$PATH"
 ENV PYTHONPATH="/opt/bin:$PATH"
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip && \
+    pip install graphviz 
 
 # Autocog
 

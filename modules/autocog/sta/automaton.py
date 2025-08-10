@@ -538,14 +538,8 @@ class Automaton(BaseModel):
         fta.connect('next.field', 'next.choice')
         return fta
 
-    def parse(self, lm:LM, ftt:FTT, syntax: Syntax, stacks: Any):
+    def parse(self, lm:LM, text:str, syntax: Syntax, stacks: Any):
         result = None
-
-        results = ftt.results(lm=lm, normalized=True)
-        # for r,res in enumerate(results):
-        #     lines = res[0].split('\nstart:\n')[2].split('\n')
-        #     print(f"[{r}]\n>  " + "\n>  ".join(lines) + f"\n[/{r}]")
-        text = results[-1][0]
         lines = text.split('\nstart:\n')[2].split('\n')
         # print("[Lines]\n>  " + "\n>  ".join(lines) + "\n[/Lines]")
 

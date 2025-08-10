@@ -83,11 +83,18 @@ class Automaton(Cog):
             __page.ftas[ptag].append(fta)
             fta.simplify()
             if hasattr(self.arch.lm, 'evaluate'):
-                ftt = fta.execute(lm=self.arch.lm)
+                (ftt, paths) = self.arch.lm.evaluate(fta)
+                (text, proba) = paths[0]
+                __page.ftts[ptag].append(ftt)
             else:
                 ftt = fta.greedy(lm=self.arch.lm)
-            __page.ftts[ptag].append(ftt)
-            next = sta.parse(lm=self.arch.lm, syntax=self.arch.syntax, stacks=__page.stacks, ftt=ftt)
+                __page.ftts[ptag].append(ftt)
+                results = ftt.results(lm=lm, normalized=True)
+                # for r,res in enumerate(results):
+                #     lines = res[0].split('\nstart:\n')[2].split('\n')
+                #     print(f"[{r}]\n>  " + "\n>  ".join(lines) + f"\n[/{r}]")
+                text = results[-1][0]
+            next = sta.parse(lm=self.arch.lm, syntax=self.arch.syntax, stacks=__page.stacks, text=text)
             if isinstance(next, Return):
                 if len(next.fields) == 1 and '_' in next.fields:
                     return frame.read(next.fields['_'])

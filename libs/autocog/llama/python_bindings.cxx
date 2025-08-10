@@ -9,8 +9,12 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 
-#include <iostream>
 #include <optional>
+
+#if VERBOSE
+#  include <iostream>
+#endif
+#define DEBUG_pybind_evaluate VERBOSE && 0
 
 namespace autocog {
 namespace llama {
@@ -80,19 +84,33 @@ PYBIND11_MODULE(llama, module) {
     
   module.def("evaluate",
     [](ModelID model, pybind11::dict const & fta_dict) {
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): START" << std::endl;
+#endif
       FTA fta = convert_pydict_to_fta(model, fta_dict);
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): FTA" << std::endl;
+#endif
       EvalID eval = Manager::add_eval(model, fta);
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): EVAL" << std::endl;
+#endif
       Manager::get_eval(eval).advance(std::nullopt);
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): FTT" << std::endl;
+#endif
       FTT const & ftt = Manager::get_eval(eval).get();
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): RES" << std::endl;
+#endif
       pybind11::dict res = convert_ftt_to_pydict(model, ftt);
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): CLEAN" << std::endl;
+#endif
       Manager::rm_eval(eval);
+#if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): DONE" << std::endl;
+#endif
       return res;
     },
     "Evaluate a FTA using a model and return the FTT."
