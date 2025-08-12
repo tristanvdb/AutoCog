@@ -3,6 +3,7 @@
 
 #include "autocog/llama/types.hxx"
 #include "autocog/llama/model.hxx"
+#include "autocog/llama/evaluation.hxx"
 
 #include <unordered_map>
 #include <string>

@@ -4,3 +4,5 @@
 /Pipfile
 /modules/autocog/*.so
 /build/
+ftt.svg
+.venv/

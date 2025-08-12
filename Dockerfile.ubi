@@ -1,0 +1,49 @@
+FROM registry.access.redhat.com/ubi9/ubi:latest
+
+ENV PYTHONUNBUFFERED=1
+
+# RUN rm -f /etc/yum.repos.d/*.repo && \
+#     dnf clean all
+
+# RUN dnf config-manager --disable \* && \
+#     dnf config-manager --enable ubi-9-appstream-rpms && \
+#     dnf config-manager --enable ubi-9-baseos-rpms
+
+RUN cat /etc/yum.repos.d/*.repo && \
+    dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
+        gcc gcc-c++ \
+        cmake \
+        pkgconf-pkg-config \
+        python3 \
+        python3-pip \
+        python3-devel \
+        graphviz && \
+    dnf clean all
+
+# LLama.cpp
+
+COPY vendors/llama /tmp/llama_cpp
+
+RUN cd /tmp/llama_cpp && \
+      cmake -DLLAMA_BUILD_COMMON=OFF -B build && \
+      make -C build -j$(nproc) install
+
+ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
+
+# Venv
+
+RUN python3 -m venv /opt
+ENV PATH="/opt/bin:$PATH"
+ENV PYTHONPATH="/opt/bin:$PATH"
+RUN pip install --upgrade pip && \
+    pip install graphviz
+
+# Autocog
+
+COPY . /workspace/autocog
+
+RUN rm -rf /workspace/autocog/vendors && \
+    pip install /workspace/autocog && \
+    rm -rf /workspace/autocog
+
+WORKDIR /workspace
