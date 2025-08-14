@@ -39,16 +39,18 @@ class Syntax(BaseModel):
     header_mechanic: str = "You are using the following syntax:"
     header_formats:  str = "It includes the folowing named formats:"
     format_listing:  str = "- "
-    prompt_indent:   str = "> "
+    prompt_indent:   str = "\t"
 
     system_msg:  str = 'You are an AI expert interacting with your environment using a set of interactive questionnaires. A newline ends each statement (or prompt).'
     header_pre:  str = ''
     header_mid:  str = '\n'
     header_post: str = '\n'
 
-    prompt_with_format: bool = True
-    prompt_with_index:  bool = True
+    prompt_with_format: bool = False
+    prompt_with_index:  bool = False
     prompt_zero_index:  bool = False
+
+    detailed_formats:  bool = False
     
     @staticmethod
     def Llama2Chat(**kwargs):
@@ -70,6 +72,8 @@ class Syntax(BaseModel):
             mech=self.header_mechanic,
             indent=self.prompt_indent,
             fmt=self.header_formats,
-            lst=self.format_listing
+            lst=self.format_listing,
+            detailed_formats=self.detailed_formats
         )
         return self.header_pre + self.system_msg + self.header_mid + header + self.header_post + 'start:\n'
+

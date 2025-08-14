@@ -7,6 +7,8 @@ from autocog.sta.runtime import Frame
 
 from autocog.fta.automaton import FiniteThoughtAutomaton as FTA
 
+from autocog.utility.models import loader
+
 import autocog.llama
 from autocog.llama import tokenize, detokenize
 
@@ -20,8 +22,10 @@ def main(argv):
       open(sta_file, 'r').read()
     )[1][prompt_name]
 
+    (model, syntax) = loader(models_path=model_path, n_ctx=4096, use_cxx=True)
+
     fta = sta.instantiate(
-      syntax=Syntax(),
+      syntax=syntax,
       frame=Frame(
         state={ st.label() : None for st in sta.concretes.values() if st.abstract.field is not None },
         data=json.loads(json_data)
@@ -29,8 +33,6 @@ def main(argv):
       branches={},
       inputs=None
     ).simplify()
-
-    model = autocog.lm.LlamaCXX(model_path, 4096)
 
     (ftt, paths) = model.evaluate(fta)
 
@@ -95,6 +97,7 @@ def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='p
         
         # Extract node properties
         probability = node["probability"]
+        locproba = node["locproba"]
         text = node.get("text", "")
         is_pruned = node["pruned"]
         
@@ -105,6 +108,13 @@ def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='p
             prob_str = f"{probability:.4f}"
         else:
             prob_str = f"{probability:.3f}"
+
+        if locproba < 0.001:
+            locprob_str = f"{locproba:.2e}"
+        elif locproba < 0.01:
+            locprob_str = f"{locproba:.4f}"
+        else:
+            locprob_str = f"{locproba:.3f}"
         
         # Determine colors
         if is_pruned:
@@ -124,7 +134,7 @@ def ftt_to_graphviz_detailed(ftt, output_filename='ftt_tree_detailed', format='p
         display_text = format_text_for_display(text, max_text_length)
         
         label = f'''<<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" COLOR="{border_color}">
-<TR><TD BGCOLOR="{header_color}" ALIGN="CENTER" COLSPAN="2"><B>P = {prob_str}</B></TD></TR>
+<TR><TD BGCOLOR="{header_color}" ALIGN="CENTER" COLSPAN="2"><B>P = {prob_str}</B>(p = {locprob_str})</TD></TR>
 <TR><TD COLSPAN="2" ALIGN="LEFT" BGCOLOR="white"><FONT FACE="monospace">{display_text}</FONT></TD></TR>
 </TABLE>>'''
         

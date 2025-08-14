@@ -12,11 +12,12 @@ namespace llama {
 
 class FTT {
   public:
-    ActionID const action;
-    TokenSequence const tokens;
-    ProbaSequence const logprobs;
-    float const logprob;
-    unsigned const length;
+    ActionID const action;        //< Action evaluated for this node
+    TokenSequence const tokens;   //< Tokens generated at this node
+    ProbaSequence const logprobs; //< Logprob for each token
+
+    float const logprob;          //< Cumulative logprob from the root
+    unsigned const length;        //< Total length from the root
 
     bool pruned{false};
   private:

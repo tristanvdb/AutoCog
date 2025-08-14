@@ -41,9 +41,14 @@ struct BeamState {
   }
 };
 
-static float calculate_repetition_penalty(TokenSequence const & tokens, float & penalty, float const penalty_weight) {
-  size_t const min_length = 3;
-  size_t const max_window_size = 256;
+static float calculate_repetition_penalty(
+  TokenSequence const & tokens, float & penalty,
+  float const penalty_weight,
+  size_t const min_length = 3,
+  size_t const max_window_size = 256,
+  float const length_weight = 1.0,
+  float const recency_weight = 1.0
+) {
 
   size_t window_size = std::min(tokens.size(), max_window_size);
   for (size_t i = min_length; i < tokens.size(); ++i) {
@@ -71,9 +76,9 @@ static float calculate_repetition_penalty(TokenSequence const & tokens, float & 
       // Stronger penalty for:
       // - Longer repetitions
       // - Recent repetitions (smaller distance)
-      float length_factor = std::log(best_length + 1);
-      float recency_factor = 1.0f / std::log(best_distance + 2);
-      penalty *= (1.0f + penalty_weight * length_factor * recency_factor);
+      float length_factor  = std::log(1. + length_weight  * best_length  );
+      float recency_factor = std::log(1. + recency_weight * best_distance);
+      penalty *= (1.0f + penalty_weight * length_factor / recency_factor);
     }
   }
   return penalty;
@@ -151,7 +156,10 @@ static unsigned expand_beam(
       TokenSequence beam_tokens;
       beam_tokens.insert(beam_tokens.end(), base_tokens.begin(), base_tokens.end());
       beam_tokens.insert(beam_tokens.end(), new_beam.tokens.begin(), new_beam.tokens.end());
-      calculate_repetition_penalty(beam_tokens, new_beam.repetition_penalty, action.repetition.value());
+      calculate_repetition_penalty(
+          beam_tokens, new_beam.repetition_penalty,
+          action.repetition.value()
+      );
     }
 
     new_beam.stopped = (

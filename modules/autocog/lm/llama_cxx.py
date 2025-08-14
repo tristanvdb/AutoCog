@@ -13,6 +13,24 @@ from ..llama import detokenize as autocog_llama_detokenize
 from ..llama import vocab_size as autocog_llama_vocab_size
 from ..llama import evaluate as autocog_llama_evaluate
 
+fta_defaults = {
+  "Text" : {
+    "evaluate" : True
+  },
+  "Choose" : {
+    "threshold" : 0.4,
+    "width" : 2
+  },
+  "Complete" : {
+    "threshold" : 0.3,
+    "width" : 2,
+    "beams" : 3,
+    "ahead" : 1,
+    "diversity" : 1.,
+    "repetition" : .5
+  }
+}
+
 def fta_to_cxx(model, fta, defaults, safe_mask, char_mask):
     actions = []
     for act in fta.actions.values():
@@ -59,6 +77,7 @@ def cxx_to_ftt(model, ftt):
       "length" : ftt["length"],
       "logprobs" : ftt["logprobs"],
       "probability" : math.exp(-ftt["logprob"]/ftt["length"]),
+      "locproba" : math.exp(-sum(ftt["logprobs"])/len(ftt["logprobs"])),
       "children" : [ cxx_to_ftt(model, child) for child in ftt["children"] ],
       "pruned" : ftt["pruned"],
     }
@@ -141,24 +160,6 @@ def extract_paths_from_ftt(ftt, current_path=""):
             child_paths = extract_paths_from_ftt(child, new_path)
             paths.extend(child_paths)
     return sorted(paths, key=lambda path: path[1], reverse=True)
-
-fta_defaults = {
-  "Text" : {
-    "evaluate" : True
-  },
-  "Choose" : {
-    "threshold" : 0e-1,
-    "width" : 2
-  },
-  "Complete" : {
-    "threshold" : 0e-1,
-    "width" : 2,
-    "beams" : 3,
-    "ahead" : 1,
-    "diversity" : 1.,
-    "repetition" : .2
-  }
-}
 
 class LlamaCXX(LM):
     model: Any

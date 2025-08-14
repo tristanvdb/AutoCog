@@ -97,21 +97,31 @@ class Prompt(Object):
         mechs = '\n'.join(mechs)
         return mech + '\n```\n' + mechs + '\n```'
 
-    def formats(self, fmt, lst):
+    def formats(self, fmt, lst, detailed_formats):
         # TODO add enum, repeat, select, and text description as needed
         # TODO next if len(self.flows) > 0
         formats = [ fld.format for fld in self.fields if fld.format is not None and fld.format.refname is not None ]
         if len(formats) > 0:
             fmtstrs = []
             for f in formats:
-                fmtstrs.append(f"{lst}{f.label()}: {f.str()}")
-                fmtstrs += [ f"  {lst}{desc}" for desc in f.desc ]
+                if detailed_formats:
+                    fmtstrs.append(f"{lst}{f.label()}: {f.str()}")
+                    fmtstrs += [ f"  {lst}{desc}" for desc in f.desc ]
+                else:
+                    fmtstr = f"{lst}{f.label()}: "
+                    if len(f.desc) > 1:
+                        fmtstrs.append(fmtstr)
+                        fmtstrs += [ f"  {lst}{desc}" for desc in f.desc ]
+                    elif len(f.desc) == 1:
+                        fmtstrs.append(f"{fmtstr}{f.desc[0]}")
+                    else:
+                        fmtstrs.append(fmtstr)
             return '\n' + fmt + '\n' + '\n'.join(fmtstrs)
         else:
             return ''
 
-    def header(self, mech:str, indent:str, fmt:str, lst:str):
-        return ' '.join(self.desc) + '\n' + self.mechanics(mech=mech, indent=indent) + self.formats(fmt=fmt, lst=lst)
+    def header(self, mech:str, indent:str, fmt:str, lst:str, detailed_formats:bool):
+        return ' '.join(self.desc) + '\n' + self.mechanics(mech=mech, indent=indent) + self.formats(fmt=fmt, lst=lst, detailed_formats=detailed_formats)
 
 class Program(BaseModel):
     desc:    Optional[str]    = None
