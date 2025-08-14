@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi:latest
+FROM docker.io/nvidia/cuda:13.0.0-devel-ubi9
 
 ENV PYTHONUNBUFFERED=1
 
@@ -17,7 +17,7 @@ RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
 COPY vendors/llama /tmp/llama_cpp
 
 RUN cd /tmp/llama_cpp && \
-      cmake -DLLAMA_BUILD_COMMON=OFF -B build && \
+      cmake -DLLAMA_BUILD_COMMON=OFF -DLLAMA_CUDA=ON -B build && \
       make -C build -j$(nproc) install
 
 ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"

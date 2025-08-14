@@ -6,6 +6,10 @@
 #include <cstdlib>
 #include <stdexcept>
 
+#if VERBOSE
+#  include <iostream>
+#endif
+
 namespace autocog {
 namespace llama {
 
@@ -14,6 +18,8 @@ void quiet_log_callback(enum ggml_log_level level, const char * text, void * use
         fprintf(stderr, "%s", text);
     }
 }
+
+bool Manager::initialized{false};
 
 Manager & Manager::instance() {
   static Manager __instance;
@@ -25,11 +31,21 @@ Manager::~Manager() {
 }
 
 void Manager::cleanup() {
-  models.clear();
-  llama_backend_free();
+#if VERBOSE
+  std::cerr << "Manager::cleanup()" << std::endl;
+#endif
+  if (Manager::initialized) {
+    evaluations.clear();
+    models.clear();
+    llama_backend_free();
+    Manager::initialized = false;
+  }
 }
 
 void Manager::initialize() {
+#if VERBOSE
+  std::cerr << "Manager::initialize()" << std::endl;
+#endif
 #if VERBOSE == 0
   llama_log_set(quiet_log_callback, nullptr);
 #endif
@@ -41,6 +57,7 @@ void Manager::initialize() {
   std::atexit([]() { 
     instance().cleanup(); 
   });
+  Manager::initialized = true;
 }
 
 ModelID Manager::add_model(std::string const & path, int n_ctx) {

@@ -49,10 +49,16 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
 }
 
 Model::~Model() {
-  for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
-  contexts.clear();
-
-  if (this->model) llama_model_free(model);
+#if VERBOSE
+  std::cerr << "Model::~Model(" << this->id << ")" << std::endl;
+#endif
+  if (this->id == 0) {
+    // NOP
+  } else {
+    for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
+    contexts.clear();
+    if (this->model) llama_model_free(model);
+  }
 }
 
 void Model::check_context_id(ContextID const id) const {

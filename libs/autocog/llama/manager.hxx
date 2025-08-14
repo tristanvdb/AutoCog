@@ -15,6 +15,8 @@ class Evaluation;
 class FTA;
 
 class Manager {
+  public:
+    static bool initialized;
   private:
     std::vector<Model> models;
     

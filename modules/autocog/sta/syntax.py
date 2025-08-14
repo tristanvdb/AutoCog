@@ -41,7 +41,7 @@ class Syntax(BaseModel):
     format_listing:  str = "- "
     prompt_indent:   str = "> "
 
-    system_msg:  str = 'You are an AI expert interacting with your environment using a set of interactive questionnaires.'
+    system_msg:  str = 'You are an AI expert interacting with your environment using a set of interactive questionnaires. A newline ends each statement (or prompt).'
     header_pre:  str = ''
     header_mid:  str = '\n'
     header_post: str = '\n'
