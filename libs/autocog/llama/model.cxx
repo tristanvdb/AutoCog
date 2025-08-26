@@ -55,7 +55,7 @@ Model::~Model() {
   if (this->id == 0) {
     // NOP
   } else {
-    for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
+    // for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
     contexts.clear();
     if (this->model) llama_model_free(model);
   }
