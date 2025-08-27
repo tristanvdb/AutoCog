@@ -194,3 +194,4 @@ class Dataflow(Channel):
 
 class Input(Channel):
     src: SrcPath
+
