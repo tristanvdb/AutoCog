@@ -637,17 +637,180 @@ void Parser::parse<IrTag::Struct>(ParserState & state, IrData<IrTag::Struct> & d
 
 template <>
 void Parser::parse<IrTag::Channel>(ParserState & state, IrData<IrTag::Channel> & data) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Channel>()"); // TODO
+  // Channel syntax: channel { to .target from source; to .target call {...}; ... }
+  
+  if (!state.expect(TokenType::LBRACE, " when starting to parse channel body.")) return;
+  
+  while (!state.error && !state.match(TokenType::RBRACE)) {
+    // Each link starts with "to"
+    if (!state.expect(TokenType::TO, " when starting channel link.")) return;
+    
+    // Create a new link
+    data.links.emplace_back();
+    auto & link = data.links.back().data;
+    
+    // Parse target path
+    parse(state, link.target.data);
+    
+    // Check what follows: "from" for path or "call" for external call
+    if (state.match(TokenType::FROM)) {
+      // Source is a path
+      link.source.emplace<0>();  // Path variant
+      parse(state, std::get<0>(link.source).data);
+      
+    } else if (state.match(TokenType::CALL)) {
+      // Source is a call
+      link.source.emplace<1>();  // Call variant
+      auto & call = std::get<1>(link.source).data;
+      
+      if (!state.expect(TokenType::LBRACE, " to start call block.")) return;
+      
+      // Parse call components
+      while (!state.error && !state.match(TokenType::RBRACE)) {
+        if (state.match(TokenType::EXTERN)) {
+          // extern identifier;
+          if (!state.expect(TokenType::IDENTIFIER, " for extern name.")) return;
+          call.extcog.data.name = state.previous.text;
+          if (!state.expect(TokenType::SEMICOLON, " after extern declaration.")) return;
+          
+        } else if (state.match(TokenType::ENTRY)) {
+          // entry identifier;
+          if (!state.expect(TokenType::IDENTIFIER, " for entry name.")) return;
+          call.entry.data.name = state.previous.text;
+          if (!state.expect(TokenType::SEMICOLON, " after entry declaration.")) return;
+          
+        } else if (state.match(TokenType::KWARG)) {
+          // kwarg name from/map source;
+          call.kwargs.emplace_back();
+          auto & kwarg = call.kwargs.back().data;
+          
+          if (!state.expect(TokenType::IDENTIFIER, " for kwarg name.")) return;
+          kwarg.name.data.name = state.previous.text;
+          
+          // Check for "from" or "map"
+          if (state.match(TokenType::FROM)) {
+            kwarg.mapped = false;
+          } else if (state.match(TokenType::MAP)) {
+            kwarg.mapped = true;
+          } else {
+            state.emit_error("Expected 'from' or 'map' after kwarg name.");
+            return;
+          }
+          
+          parse(state, kwarg.source.data);
+          if (!state.expect(TokenType::SEMICOLON, " after kwarg declaration.")) return;
+          
+        } else if (state.match(TokenType::BIND)) {
+          if (!state.expect(TokenType::IDENTIFIER, " for bind alias.")) return;
+          auto & bind_path = call.binds[state.previous.text].data;
+          bind_path.input = false;
+          bind_path.prompt = std::nullopt;
+
+          if (!state.expect(TokenType::FROM, " for bind source.")) return;
+          if (!state.expect(TokenType::IDENTIFIER, " for bind path.")) return;
+
+          bind_path.steps.emplace_back();
+          bind_path.steps.back().data.field.data.name = state.previous.text;
+
+          while (state.match(TokenType::DOT)) {
+            if (!state.expect(TokenType::IDENTIFIER, " in bind path.")) return;
+            bind_path.steps.emplace_back();
+            bind_path.steps.back().data.field.data.name = state.previous.text;
+          }
+          if (!state.expect(TokenType::SEMICOLON, " after bind declaration.")) return;
+          
+        } else {
+          state.emit_error("Unexpected token in call block. Expected 'extern', 'entry', 'kwarg', or 'bind'.");
+          return;
+        }
+      }
+    } else {
+      state.emit_error("Expected 'from' or 'call' after channel target.");
+      return;
+    }
+    
+    if (!state.expect(TokenType::SEMICOLON, " to end channel link.")) return;
+  }
 }
 
 template <>
 void Parser::parse<IrTag::Flow>(ParserState & state, IrData<IrTag::Flow> & data) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Flow>()"); // TODO
+  // Flow syntax:
+  // flow { to prompt_name as "label"; to prompt[index] as "label"; ... }
+  // or single: flow to prompt_name as "label";
+  
+  if (state.match(TokenType::LBRACE)) {
+    // Block form
+    data.single_statement = false;
+    
+    while (!state.error && !state.match(TokenType::RBRACE)) {
+      if (!state.expect(TokenType::TO, " when starting flow edge.")) return;
+      
+      data.edges.emplace_back();
+      auto & edge = data.edges.back().data;
+      
+      // Parse prompt identifier
+      if (!state.expect(TokenType::IDENTIFIER, " for flow target prompt.")) return;
+      edge.prompt.data.name = state.previous.text;
+      
+      // Parse label
+      if (state.match(TokenType::AS)) {
+        if (!state.expect(TokenType::STRING_LITERAL, " for flow edge label.")) return;
+        edge.label.emplace();
+        clean_raw_string(state.previous.text, edge.label.value().data);
+      }
+      
+      if (!state.expect(TokenType::SEMICOLON, " to end flow edge.")) return;
+    }
+  } else {
+    // Single statement form
+    data.single_statement = true;
+    data.edges.emplace_back();
+    auto & edge = data.edges.back().data;
+    
+    // Parse prompt identifier
+    if (!state.expect(TokenType::IDENTIFIER, " for flow target prompt.")) return;
+    edge.prompt.data.name = state.previous.text;
+
+    // Parse label
+    if (state.match(TokenType::AS)) {
+      if (!state.expect(TokenType::STRING_LITERAL, " for flow edge label.")) return;
+      edge.label.emplace();
+      clean_raw_string(state.previous.text, edge.label.value().data);
+    }
+    
+    if (!state.expect(TokenType::SEMICOLON, " to end flow statement.")) return;
+  }
 }
 
 template <>
 void Parser::parse<IrTag::Return>(ParserState & state, IrData<IrTag::Return> & data) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Return>()"); // TODO
+  // Return syntax:
+  // return { as "label"; from .path; from .path as identifier; ... }
+  
+  if (!state.expect(TokenType::LBRACE, " to start return block.")) return;
+  
+  // Parse optional label first
+  if (state.match(TokenType::AS)) {
+    if (!state.expect(TokenType::STRING_LITERAL, " for return label.")) return;
+    data.label.emplace();
+    clean_raw_string(state.previous.text, data.label.value().data);
+    if (!state.expect(TokenType::SEMICOLON, " after return label.")) return;
+  }
+  
+  // Parse field mappings
+  while (!state.error && !state.match(TokenType::RBRACE)) {
+    if (!state.expect(TokenType::FROM, " when parsing return field.")) return;
+    
+    data.fields.emplace_back();
+    auto & field = data.fields.back().data;
+    parse(state, field.field.data);
+    if (state.match(TokenType::AS)) {
+      if (!state.expect(TokenType::IDENTIFIER, " for return field alias.")) return;
+      field.alias.emplace(state.previous.text);
+    }
+    if (!state.expect(TokenType::SEMICOLON, " to end return field.")) return;
+  }
 }
 
 template <>

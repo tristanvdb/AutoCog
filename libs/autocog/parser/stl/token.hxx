@@ -21,6 +21,7 @@ enum class TokenType : int {
     PROMPT,
     CHANNEL,
     FLOW,
+    ENTRY,
     RETURN,
     ANNOTATE,
     TO,

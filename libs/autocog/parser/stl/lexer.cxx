@@ -51,7 +51,7 @@
 
 int autocog::parser::Lexer::lex(void)
 {
-  static const char *REGEX_INITIAL = "(?m)(\\n)|([\\x09\\x0d\\x20]+)|((?:\\Q//\\E)[^\\x0a]*)|((?:\\Q/*\\E)(?:[^\\x2a]|\\*[^/])*(?:\\Q*/\\E))|((?:\\Qdefine\\E))|((?:\\Qargument\\E))|((?:\\Qrecord\\E))|((?:\\Qimport\\E))|((?:\\Qexport\\E))|((?:\\Qprompt\\E))|((?:\\Qchannel\\E))|((?:\\Qflow\\E))|((?:\\Qreturn\\E))|((?:\\Qannotate\\E))|((?:\\Qto\\E))|((?:\\Qfrom\\E))|((?:\\Qcall\\E))|((?:\\Qextern\\E))|((?:\\Qkwarg\\E))|((?:\\Qmap\\E))|((?:\\Qbind\\E))|((?:\\Qas\\E))|((?:\\Qis\\E))|((?:\\Qsearch\\E))|((?:\\Qtext\\E))|((?:\\Qselect\\E))|((?:\\Qrepeat\\E))|((?:\\Qenum\\E))|((?:\\Qtrue\\E))|((?:\\Qfalse\\E))|([A-Z_a-z][0-9A-Z_a-z]*)|([0-9]+)|([0-9]+\\.[0-9]+)|([Ff]\"(?:[^\"\\x5c]|\\\\.)*\")|([Ff]'(?:[^'\\x5c]|\\\\.)*')|(\"(?:[^\"\\x5c]|\\\\.)*\")|('(?:[^'\\x5c]|\\\\.)*')|((?:\\Q<=\\E))|((?:\\Q>=\\E))|((?:\\Q==\\E))|((?:\\Q!=\\E))|((?:\\Q&&\\E))|((?:\\Q||\\E))|((?:\\Q{\\E))|((?:\\Q}\\E))|((?:\\Q[\\E))|((?:\\Q]\\E))|((?:\\Q(\\E))|((?:\\Q)\\E))|((?:\\Q;\\E))|((?:\\Q:\\E))|((?:\\Q,\\E))|((?:\\Q.\\E))|((?:\\Q=\\E))|((?:\\Q+\\E))|((?:\\Q-\\E))|((?:\\Q*\\E))|((?:\\Q/\\E))|((?:\\Q%\\E))|((?:\\Q<\\E))|((?:\\Q>\\E))|((?:\\Q!\\E))|((?:\\Q?\\E))|(.)";
+  static const char *REGEX_INITIAL = "(?m)(\\n)|([\\x09\\x0d\\x20]+)|((?:\\Q//\\E)[^\\x0a]*)|((?:\\Q/*\\E)(?:[^\\x2a]|\\*[^/])*(?:\\Q*/\\E))|((?:\\Qdefine\\E))|((?:\\Qargument\\E))|((?:\\Qrecord\\E))|((?:\\Qimport\\E))|((?:\\Qexport\\E))|((?:\\Qprompt\\E))|((?:\\Qchannel\\E))|((?:\\Qflow\\E))|((?:\\Qentry\\E))|((?:\\Qreturn\\E))|((?:\\Qannotate\\E))|((?:\\Qto\\E))|((?:\\Qfrom\\E))|((?:\\Qcall\\E))|((?:\\Qextern\\E))|((?:\\Qkwarg\\E))|((?:\\Qmap\\E))|((?:\\Qbind\\E))|((?:\\Qas\\E))|((?:\\Qis\\E))|((?:\\Qsearch\\E))|((?:\\Qtext\\E))|((?:\\Qselect\\E))|((?:\\Qrepeat\\E))|((?:\\Qenum\\E))|((?:\\Qtrue\\E))|((?:\\Qfalse\\E))|([A-Z_a-z][0-9A-Z_a-z]*)|([0-9]+)|([0-9]+\\.[0-9]+)|([Ff]\"(?:[^\"\\x5c]|\\\\.)*\")|([Ff]'(?:[^'\\x5c]|\\\\.)*')|(\"(?:[^\"\\x5c]|\\\\.)*\")|('(?:[^'\\x5c]|\\\\.)*')|((?:\\Q<=\\E))|((?:\\Q>=\\E))|((?:\\Q==\\E))|((?:\\Q!=\\E))|((?:\\Q&&\\E))|((?:\\Q||\\E))|((?:\\Q{\\E))|((?:\\Q}\\E))|((?:\\Q[\\E))|((?:\\Q]\\E))|((?:\\Q(\\E))|((?:\\Q)\\E))|((?:\\Q;\\E))|((?:\\Q:\\E))|((?:\\Q,\\E))|((?:\\Q.\\E))|((?:\\Q=\\E))|((?:\\Q+\\E))|((?:\\Q-\\E))|((?:\\Q*\\E))|((?:\\Q/\\E))|((?:\\Q%\\E))|((?:\\Q<\\E))|((?:\\Q>\\E))|((?:\\Q!\\E))|((?:\\Q?\\E))|(.)";
   static const reflex::Pattern PATTERN_INITIAL(REGEX_INITIAL);
   if (!has_matcher())
   {
@@ -64,7 +64,7 @@ int autocog::parser::Lexer::lex(void)
           case 0:
             if (matcher().at_end())
             {
-#line 129 "/workspace/libs/autocog/parser/stl/lexer.l"
+#line 130 "/workspace/libs/autocog/parser/stl/lexer.l"
 { return (int)TokenType::END_OF_FILE; }
 
             }
@@ -128,217 +128,221 @@ int autocog::parser::Lexer::lex(void)
 #line 64 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::FLOW; }
             break;
-          case 13: // rule /workspace/libs/autocog/parser/stl/lexer.l:65: "return" :
+          case 13: // rule /workspace/libs/autocog/parser/stl/lexer.l:65: "entry" :
 #line 65 "/workspace/libs/autocog/parser/stl/lexer.l"
+{ update_location(); return (int)TokenType::ENTRY; }
+            break;
+          case 14: // rule /workspace/libs/autocog/parser/stl/lexer.l:66: "return" :
+#line 66 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::RETURN; }
             break;
-          case 14: // rule /workspace/libs/autocog/parser/stl/lexer.l:66: "annotate" :
-#line 66 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 15: // rule /workspace/libs/autocog/parser/stl/lexer.l:67: "annotate" :
+#line 67 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::ANNOTATE; }
             break;
-          case 15: // rule /workspace/libs/autocog/parser/stl/lexer.l:67: "to" :
-#line 67 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 16: // rule /workspace/libs/autocog/parser/stl/lexer.l:68: "to" :
+#line 68 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::TO; }
             break;
-          case 16: // rule /workspace/libs/autocog/parser/stl/lexer.l:68: "from" :
-#line 68 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 17: // rule /workspace/libs/autocog/parser/stl/lexer.l:69: "from" :
+#line 69 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::FROM; }
             break;
-          case 17: // rule /workspace/libs/autocog/parser/stl/lexer.l:69: "call" :
-#line 69 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 18: // rule /workspace/libs/autocog/parser/stl/lexer.l:70: "call" :
+#line 70 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::CALL; }
             break;
-          case 18: // rule /workspace/libs/autocog/parser/stl/lexer.l:70: "extern" :
-#line 70 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 19: // rule /workspace/libs/autocog/parser/stl/lexer.l:71: "extern" :
+#line 71 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::EXTERN; }
             break;
-          case 19: // rule /workspace/libs/autocog/parser/stl/lexer.l:71: "kwarg" :
-#line 71 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 20: // rule /workspace/libs/autocog/parser/stl/lexer.l:72: "kwarg" :
+#line 72 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::KWARG; }
             break;
-          case 20: // rule /workspace/libs/autocog/parser/stl/lexer.l:72: "map" :
-#line 72 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 21: // rule /workspace/libs/autocog/parser/stl/lexer.l:73: "map" :
+#line 73 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::MAP; }
             break;
-          case 21: // rule /workspace/libs/autocog/parser/stl/lexer.l:73: "bind" :
-#line 73 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 22: // rule /workspace/libs/autocog/parser/stl/lexer.l:74: "bind" :
+#line 74 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::BIND; }
             break;
-          case 22: // rule /workspace/libs/autocog/parser/stl/lexer.l:74: "as" :
-#line 74 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 23: // rule /workspace/libs/autocog/parser/stl/lexer.l:75: "as" :
+#line 75 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::AS; }
             break;
-          case 23: // rule /workspace/libs/autocog/parser/stl/lexer.l:75: "is" :
-#line 75 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 24: // rule /workspace/libs/autocog/parser/stl/lexer.l:76: "is" :
+#line 76 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::IS; }
             break;
-          case 24: // rule /workspace/libs/autocog/parser/stl/lexer.l:76: "search" :
-#line 76 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 25: // rule /workspace/libs/autocog/parser/stl/lexer.l:77: "search" :
+#line 77 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::SEARCH; }
             break;
-          case 25: // rule /workspace/libs/autocog/parser/stl/lexer.l:77: "text" :
-#line 77 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 26: // rule /workspace/libs/autocog/parser/stl/lexer.l:78: "text" :
+#line 78 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::TEXT; }
             break;
-          case 26: // rule /workspace/libs/autocog/parser/stl/lexer.l:78: "select" :
-#line 78 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 27: // rule /workspace/libs/autocog/parser/stl/lexer.l:79: "select" :
+#line 79 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::SELECT; }
             break;
-          case 27: // rule /workspace/libs/autocog/parser/stl/lexer.l:79: "repeat" :
-#line 79 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 28: // rule /workspace/libs/autocog/parser/stl/lexer.l:80: "repeat" :
+#line 80 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::REPEAT; }
             break;
-          case 28: // rule /workspace/libs/autocog/parser/stl/lexer.l:80: "enum" :
-#line 80 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 29: // rule /workspace/libs/autocog/parser/stl/lexer.l:81: "enum" :
+#line 81 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::ENUM; }
             break;
-          case 29: // rule /workspace/libs/autocog/parser/stl/lexer.l:81: "true" :
-#line 81 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 30: // rule /workspace/libs/autocog/parser/stl/lexer.l:82: "true" :
+#line 82 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
             break;
-          case 30: // rule /workspace/libs/autocog/parser/stl/lexer.l:82: "false" :
-#line 82 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 31: // rule /workspace/libs/autocog/parser/stl/lexer.l:83: "false" :
+#line 83 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
 
             break;
-          case 31: // rule /workspace/libs/autocog/parser/stl/lexer.l:85: [a-zA-Z_][a-zA-Z0-9_]* :
-#line 85 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 32: // rule /workspace/libs/autocog/parser/stl/lexer.l:86: [a-zA-Z_][a-zA-Z0-9_]* :
+#line 86 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::IDENTIFIER; }
             break;
-          case 32: // rule /workspace/libs/autocog/parser/stl/lexer.l:86: [0-9]+ :
-#line 86 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 33: // rule /workspace/libs/autocog/parser/stl/lexer.l:87: [0-9]+ :
+#line 87 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::INTEGER_LITERAL; }
             break;
-          case 33: // rule /workspace/libs/autocog/parser/stl/lexer.l:87: [0-9]+\.[0-9]+ :
-#line 87 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 34: // rule /workspace/libs/autocog/parser/stl/lexer.l:88: [0-9]+\.[0-9]+ :
+#line 88 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::FLOAT_LITERAL; }
 
             break;
-          case 34: // rule /workspace/libs/autocog/parser/stl/lexer.l:89: [fF]\"([^"\\]|\\.)*\" :
-#line 89 "/workspace/libs/autocog/parser/stl/lexer.l"
-{ update_location(); return (int)TokenType::STRING_LITERAL; }
-            break;
-          case 35: // rule /workspace/libs/autocog/parser/stl/lexer.l:90: [fF]'([^'\\]|\\.)*' :
+          case 35: // rule /workspace/libs/autocog/parser/stl/lexer.l:90: [fF]\"([^"\\]|\\.)*\" :
 #line 90 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::STRING_LITERAL; }
             break;
-          case 36: // rule /workspace/libs/autocog/parser/stl/lexer.l:91: \"([^"\\]|\\.)*\" :
+          case 36: // rule /workspace/libs/autocog/parser/stl/lexer.l:91: [fF]'([^'\\]|\\.)*' :
 #line 91 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::STRING_LITERAL; }
             break;
-          case 37: // rule /workspace/libs/autocog/parser/stl/lexer.l:92: '([^'\\]|\\.)*' :
+          case 37: // rule /workspace/libs/autocog/parser/stl/lexer.l:92: \"([^"\\]|\\.)*\" :
 #line 92 "/workspace/libs/autocog/parser/stl/lexer.l"
+{ update_location(); return (int)TokenType::STRING_LITERAL; }
+            break;
+          case 38: // rule /workspace/libs/autocog/parser/stl/lexer.l:93: '([^'\\]|\\.)*' :
+#line 93 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::STRING_LITERAL; }
 
             break;
-          case 38: // rule /workspace/libs/autocog/parser/stl/lexer.l:96: "<=" :
-#line 96 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 39: // rule /workspace/libs/autocog/parser/stl/lexer.l:97: "<=" :
+#line 97 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::LTEQ; }
             break;
-          case 39: // rule /workspace/libs/autocog/parser/stl/lexer.l:97: ">=" :
-#line 97 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 40: // rule /workspace/libs/autocog/parser/stl/lexer.l:98: ">=" :
+#line 98 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::GTEQ; }
             break;
-          case 40: // rule /workspace/libs/autocog/parser/stl/lexer.l:98: "==" :
-#line 98 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 41: // rule /workspace/libs/autocog/parser/stl/lexer.l:99: "==" :
+#line 99 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::EQEQ; }
             break;
-          case 41: // rule /workspace/libs/autocog/parser/stl/lexer.l:99: "!=" :
-#line 99 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 42: // rule /workspace/libs/autocog/parser/stl/lexer.l:100: "!=" :
+#line 100 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::BANGEQ; }
             break;
-          case 42: // rule /workspace/libs/autocog/parser/stl/lexer.l:100: "&&" :
-#line 100 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 43: // rule /workspace/libs/autocog/parser/stl/lexer.l:101: "&&" :
+#line 101 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::AMPAMP; }
             break;
-          case 43: // rule /workspace/libs/autocog/parser/stl/lexer.l:101: "||" :
-#line 101 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 44: // rule /workspace/libs/autocog/parser/stl/lexer.l:102: "||" :
+#line 102 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::PIPEPIPE; }
 
             break;
-          case 44: // rule /workspace/libs/autocog/parser/stl/lexer.l:103: "{" :
-#line 103 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 45: // rule /workspace/libs/autocog/parser/stl/lexer.l:104: "{" :
+#line 104 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::LBRACE; }
             break;
-          case 45: // rule /workspace/libs/autocog/parser/stl/lexer.l:104: "}" :
-#line 104 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 46: // rule /workspace/libs/autocog/parser/stl/lexer.l:105: "}" :
+#line 105 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::RBRACE; }
             break;
-          case 46: // rule /workspace/libs/autocog/parser/stl/lexer.l:105: "[" :
-#line 105 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 47: // rule /workspace/libs/autocog/parser/stl/lexer.l:106: "[" :
+#line 106 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::LSQUARE; }
             break;
-          case 47: // rule /workspace/libs/autocog/parser/stl/lexer.l:106: "]" :
-#line 106 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 48: // rule /workspace/libs/autocog/parser/stl/lexer.l:107: "]" :
+#line 107 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::RSQUARE; }
             break;
-          case 48: // rule /workspace/libs/autocog/parser/stl/lexer.l:107: "(" :
-#line 107 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 49: // rule /workspace/libs/autocog/parser/stl/lexer.l:108: "(" :
+#line 108 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::LPAREN; }
             break;
-          case 49: // rule /workspace/libs/autocog/parser/stl/lexer.l:108: ")" :
-#line 108 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 50: // rule /workspace/libs/autocog/parser/stl/lexer.l:109: ")" :
+#line 109 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::RPAREN; }
             break;
-          case 50: // rule /workspace/libs/autocog/parser/stl/lexer.l:109: ";" :
-#line 109 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 51: // rule /workspace/libs/autocog/parser/stl/lexer.l:110: ";" :
+#line 110 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::SEMICOLON; }
             break;
-          case 51: // rule /workspace/libs/autocog/parser/stl/lexer.l:110: ":" :
-#line 110 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 52: // rule /workspace/libs/autocog/parser/stl/lexer.l:111: ":" :
+#line 111 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::COLON; }
             break;
-          case 52: // rule /workspace/libs/autocog/parser/stl/lexer.l:111: "," :
-#line 111 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 53: // rule /workspace/libs/autocog/parser/stl/lexer.l:112: "," :
+#line 112 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::COMMA; }
             break;
-          case 53: // rule /workspace/libs/autocog/parser/stl/lexer.l:112: "." :
-#line 112 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 54: // rule /workspace/libs/autocog/parser/stl/lexer.l:113: "." :
+#line 113 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::DOT; }
             break;
-          case 54: // rule /workspace/libs/autocog/parser/stl/lexer.l:113: "=" :
-#line 113 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 55: // rule /workspace/libs/autocog/parser/stl/lexer.l:114: "=" :
+#line 114 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::EQUAL; }
             break;
-          case 55: // rule /workspace/libs/autocog/parser/stl/lexer.l:114: "+" :
-#line 114 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 56: // rule /workspace/libs/autocog/parser/stl/lexer.l:115: "+" :
+#line 115 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::PLUS; }
             break;
-          case 56: // rule /workspace/libs/autocog/parser/stl/lexer.l:115: "-" :
-#line 115 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 57: // rule /workspace/libs/autocog/parser/stl/lexer.l:116: "-" :
+#line 116 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::MINUS; }
             break;
-          case 57: // rule /workspace/libs/autocog/parser/stl/lexer.l:116: "*" :
-#line 116 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 58: // rule /workspace/libs/autocog/parser/stl/lexer.l:117: "*" :
+#line 117 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::STAR; }
             break;
-          case 58: // rule /workspace/libs/autocog/parser/stl/lexer.l:117: "/" :
-#line 117 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 59: // rule /workspace/libs/autocog/parser/stl/lexer.l:118: "/" :
+#line 118 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::SLASH; }
             break;
-          case 59: // rule /workspace/libs/autocog/parser/stl/lexer.l:118: "%" :
-#line 118 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 60: // rule /workspace/libs/autocog/parser/stl/lexer.l:119: "%" :
+#line 119 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::PERCENT; }
             break;
-          case 60: // rule /workspace/libs/autocog/parser/stl/lexer.l:119: "<" :
-#line 119 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 61: // rule /workspace/libs/autocog/parser/stl/lexer.l:120: "<" :
+#line 120 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::LT; }
             break;
-          case 61: // rule /workspace/libs/autocog/parser/stl/lexer.l:120: ">" :
-#line 120 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 62: // rule /workspace/libs/autocog/parser/stl/lexer.l:121: ">" :
+#line 121 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::GT; }
             break;
-          case 62: // rule /workspace/libs/autocog/parser/stl/lexer.l:121: "!" :
-#line 121 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 63: // rule /workspace/libs/autocog/parser/stl/lexer.l:122: "!" :
+#line 122 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::BANG; }
             break;
-          case 63: // rule /workspace/libs/autocog/parser/stl/lexer.l:122: "?" :
-#line 122 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 64: // rule /workspace/libs/autocog/parser/stl/lexer.l:123: "?" :
+#line 123 "/workspace/libs/autocog/parser/stl/lexer.l"
 { update_location(); return (int)TokenType::QUESTION; }
 
             break;
-          case 64: // rule /workspace/libs/autocog/parser/stl/lexer.l:124: . :
-#line 124 "/workspace/libs/autocog/parser/stl/lexer.l"
+          case 65: // rule /workspace/libs/autocog/parser/stl/lexer.l:125: . :
+#line 125 "/workspace/libs/autocog/parser/stl/lexer.l"
 {
     update_location();
     return (int)TokenType::ERROR;

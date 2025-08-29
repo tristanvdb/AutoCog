@@ -15,6 +15,7 @@ const char * token_type_name(TokenType type) {
         case TokenType::PROMPT: return "prompt";
         case TokenType::CHANNEL: return "channel";
         case TokenType::FLOW: return "flow";
+        case TokenType::ENTRY: return "entry";
         case TokenType::RETURN: return "return";
         case TokenType::ANNOTATE: return "annotate";
         case TokenType::TO: return "to";

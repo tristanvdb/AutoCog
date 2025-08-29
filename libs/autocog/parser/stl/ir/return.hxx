@@ -3,9 +3,14 @@
 
 namespace autocog { namespace parser {
 
+DATA(Retfield) {
+  NODE(Path)    field;
+  ONODE(String) alias;
+};
+
 DATA(Return) {
-  ONODE(String) label;
-  MAPPED(Path) fields;
+  ONODE(String)   label;
+  NODES(Retfield) fields;
 };
 
 } // namespace parser  

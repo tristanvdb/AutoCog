@@ -62,6 +62,7 @@ public:
 "prompt"                { update_location(); return (int)TokenType::PROMPT; }
 "channel"               { update_location(); return (int)TokenType::CHANNEL; }
 "flow"                  { update_location(); return (int)TokenType::FLOW; }
+"entry"                 { update_location(); return (int)TokenType::ENTRY; }
 "return"                { update_location(); return (int)TokenType::RETURN; }
 "annotate"              { update_location(); return (int)TokenType::ANNOTATE; }
 "to"                    { update_location(); return (int)TokenType::TO; }

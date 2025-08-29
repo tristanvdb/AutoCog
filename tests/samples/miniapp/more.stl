@@ -1,0 +1,299 @@
+// Global definitions
+define max_retries = 3;
+define timeout_seconds = 30;
+
+// Annotation block for the entire module
+annotate {
+  _ as "Customer support dialogue system with multi-stage processing";
+}
+
+// Define a record structure for customer data
+record CustomerInput {
+  argument customer_id;
+  argument query = "default query";
+  
+  is {
+    customer_id is text;
+    query is text;
+    timestamp is integer;
+    priority is enum("low", "medium", "high", "urgent");
+    metadata[0:10] is {
+      key is text;
+      value is text;
+    }
+  }
+  
+  annotate {
+    customer_id as "Unique customer identifier";
+    query as "Customer's input query text";
+    priority as f"Priority level: {priority}";
+  }
+}
+
+// Record for classification results
+record ClassificationResult {
+  is {
+    category is text;
+    confidence is float;
+    subcategories[0:5] is text;
+    requires_escalation is boolean;
+  }
+}
+
+// Main prompt for initial query processing
+prompt QueryProcessor {
+  argument input_data;
+  define threshold = 0.85;
+  
+  // Define the data structure
+  is {
+    raw_input is text;
+    processed_query is text;
+    classification_result is ClassificationResult;
+    customer_context is {
+      previous_interactions[0:5] is text;
+      account_status is text;
+      preferred_language is text;
+    }
+  }
+  
+  // Channel definition - connecting to external services
+  channel {
+    // Simple path assignment
+    to .raw_input from ?input_data.query;
+    
+    // Call to external text processor
+    to .processed_query call {
+      extern nlp_service;
+      entry preprocess;
+      kwarg string from .raw_input;
+      kwarg language from .customer_context.preferred_language;
+      kwarg options map .preprocessing_options;
+      bind processor_id from processor.version.id;
+      bind cache_timeout from cache.ttl.value;
+    };
+    
+    // Call to classifier
+    to .classification_result call {
+      extern classifier_service;
+      entry analyze;
+      kwarg input from .processed_query;
+      kwarg context from .customer_context;
+      bind model_name from model.config.name;
+    };
+    
+    // Path assignment from input
+    to .customer_context.account_status from ?input_data.metadata[0].value;
+    to .customer_context.previous_interactions[0] from history.last_interaction;
+  }
+  
+  // Flow control - single edge
+  flow {
+    to ClassificationHandler as "process_classification";
+  }
+}
+
+// Handler for classification results
+prompt ClassificationHandler {
+  argument classification_data;
+  
+  is {
+    result is ClassificationResult;
+    action is text;
+    confidence_check is boolean;
+  }
+  
+  channel {
+    to .result from classification_data;
+    
+    to .confidence_check call {
+      extern validator;
+      entry check;
+      kwarg value from .result.confidence;
+      kwarg threshold from threshold;
+      bind rules_version from validation.rules.set;
+    };
+  }
+  
+  // Flow control - multiple edges with labels
+  flow {
+    to HighConfidenceHandler as "high_confidence";
+    to LowConfidenceHandler as "low_confidence";
+    to EscalationHandler as "needs_escalation";
+    to ReviewPrompt as "final_review";
+  }
+  
+  // Return with label and field mappings
+  return {
+    as "classification_complete";
+    from .result.category as category;
+    from .result.confidence as confidence_score;
+    from .result.requires_escalation as needs_review;
+    from .action;
+  }
+}
+
+// High confidence handling
+prompt HighConfidenceHandler {
+  is {
+    automated_response is text;
+    resolution_code is text;
+    template_used is text;
+  }
+  
+  channel {
+    to .automated_response call {
+      extern responder;
+      entry generate;
+      kwarg category from ?classification.category;
+      kwarg context from ?customer_context;
+      kwarg template map .response_templates;
+      bind gen_version from generator.model.version;
+      bind format_type from output.format.type;
+    };
+    
+    to .resolution_code from .automated_response[0];
+  }
+  
+  // Simple return with label
+  return {
+    as "handled_automatically";
+    from .automated_response;
+    from .resolution_code as code;
+  }
+}
+
+// Low confidence handling  
+prompt LowConfidenceHandler {
+  is {
+    clarification_request is text;
+    additional_info is text;
+    suggestions[0:3] is text;
+  }
+  
+  channel {
+    to .clarification_request call {
+      extern dialogue;
+      entry create_clarification;
+      kwarg original from ?query;
+      kwarg confidence from ?confidence;
+      bind dialogue_id from dialogue.state.id;
+    };
+    
+    to .suggestions[0] from suggestion_engine.top_suggestion;
+    to .suggestions[1] from suggestion_engine.alt_suggestion;
+  }
+  
+  // Flow with single edge
+  flow {
+    to HumanReviewQueue as "needs_human_review";
+  }
+  
+  // Return with fields only (no label)
+  return {
+    from .clarification_request as status;
+    from .additional_info as info;
+    from .suggestions;
+  }
+}
+
+// Escalation handling
+prompt EscalationHandler {
+  define escalation_tier = 2;
+  
+  is {
+    ticket_id is text;
+    assigned_agent is text;
+    priority_override is boolean;
+  }
+  
+  channel {
+    to .ticket_id call {
+      extern ticketing;
+      entry create;
+      kwarg customer from ?input_data.customer_id;
+      kwarg priority from ?input_data.priority;
+      kwarg tier map escalation_tier;
+      bind system_id from ticket.system.id;
+      bind queue_name from ticket.queue.name;
+    };
+    
+    to .assigned_agent call {
+      extern routing;
+      entry assign;
+      kwarg ticket from .ticket_id;
+      kwarg urgent from .priority_override;
+      bind agent_status from agent.availability.status;
+    };
+  }
+  
+  // Empty return
+  return {
+  }
+}
+
+// Human review queue
+prompt HumanReviewQueue {
+  is {
+    queue_position is integer;
+    estimated_wait is float;
+  }
+  
+  channel {
+    to .queue_position from queue.current_position;
+    to .estimated_wait from queue.wait_estimate;
+  }
+  
+  return {
+    as "queued_for_review";
+    from .queue_position as position;
+    from .estimated_wait as wait_time;
+  }
+}
+
+// Final review prompt
+prompt ReviewPrompt {
+  is {
+    all_results[0:10] is text;
+    summary is text;
+    metrics is {
+      total_processed is integer;
+      avg_confidence is float;
+    }
+  }
+  
+  // Complex channel with multiple sources
+  channel {
+    to .all_results[0] from HighConfidenceHandler.automated_response;
+    to .all_results[1] from LowConfidenceHandler.clarification_request;
+    to .all_results[2] from EscalationHandler.ticket_id;
+    
+    to .summary call {
+      extern summarizer;
+      entry create;
+      kwarg inputs map .all_results;
+      kwarg max_length from max_summary_length;
+      bind engine_version from summary.engine.version;
+    };
+    
+    to .metrics.total_processed from stats.count;
+    to .metrics.avg_confidence from stats.average_confidence;
+  }
+  
+  return {
+    from .summary as final_summary;
+    from .all_results as results;
+    from .metrics.total_processed;
+    from .metrics.avg_confidence as average_confidence;
+  }
+}
+
+// Export entry points
+export main is QueryProcessor<
+  input_data = CustomerInput,
+  max_retries = 3
+>;
+
+export admin_review is ReviewPrompt<
+  admin_mode = true
+>;
