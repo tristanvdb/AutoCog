@@ -26,7 +26,7 @@ struct SourceRange {
 enum class IrTag {
   Program,
   Import,
-  Entry,
+  Export,
   Enum,
   Choice,
   Annotate,
@@ -41,6 +41,7 @@ enum class IrTag {
   Return,
   Record,
   Format,
+  Text,
   Prompt,
   Channel,
   Link,
@@ -131,6 +132,7 @@ struct IrNode {
 #define VARIANT(...) std::variant<FOR_EACH(NODE, __VA_ARGS__)>
 
 #define DATA(tag) template <> struct IrData< IrTag::tag >
+#define DATA_CTOR(tag) IrData< IrTag::tag >
 #define DATA_CTOR_EMPTY(tag) IrData< IrTag::tag >()
 #define EXEC(tag) template <> struct IrExec< IrTag::tag > : BaseExec<IrTag::tag>
 #define EXEC_CTOR(tag) IrExec(IrNode<IrTag::tag> & node) : BaseExec<IrTag::tag>(node)

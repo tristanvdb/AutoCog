@@ -86,8 +86,14 @@ private:
     }
 
 public:
-    autocog::parser::SourceLocation current_location() const {
+    SourceLocation current_location() const {
         return {line_number, last_column, current_offset};
+    }
+
+    Token advance() {
+        TokenType tok = (TokenType)(this->lex());
+        Token token{ tok, this->str(), this->current_location() };
+        return token;
     }
 
  public:

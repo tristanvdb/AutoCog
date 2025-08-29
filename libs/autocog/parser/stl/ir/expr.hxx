@@ -24,8 +24,8 @@ DATA(Boolean) {
 };
 
 DATA(String) {
-  bool is_format;
   std::string value;
+  bool is_format{false};
 };
 
 DATA(Scalar) {

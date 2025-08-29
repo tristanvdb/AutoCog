@@ -3,35 +3,27 @@
 
 namespace autocog { namespace parser {
 
-DATA(Entry) {
-  NODE(Identifier) alias;
-  NODE(String) target;
+DATA(Export) {
+  // Syntax: "export my_alias is my_target<arg=expr, arg=expr>;"
+  std::string alias;
+  std::string target;
+  MAPPED(Expression) kwargs;
 };
 
 DATA(Import) {
-  NODE(String) file;
-  NODES(Identifier) prompts;
-  NODES(Identifier) records;
+  // Syntax: "from file import target as alias, target;"
+  std::string file;
+  std::unordered_map<std::string,std::string> targets;
 };
 
 DATA(Program) {
-//DATA_CTOR_EMPTY(Program) :
-//  imports(),
-//  defines(),
-//  annotate(std::nullopt),
-//  search(std::nullopt),
-//  entries(),
-//  records(),
-//  prompts()
-//{}
-
-  NODES(Import) imports;
+  NODES(Import)  imports;
+  MAPPED(Export) exports;
 
   MAPPED(Define)  defines;
   ONODE(Annotate) annotate;
   ONODE(Search)   search;
 
-  MAPPED(Entry)  entries;
   MAPPED(Record) records;
   MAPPED(Prompt) prompts;
 };

@@ -25,8 +25,14 @@ private:
     }
     
 public:
-    autocog::parser::SourceLocation current_location() const {
+    SourceLocation current_location() const {
         return {line_number, last_column, current_offset};
+    }
+
+    Token advance() {
+        TokenType tok = (TokenType)(this->lex());
+        Token token{ tok, this->str(), this->current_location() };
+        return token;
     }
 %}
 
@@ -50,8 +56,9 @@ public:
 // Keywords
 "define"                { update_location(); return (int)TokenType::DEFINE; }
 "argument"              { update_location(); return (int)TokenType::ARGUMENT; }
-"format"                { update_location(); return (int)TokenType::FORMAT; }
-"struct"                { update_location(); return (int)TokenType::STRUCT; }
+"record"                { update_location(); return (int)TokenType::RECORD; }
+"import"                { update_location(); return (int)TokenType::IMPORT; }
+"export"                { update_location(); return (int)TokenType::EXPORT; }
 "prompt"                { update_location(); return (int)TokenType::PROMPT; }
 "channel"               { update_location(); return (int)TokenType::CHANNEL; }
 "flow"                  { update_location(); return (int)TokenType::FLOW; }
@@ -61,7 +68,6 @@ public:
 "from"                  { update_location(); return (int)TokenType::FROM; }
 "call"                  { update_location(); return (int)TokenType::CALL; }
 "extern"                { update_location(); return (int)TokenType::EXTERN; }
-"entry"                 { update_location(); return (int)TokenType::ENTRY; }
 "kwarg"                 { update_location(); return (int)TokenType::KWARG; }
 "map"                   { update_location(); return (int)TokenType::MAP; }
 "bind"                  { update_location(); return (int)TokenType::BIND; }
@@ -71,6 +77,7 @@ public:
 "text"                  { update_location(); return (int)TokenType::TEXT; }
 "select"                { update_location(); return (int)TokenType::SELECT; }
 "repeat"                { update_location(); return (int)TokenType::REPEAT; }
+"enum"                  { update_location(); return (int)TokenType::ENUM; }
 "true"                  { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
 "false"                 { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
 
@@ -97,6 +104,8 @@ public:
 "-"                     { update_location(); return (int)TokenType::MINUS; }
 "*"                     { update_location(); return (int)TokenType::STAR; }
 "/"                     { update_location(); return (int)TokenType::SLASH; }
+"<"                     { update_location(); return (int)TokenType::LT; }
+">"                     { update_location(); return (int)TokenType::GT; }
 
 .                       { 
     update_location(); 

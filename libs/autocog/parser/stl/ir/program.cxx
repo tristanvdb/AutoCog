@@ -10,7 +10,7 @@ using IrBaseProgram = BaseExec<IrTag::Program>;
 
 void IrExecProgram::queue_imports(std::queue<std::string> & queue) const {
     for (auto & import: node.data.imports) {
-      queue.push(import.data.file.data.value);
+      queue.push(import.data.file);
     }
 }
 

@@ -1,6 +1,8 @@
 #ifndef AUTOCOG_PARSER_STL_TOKEN_HXX
 #define AUTOCOG_PARSER_STL_TOKEN_HXX
 
+#include "autocog/parser/stl/location.hxx"
+
 #include <string>
 #include <ostream>
 
@@ -9,11 +11,13 @@ namespace parser {
 
 // Token types
 enum class TokenType : int {
+    NOT_A_VALID_TOKEN,
     // Keywords
     DEFINE,
     ARGUMENT,
-    FORMAT,
-    STRUCT,
+    RECORD,
+    IMPORT,
+    EXPORT,
     PROMPT,
     CHANNEL,
     FLOW,
@@ -23,7 +27,6 @@ enum class TokenType : int {
     FROM,
     CALL,
     EXTERN,
-    ENTRY,
     KWARG,
     MAP,
     BIND,
@@ -33,6 +36,7 @@ enum class TokenType : int {
     TEXT,
     SELECT,
     REPEAT,
+    ENUM,
     
     // Identifiers and literals
     IDENTIFIER,
@@ -57,10 +61,19 @@ enum class TokenType : int {
     MINUS,       // -
     STAR,        // *
     SLASH,       // /
+    LT,          // <
+    GT,          // >
     
     // Special
     ERROR,
     END_OF_FILE
+};
+
+// Token structure
+struct Token {
+    TokenType      type{TokenType::NOT_A_VALID_TOKEN};
+    std::string    text{""};
+    SourceLocation location{-1,-1,0};
 };
 
 // Helper function to get token type name

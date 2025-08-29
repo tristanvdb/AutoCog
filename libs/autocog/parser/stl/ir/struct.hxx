@@ -14,8 +14,12 @@ DATA(Choice) {
   NODE(Path) source;
 };
 
+DATA(Text) {
+  // TODO vocab definition
+};
+
 DATA(Format) {
-  VARIANT(Identifier, Enum, Choice) type;
+  VARIANT(Identifier, Text, Enum, Choice) type;
   NODES(Expression) args;
   MAPPED(Expression) kwargs;
 };
