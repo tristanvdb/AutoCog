@@ -43,17 +43,20 @@ class Parser {
   public:
     using Program = NODE(Program);
 
-    std::queue<std::string> queue; //< file queue
-
   private:
+    std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
+    std::queue<std::string> queue;
     MAPPED(Program) programs;
 
+    template <IrTag tag>
+    void parse(ParserState & state, IrData<tag> & data, int min_precedence);
     template <IrTag tag>
     void parse(ParserState & state, IrData<tag> & data);
 
   public:
-    Parser(std::list<Diagnostic> & diagnostics_);
+    Parser(std::list<Diagnostic> &, std::list<std::string> const &);
+    Parser(std::list<Diagnostic> &, std::list<std::string> const &, std::list<std::string> const &);
 
     void parse();
     void parse(std::string const & filename, std::string const & source);

@@ -64,6 +64,21 @@ enum class TokenType : int {
     LT,          // <
     GT,          // >
     
+        // Comparison operators
+    LTEQ,        // <=
+    GTEQ,        // >=
+    EQEQ,        // ==
+    BANGEQ,      // !=
+    
+    // Logical operators
+    AMPAMP,      // &&
+    PIPEPIPE,    // ||
+    BANG,        // !
+    
+    // Other operators
+    PERCENT,     // %
+    QUESTION,    // ?
+    
     // Special
     ERROR,
     END_OF_FILE

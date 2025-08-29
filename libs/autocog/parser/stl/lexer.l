@@ -85,10 +85,21 @@ public:
 [a-zA-Z_][a-zA-Z0-9_]*  { update_location(); return (int)TokenType::IDENTIFIER; }
 [0-9]+                  { update_location(); return (int)TokenType::INTEGER_LITERAL; }
 [0-9]+\.[0-9]+          { update_location(); return (int)TokenType::FLOAT_LITERAL; }
+
+[fF]\"([^"\\]|\\.)*\"   { update_location(); return (int)TokenType::STRING_LITERAL; }
+[fF]'([^'\\]|\\.)*'     { update_location(); return (int)TokenType::STRING_LITERAL; }
 \"([^"\\]|\\.)*\"       { update_location(); return (int)TokenType::STRING_LITERAL; }
 '([^'\\]|\\.)*'         { update_location(); return (int)TokenType::STRING_LITERAL; }
 
 // Operators and delimiters
+// IMPORTANT: Multi-character operators must come before single-character ones
+"<="                    { update_location(); return (int)TokenType::LTEQ; }
+">="                    { update_location(); return (int)TokenType::GTEQ; }
+"=="                    { update_location(); return (int)TokenType::EQEQ; }
+"!="                    { update_location(); return (int)TokenType::BANGEQ; }
+"&&"                    { update_location(); return (int)TokenType::AMPAMP; }
+"||"                    { update_location(); return (int)TokenType::PIPEPIPE; }
+
 "{"                     { update_location(); return (int)TokenType::LBRACE; }
 "}"                     { update_location(); return (int)TokenType::RBRACE; }
 "["                     { update_location(); return (int)TokenType::LSQUARE; }
@@ -104,8 +115,11 @@ public:
 "-"                     { update_location(); return (int)TokenType::MINUS; }
 "*"                     { update_location(); return (int)TokenType::STAR; }
 "/"                     { update_location(); return (int)TokenType::SLASH; }
+"%"                     { update_location(); return (int)TokenType::PERCENT; }
 "<"                     { update_location(); return (int)TokenType::LT; }
 ">"                     { update_location(); return (int)TokenType::GT; }
+"!"                     { update_location(); return (int)TokenType::BANG; }
+"?"                     { update_location(); return (int)TokenType::QUESTION; }
 
 .                       { 
     update_location(); 

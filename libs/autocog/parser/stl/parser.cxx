@@ -2,6 +2,8 @@
 #include "autocog/parser/stl/parser.hxx"
 #include "autocog/parser/stl/diagnostic.hxx"
 
+#include <filesystem>
+
 #include <stdexcept>
 
 namespace autocog::parser {
@@ -69,64 +71,513 @@ void ParserState::emit_error(std::string msg) {
   error = true;
 }
 
-Parser::Parser(std::list<Diagnostic> & diagnostics_) :
-  queue(),
+Parser::Parser(
+  std::list<Diagnostic> & diagnostics_,
+  std::list<std::string> const & search_paths_
+) :
+  search_paths(search_paths_),
   diagnostics(diagnostics_),
+  queue(),
   programs()
 {}
+
+Parser::Parser(
+  std::list<Diagnostic> & diagnostics_,
+  std::list<std::string> const & search_paths_,
+  std::list<std::string> const & filepaths
+) :
+  Parser(diagnostics_, search_paths_)
+{
+  for (auto & filepath: filepaths) {
+    queue.push(filepath);
+  }
+}
+
+static std::string file_lookup(std::string const & filepath, std::list<std::string> const & search_paths) {
+  std::string found_path;
+  if (std::filesystem::exists(filepath)) {
+    found_path = filepath;
+  } else {
+    for (auto const & search_path : search_paths) {
+      std::filesystem::path full_path = std::filesystem::path(search_path) / filepath;
+      if (std::filesystem::exists(full_path)) {
+        found_path = full_path.string();
+        break;
+      }
+    }
+  }
+  return found_path;
+}
 
 void Parser::parse() {
   while (!queue.empty()) {
     std::string filepath = queue.front();
     queue.pop();
 
-    std::ifstream file(filepath); // TODO file lookup in 'search_paths'
-    if (!file) {
+    std::string found_path = file_lookup(filepath, search_paths);
+    if (found_path.empty()) {
       std::ostringstream oss;
-      oss << "Cannot read file: `" << filepath << "`";
+      oss << "Cannot find file: `" << filepath << "`";
       diagnostics.emplace_back(DiagnosticLevel::Error, oss.str());
     } else {
+      std::ifstream file(found_path);
       std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-      parse(filepath, source);
       file.close();
+
+      parse(filepath, source);
       programs[filepath].exec.queue_imports(queue);
     }
   }
 }
 
-template <>
-void Parser::parse<IrTag::Import>(ParserState & state, IrData<IrTag::Import> & import) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Import>()"); // TODO
+template <> void Parser::parse<IrTag::Expression> (ParserState & state, IrData<IrTag::Expression> &);
+template <> void Parser::parse<IrTag::Program>    (ParserState & state, IrData<IrTag::Program>    &);
+template <> void Parser::parse<IrTag::Prompt>     (ParserState & state, IrData<IrTag::Prompt>     &);
+template <> void Parser::parse<IrTag::Record>     (ParserState & state, IrData<IrTag::Record>     &);
+template <> void Parser::parse<IrTag::Format>     (ParserState & state, IrData<IrTag::Format>     &);
+template <> void Parser::parse<IrTag::Channel>    (ParserState & state, IrData<IrTag::Channel>    &);
+template <> void Parser::parse<IrTag::Flow>       (ParserState & state, IrData<IrTag::Flow>       &);
+template <> void Parser::parse<IrTag::Return>     (ParserState & state, IrData<IrTag::Return>     &);
+template <> void Parser::parse<IrTag::Struct>     (ParserState & state, IrData<IrTag::Struct>     &);
+template <> void Parser::parse<IrTag::Field>      (ParserState & state, IrData<IrTag::Field>      &);
+template <> void Parser::parse<IrTag::Search>     (ParserState & state, IrData<IrTag::Search>     &);
+template <> void Parser::parse<IrTag::Annotate>   (ParserState & state, IrData<IrTag::Annotate>   &);
+template <> void Parser::parse<IrTag::Define>     (ParserState & state, IrData<IrTag::Define>     &);
+template <> void Parser::parse<IrTag::Export>     (ParserState & state, IrData<IrTag::Export>     &);
+template <> void Parser::parse<IrTag::Path>       (ParserState & state, IrData<IrTag::Path>       &);
+template <> void Parser::parse<IrTag::Import>     (ParserState & state, IrData<IrTag::Import>     &);
+
+static void clean_raw_string(std::string raw_text, IrData<IrTag::String> & data) {
+  if (raw_text.empty()) {
+    throw std::runtime_error("Found empty string literal!");
+  }
+  data.is_format = (raw_text[0] == 'f' || raw_text[0] == 'F');
+  if (data.is_format) {
+    raw_text = raw_text.substr(1, raw_text.length() - 1);
+  }
+  if (raw_text.size() < 2) {
+    throw std::runtime_error("Found string literal with less than 2 characters but expect to find quotes!");
+  }
+  if (raw_text[0] != '"' || raw_text[raw_text.length()-1] != '"') {
+    throw std::runtime_error("Found string literal without leading and ending quotes!");
+  }
+  data.value = raw_text.substr(1, raw_text.length() - 2);
+}
+
+static OpKind token_to_operator_kind(TokenType type) {
+  switch (type) {
+    case TokenType::BANG:     return OpKind::Not;
+    case TokenType::PLUS:     return OpKind::Add;
+    case TokenType::MINUS:    return OpKind::Sub;
+    case TokenType::STAR:     return OpKind::Mul;
+    case TokenType::SLASH:    return OpKind::Div;
+    case TokenType::PERCENT:  return OpKind::Mod;
+    case TokenType::AMPAMP:   return OpKind::And;
+    case TokenType::PIPEPIPE: return OpKind::Or;
+    case TokenType::LT:       return OpKind::Lt;
+    case TokenType::GT:       return OpKind::Gt;
+    case TokenType::LTEQ:     return OpKind::Lte;
+    case TokenType::GTEQ:     return OpKind::Gte;
+    case TokenType::EQEQ:     return OpKind::Eq;
+    case TokenType::BANGEQ:   return OpKind::Neq;
+    default:                  return OpKind::NOP;
+  }
+}
+
+// Operator precedence (higher number = higher precedence)
+static int get_precedence(TokenType type) {
+  switch (type) {
+    case TokenType::STAR:
+    case TokenType::SLASH:
+    case TokenType::PERCENT:
+      return 10;  // Multiplicative
+      
+    case TokenType::PLUS:
+    case TokenType::MINUS:
+      return 9;   // Additive
+      
+    case TokenType::LT:
+    case TokenType::GT:
+    case TokenType::LTEQ:
+    case TokenType::GTEQ:
+      return 8;   // Relational
+      
+    case TokenType::EQEQ:
+    case TokenType::BANGEQ:
+      return 7;   // Equality
+      
+    case TokenType::AMPAMP:
+      return 4;   // Logical AND
+      
+    case TokenType::PIPEPIPE:
+      return 3;   // Logical OR
+      
+    case TokenType::QUESTION:
+      return 2;   // Ternary conditional
+      
+    default:
+      return -1;  // Not a binary operator
+  }
+}
+
+static bool is_unary(TokenType tok) {
+  return tok == TokenType::BANG || tok == TokenType::MINUS;
+}
+
+static bool is_binary(TokenType tok) {
+  OpKind kind = token_to_operator_kind(tok);
+  return kind != OpKind::Not && kind != OpKind::NOP;
+}
+
+static bool is_primary(TokenType tok) {
+  return tok == TokenType::STRING_LITERAL  ||
+         tok == TokenType::INTEGER_LITERAL ||
+         tok == TokenType::FLOAT_LITERAL   ||
+         tok == TokenType::BOOLEAN_LITERAL ||
+         tok == TokenType::IDENTIFIER;
+}
+
+static bool is_conditional(TokenType tok) {
+  return tok == TokenType::QUESTION;
+}
+
+//DATA(Expression) {
+//  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
+//};
+
+static void parse_primary(ParserState & state, IrData<IrTag::Expression> & expr) {
+  switch (state.current.type) {
+    case TokenType::IDENTIFIER: {
+      state.advance();
+      expr.expr.emplace<0>();
+      auto & data = std::get<0>(expr.expr).data;
+      data.name = state.previous.text;
+      break;
+    }
+    
+    case TokenType::INTEGER_LITERAL: {
+      state.advance();
+      expr.expr.emplace<1>();
+      auto & data = std::get<1>(expr.expr).data;
+      data.value = std::stoi(state.previous.text);
+      break;
+    }
+    
+    case TokenType::FLOAT_LITERAL: {
+      state.advance();
+      expr.expr.emplace<2>();
+      auto & data = std::get<2>(expr.expr).data;
+      data.value = std::stof(state.previous.text);
+      break;
+    }
+    
+    case TokenType::BOOLEAN_LITERAL: {
+      state.advance();
+      expr.expr.emplace<3>();
+      auto & data = std::get<3>(expr.expr).data;
+      data.value = (state.previous.text == "true");
+      break;
+    }
+    
+    case TokenType::STRING_LITERAL: {
+      state.advance();
+      expr.expr.emplace<4>();
+      auto & data = std::get<4>(expr.expr).data;
+      clean_raw_string(state.previous.text, data);
+      break;
+    }
+    
+    default:
+      state.emit_error("Expected literal or identifier in expression.");
+      break;
+  }
 }
 
 template <>
-void Parser::parse<IrTag::Export>(ParserState & state, IrData<IrTag::Export> & entry) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Export>()"); // TODO
-}
+void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Expression> & expr) {
+  if (is_primary(state.current.type)) {
+    parse_primary(state, expr);
 
-template <>
-void Parser::parse<IrTag::Define>(ParserState & state, IrData<IrTag::Define> & define) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Define>()"); // TODO
-}
+  } else if (is_unary(state.current.type)) {
+    state.advance();
+    expr.expr.emplace<5>();
+    auto & data = std::get<5>(expr.expr).data;
+    data.kind = token_to_operator_kind(state.previous.type);
+    data.operand = std::make_unique<IrNode<IrTag::Expression>>();
+    if (!is_primary(state.current.type) && state.current.type != TokenType::LPAREN ) {
+      state.emit_error("Unary operator expects primary or parenthesized operand!");
+      return;
+    }
+    parse(state, data.operand->data);
+  } else if (state.match(TokenType::LPAREN)) {
+    auto operand = std::make_unique<IrNode<IrTag::Expression>>();
+    parse(state, operand->data);
+    if (is_binary(state.current.type)) {
+      state.advance();
+      expr.expr.emplace<6>();
+      auto & data = std::get<6>(expr.expr).data;
+      data.kind = token_to_operator_kind(state.previous.type);
+      data.lhs = std::move(operand);
+      data.rhs = std::make_unique<IrNode<IrTag::Expression>>();
+      parse(state, data.rhs->data);
 
-template <>
-void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Expression> & expression) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Expression>()"); // TODO
+    } else if (state.match(TokenType::QUESTION)) {
+      expr.expr.emplace<7>();
+      auto & data = std::get<7>(expr.expr).data;
+      data.cond = std::move(operand);
+      data.e_true = std::make_unique<IrNode<IrTag::Expression>>();
+      parse(state, data.e_true->data);
+      if (!state.expect(TokenType::COLON, " within conditional expression.")) return;
+      data.e_false = std::make_unique<IrNode<IrTag::Expression>>();
+      parse(state, data.e_false->data);
+
+    } else {
+      expr.expr.emplace<8>();
+      auto & data = std::get<8>(expr.expr).data;
+      data.expr = std::move(operand);
+
+    }
+    if (!state.expect(TokenType::RPAREN, " to end parenthesized expression.")) return;
+    
+  } else {
+    state.emit_error("Expression must be primary, unary, or perenthesized (for binary and conditional)!");
+    return;
+  }
 }
 
 template <>
 void Parser::parse<IrTag::Path>(ParserState & state, IrData<IrTag::Path> & path) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Path>()"); // TODO
+  // Path examples:
+  // ?xyz[3:7].abc         - input path
+  // prompt_name.field[1]  - prompt path  
+  // .field[-1].subfield   - relative path
+  
+  // Check for input prefix '?'
+  if (state.match(TokenType::QUESTION)) {
+    path.input = true;
+    
+    // Expect identifier after '?'
+    if (state.expect(TokenType::IDENTIFIER, " after '?' in input path.")) {
+      // First step from the input identifier
+      path.steps.emplace_back();
+      auto & step = path.steps.back().data;
+      step.field.data.name = state.previous.text;
+      
+      // Check for array bounds on this first field
+      if (state.match(TokenType::LSQUARE)) {
+        step.lower.emplace();
+        parse(state, step.lower.value().data);
+        if (state.match(TokenType::COLON)) {
+          step.upper.emplace();
+          if (!state.check(TokenType::RSQUARE)) {
+            parse(state, step.upper.value().data);
+          }
+        }
+        if (!state.expect(TokenType::RSQUARE, " to close array access.")) return;
+      }
+      
+      // Continue with rest of path if there's a dot
+      if (!state.match(TokenType::DOT)) return;
+    } else {
+      return; // Error already reported by expect()
+    }
+  }
+  // Check for leading dot (relative path)
+  else if (state.match(TokenType::DOT)) {
+    path.input = false;
+    // No prompt name, starts with a field
+  }
+  // Otherwise check for prompt name or direct field
+  else if (state.check(TokenType::IDENTIFIER)) {
+    path.input = false;
+    state.advance();
+    std::string first_name = state.previous.text;
+    
+    // Check what follows to determine if it's a prompt name or field
+    if (state.match(TokenType::DOT)) {
+      // It's a prompt name
+      path.prompt.emplace();
+      path.prompt.value().data.name = first_name;
+    } else {
+      // It's just a field, not a prompt prefix
+      path.steps.emplace_back();
+      auto & step = path.steps.back().data;
+      step.field.data.name = first_name;
+      
+      // Check for array bounds
+      if (state.match(TokenType::LSQUARE)) {
+        step.lower.emplace();
+        parse(state, step.lower.value().data);
+        if (state.match(TokenType::COLON)) {
+          step.upper.emplace();
+          if (!state.check(TokenType::RSQUARE)) {
+            parse(state, step.upper.value().data);
+          }
+        }
+        if (!state.expect(TokenType::RSQUARE, " to close array access.")) return;
+      }
+      
+      // Early return if no more path components
+      if (!state.match(TokenType::DOT)) return;
+    }
+  } else {
+    // Empty path or invalid start
+    return;
+  }
+  
+  // Parse remaining steps (field.field[bounds].field...)
+  do {
+    if (!state.expect(TokenType::IDENTIFIER, " when parsing path field.")) return;
+    
+    path.steps.emplace_back();
+    auto & step = path.steps.back().data;
+    step.field.data.name = state.previous.text;
+    
+    // Check for array bounds [lower:upper] or [index]
+    if (state.match(TokenType::LSQUARE)) {
+      step.lower.emplace();
+      parse(state, step.lower.value().data);
+      
+      if (state.match(TokenType::COLON)) {
+        step.upper.emplace();
+        if (!state.check(TokenType::RSQUARE)) {
+          parse(state, step.upper.value().data);
+        }
+      }
+      
+      if (!state.expect(TokenType::RSQUARE, " to close array access.")) return;
+    }
+  } while (state.match(TokenType::DOT));
+}
+
+template <>
+void Parser::parse<IrTag::Import>(ParserState & state, IrData<IrTag::Import> & import) {
+  if (!state.expect(TokenType::STRING_LITERAL, " when parsing import file path.")) return;
+  
+  std::string raw_text = state.previous.text;
+  
+  // Reject f-strings for import paths
+  if (!raw_text.empty() && (raw_text[0] == 'f' || raw_text[0] == 'F')) {
+    state.emit_error("Format strings (f-strings) are not allowed for import paths.");
+    return;
+  }
+  
+  // Strip quotes from regular string
+  std::string file_path = raw_text;
+  if (file_path.length() >= 2 &&
+      ((file_path.front() == '"' && file_path.back() == '"') ||
+       (file_path.front() == '\'' && file_path.back() == '\''))) {
+    file_path = file_path.substr(1, file_path.length() - 2);
+  }
+  import.file = file_path;
+  
+  if (!state.expect(TokenType::IMPORT, " after file path in import statement.")) return;
+  
+  do {
+    if (!state.expect(TokenType::IDENTIFIER, " when parsing import target.")) return;
+    std::string target = state.previous.text;
+    std::string alias = target;
+    if (state.match(TokenType::AS)) {
+      if (!state.expect(TokenType::IDENTIFIER, " when parsing import alias.")) return;
+      alias = state.previous.text;
+    }
+    import.targets[alias] = target;
+  } while (state.match(TokenType::COMMA));
+  
+  if (!state.expect(TokenType::SEMICOLON, " to end import statement.")) return;
+}
+
+template <>
+void Parser::parse<IrTag::Export>(ParserState & state, IrData<IrTag::Export> & entry) {
+  if (!state.expect(TokenType::IS, " in export statement.")) return;
+  if (!state.expect(TokenType::IDENTIFIER, " when parsing export target.")) return;
+  entry.target = state.previous.text;
+  if (state.match(TokenType::LT)) {
+    do {
+      if (!state.expect(TokenType::IDENTIFIER, " when parsing export argument name.")) return;
+      std::string arg_name = state.previous.text;
+      if (!state.expect(TokenType::EQUAL, " when parsing export argument.")) return;
+      parse(state, entry.kwargs[arg_name].data);
+    } while (state.match(TokenType::COMMA));
+    if (!state.expect(TokenType::GT, " to close export arguments.")) return;
+  }
+  if (!state.expect(TokenType::SEMICOLON, " to end export statement.")) return;
+}
+
+template <>
+void Parser::parse<IrTag::Define>(ParserState & state, IrData<IrTag::Define> & define) {
+  if (state.match(TokenType::EQUAL)) {
+    define.init.emplace();
+    parse(state, define.init.value().data);
+  }
+  if (!state.expect(TokenType::SEMICOLON, " to end define/argument statement.")) return;
 }
 
 template <>
 void Parser::parse<IrTag::Annotate>(ParserState & state, IrData<IrTag::Annotate> & annotate) {
   if (state.match(TokenType::LBRACE)) {
+    // Block form: annotate { path as "description"; ... }
     annotate.single_statement = false;
-    throw std::runtime_error("NIY: Parser::parse<IrTag::Annotate>() with body"); // TODO
-  } else if (state.expect(TokenType::STRING_LITERAL, " when parsing autonmous annotation.")) {
+    
+    while (!state.error && !state.match(TokenType::RBRACE)) {
+      annotate.annotations.emplace_back();
+      auto & annotation = annotate.annotations.back().data;
+      
+      // Parse optional path (could be _ for no path)
+      if (!(state.match(TokenType::IDENTIFIER) && state.previous.text == "_")) {
+        annotation.path.emplace();
+        parse(state, annotation.path.value().data);
+      }
+      
+      if (!state.expect(TokenType::AS, " in annotation.")) return;
+      if (!state.expect(TokenType::STRING_LITERAL, " for annotation description.")) return;
+      
+      // Handle both regular and format strings
+      std::string raw_text = state.previous.text;
+      if (!raw_text.empty() && (raw_text[0] == 'f' || raw_text[0] == 'F')) {
+        annotation.description.data.is_format = true;
+        // Remove f prefix and quotes
+        if (raw_text.length() >= 3) {
+          annotation.description.data.value = raw_text.substr(2, raw_text.length() - 3);
+        }
+      } else {
+        annotation.description.data.is_format = false;
+        // Remove just quotes
+        if (raw_text.length() >= 2 &&
+            ((raw_text.front() == '"' && raw_text.back() == '"') ||
+             (raw_text.front() == '\'' && raw_text.back() == '\''))) {
+          annotation.description.data.value = raw_text.substr(1, raw_text.length() - 2);
+        } else {
+          annotation.description.data.value = raw_text;
+        }
+      }
+      
+      if (!state.expect(TokenType::SEMICOLON, " to end annotation.")) return;
+    }
+  } else if (state.expect(TokenType::STRING_LITERAL, " when parsing autonomous annotation.")) {
+    // Single statement form
     annotate.single_statement = true;
-    annotate.annotations.emplace_back(std::nullopt, state.previous.text);
+    annotate.annotations.emplace_back();
+    auto & annotation = annotate.annotations.back().data;
+    
+    // Handle both regular and format strings
+    std::string raw_text = state.previous.text;
+    if (!raw_text.empty() && (raw_text[0] == 'f' || raw_text[0] == 'F')) {
+      annotation.description.data.is_format = true;
+      if (raw_text.length() >= 3) {
+        annotation.description.data.value = raw_text.substr(2, raw_text.length() - 3);
+      }
+    } else {
+      annotation.description.data.is_format = false;
+      if (raw_text.length() >= 2 &&
+          ((raw_text.front() == '"' && raw_text.back() == '"') ||
+           (raw_text.front() == '\'' && raw_text.back() == '\''))) {
+        annotation.description.data.value = raw_text.substr(1, raw_text.length() - 2);
+      } else {
+        annotation.description.data.value = raw_text;
+      }
+    }
+    
     state.expect(TokenType::SEMICOLON, " when ending single statement annotation.");
   }
 }
@@ -148,8 +599,40 @@ void Parser::parse<IrTag::Search>(ParserState & state, IrData<IrTag::Search> & s
 }
 
 template <>
+void Parser::parse<IrTag::Field>(ParserState & state, IrData<IrTag::Field> & field) {
+  if (state.match(TokenType::LSQUARE)) {
+    field.lower.emplace();
+    parse(state, field.lower.value().data);
+    
+    if (state.match(TokenType::COLON)) {
+      field.upper.emplace();
+      parse(state, field.upper.value().data);
+    }    
+    if (!state.expect(TokenType::RSQUARE, " to close array dimension.")) return;
+  }
+  if (!state.expect(TokenType::IS, " between field name and type.")) return;
+  if (state.check(TokenType::LBRACE)) {
+    field.type.emplace<1>();
+    parse(state, std::get<1>(field.type).data);
+  } else {
+    field.type.emplace<0>();
+    parse(state, std::get<0>(field.type).data);
+  }
+}
+
+template <>
 void Parser::parse<IrTag::Struct>(ParserState & state, IrData<IrTag::Struct> & data) {
-  throw std::runtime_error("NIY: Parser::parse<IrTag::Struct>()"); // TODO
+  if (!state.expect(TokenType::LBRACE, " when starting to parse struct body.")) return;
+
+  while (!state.error && !state.match(TokenType::RBRACE)) {
+    if (!state.expect(TokenType::IDENTIFIER, " when parsing field name.")) return;
+    std::string field_name = state.previous.text;
+
+    data.fields.emplace_back(std::make_unique<IrNode<IrTag::Field>>());
+    auto & field = data.fields.back()->data;
+    field.name = field_name;
+    parse(state, field);
+  }
 }
 
 template <>
@@ -225,8 +708,13 @@ void Parser::parse<IrTag::Format>(ParserState & state, IrData<IrTag::Format> & d
     }
   }
   if (state.match(TokenType::LT)) {
-    // TODO parse KWARGS
-    state.expect(TokenType::GT, ".");
+    do {
+      if (!state.expect(TokenType::IDENTIFIER, " when parsing format argument name.")) return;
+      std::string arg_name = state.previous.text;
+      if (!state.expect(TokenType::EQUAL, " when parsing format argument.")) return;
+      parse(state, data.kwargs[arg_name].data);
+    } while (state.match(TokenType::COMMA));
+    if (!state.expect(TokenType::GT, " to close format arguments.")) return;
   }
   state.expect(TokenType::SEMICOLON, " to finish format statement");
 }

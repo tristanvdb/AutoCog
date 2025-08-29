@@ -30,6 +30,8 @@ DATA(Struct) {
 
 DATA(Field) {
   std::string name;
+  ONODE(Expression) lower;
+  ONODE(Expression) upper;
   VARIANT(Format, Struct) type;
 };
 

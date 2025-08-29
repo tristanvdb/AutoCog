@@ -9,9 +9,11 @@ using IrExecProgram = IrExec<IrTag::Program>;
 using IrBaseProgram = BaseExec<IrTag::Program>;
 
 void IrExecProgram::queue_imports(std::queue<std::string> & queue) const {
-    for (auto & import: node.data.imports) {
-      queue.push(import.data.file);
-    }
+  for (auto & import: node.data.imports) {
+    std::string const & file = import.data.file;
+    bool has_stl_extension = file.size() >= 4 && ( file.rfind(".stl") == file.size() - 4 );
+    if (has_stl_extension) queue.push(file);
+  }
 }
 
 template <>

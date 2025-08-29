@@ -1,0 +1,115 @@
+// Test imports
+from "library/types.stl" import Response as ResponseType, Thoughts;
+from "utilities.py" import tool_0, tool_1;
+
+// Global defines
+define MAX_ITEMS = 10;
+define threshold = 0.75;
+
+// Global annotation
+annotate {
+    _ as "Test STL program with parameterized records";
+    quiz_generator as "Main quiz generation prompt";
+}
+
+// Search parameters for FTA engine
+search {
+    beam.width = 5;
+    beam.depth = 3;
+    repetition.penalty = 1.2;
+}
+
+// Another parameterized record
+record ChoiceSet {
+    argument N = 4;
+    argument allow_multiple = false;
+    
+    is {
+        options[N] is text;
+        correct is select(.options);
+        explanation is text;
+    }
+}
+
+// Record using other records
+record Question {
+    argument difficulty = 5;
+    
+    is {
+        question is text;
+        choices is ChoiceSet<N=5>;  // Override N to 5
+        hints is Thoughts<N_min=1, N_max=3, L=50>;  // Small hints
+    }
+}
+
+// Main prompt using parameterized records
+prompt quiz_generator {
+    define num_questions = 5;
+    argument topic = "general";
+    
+    annotate {
+        .brainstorm as "Initial idea generation";
+        .output as "Final quiz output";
+    }
+    
+    search {
+        beam.diversity = 0.8;
+    }
+    
+    is {
+        instructions is text;
+        context is text;
+        
+        // Different parameterizations of same record
+        brainstorm is Thoughts<N_min=10, N_max=20, L=200>;
+        refined_ideas is Thoughts<N_min=5, N_max=10>;
+        final_thoughts is Thoughts<N_min=3, N_max=5, L=500>;
+        
+        // Using Question record
+        output is {
+            questions[5] is Question<difficulty=8>;
+            summary is text;
+            difficulty_rating is ResponseType;  // Reference to enum record
+        }
+    }
+}
+
+// Another prompt showing record reuse
+prompt essay_writer {
+    is {
+        topic is text;
+        
+        // Various thought configurations
+        initial_brainstorm is Thoughts<N_max=50, L=100>;
+        outline is Thoughts<N_min=3, N_max=7, L=200>;
+        paragraphs is Thoughts<N_min=5, N_max=8, L=1000>;
+        
+        conclusion is text;
+        self_assessment is ResponseType;
+    }
+}
+
+// Prompt with nested choice structures
+prompt multi_choice_test {
+    is {
+        easy_questions[3] is {
+            q is text;
+            choices is ChoiceSet<N=3>;
+        }
+        
+        medium_questions[5] is {
+            q is text;
+            choices is ChoiceSet<N=4>;
+        }
+        
+        hard_questions[2] is {
+            q is text;
+            choices is ChoiceSet<N=6, allow_multiple=true>;
+        }
+    }
+}
+
+// Test export statements
+export main is quiz_generator<topic="science", num_questions=10>;
+export essay is essay_writer;
+export test is multi_choice_test;

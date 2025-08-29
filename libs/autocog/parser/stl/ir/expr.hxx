@@ -4,8 +4,13 @@
 namespace autocog {
 namespace parser {
 
-enum class UnaryKind { Not, Neg };
-enum class BinaryKind { Add, Sub, Mul, Div, Mod, And, Or, Xor };
+enum class OpKind {
+    NOP,                         // Not an operator
+    Not, Neg,                    // Unary
+    Add, Sub, Mul, Div, Mod,     // Arithmetic
+    And, Or,                     // Logical
+    Lt, Gt, Lte, Gte, Eq, Neq    // Comparison
+};
 
 DATA(Identifier) {
   std::string name;
@@ -28,17 +33,13 @@ DATA(String) {
   bool is_format{false};
 };
 
-DATA(Scalar) {
-  VARIANT(Identifier, Integer, Float, Boolean, String) value;
-};
-
 DATA(Unary) {
-  UnaryKind kind;
+  OpKind kind;
   PNODE(Expression) operand;
 };
 
 DATA(Binary) {
-  BinaryKind kind;
+  OpKind kind;
   PNODE(Expression) lhs;
   PNODE(Expression) rhs;
 };
@@ -49,8 +50,12 @@ DATA(Conditional) {
   PNODE(Expression) e_false;
 };
 
+DATA(Parenthesis) {
+  PNODE(Expression) expr;
+};
+
 DATA(Expression) {
-  VARIANT(Scalar, Unary, Binary, Conditional, Identifier) expr;
+  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
 };
 
 } }

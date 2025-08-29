@@ -13,7 +13,7 @@ void print_usage(const char* program) {
     std::cerr << "Options:\n";
     std::cerr << "  -o <output.json>  Write JSON IR to file (default: stdout)\n";
     std::cerr << "  -V                Verbose\n";
-    std::cerr << "  -I                Add to import search paths\n";
+    std::cerr << "  -I <path>         Add to import search paths\n";
     std::cerr << "  -h                Show this help\n";
 }
 
@@ -42,7 +42,7 @@ bool report_errors(std::list<autocog::parser::Diagnostic> & diagnostics, unsigne
 bool parse_args(
     int argc,
     char** argv,
-    std::queue<std::string> & input_files,
+    std::list<std::string> & input_files,
     std::string & output_file,
     std::list<std::string> & search_paths,
     bool & verbose
@@ -72,7 +72,7 @@ bool parse_args(
             print_usage(argv[0]);
             return false;
         } else {
-            input_files.push(argv[i]);
+            input_files.push_back(argv[i]);
         }
     }
     return true;
@@ -80,24 +80,27 @@ bool parse_args(
 
 int main(int argc, char** argv) {
 
-    unsigned errors = 0;
-    unsigned warnings = 0;
-    unsigned notes = 0;
-    std::list<autocog::parser::Diagnostic> diagnostics;
-    autocog::parser::Parser parser(diagnostics);
-
     // Parge CLI arguments
 
     std::string output_file;
+    std::list<std::string> file_paths;
     std::list<std::string> search_paths;
     bool verbose = false;
-    if (!parse_args(argc, argv, parser.queue, output_file, search_paths, verbose)) return 1;
+    if (!parse_args(argc, argv, file_paths, output_file, search_paths, verbose)) return 1;
     
-    if (parser.queue.empty()) {
+    if (file_paths.empty()) {
         std::cerr << "Error: No input file specified" << std::endl;
         print_usage(argv[0]);
         return 1;
     }
+    
+    // Create parser
+
+    unsigned errors = 0;
+    unsigned warnings = 0;
+    unsigned notes = 0;
+    std::list<autocog::parser::Diagnostic> diagnostics;
+    autocog::parser::Parser parser(diagnostics, search_paths, file_paths);
 
     // Parse all files
 

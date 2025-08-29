@@ -1,0 +1,74 @@
+// Basic literals
+define v0 = 42;
+define v1 = 3.14;
+define v2 = true;
+define v3 = false;
+define v4 = "hello";
+define v5 = f"formatted {v0}";
+
+// Unary operators
+define v6 = -42;
+define v7 = -v0;
+define v8 = !true;
+define v9 = !v2;
+define v10 = -(12);
+
+// Binary arithmetic (fully parenthesized)
+define v11 = (3 + 4);
+define v12 = (10 - 5);
+define v13 = (6 * 7);
+define v14 = (20 / 4);
+define v15 = (17 % 5);
+
+// Binary with variables
+define v16 = (v0 + v1);
+define v17 = (v11 * 2);
+define v18 = (v0 - v12);
+
+// Comparison operators
+define v19 = (5 < 10);
+define v20 = (10 > 5);
+define v21 = (5 <= 5);
+define v22 = (10 >= 10);
+define v23 = (42 == 42);
+define v24 = (1 != 2);
+
+// Logical operators
+define v25 = (true && false);
+define v26 = (true || false);
+define v27 = (v2 && v3);
+
+// Nested expressions
+define v28 = ((3 + 4) * 5);
+define v29 = (6 * (7 + 8));
+define v30 = ((10 - 5) * (3 + 2));
+define v31 = (((1 + 2) * 3) - 4);
+
+// Unary with parenthesized operands
+define v32 = -(3 + 4);
+define v33 = !((5 > 3));
+define v34 = -(-(42));
+
+// Conditional expressions
+define v35 = ((5 > 3) ? 10 : 20);
+define v36 = ((v2) ? "yes" : "no");
+define v37 = ((v0 > 100) ? (v0 * 2) : (v0 / 2));
+define v38 = (((x > 0) && (y < 0)) ? -x : x);
+
+// Complex nested conditionals
+define v39 = ((a > b) ? ((c > d) ? c : d) : ((e > f) ? e : f));
+define v40 = (((x > 0) ? (x * 2) : -x) + 10);
+
+// Just parentheses (no operator)
+define v41 = (42);
+define v42 = ((42));
+define v43 = (((v0)));
+
+// Mixed types in conditionals
+define v44 = ((flag) ? 1 : 0);
+define v45 = ((score > 90) ? "A" : ((score > 80) ? "B" : "C"));
+
+// Edge cases with identifiers
+define MAX_VALUE = 1000;
+define v46 = (v0 < MAX_VALUE);
+define v47 = ((count % 2) == 0);
