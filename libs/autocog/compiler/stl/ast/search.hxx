@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_SEARCH_HXX
 #define AUTOCOG_COMPILER_STL_AST_SEARCH_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 DATA(Param) {
   NODES(Identifier) locator;

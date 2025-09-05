@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_ANNOT_HXX
 #define AUTOCOG_COMPILER_STL_AST_ANNOT_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 DATA(Annotation) {
   ONODE(Path) path;

@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_DEFINE_HXX
 #define AUTOCOG_COMPILER_STL_AST_DEFINE_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 DATA(Define) {
   bool argument;

@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_EXPR_HXX
 #define AUTOCOG_COMPILER_STL_AST_EXPR_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 enum class OpKind {
     NOP,                         // Not an operator

@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_PROGRAM_HXX
 #define AUTOCOG_COMPILER_STL_AST_PROGRAM_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 DATA(Export) {
   // Syntax: "export my_alias is my_target<arg=expr, arg=expr>;"

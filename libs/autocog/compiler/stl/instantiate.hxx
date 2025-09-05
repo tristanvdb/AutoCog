@@ -13,7 +13,7 @@ namespace autocog::compiler::stl {
 class Instantiator {
 public:
     // Main entry point
-    ir::Program instantiate(const AstNode<AstTag::Program> & ast);
+    ir::Program instantiate(const ast::Program & ast);
 };
 
 }

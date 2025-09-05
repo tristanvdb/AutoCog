@@ -130,24 +130,24 @@ void Parser::parse() {
   }
 }
 
-template <> void Parser::parse<AstTag::Expression> (ParserState & state, AstData<AstTag::Expression> &);
-template <> void Parser::parse<AstTag::Program>    (ParserState & state, AstData<AstTag::Program>    &);
-template <> void Parser::parse<AstTag::Prompt>     (ParserState & state, AstData<AstTag::Prompt>     &);
-template <> void Parser::parse<AstTag::Record>     (ParserState & state, AstData<AstTag::Record>     &);
-template <> void Parser::parse<AstTag::Format>     (ParserState & state, AstData<AstTag::Format>     &);
-template <> void Parser::parse<AstTag::Channel>    (ParserState & state, AstData<AstTag::Channel>    &);
-template <> void Parser::parse<AstTag::Flow>       (ParserState & state, AstData<AstTag::Flow>       &);
-template <> void Parser::parse<AstTag::Return>     (ParserState & state, AstData<AstTag::Return>     &);
-template <> void Parser::parse<AstTag::Struct>     (ParserState & state, AstData<AstTag::Struct>     &);
-template <> void Parser::parse<AstTag::Field>      (ParserState & state, AstData<AstTag::Field>      &);
-template <> void Parser::parse<AstTag::Search>     (ParserState & state, AstData<AstTag::Search>     &);
-template <> void Parser::parse<AstTag::Annotate>   (ParserState & state, AstData<AstTag::Annotate>   &);
-template <> void Parser::parse<AstTag::Define>     (ParserState & state, AstData<AstTag::Define>     &);
-template <> void Parser::parse<AstTag::Export>     (ParserState & state, AstData<AstTag::Export>     &);
-template <> void Parser::parse<AstTag::Path>       (ParserState & state, AstData<AstTag::Path>       &);
-template <> void Parser::parse<AstTag::Import>     (ParserState & state, AstData<AstTag::Import>     &);
+template <> void Parser::parse<ast::Tag::Expression> (ParserState & state, ast::Data<ast::Tag::Expression> &);
+template <> void Parser::parse<ast::Tag::Program>    (ParserState & state, ast::Data<ast::Tag::Program>    &);
+template <> void Parser::parse<ast::Tag::Prompt>     (ParserState & state, ast::Data<ast::Tag::Prompt>     &);
+template <> void Parser::parse<ast::Tag::Record>     (ParserState & state, ast::Data<ast::Tag::Record>     &);
+template <> void Parser::parse<ast::Tag::Format>     (ParserState & state, ast::Data<ast::Tag::Format>     &);
+template <> void Parser::parse<ast::Tag::Channel>    (ParserState & state, ast::Data<ast::Tag::Channel>    &);
+template <> void Parser::parse<ast::Tag::Flow>       (ParserState & state, ast::Data<ast::Tag::Flow>       &);
+template <> void Parser::parse<ast::Tag::Return>     (ParserState & state, ast::Data<ast::Tag::Return>     &);
+template <> void Parser::parse<ast::Tag::Struct>     (ParserState & state, ast::Data<ast::Tag::Struct>     &);
+template <> void Parser::parse<ast::Tag::Field>      (ParserState & state, ast::Data<ast::Tag::Field>      &);
+template <> void Parser::parse<ast::Tag::Search>     (ParserState & state, ast::Data<ast::Tag::Search>     &);
+template <> void Parser::parse<ast::Tag::Annotate>   (ParserState & state, ast::Data<ast::Tag::Annotate>   &);
+template <> void Parser::parse<ast::Tag::Define>     (ParserState & state, ast::Data<ast::Tag::Define>     &);
+template <> void Parser::parse<ast::Tag::Export>     (ParserState & state, ast::Data<ast::Tag::Export>     &);
+template <> void Parser::parse<ast::Tag::Path>       (ParserState & state, ast::Data<ast::Tag::Path>       &);
+template <> void Parser::parse<ast::Tag::Import>     (ParserState & state, ast::Data<ast::Tag::Import>     &);
 
-static void clean_raw_string(std::string raw_text, AstData<AstTag::String> & data) {
+static void clean_raw_string(std::string raw_text, ast::Data<ast::Tag::String> & data) {
   if (raw_text.empty()) {
     throw std::runtime_error("Found empty string literal!");
   }
@@ -164,23 +164,23 @@ static void clean_raw_string(std::string raw_text, AstData<AstTag::String> & dat
   data.value = raw_text.substr(1, raw_text.length() - 2);
 }
 
-static OpKind token_to_operator_kind(TokenType type) {
+static ast::OpKind token_to_operator_kind(TokenType type) {
   switch (type) {
-    case TokenType::BANG:     return OpKind::Not;
-    case TokenType::PLUS:     return OpKind::Add;
-    case TokenType::MINUS:    return OpKind::Sub;
-    case TokenType::STAR:     return OpKind::Mul;
-    case TokenType::SLASH:    return OpKind::Div;
-    case TokenType::PERCENT:  return OpKind::Mod;
-    case TokenType::AMPAMP:   return OpKind::And;
-    case TokenType::PIPEPIPE: return OpKind::Or;
-    case TokenType::LT:       return OpKind::Lt;
-    case TokenType::GT:       return OpKind::Gt;
-    case TokenType::LTEQ:     return OpKind::Lte;
-    case TokenType::GTEQ:     return OpKind::Gte;
-    case TokenType::EQEQ:     return OpKind::Eq;
-    case TokenType::BANGEQ:   return OpKind::Neq;
-    default:                  return OpKind::NOP;
+    case TokenType::BANG:     return ast::OpKind::Not;
+    case TokenType::PLUS:     return ast::OpKind::Add;
+    case TokenType::MINUS:    return ast::OpKind::Sub;
+    case TokenType::STAR:     return ast::OpKind::Mul;
+    case TokenType::SLASH:    return ast::OpKind::Div;
+    case TokenType::PERCENT:  return ast::OpKind::Mod;
+    case TokenType::AMPAMP:   return ast::OpKind::And;
+    case TokenType::PIPEPIPE: return ast::OpKind::Or;
+    case TokenType::LT:       return ast::OpKind::Lt;
+    case TokenType::GT:       return ast::OpKind::Gt;
+    case TokenType::LTEQ:     return ast::OpKind::Lte;
+    case TokenType::GTEQ:     return ast::OpKind::Gte;
+    case TokenType::EQEQ:     return ast::OpKind::Eq;
+    case TokenType::BANGEQ:   return ast::OpKind::Neq;
+    default:                  return ast::OpKind::NOP;
   }
 }
 
@@ -225,8 +225,8 @@ static bool is_unary(TokenType tok) {
 }
 
 static bool is_binary(TokenType tok) {
-  OpKind kind = token_to_operator_kind(tok);
-  return kind != OpKind::Not && kind != OpKind::NOP;
+  auto kind = token_to_operator_kind(tok);
+  return kind != ast::OpKind::Not && kind != ast::OpKind::NOP;
 }
 
 static bool is_primary(TokenType tok) {
@@ -245,7 +245,7 @@ static bool is_conditional(TokenType tok) {
 //  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
 //};
 
-static void parse_primary(ParserState & state, AstData<AstTag::Expression> & expr) {
+static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       state.advance();
@@ -294,7 +294,7 @@ static void parse_primary(ParserState & state, AstData<AstTag::Expression> & exp
 }
 
 template <>
-void Parser::parse<AstTag::Expression>(ParserState & state, AstData<AstTag::Expression> & expr) {
+void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
   if (is_primary(state.current.type)) {
     parse_primary(state, expr);
 
@@ -303,14 +303,14 @@ void Parser::parse<AstTag::Expression>(ParserState & state, AstData<AstTag::Expr
     expr.expr.emplace<5>();
     auto & data = std::get<5>(expr.expr).data;
     data.kind = token_to_operator_kind(state.previous.type);
-    data.operand = std::make_unique<AstNode<AstTag::Expression>>();
+    data.operand = std::make_unique<ast::Expression>();
     if (!is_primary(state.current.type) && state.current.type != TokenType::LPAREN ) {
       state.emit_error("Unary operator expects primary or parenthesized operand!");
       return;
     }
     parse(state, data.operand->data);
   } else if (state.match(TokenType::LPAREN)) {
-    auto operand = std::make_unique<AstNode<AstTag::Expression>>();
+    auto operand = std::make_unique<ast::Expression>();
     parse(state, operand->data);
     if (is_binary(state.current.type)) {
       state.advance();
@@ -318,17 +318,17 @@ void Parser::parse<AstTag::Expression>(ParserState & state, AstData<AstTag::Expr
       auto & data = std::get<6>(expr.expr).data;
       data.kind = token_to_operator_kind(state.previous.type);
       data.lhs = std::move(operand);
-      data.rhs = std::make_unique<AstNode<AstTag::Expression>>();
+      data.rhs = std::make_unique<ast::Expression>();
       parse(state, data.rhs->data);
 
     } else if (state.match(TokenType::QUESTION)) {
       expr.expr.emplace<7>();
       auto & data = std::get<7>(expr.expr).data;
       data.cond = std::move(operand);
-      data.e_true = std::make_unique<AstNode<AstTag::Expression>>();
+      data.e_true = std::make_unique<ast::Expression>();
       parse(state, data.e_true->data);
       if (!state.expect(TokenType::COLON, " within conditional expression.")) return;
-      data.e_false = std::make_unique<AstNode<AstTag::Expression>>();
+      data.e_false = std::make_unique<ast::Expression>();
       parse(state, data.e_false->data);
 
     } else {
@@ -346,7 +346,7 @@ void Parser::parse<AstTag::Expression>(ParserState & state, AstData<AstTag::Expr
 }
 
 template <>
-void Parser::parse<AstTag::Path>(ParserState & state, AstData<AstTag::Path> & path) {
+void Parser::parse<ast::Tag::Path>(ParserState & state, ast::Data<ast::Tag::Path> & path) {
   // Path examples:
   // ?xyz[3:7].abc         - input path
   // prompt_name.field[1]  - prompt path  
@@ -451,7 +451,7 @@ void Parser::parse<AstTag::Path>(ParserState & state, AstData<AstTag::Path> & pa
 }
 
 template <>
-void Parser::parse<AstTag::Import>(ParserState & state, AstData<AstTag::Import> & import) {
+void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Import> & import) {
   if (!state.expect(TokenType::STRING_LITERAL, " when parsing import file path.")) return;
   
   std::string raw_text = state.previous.text;
@@ -488,7 +488,7 @@ void Parser::parse<AstTag::Import>(ParserState & state, AstData<AstTag::Import> 
 }
 
 template <>
-void Parser::parse<AstTag::Export>(ParserState & state, AstData<AstTag::Export> & entry) {
+void Parser::parse<ast::Tag::Export>(ParserState & state, ast::Data<ast::Tag::Export> & entry) {
   if (!state.expect(TokenType::IS, " in export statement.")) return;
   if (!state.expect(TokenType::IDENTIFIER, " when parsing export target.")) return;
   entry.target = state.previous.text;
@@ -505,7 +505,7 @@ void Parser::parse<AstTag::Export>(ParserState & state, AstData<AstTag::Export> 
 }
 
 template <>
-void Parser::parse<AstTag::Define>(ParserState & state, AstData<AstTag::Define> & define) {
+void Parser::parse<ast::Tag::Define>(ParserState & state, ast::Data<ast::Tag::Define> & define) {
   if (state.match(TokenType::EQUAL)) {
     define.init.emplace();
     parse(state, define.init.value().data);
@@ -514,7 +514,7 @@ void Parser::parse<AstTag::Define>(ParserState & state, AstData<AstTag::Define> 
 }
 
 template <>
-void Parser::parse<AstTag::Annotate>(ParserState & state, AstData<AstTag::Annotate> & annotate) {
+void Parser::parse<ast::Tag::Annotate>(ParserState & state, ast::Data<ast::Tag::Annotate> & annotate) {
   if (state.match(TokenType::LBRACE)) {
     // Block form: annotate { path as "description"; ... }
     annotate.single_statement = false;
@@ -583,7 +583,7 @@ void Parser::parse<AstTag::Annotate>(ParserState & state, AstData<AstTag::Annota
 }
 
 template <>
-void Parser::parse<AstTag::Search>(ParserState & state, AstData<AstTag::Search> & search) {
+void Parser::parse<ast::Tag::Search>(ParserState & state, ast::Data<ast::Tag::Search> & search) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a block of search parameters.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     search.params.emplace_back();
@@ -599,7 +599,7 @@ void Parser::parse<AstTag::Search>(ParserState & state, AstData<AstTag::Search> 
 }
 
 template <>
-void Parser::parse<AstTag::Field>(ParserState & state, AstData<AstTag::Field> & field) {
+void Parser::parse<ast::Tag::Field>(ParserState & state, ast::Data<ast::Tag::Field> & field) {
   if (state.match(TokenType::LSQUARE)) {
     field.lower.emplace();
     parse(state, field.lower.value().data);
@@ -621,14 +621,14 @@ void Parser::parse<AstTag::Field>(ParserState & state, AstData<AstTag::Field> & 
 }
 
 template <>
-void Parser::parse<AstTag::Struct>(ParserState & state, AstData<AstTag::Struct> & data) {
+void Parser::parse<ast::Tag::Struct>(ParserState & state, ast::Data<ast::Tag::Struct> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse struct body.")) return;
 
   while (!state.error && !state.match(TokenType::RBRACE)) {
     if (!state.expect(TokenType::IDENTIFIER, " when parsing field name.")) return;
     std::string field_name = state.previous.text;
 
-    data.fields.emplace_back(std::make_unique<AstNode<AstTag::Field>>());
+    data.fields.emplace_back(std::make_unique<ast::Field>());
     auto & field = data.fields.back()->data;
     field.name = field_name;
     parse(state, field);
@@ -636,7 +636,7 @@ void Parser::parse<AstTag::Struct>(ParserState & state, AstData<AstTag::Struct> 
 }
 
 template <>
-void Parser::parse<AstTag::Channel>(ParserState & state, AstData<AstTag::Channel> & data) {
+void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::Channel> & data) {
   // Channel syntax: channel { to .target from source; to .target call {...}; ... }
   
   if (!state.expect(TokenType::LBRACE, " when starting to parse channel body.")) return;
@@ -734,7 +734,7 @@ void Parser::parse<AstTag::Channel>(ParserState & state, AstData<AstTag::Channel
 }
 
 template <>
-void Parser::parse<AstTag::Flow>(ParserState & state, AstData<AstTag::Flow> & data) {
+void Parser::parse<ast::Tag::Flow>(ParserState & state, ast::Data<ast::Tag::Flow> & data) {
   // Flow syntax:
   // flow { to prompt_name as "label"; to prompt[index] as "label"; ... }
   // or single: flow to prompt_name as "label";
@@ -784,7 +784,7 @@ void Parser::parse<AstTag::Flow>(ParserState & state, AstData<AstTag::Flow> & da
 }
 
 template <>
-void Parser::parse<AstTag::Return>(ParserState & state, AstData<AstTag::Return> & data) {
+void Parser::parse<ast::Tag::Return>(ParserState & state, ast::Data<ast::Tag::Return> & data) {
   // Return syntax:
   // return { as "label"; from .path; from .path as identifier; ... }
   
@@ -814,7 +814,7 @@ void Parser::parse<AstTag::Return>(ParserState & state, AstData<AstTag::Return> 
 }
 
 template <>
-void Parser::parse<AstTag::Format>(ParserState & state, AstData<AstTag::Format> & data) {
+void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Format> & data) {
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       state.advance();
@@ -853,9 +853,9 @@ void Parser::parse<AstTag::Format>(ParserState & state, AstData<AstTag::Format> 
       data.type.emplace<3>();
       auto & type = std::get<3>(data.type).data;
       if (state.current.type == TokenType::REPEAT) {
-        type.mode = ChoiceKind::Repeat;
+        type.mode = ast::ChoiceKind::Repeat;
       } else {
-        type.mode = ChoiceKind::Select;
+        type.mode = ast::ChoiceKind::Select;
       }
 
       if (!state.expect(TokenType::LPAREN, " when parsing a choice format.")) return;
@@ -883,7 +883,7 @@ void Parser::parse<AstTag::Format>(ParserState & state, AstData<AstTag::Format> 
 }
 
 template <>
-void Parser::parse<AstTag::Record>(ParserState & state, AstData<AstTag::Record> & data) {
+void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Record> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Record.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
@@ -931,7 +931,7 @@ void Parser::parse<AstTag::Record>(ParserState & state, AstData<AstTag::Record> 
 }
 
 template <>
-void Parser::parse<AstTag::Prompt>(ParserState & state, AstData<AstTag::Prompt> & data) {
+void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Prompt> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Prompt.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
@@ -991,7 +991,7 @@ void Parser::parse<AstTag::Prompt>(ParserState & state, AstData<AstTag::Prompt> 
 }
 
 template <>
-void Parser::parse<AstTag::Program>(ParserState & state, AstData<AstTag::Program> & data) {
+void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::Program> & data) {
   while (!state.error && !state.match(TokenType::END_OF_FILE)) {
     switch (state.current.type) {
       case TokenType::FROM: {
@@ -1059,10 +1059,10 @@ void Parser::parse<AstTag::Program>(ParserState & state, AstData<AstTag::Program
 
 void Parser::parse(std::string const & name, std::string const & source) {
   ParserState state(name, source, diagnostics);
-  parse<AstTag::Program>(state, programs[name].data);
+  parse<ast::Tag::Program>(state, programs[name].data);
 }
 
-MAPPED(Program) const & Parser::get() const {
+Parser::file_to_program_map_t const & Parser::get() const {
     return programs;
 }
 
@@ -1071,7 +1071,7 @@ bool Parser::has_prompt(std::string const & filename, std::string const & objnam
     return program.data.prompts.find(objname) != program.data.prompts.end();
 }
 
-NODE(Prompt) const & Parser::get_prompt(std::string const & filename, std::string const & objname) const {
+ast::Prompt const & Parser::get_prompt(std::string const & filename, std::string const & objname) const {
     auto & program = programs.at(filename);
     return program.data.prompts.at(objname);
 }
@@ -1081,7 +1081,7 @@ bool Parser::has_record(std::string const & filename, std::string const & objnam
     return program.data.records.find(objname) != program.data.records.end();
 }
 
-NODE(Record) const & Parser::get_record(std::string const & filename, std::string const & objname) const {
+ast::Record const & Parser::get_record(std::string const & filename, std::string const & objname) const {
     auto & program = programs.at(filename);
     return program.data.records.at(objname);
 }

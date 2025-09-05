@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_RETURN_HXX
 #define AUTOCOG_COMPILER_STL_AST_RETURN_HXX
 
-namespace autocog::compiler::stl {
+namespace autocog::compiler::stl::ast {
 
 DATA(Retfield) {
   NODE(Path)    field;

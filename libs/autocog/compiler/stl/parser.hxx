@@ -42,18 +42,18 @@ struct ParserState {
 
 class Parser {
   public:
-    using Program = NODE(Program);
+    using file_to_program_map_t = std::unordered_map<std::string, ast::Program>;
 
   private:
     std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
     std::queue<std::string> queue;
-    MAPPED(Program) programs;
+    file_to_program_map_t programs;
 
-    template <AstTag tag>
-    void parse(ParserState & state, AstData<tag> & data, int min_precedence);
-    template <AstTag tag>
-    void parse(ParserState & state, AstData<tag> & data);
+    template <ast::Tag tag>
+    void parse(ParserState & state, ast::Data<tag> & data, int min_precedence);
+    template <ast::Tag tag>
+    void parse(ParserState & state, ast::Data<tag> & data);
 
   public:
     Parser(std::list<Diagnostic> &, std::list<std::string> const &);
@@ -62,13 +62,13 @@ class Parser {
     void parse();
     void parse(std::string const & filename, std::string const & source);
 
-    MAPPED(Program) const & get() const;
+    file_to_program_map_t const & get() const;
 
     bool has_prompt(std::string const & filename, std::string const & objname) const;
-    NODE(Prompt) const & get_prompt(std::string const & filename, std::string const & objname) const;
+    ast::Prompt const & get_prompt(std::string const & filename, std::string const & objname) const;
 
     bool has_record(std::string const & filename, std::string const & objname) const;
-    NODE(Record) const & get_record(std::string const & filename, std::string const & objname) const;
+    ast::Record const & get_record(std::string const & filename, std::string const & objname) const;
 };
 
 }

@@ -3,7 +3,7 @@
 namespace autocog::compiler::stl {
 
 ir::Program Instantiator::instantiate(
-    const AstNode<AstTag::Program>& ast
+    const ast::Program & ast
 ) {    
     ir::Program program;
 

@@ -3,11 +3,15 @@
 
 namespace autocog::compiler::stl {
 
-// Source location tracking
 struct SourceLocation {
     int line;
     int column;
     unsigned offset;
+};
+
+struct SourceRange {
+  SourceLocation start;
+  SourceLocation stop;
 };
 
 }
