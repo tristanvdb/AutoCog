@@ -8,7 +8,7 @@
 namespace py = pybind11;
 
 // Helper to convert C++ IR to Python dict
-py::dict ir_to_dict(const autocog::compiler::IrProgram& program) {
+py::dict ir_to_dict(const autocog::compiler::stl::IrProgram& program) {
     py::dict result;
     
     // Convert variables
@@ -260,36 +260,36 @@ PYBIND11_MODULE(stl_parser_cpp, m) {
     m.doc() = "C++ STL parser for AutoCog";
     
     // FieldType enum
-    py::enum_<autocog::compiler::FieldType>(m, "FieldType")
-        .value("TEXT", autocog::compiler::FieldType::TEXT)
-        .value("SELECT", autocog::compiler::FieldType::SELECT)
-        .value("GENERATE", autocog::compiler::FieldType::GENERATE)
-        .value("INTEGER", autocog::compiler::FieldType::INTEGER)
-        .value("BOOLEAN", autocog::compiler::FieldType::BOOLEAN)
-        .value("FLOAT", autocog::compiler::FieldType::FLOAT)
-        .value("CUSTOM", autocog::compiler::FieldType::CUSTOM);
+    py::enum_<autocog::compiler::stl::FieldType>(m, "FieldType")
+        .value("TEXT", autocog::compiler::stl::FieldType::TEXT)
+        .value("SELECT", autocog::compiler::stl::FieldType::SELECT)
+        .value("GENERATE", autocog::compiler::stl::FieldType::GENERATE)
+        .value("INTEGER", autocog::compiler::stl::FieldType::INTEGER)
+        .value("BOOLEAN", autocog::compiler::stl::FieldType::BOOLEAN)
+        .value("FLOAT", autocog::compiler::stl::FieldType::FLOAT)
+        .value("CUSTOM", autocog::compiler::stl::FieldType::CUSTOM);
     
     // Diagnostic class
-    py::class_<autocog::compiler::Diagnostic>(m, "Diagnostic")
-        .def_readonly("level", &autocog::compiler::Diagnostic::level)
-        .def_property_readonly("line", [](const autocog::compiler::Diagnostic& d) { return d.location.line; })
-        .def_property_readonly("column", [](const autocog::compiler::Diagnostic& d) { return d.location.column; })
-        .def_readonly("message", &autocog::compiler::Diagnostic::message)
-        .def_readonly("source_line", &autocog::compiler::Diagnostic::source_line)
-        .def_readonly("notes", &autocog::compiler::Diagnostic::notes)
-        .def("format", &autocog::compiler::Diagnostic::format)
-        .def("__str__", &autocog::compiler::Diagnostic::format);
+    py::class_<autocog::compiler::stl::Diagnostic>(m, "Diagnostic")
+        .def_readonly("level", &autocog::compiler::stl::Diagnostic::level)
+        .def_property_readonly("line", [](const autocog::compiler::stl::Diagnostic& d) { return d.location.line; })
+        .def_property_readonly("column", [](const autocog::compiler::stl::Diagnostic& d) { return d.location.column; })
+        .def_readonly("message", &autocog::compiler::stl::Diagnostic::message)
+        .def_readonly("source_line", &autocog::compiler::stl::Diagnostic::source_line)
+        .def_readonly("notes", &autocog::compiler::stl::Diagnostic::notes)
+        .def("format", &autocog::compiler::stl::Diagnostic::format)
+        .def("__str__", &autocog::compiler::stl::Diagnostic::format);
     
     // Diagnostic Level enum
-    py::enum_<autocog::compiler::Diagnostic::Level>(m, "DiagnosticLevel")
-        .value("Error", autocog::compiler::Diagnostic::Level::Error)
-        .value("Warning", autocog::compiler::Diagnostic::Level::Warning)
-        .value("Note", autocog::compiler::Diagnostic::Level::Note);
+    py::enum_<autocog::compiler::stl::Diagnostic::Level>(m, "DiagnosticLevel")
+        .value("Error", autocog::compiler::stl::Diagnostic::Level::Error)
+        .value("Warning", autocog::compiler::stl::Diagnostic::Level::Warning)
+        .value("Note", autocog::compiler::stl::Diagnostic::Level::Note);
     
     // Main parsing functions
     m.def("parse_file", [](const std::string& filename) {
-        std::vector<autocog::compiler::Diagnostic> diagnostics;
-        auto ir = autocog::compiler::parse_file(filename, diagnostics);
+        std::vector<autocog::compiler::stl::Diagnostic> diagnostics;
+        auto ir = autocog::compiler::stl::parse_file(filename, diagnostics);
         
         py::dict result;
         result["success"] = (ir != nullptr);
@@ -297,7 +297,7 @@ PYBIND11_MODULE(stl_parser_cpp, m) {
         
         if (ir) {
             result["ir"] = ir_to_dict(*ir);
-            result["json"] = autocog::compiler::ir_to_json(*ir);
+            result["json"] = autocog::compiler::stl::ir_to_json(*ir);
         }
         
         return result;
@@ -305,8 +305,8 @@ PYBIND11_MODULE(stl_parser_cpp, m) {
        "Parse an STL file and return IR as Python dict");
     
     m.def("parse_string", [](const std::string& source) {
-        std::vector<autocog::compiler::Diagnostic> diagnostics;
-        auto ir = autocog::compiler::parse_string(source, diagnostics);
+        std::vector<autocog::compiler::stl::Diagnostic> diagnostics;
+        auto ir = autocog::compiler::stl::parse_string(source, diagnostics);
         
         py::dict result;
         result["success"] = (ir != nullptr);
@@ -314,7 +314,7 @@ PYBIND11_MODULE(stl_parser_cpp, m) {
         
         if (ir) {
             result["ir"] = ir_to_dict(*ir);
-            result["json"] = autocog::compiler::ir_to_json(*ir);
+            result["json"] = autocog::compiler::stl::ir_to_json(*ir);
         }
         
         return result;

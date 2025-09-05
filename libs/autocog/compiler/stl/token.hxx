@@ -6,7 +6,7 @@
 #include <string>
 #include <ostream>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 // Token types
 enum class TokenType : int {

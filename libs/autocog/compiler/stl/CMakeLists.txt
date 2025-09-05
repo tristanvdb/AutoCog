@@ -21,9 +21,18 @@ if(NOT pybind11_FOUND)
     endif()
 endif()
 
-# RE/flex lexer generation
 find_program(REFLEX reflex REQUIRED)
 find_library(REFLEX_LIB reflex REQUIRED)
+find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
+
+# Generate C++ protobuf files (ir.proto is in same directory)
+protobuf_generate(
+  LANGUAGE cpp
+  OUT_VAR PROTO_IR_SRCS
+  PROTOS ir.proto
+  PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # Generate lexer from .l file
 add_custom_command(
@@ -35,14 +44,33 @@ add_custom_command(
     COMMENT "Generating lexer with RE/flex"
 )
 
-add_library(autocog_compiler_stl_lib STATIC ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx parser.cxx token.cxx diagnostic.cxx ast/program.cxx)
+# Sources
+add_library(autocog_compiler_stl_lib STATIC
+    token.cxx parser.cxx instantiate.cxx
+    ast/program.cxx
+    diagnostic.cxx
+    ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
+    ${PROTO_IR_SRCS}
+)
 
-target_include_directories(autocog_compiler_stl_lib PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ../../.. ../../../../vendors/headers)
-if(REFLEX_LIB)
-    target_link_libraries(autocog_compiler_stl_lib PUBLIC ${REFLEX_LIB})
-else()
-    message(FATAL_ERROR "RE/flex library not found, trying to link manually")
-endif()
+# Header paths
+target_include_directories(autocog_compiler_stl_lib PUBLIC
+    ../../..
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${Protobuf_INCLUDE_DIRS}
+    ../../../../vendors/headers
+)
+
+# Libraries
+target_link_libraries(autocog_compiler_stl_lib PUBLIC
+    ${REFLEX_LIB}
+    protobuf::libprotobuf
+    absl::log_internal_check_op
+    absl::statusor
+    absl::strings
+)
+
+# FPIC
 set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Executable `autocog-compiler-stl`
@@ -52,6 +80,7 @@ target_link_libraries(autocog_compiler_stl_cli PUBLIC autocog_compiler_stl_lib)
 set_target_properties(autocog_compiler_stl_cli PROPERTIES OUTPUT_NAME "autocog-compiler-stl")
 install(TARGETS autocog_compiler_stl_cli DESTINATION bin)
 
+
 # Python module
 #pybind11_add_module(stl_compiler_stl_pybind
 #    binding.cxx
@@ -60,5 +89,9 @@ install(TARGETS autocog_compiler_stl_cli DESTINATION bin)
 #    autocog_compiler_stl_lib
 #)
 #set_property(TARGET stl_compiler_stl_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)
-#install(TARGETS stl_compiler_stl_pybind DESTINATION ${Python_SITEARCH})
-
+#protobuf_generate(
+#  LANGUAGE python
+#  OUT_VAR PROTO_IR_PY
+#  PROTOS ir.proto
+#  PROTOC_OUT_DIR ${CMAKE_BINARY_DIR}/python/autocog/compiler
+#)

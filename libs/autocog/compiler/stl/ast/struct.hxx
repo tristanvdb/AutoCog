@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_STRUCT_HXX
 #define AUTOCOG_COMPILER_STL_AST_STRUCT_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 DATA(Enum) {
   NODES(String) enumerators;

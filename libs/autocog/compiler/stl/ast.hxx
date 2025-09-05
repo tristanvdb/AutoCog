@@ -12,7 +12,7 @@
 #include <variant>
 #include <unordered_map>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 class Lexer;
 class Parser;

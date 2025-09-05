@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_) :
   level(level_),

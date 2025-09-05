@@ -38,7 +38,7 @@ public:
 
 %option c++ noyywrap
 %option lexer=Lexer
-%option namespace=autocog::compiler
+%option namespace=autocog::compiler::stl
 
 %%
 

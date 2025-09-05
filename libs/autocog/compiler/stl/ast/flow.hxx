@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_FLOW_HXX
 #define AUTOCOG_COMPILER_STL_AST_FLOW_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 DATA(Edge) {
   NODE(Identifier) prompt;

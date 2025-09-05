@@ -2,7 +2,7 @@
 #include "autocog/compiler/stl/ast.hxx"
 #include <stdexcept>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 using AstExecProgram = AstExec<AstTag::Program>;
 using AstBaseProgram = BaseExec<AstTag::Program>;

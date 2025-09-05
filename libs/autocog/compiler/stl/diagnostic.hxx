@@ -7,7 +7,7 @@
 #include <vector>
 #include <optional>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 enum class DiagnosticLevel { Error, Warning, Note };
 

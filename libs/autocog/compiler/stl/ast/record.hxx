@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_RECORD_HXX
 #define AUTOCOG_COMPILER_STL_AST_RECORD_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 DATA(Record) {
   std::string name;

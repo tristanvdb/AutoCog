@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_PATH_HXX
 #define AUTOCOG_COMPILER_STL_AST_PATH_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 DATA(Step) {
   NODE(Identifier) field;

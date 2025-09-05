@@ -6,7 +6,7 @@
 
 #include <stdexcept>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 static std::string get_line(std::string const & source, int line_pos) {
     if (line_pos <= 0) throw std::runtime_error("In get_line(): line number must be greater than 0");

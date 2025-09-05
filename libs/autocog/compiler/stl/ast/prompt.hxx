@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_AST_PROMPT_HXX
 #define AUTOCOG_COMPILER_STL_AST_PROMPT_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 DATA(Prompt) {
   std::string     name;

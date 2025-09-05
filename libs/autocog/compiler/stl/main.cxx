@@ -2,11 +2,14 @@
 #include "autocog/compiler/stl/diagnostic.hxx"
 #include "autocog/compiler/stl/parser.hxx"
 #include "autocog/compiler/stl/ast.hxx"
+#include "autocog/compiler/stl/instantiate.hxx"
 
 #include <iostream>
 #include <fstream>
 #include <cstring>
 #include <queue>
+
+using namespace autocog::compiler::stl;
 
 void print_usage(const char* program) {
     std::cerr << "Usage: " << program << " [options] <input.stl>\n";
@@ -17,13 +20,13 @@ void print_usage(const char* program) {
     std::cerr << "  -h                Show this help\n";
 }
 
-bool report_errors(std::list<autocog::compiler::Diagnostic> & diagnostics, unsigned & errors, unsigned & warnings, unsigned & notes) {
+bool report_errors(std::list<Diagnostic> & diagnostics, unsigned & errors, unsigned & warnings, unsigned & notes) {
     for (auto const & diag : diagnostics) {
         std::cerr << diag.format() << std::endl;
         switch (diag.level) {
-          case autocog::compiler::DiagnosticLevel::Error:   errors++;   break;
-          case autocog::compiler::DiagnosticLevel::Warning: warnings++; break;
-          case autocog::compiler::DiagnosticLevel::Note:    notes++;    break;
+          case DiagnosticLevel::Error:   errors++;   break;
+          case DiagnosticLevel::Warning: warnings++; break;
+          case DiagnosticLevel::Note:    notes++;    break;
         }
     }
 
@@ -99,18 +102,19 @@ int main(int argc, char** argv) {
     unsigned errors = 0;
     unsigned warnings = 0;
     unsigned notes = 0;
-    std::list<autocog::compiler::Diagnostic> diagnostics;
-    autocog::compiler::Parser parser(diagnostics, search_paths, file_paths);
+    std::list<Diagnostic> diagnostics;
+    Parser parser(diagnostics, search_paths, file_paths);
 
     // Parse all files
 
     parser.parse();
     if (report_errors(diagnostics, errors, warnings, notes)) return 1;
 
-    // Semantic Check
+    // Instantiate all exported prompts associated to input files
 
+    Instantiator instantiator;
     for (auto const & [filepath,program]: parser.get()) {
-        program.exec.semcheck(parser, filepath, diagnostics);
+        instantiator.instantiate(program);
     }
     if (report_errors(diagnostics, errors, warnings, notes)) return 1;
 

@@ -12,7 +12,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 class Lexer;
 struct Diagnostic;

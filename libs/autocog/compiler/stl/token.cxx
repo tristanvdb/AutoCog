@@ -1,7 +1,7 @@
 
 #include "autocog/compiler/stl/token.hxx"
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 const char * token_type_name(TokenType type) {
     switch (type) {

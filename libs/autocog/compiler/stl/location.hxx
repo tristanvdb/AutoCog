@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_LOCATION_HXX
 #define AUTOCOG_COMPILER_STL_LOCATION_HXX
 
-namespace autocog::compiler {
+namespace autocog::compiler::stl {
 
 // Source location tracking
 struct SourceLocation {
