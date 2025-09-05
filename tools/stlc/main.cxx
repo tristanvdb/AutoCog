@@ -1,4 +1,6 @@
 
+#include "convert.hxx"
+
 #include "autocog/compiler/stl/diagnostic.hxx"
 #include "autocog/compiler/stl/parser.hxx"
 #include "autocog/compiler/stl/ast.hxx"

@@ -1,4 +1,5 @@
-#include "autocog/llama/model.hxx"
+
+#include "autocog/llama/xfta/model.hxx"
 
 #include <llama.h>
 
@@ -14,7 +15,7 @@
 #define DEBUG_Model_eval_sequences VERBOSE && 0
 #define DEBUG_Model_eval_topk_tokens VERBOSE && 0
 
-namespace autocog { namespace llama {
+namespace autocog::llama::xfta {
 
 Model::Model() :
   id(0),
@@ -378,5 +379,5 @@ unsigned Model::eval_topk_tokens(
   return 1;
 }
 
-} }
+}
 

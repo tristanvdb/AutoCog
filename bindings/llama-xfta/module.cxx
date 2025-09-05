@@ -1,9 +1,9 @@
 
-#include "fta.hxx"
-#include "ftt.hxx"
-#include "model.hxx"
-#include "evaluation.hxx"
-#include "manager.hxx"
+#include "convert.hxx"
+
+#include "autocog/llama/xfta/model.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
+#include "autocog/llama/xfta/manager.hxx"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -16,27 +16,8 @@
 #endif
 #define DEBUG_pybind_evaluate VERBOSE && 0
 
-namespace autocog {
-namespace llama {
-
-static FTA convert_pydict_to_fta(ModelID const id, pybind11::dict const & fta_dict) {
-  Model & model = Manager::get_model(id);
-
-  FTA fta(model, fta_dict); // TODO move from class
-
-  return fta;
-}
-
-static pybind11::dict convert_ftt_to_pydict(ModelID const id, FTT const & ftt) {
-  Model & model = Manager::get_model(id);
-
-  return ftt.pydict(); // TODO move from class
-}
-
-} }
-
 PYBIND11_MODULE(llama, module) {
-  using namespace autocog::llama;
+  using namespace autocog::llama::xfta;
 
   Manager::initialize();
 

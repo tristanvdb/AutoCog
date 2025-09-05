@@ -1,12 +1,11 @@
-#ifndef __AUTOCOG_LLAMA_MODEL__HXX_
-#define __AUTOCOG_LLAMA_MODEL__HXX_
+#ifndef AUTOCOG_LLAMA_XFTA_MODEL_HXX
+#define AUTOCOG_LLAMA_XFTA_MODEL_HXX
 
-#include "autocog/llama/types.hxx"
+#include "autocog/llama/xfta/types.hxx"
 
 #include <string>
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 class Model {
   public:
@@ -59,7 +58,7 @@ class Model {
     );
 };
 
-} }
+}
 
-#endif /* __AUTOCOG_LLAMA_MODEL__HXX_ */
+#endif /* AUTOCOG_LLAMA_XFTA_MODEL_HXX */
 

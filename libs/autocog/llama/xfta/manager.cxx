@@ -1,6 +1,6 @@
 
-#include "autocog/llama/manager.hxx"
-#include "autocog/llama/evaluation.hxx"
+#include "autocog/llama/xfta/manager.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
 
 #include <string>
 #include <cstdlib>
@@ -10,8 +10,7 @@
 #  include <iostream>
 #endif
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 void quiet_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     if (level == GGML_LOG_LEVEL_ERROR) {
@@ -94,5 +93,5 @@ void Manager::rm_eval(EvalID id) {
   manager.evaluations.erase(id);
 }
 
-} }
+}
 

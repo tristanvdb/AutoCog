@@ -1,13 +1,12 @@
-#ifndef __AUTOCOG_LLAMA_Evaluation__HXX_
-#define __AUTOCOG_LLAMA_Evaluation__HXX_
+#ifndef AUTOCOG_LLAMA_XFTA_EVALUATION_HXX
+#define AUTOCOG_LLAMA_XFTA_EVALUATION_HXX
 
-#include "autocog/llama/types.hxx"
+#include "autocog/llama/xfta/types.hxx"
 
 #include <optional>
 #include <queue>
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 class Model;
 class FTA;
@@ -59,7 +58,7 @@ class Evaluation {
     FTT const & get() const;
 };
 
-} }
+}
 
-#endif /* __AUTOCOG_LLAMA_Evaluation__HXX_ */
+#endif /* AUTOCOG_LLAMA_XFTA_EVALUATION_HXX */
 

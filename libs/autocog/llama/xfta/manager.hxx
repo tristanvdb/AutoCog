@@ -1,15 +1,14 @@
-#ifndef __AUTOCOG_LLAMA_MANAGER__HXX_
-#define __AUTOCOG_LLAMA_MANAGER__HXX_
+#ifndef AUTOCOG_LLAMA_XFTA_MANAGER_HXX
+#define AUTOCOG_LLAMA_XFTA_MANAGER_HXX
 
-#include "autocog/llama/types.hxx"
-#include "autocog/llama/model.hxx"
-#include "autocog/llama/evaluation.hxx"
+#include "autocog/llama/xfta/types.hxx"
+#include "autocog/llama/xfta/model.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
 
 #include <unordered_map>
 #include <string>
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 class Evaluation;
 class FTA;
@@ -40,7 +39,7 @@ class Manager {
     static void rm_eval(EvalID id);
 };
 
-} }
+}
 
-#endif /* __AUTOCOG_LLAMA_MANAGER__HXX_ */
+#endif /* AUTOCOG_LLAMA_XFTA_MANAGER_HXX */
 

@@ -1,5 +1,5 @@
-#ifndef __AUTOCOG_LLAMA_TYPES__HXX_
-#define __AUTOCOG_LLAMA_TYPES__HXX_
+#ifndef AUTOCOG_LLAMA_XFTA_TYPES_HXX
+#define AUTOCOG_LLAMA_XFTA_TYPES_HXX
 
 #include <llama.h>
 #include <vector>
@@ -8,8 +8,7 @@
 #  define VERBOSE 0
 #endif
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 using EvalID = unsigned;
 using ModelID = unsigned;
@@ -20,7 +19,7 @@ using TokenID = llama_token;
 using TokenSequence = std::vector<TokenID>;
 using ProbaSequence = std::vector<float>;
 
-} }
+}
 
-#endif /* __AUTOCOG_LLAMA_TYPES__HXX_ */
+#endif /* AUTOCOG_LLAMA_XFTA_TYPES_HXX */
 

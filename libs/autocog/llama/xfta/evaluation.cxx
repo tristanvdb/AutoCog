@@ -1,9 +1,9 @@
 
-#include "autocog/llama/manager.hxx"
-#include "autocog/llama/evaluation.hxx"
-#include "autocog/llama/model.hxx"
-#include "autocog/llama/ftt.hxx"
-#include "autocog/llama/fta.hxx"
+#include "autocog/llama/xfta/manager.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
+#include "autocog/llama/xfta/model.hxx"
+#include "autocog/llama/xfta/ftt.hxx"
+#include "autocog/llama/xfta/fta.hxx"
 
 #if VERBOSE
 #  include <iostream>
@@ -12,7 +12,7 @@
 #define DEBUG_Evaluation_enqueue VERBOSE && 0
 #define DEBUG_Evaluation_advance VERBOSE && 0
 
-namespace autocog { namespace llama {
+namespace autocog::llama::xfta {
 
 PathState::PathState(ActionID const action_, FTT & parent_, TokenSequence const & tokens_, std::optional<ContextID> context_) :
   action(action_),
@@ -117,5 +117,5 @@ std::pair<Model &, ContextID> Evaluation::restore(PathState & state) const {
   return std::pair<Model &, ContextID>(model, state.context.value());
 }
 
-} }
+}
 

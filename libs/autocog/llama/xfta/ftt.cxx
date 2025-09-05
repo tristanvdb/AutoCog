@@ -1,5 +1,7 @@
 
-#include "autocog/llama/ftt.hxx"
+#include "autocog/llama/xfta/ftt.hxx"
+
+#include <cmath>
 
 #if VERBOSE
 #  include <iostream>
@@ -7,7 +9,7 @@
 
 #define DEBUG_FTT_add VERBOSE && 0
 
-namespace autocog { namespace llama {
+namespace autocog::llama::xfta {
 
 FTT::FTT(
   ActionID const action_,
@@ -44,44 +46,13 @@ FTT * FTT::make_root(TokenSequence const & tokens) {
   return new FTT(0, tokens, logprobs, 0, tokens.size());
 }
 
-// TODO review code below
-
-pybind11::dict FTT::pydict() const {
-    pybind11::dict result;
-    result["action"] = this->action;
-    
-    // Convert tokens
-    pybind11::list token_list;
-    for (TokenID token : this->tokens) {
-        token_list.append(token);
-    }
-    result["tokens"] = token_list;
-
-    // Convert probabilities  
-    pybind11::list logprobs_list;
-    for (float lpb : this->logprobs) {
-        logprobs_list.append(lpb);
-    }
-    result["logprobs"] = logprobs_list;
-    result["logprob"] = this->logprob;
-    result["length"] = this->length;
-
-    // Convert children recursively
-    pybind11::list children_list;
-    for (const FTT& child : this->children) {
-        children_list.append(child.pydict());
-    }
-    result["children"] = children_list;
-
-    // Add metadata
-    result["pruned"] = this->pruned;
-    
-    return result;
-}
-
 float FTT::proba() const {
   return std::exp(-this->logprob / this->length);
 }
 
-} }
+std::list<FTT> const & FTT::get_children() const {
+  return this->children;
+}
+
+}
 

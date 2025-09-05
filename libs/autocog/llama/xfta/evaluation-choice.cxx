@@ -1,11 +1,13 @@
 
-#include "autocog/llama/evaluation.hxx"
-#include "autocog/llama/model.hxx"
-#include "autocog/llama/fta.hxx"
-#include "autocog/llama/ftt.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
+#include "autocog/llama/xfta/model.hxx"
+#include "autocog/llama/xfta/fta.hxx"
+#include "autocog/llama/xfta/ftt.hxx"
 
 #include <llama.h>
 
+
+#include <cmath>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
@@ -16,7 +18,7 @@
 
 #define DEBUG_Evaluation_evaluate_choice VERBOSE && 0
 
-namespace autocog { namespace llama {
+namespace autocog::llama::xfta {
 
 struct ChoiceResult {
   size_t index;
@@ -103,5 +105,5 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   return num_token_eval;
 }
 
-} }
+}
 

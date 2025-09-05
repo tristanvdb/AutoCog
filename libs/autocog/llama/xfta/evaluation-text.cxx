@@ -1,9 +1,9 @@
 
-#include "autocog/llama/manager.hxx"
-#include "autocog/llama/evaluation.hxx"
-#include "autocog/llama/model.hxx"
-#include "autocog/llama/fta.hxx"
-#include "autocog/llama/ftt.hxx"
+#include "autocog/llama/xfta/manager.hxx"
+#include "autocog/llama/xfta/evaluation.hxx"
+#include "autocog/llama/xfta/model.hxx"
+#include "autocog/llama/xfta/fta.hxx"
+#include "autocog/llama/xfta/ftt.hxx"
 
 #include <stdexcept>
 
@@ -13,7 +13,7 @@
 
 #define DEBUG_Evaluation_evaluate_text VERBOSE && 0
 
-namespace autocog { namespace llama {
+namespace autocog::llama::xfta {
 
 unsigned Evaluation::evaluate_text(PathState & state) {
 #if DEBUG_Evaluation_evaluate_text
@@ -49,5 +49,5 @@ unsigned Evaluation::evaluate_text(PathState & state) {
   return num_token_eval;
 }
 
-} }
+}
 

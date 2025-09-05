@@ -39,7 +39,7 @@ podman exec -ti autocog python3 tests/autocog/llama/execute_sta_with_llama_cpp.p
 
 ```
 docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest bash
-mkdir -p /workspace/libs/autocog/compiler/stl/__build/
-( cd /workspace/libs/autocog/compiler/stl/__build/ && rm -rf * && cmake .. && make install )
+mkdir -p /tmp/autocog
+( cd /tmp/autocog && rm -rf * && cmake /workspace/autocog && make install )
 ( cd /workspace/tests/samples ; autocog-compiler-stl -I miniapp miniapp/main.stl miniapp/more.stl defines.stl )
 ```

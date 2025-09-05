@@ -1,14 +1,15 @@
-#ifndef __AUTOCOG_LLAMA_FTA__HXX_
-#define __AUTOCOG_LLAMA_FTA__HXX_
+#ifndef AUTOCOG_LLAMA_XFTA_FTA_HXX
+#define AUTOCOG_LLAMA_XFTA_FTA_HXX
 
-#include "autocog/llama/types.hxx"
+#include "autocog/llama/xfta/types.hxx"
 
-#include <pybind11/pybind11.h>
-
+#include <optional>
+#include <string>
 #include <utility>
+#include <memory>
+#include <stdexcept>
 
-namespace autocog {
-namespace llama {
+namespace autocog::llama::xfta {
 
 class Model;
 
@@ -87,18 +88,12 @@ struct Choice : public Action {
   Choice(ActionID const id_, std::string const & name_, float threshold_, unsigned width_);
 };
 
-class FTA {
-  public:
-    Action const & action(ActionID const id) const;
-
-    FTA() = default;
-    FTA(Model const & model, pybind11::dict const & pydata);
-
-  private:
-    std::vector<std::unique_ptr<Action>> actions;
+struct FTA {
+  Action const & action(ActionID const id) const;
+  std::vector<std::unique_ptr<Action>> actions;
 };
 
-} }
+}
 
-#endif /* __AUTOCOG_LLAMA_FTA__HXX_ */
+#endif /* AUTOCOG_LLAMA_XFTA_FTA_HXX */
 
