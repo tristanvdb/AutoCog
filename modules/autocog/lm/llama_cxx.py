@@ -7,11 +7,11 @@ from .lm import LM
 
 from ..fta.actions import Choose, Text, Complete
 
-from ..llama import create as autocog_llama_create
-from ..llama import tokenize as autocog_llama_tokenize
-from ..llama import detokenize as autocog_llama_detokenize
-from ..llama import vocab_size as autocog_llama_vocab_size
-from ..llama import evaluate as autocog_llama_evaluate
+from ..llama.xfta import create as autocog_llama_create
+from ..llama.xfta import tokenize as autocog_llama_tokenize
+from ..llama.xfta import detokenize as autocog_llama_detokenize
+from ..llama.xfta import vocab_size as autocog_llama_vocab_size
+from ..llama.xfta import evaluate as autocog_llama_evaluate
 
 fta_defaults = {
   "Text" : {

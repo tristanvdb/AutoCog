@@ -2,15 +2,19 @@
 # Generate C++ protobuf files (ir.proto is in same directory)
 protobuf_generate(
   LANGUAGE cpp
-  OUT_VAR PROTO_IR_SRCS
+  OUT_VAR PROTO_IR_CXX
   PROTOS ir.proto
   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
 )
-#protobuf_generate(
-#  LANGUAGE python
-#  PROTOS ir.proto
-#  PROTOC_OUT_DIR ${PYTHON_MODULE_PREFIX}/autocog/compiler
-#)
+protobuf_generate(
+  LANGUAGE python
+  OUT_VAR PROTO_IR_PY
+  PROTOS ir.proto
+  PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_custom_target(generate_python_proto ALL
+  DEPENDS ${PROTO_IR_PY}
+)
 
 # Generate lexer from .l file
 add_custom_command(
@@ -27,7 +31,7 @@ add_library(autocog_compiler_stl_lib STATIC
     ast/program.cxx
     diagnostic.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
-    ${PROTO_IR_SRCS}
+    ${PROTO_IR_CXX}
 )
 
 target_include_directories(autocog_compiler_stl_lib PUBLIC
@@ -46,4 +50,6 @@ target_link_libraries(autocog_compiler_stl_lib PUBLIC
 )
 
 set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+install(FILES ${PROTO_IR_PY} DESTINATION ${PYTHON_MODULE_PREFIX}/autocog/compiler/stl)
 

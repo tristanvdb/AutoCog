@@ -16,7 +16,7 @@
 #endif
 #define DEBUG_pybind_evaluate VERBOSE && 0
 
-PYBIND11_MODULE(llama, module) {
+PYBIND11_MODULE(xfta_cxx, module) {
   using namespace autocog::llama::xfta;
 
   Manager::initialize();

@@ -7,8 +7,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-PYBIND11_MODULE(stl_parser_cpp, m) {
-  m.doc() = "C++ STL parser for AutoCog";
+PYBIND11_MODULE(stl_cxx, module) {
+  module.doc() = "C++ STL parser for AutoCog";
 
   // TODO
 }

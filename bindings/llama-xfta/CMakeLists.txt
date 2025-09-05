@@ -15,9 +15,9 @@ target_link_libraries(autocog_llama_xfta_pybind PRIVATE
 )
 set_property(TARGET autocog_llama_xfta_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(autocog_llama_xfta_pybind PROPERTIES
-  OUTPUT_NAME "xfta"
+  OUTPUT_NAME "xfta_cxx"
   PREFIX "${PYTHON_MODULE_PREFIX}"
   SUFFIX "${PYTHON_MODULE_EXTENSION}"
 )
-install(TARGETS autocog_llama_xfta_pybind DESTINATION autocog/llama)
+install(TARGETS autocog_llama_xfta_pybind DESTINATION autocog/llama/xfta)
 

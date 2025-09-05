@@ -32,7 +32,7 @@ FTA convert_pydict_to_fta(ModelID const id, pybind11::dict const & pydata) {
         
     std::string action_type = action_dict["__type__"].cast<std::string>();
         
-    ActionID node_id = fta.actions.size();  // Assign sequential IDs
+    ActionID node_id = fta.actions.size(); // Assign sequential IDs
     uid_to_id[uid] = node_id;
         
     std::unique_ptr<Action> action;
