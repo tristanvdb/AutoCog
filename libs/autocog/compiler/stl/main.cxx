@@ -1,7 +1,7 @@
 
-#include "autocog/parser/stl/diagnostic.hxx"
-#include "autocog/parser/stl/parser.hxx"
-#include "autocog/parser/stl/ir.hxx"
+#include "autocog/compiler/stl/diagnostic.hxx"
+#include "autocog/compiler/stl/parser.hxx"
+#include "autocog/compiler/stl/ast.hxx"
 
 #include <iostream>
 #include <fstream>
@@ -17,13 +17,13 @@ void print_usage(const char* program) {
     std::cerr << "  -h                Show this help\n";
 }
 
-bool report_errors(std::list<autocog::parser::Diagnostic> & diagnostics, unsigned & errors, unsigned & warnings, unsigned & notes) {
+bool report_errors(std::list<autocog::compiler::Diagnostic> & diagnostics, unsigned & errors, unsigned & warnings, unsigned & notes) {
     for (auto const & diag : diagnostics) {
         std::cerr << diag.format() << std::endl;
         switch (diag.level) {
-          case autocog::parser::DiagnosticLevel::Error:   errors++;   break;
-          case autocog::parser::DiagnosticLevel::Warning: warnings++; break;
-          case autocog::parser::DiagnosticLevel::Note:    notes++;    break;
+          case autocog::compiler::DiagnosticLevel::Error:   errors++;   break;
+          case autocog::compiler::DiagnosticLevel::Warning: warnings++; break;
+          case autocog::compiler::DiagnosticLevel::Note:    notes++;    break;
         }
     }
 
@@ -99,8 +99,8 @@ int main(int argc, char** argv) {
     unsigned errors = 0;
     unsigned warnings = 0;
     unsigned notes = 0;
-    std::list<autocog::parser::Diagnostic> diagnostics;
-    autocog::parser::Parser parser(diagnostics, search_paths, file_paths);
+    std::list<autocog::compiler::Diagnostic> diagnostics;
+    autocog::compiler::Parser parser(diagnostics, search_paths, file_paths);
 
     // Parse all files
 

@@ -1,6 +1,6 @@
 %top{
-#include "autocog/parser/stl/token.hxx"
-#include "autocog/parser/stl/location.hxx"
+#include "autocog/compiler/stl/token.hxx"
+#include "autocog/compiler/stl/location.hxx"
 #include <string>
 %}
 
@@ -38,7 +38,7 @@ public:
 
 %option c++ noyywrap
 %option lexer=Lexer
-%option namespace=autocog::parser
+%option namespace=autocog::compiler
 
 %%
 

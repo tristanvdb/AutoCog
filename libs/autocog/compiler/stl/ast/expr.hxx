@@ -1,8 +1,7 @@
-#ifndef AUTOCOG_PARSER_STL_IR_EXPR_HXX
-#define AUTOCOG_PARSER_STL_IR_EXPR_HXX
+#ifndef AUTOCOG_COMPILER_STL_AST_EXPR_HXX
+#define AUTOCOG_COMPILER_STL_AST_EXPR_HXX
 
-namespace autocog {
-namespace parser {
+namespace autocog::compiler {
 
 enum class OpKind {
     NOP,                         // Not an operator
@@ -58,6 +57,6 @@ DATA(Expression) {
   VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
 };
 
-} }
+}
 
-#endif // AUTOCOG_PARSER_STL_IR_EXPR_HXX
+#endif // AUTOCOG_COMPILER_STL_AST_EXPR_HXX

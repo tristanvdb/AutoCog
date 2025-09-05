@@ -1,13 +1,13 @@
-#ifndef AUTOCOG_PARSER_STL_DIAGNOSTIC_HXX
-#define AUTOCOG_PARSER_STL_DIAGNOSTIC_HXX
+#ifndef AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX
+#define AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX
 
-#include "autocog/parser/stl/location.hxx"
+#include "autocog/compiler/stl/location.hxx"
 
 #include <string>
 #include <vector>
 #include <optional>
 
-namespace autocog::parser {
+namespace autocog::compiler {
 
 enum class DiagnosticLevel { Error, Warning, Note };
 
@@ -26,4 +26,4 @@ struct Diagnostic {
 
 }
 
-#endif /* AUTOCOG_PARSER_STL_DIAGNOSTIC_HXX */
+#endif /* AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX */

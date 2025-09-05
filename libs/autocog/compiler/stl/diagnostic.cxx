@@ -1,11 +1,11 @@
 
-#include "autocog/parser/stl/diagnostic.hxx"
+#include "autocog/compiler/stl/diagnostic.hxx"
 
 #include <sstream>
 
 #include <stdexcept>
 
-namespace autocog::parser {
+namespace autocog::compiler {
 
 Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_) :
   level(level_),

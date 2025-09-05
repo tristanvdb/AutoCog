@@ -1,7 +1,7 @@
-#ifndef AUTOCOG_PARSER_STL_IR_ANNOT_HXX
-#define AUTOCOG_PARSER_STL_IR_ANNOT_HXX
+#ifndef AUTOCOG_COMPILER_STL_AST_ANNOT_HXX
+#define AUTOCOG_COMPILER_STL_AST_ANNOT_HXX
 
-namespace autocog { namespace parser {
+namespace autocog::compiler {
 
 DATA(Annotation) {
   ONODE(Path) path;
@@ -13,6 +13,6 @@ DATA(Annotate) {
   NODES(Annotation) annotations;
 };
 
-} }
+}
 
-#endif // AUTOCOG_PARSER_STL_IR_ANNOT_HXX
+#endif // AUTOCOG_COMPILER_STL_AST_ANNOT_HXX

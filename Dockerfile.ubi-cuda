@@ -17,10 +17,20 @@ RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
 COPY vendors/llama /tmp/llama_cpp
 
 RUN cd /tmp/llama_cpp && \
-      cmake -DLLAMA_BUILD_COMMON=OFF -DLLAMA_CUDA=ON -B build && \
-      make -C build -j$(nproc) install
+    cmake -DLLAMA_BUILD_COMMON=OFF -DLLAMA_CUDA=ON -B build && \
+    make -C build -j$(nproc) install && \
+    rm -rf /tmp/llama_cpp
 
 ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
+
+# RE/Flex
+
+RUN git clone https://github.com/Genivia/RE-flex.git /tmp/reflex && \
+    cd /tmp/reflex && \
+    ./build.sh && \
+    ./allinstall.sh && \
+    cp lib/*.so /usr/local/lib && \
+    rm -rf /tmp/reflex
 
 # Venv
 

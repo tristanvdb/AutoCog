@@ -1,7 +1,7 @@
-#ifndef AUTOCOG_PARSER_STL_IR_PROGRAM_HXX
-#define AUTOCOG_PARSER_STL_IR_PROGRAM_HXX
+#ifndef AUTOCOG_COMPILER_STL_AST_PROGRAM_HXX
+#define AUTOCOG_COMPILER_STL_AST_PROGRAM_HXX
 
-namespace autocog { namespace parser {
+namespace autocog::compiler {
 
 DATA(Export) {
   // Syntax: "export my_alias is my_target<arg=expr, arg=expr>;"
@@ -34,6 +34,6 @@ EXEC(Program) {
   void queue_imports(std::queue<std::string> & queue) const;
 };
 
-} }
+}
 
-#endif // AUTOCOG_PARSER_STL_IR_PROGRAM_HXX
+#endif // AUTOCOG_COMPILER_STL_AST_PROGRAM_HXX

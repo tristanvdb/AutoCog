@@ -1,6 +1,6 @@
 # Develop Commands Cheat Sheet
 
-## C++ module: autocog.llama
+## C++ module: `autocog.llama`
 
 Build image and "test":
 ```
@@ -16,7 +16,7 @@ pip install -e .
 python3 tests/autocog/llama/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
 ```
 
-## CUDA on RHEL with Podman
+### CUDA on RHEL with Podman
 
 First setup CUDA for container use (3rd command is for FIPS enable machines):
 ```
@@ -33,4 +33,12 @@ Then building and running the container:
 podman build --device nvidia.com/gpu=all -f Dockerfile.ubi-cuda -t autocog:ubi-cuda .\
 podman run --name autocog --rm -d --device nvidia.com/gpu=all -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:ubi-cuda sleep infinity
 podman exec -ti autocog python3 tests/autocog/llama/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
+```
+
+## C++ module: `autocog.compiler.stl`
+
+```
+docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest bash
+mkdir -p /workspace/libs/autocog/compiler/stl/__build/
+( cd /workspace/libs/autocog/compiler/stl/__build/ && rm -rf * && cmake .. && make install )
 ```

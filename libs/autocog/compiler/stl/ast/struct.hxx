@@ -1,7 +1,7 @@
-#ifndef AUTOCOG_PARSER_STL_IR_STRUCT_HXX
-#define AUTOCOG_PARSER_STL_IR_STRUCT_HXX
+#ifndef AUTOCOG_COMPILER_STL_AST_STRUCT_HXX
+#define AUTOCOG_COMPILER_STL_AST_STRUCT_HXX
 
-namespace autocog { namespace parser {
+namespace autocog::compiler {
 
 DATA(Enum) {
   NODES(String) enumerators;
@@ -35,6 +35,6 @@ DATA(Field) {
   VARIANT(Format, Struct) type;
 };
 
-} }
+}
 
-#endif // AUTOCOG_PARSER_STL_IR_STRUCT_HXX
+#endif // AUTOCOG_COMPILER_STL_AST_STRUCT_HXX

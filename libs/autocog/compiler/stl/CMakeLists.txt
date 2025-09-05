@@ -1,0 +1,64 @@
+cmake_minimum_required(VERSION 3.12)
+project(autocog_compiler_stl)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 QUIET)
+if(NOT pybind11_FOUND)
+    # Get pybind11 from Python
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import pybind11; print(pybind11.get_cmake_dir())"
+        OUTPUT_VARIABLE pybind11_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(pybind11_DIR)
+        find_package(pybind11 REQUIRED PATHS ${pybind11_DIR})
+    else()
+        message(FATAL_ERROR "pybind11 not found. Install with: pip install pybind11")
+    endif()
+endif()
+
+# RE/flex lexer generation
+find_program(REFLEX reflex REQUIRED)
+find_library(REFLEX_LIB reflex REQUIRED)
+
+# Generate lexer from .l file
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.hxx
+    COMMAND ${REFLEX} --header-file=${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.hxx
+                      --outfile=${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
+                      ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
+    COMMENT "Generating lexer with RE/flex"
+)
+
+add_library(autocog_compiler_stl_lib STATIC ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx parser.cxx token.cxx diagnostic.cxx ast/program.cxx)
+
+target_include_directories(autocog_compiler_stl_lib PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ../../.. ../../../../vendors/headers)
+if(REFLEX_LIB)
+    target_link_libraries(autocog_compiler_stl_lib PUBLIC ${REFLEX_LIB})
+else()
+    message(FATAL_ERROR "RE/flex library not found, trying to link manually")
+endif()
+set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# Executable `autocog-compiler-stl`
+
+add_executable(autocog_compiler_stl_cli main.cxx)
+target_link_libraries(autocog_compiler_stl_cli PUBLIC autocog_compiler_stl_lib)
+set_target_properties(autocog_compiler_stl_cli PROPERTIES OUTPUT_NAME "autocog-compiler-stl")
+install(TARGETS autocog_compiler_stl_cli DESTINATION bin)
+
+# Python module
+#pybind11_add_module(stl_compiler_stl_pybind
+#    binding.cxx
+#)
+#target_link_libraries(stl_compiler_stl_pybind PRIVATE
+#    autocog_compiler_stl_lib
+#)
+#set_property(TARGET stl_compiler_stl_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)
+#install(TARGETS stl_compiler_stl_pybind DESTINATION ${Python_SITEARCH})
+

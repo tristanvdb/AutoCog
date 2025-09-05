@@ -1,9 +1,10 @@
-#ifndef AUTOCOG_PARSER_STL_PARSER_HXX
-#define AUTOCOG_PARSER_STL_PARSER_HXX
+#ifndef AUTOCOG_COMPILER_STL_PARSER_HXX
+#define AUTOCOG_COMPILER_STL_PARSER_HXX
 
-#include "autocog/parser/stl/token.hxx"
-#include "autocog/parser/stl/ir.hxx"
-#include "autocog/parser/stl/lexer.hxx"
+#include "autocog/compiler/stl/token.hxx"
+#include "autocog/compiler/stl/ast.hxx"
+
+#include "autocog_compiler_stl_lexer.hxx" //< Generated file
 
 #include <memory>
 #include <queue>
@@ -11,7 +12,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace autocog::parser {
+namespace autocog::compiler {
 
 class Lexer;
 struct Diagnostic;
@@ -49,10 +50,10 @@ class Parser {
     std::queue<std::string> queue;
     MAPPED(Program) programs;
 
-    template <IrTag tag>
-    void parse(ParserState & state, IrData<tag> & data, int min_precedence);
-    template <IrTag tag>
-    void parse(ParserState & state, IrData<tag> & data);
+    template <AstTag tag>
+    void parse(ParserState & state, AstData<tag> & data, int min_precedence);
+    template <AstTag tag>
+    void parse(ParserState & state, AstData<tag> & data);
 
   public:
     Parser(std::list<Diagnostic> &, std::list<std::string> const &);
@@ -72,4 +73,4 @@ class Parser {
 
 }
 
-#endif // AUTOCOG_PARSER_STL_PARSER_HXX
+#endif // AUTOCOG_COMPILER_STL_PARSER_HXX

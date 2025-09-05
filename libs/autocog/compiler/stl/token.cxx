@@ -1,9 +1,8 @@
 
-#include "autocog/parser/stl/token.hxx"
+#include "autocog/compiler/stl/token.hxx"
 
-namespace autocog::parser {
+namespace autocog::compiler {
 
-// TODO move to token.cxx
 const char * token_type_name(TokenType type) {
     switch (type) {
         case TokenType::NOT_A_VALID_TOKEN: return "not-a-valid-token";

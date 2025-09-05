@@ -1,12 +1,12 @@
 
-#include "autocog/parser/stl/parser.hxx"
-#include "autocog/parser/stl/diagnostic.hxx"
+#include "autocog/compiler/stl/parser.hxx"
+#include "autocog/compiler/stl/diagnostic.hxx"
 
 #include <filesystem>
 
 #include <stdexcept>
 
-namespace autocog::parser {
+namespace autocog::compiler {
 
 static std::string get_line(std::string const & source, int line_pos) {
     if (line_pos <= 0) throw std::runtime_error("In get_line(): line number must be greater than 0");
@@ -130,24 +130,24 @@ void Parser::parse() {
   }
 }
 
-template <> void Parser::parse<IrTag::Expression> (ParserState & state, IrData<IrTag::Expression> &);
-template <> void Parser::parse<IrTag::Program>    (ParserState & state, IrData<IrTag::Program>    &);
-template <> void Parser::parse<IrTag::Prompt>     (ParserState & state, IrData<IrTag::Prompt>     &);
-template <> void Parser::parse<IrTag::Record>     (ParserState & state, IrData<IrTag::Record>     &);
-template <> void Parser::parse<IrTag::Format>     (ParserState & state, IrData<IrTag::Format>     &);
-template <> void Parser::parse<IrTag::Channel>    (ParserState & state, IrData<IrTag::Channel>    &);
-template <> void Parser::parse<IrTag::Flow>       (ParserState & state, IrData<IrTag::Flow>       &);
-template <> void Parser::parse<IrTag::Return>     (ParserState & state, IrData<IrTag::Return>     &);
-template <> void Parser::parse<IrTag::Struct>     (ParserState & state, IrData<IrTag::Struct>     &);
-template <> void Parser::parse<IrTag::Field>      (ParserState & state, IrData<IrTag::Field>      &);
-template <> void Parser::parse<IrTag::Search>     (ParserState & state, IrData<IrTag::Search>     &);
-template <> void Parser::parse<IrTag::Annotate>   (ParserState & state, IrData<IrTag::Annotate>   &);
-template <> void Parser::parse<IrTag::Define>     (ParserState & state, IrData<IrTag::Define>     &);
-template <> void Parser::parse<IrTag::Export>     (ParserState & state, IrData<IrTag::Export>     &);
-template <> void Parser::parse<IrTag::Path>       (ParserState & state, IrData<IrTag::Path>       &);
-template <> void Parser::parse<IrTag::Import>     (ParserState & state, IrData<IrTag::Import>     &);
+template <> void Parser::parse<AstTag::Expression> (ParserState & state, AstData<AstTag::Expression> &);
+template <> void Parser::parse<AstTag::Program>    (ParserState & state, AstData<AstTag::Program>    &);
+template <> void Parser::parse<AstTag::Prompt>     (ParserState & state, AstData<AstTag::Prompt>     &);
+template <> void Parser::parse<AstTag::Record>     (ParserState & state, AstData<AstTag::Record>     &);
+template <> void Parser::parse<AstTag::Format>     (ParserState & state, AstData<AstTag::Format>     &);
+template <> void Parser::parse<AstTag::Channel>    (ParserState & state, AstData<AstTag::Channel>    &);
+template <> void Parser::parse<AstTag::Flow>       (ParserState & state, AstData<AstTag::Flow>       &);
+template <> void Parser::parse<AstTag::Return>     (ParserState & state, AstData<AstTag::Return>     &);
+template <> void Parser::parse<AstTag::Struct>     (ParserState & state, AstData<AstTag::Struct>     &);
+template <> void Parser::parse<AstTag::Field>      (ParserState & state, AstData<AstTag::Field>      &);
+template <> void Parser::parse<AstTag::Search>     (ParserState & state, AstData<AstTag::Search>     &);
+template <> void Parser::parse<AstTag::Annotate>   (ParserState & state, AstData<AstTag::Annotate>   &);
+template <> void Parser::parse<AstTag::Define>     (ParserState & state, AstData<AstTag::Define>     &);
+template <> void Parser::parse<AstTag::Export>     (ParserState & state, AstData<AstTag::Export>     &);
+template <> void Parser::parse<AstTag::Path>       (ParserState & state, AstData<AstTag::Path>       &);
+template <> void Parser::parse<AstTag::Import>     (ParserState & state, AstData<AstTag::Import>     &);
 
-static void clean_raw_string(std::string raw_text, IrData<IrTag::String> & data) {
+static void clean_raw_string(std::string raw_text, AstData<AstTag::String> & data) {
   if (raw_text.empty()) {
     throw std::runtime_error("Found empty string literal!");
   }
@@ -245,7 +245,7 @@ static bool is_conditional(TokenType tok) {
 //  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
 //};
 
-static void parse_primary(ParserState & state, IrData<IrTag::Expression> & expr) {
+static void parse_primary(ParserState & state, AstData<AstTag::Expression> & expr) {
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       state.advance();
@@ -294,7 +294,7 @@ static void parse_primary(ParserState & state, IrData<IrTag::Expression> & expr)
 }
 
 template <>
-void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Expression> & expr) {
+void Parser::parse<AstTag::Expression>(ParserState & state, AstData<AstTag::Expression> & expr) {
   if (is_primary(state.current.type)) {
     parse_primary(state, expr);
 
@@ -303,14 +303,14 @@ void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Express
     expr.expr.emplace<5>();
     auto & data = std::get<5>(expr.expr).data;
     data.kind = token_to_operator_kind(state.previous.type);
-    data.operand = std::make_unique<IrNode<IrTag::Expression>>();
+    data.operand = std::make_unique<AstNode<AstTag::Expression>>();
     if (!is_primary(state.current.type) && state.current.type != TokenType::LPAREN ) {
       state.emit_error("Unary operator expects primary or parenthesized operand!");
       return;
     }
     parse(state, data.operand->data);
   } else if (state.match(TokenType::LPAREN)) {
-    auto operand = std::make_unique<IrNode<IrTag::Expression>>();
+    auto operand = std::make_unique<AstNode<AstTag::Expression>>();
     parse(state, operand->data);
     if (is_binary(state.current.type)) {
       state.advance();
@@ -318,17 +318,17 @@ void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Express
       auto & data = std::get<6>(expr.expr).data;
       data.kind = token_to_operator_kind(state.previous.type);
       data.lhs = std::move(operand);
-      data.rhs = std::make_unique<IrNode<IrTag::Expression>>();
+      data.rhs = std::make_unique<AstNode<AstTag::Expression>>();
       parse(state, data.rhs->data);
 
     } else if (state.match(TokenType::QUESTION)) {
       expr.expr.emplace<7>();
       auto & data = std::get<7>(expr.expr).data;
       data.cond = std::move(operand);
-      data.e_true = std::make_unique<IrNode<IrTag::Expression>>();
+      data.e_true = std::make_unique<AstNode<AstTag::Expression>>();
       parse(state, data.e_true->data);
       if (!state.expect(TokenType::COLON, " within conditional expression.")) return;
-      data.e_false = std::make_unique<IrNode<IrTag::Expression>>();
+      data.e_false = std::make_unique<AstNode<AstTag::Expression>>();
       parse(state, data.e_false->data);
 
     } else {
@@ -346,7 +346,7 @@ void Parser::parse<IrTag::Expression>(ParserState & state, IrData<IrTag::Express
 }
 
 template <>
-void Parser::parse<IrTag::Path>(ParserState & state, IrData<IrTag::Path> & path) {
+void Parser::parse<AstTag::Path>(ParserState & state, AstData<AstTag::Path> & path) {
   // Path examples:
   // ?xyz[3:7].abc         - input path
   // prompt_name.field[1]  - prompt path  
@@ -451,7 +451,7 @@ void Parser::parse<IrTag::Path>(ParserState & state, IrData<IrTag::Path> & path)
 }
 
 template <>
-void Parser::parse<IrTag::Import>(ParserState & state, IrData<IrTag::Import> & import) {
+void Parser::parse<AstTag::Import>(ParserState & state, AstData<AstTag::Import> & import) {
   if (!state.expect(TokenType::STRING_LITERAL, " when parsing import file path.")) return;
   
   std::string raw_text = state.previous.text;
@@ -488,7 +488,7 @@ void Parser::parse<IrTag::Import>(ParserState & state, IrData<IrTag::Import> & i
 }
 
 template <>
-void Parser::parse<IrTag::Export>(ParserState & state, IrData<IrTag::Export> & entry) {
+void Parser::parse<AstTag::Export>(ParserState & state, AstData<AstTag::Export> & entry) {
   if (!state.expect(TokenType::IS, " in export statement.")) return;
   if (!state.expect(TokenType::IDENTIFIER, " when parsing export target.")) return;
   entry.target = state.previous.text;
@@ -505,7 +505,7 @@ void Parser::parse<IrTag::Export>(ParserState & state, IrData<IrTag::Export> & e
 }
 
 template <>
-void Parser::parse<IrTag::Define>(ParserState & state, IrData<IrTag::Define> & define) {
+void Parser::parse<AstTag::Define>(ParserState & state, AstData<AstTag::Define> & define) {
   if (state.match(TokenType::EQUAL)) {
     define.init.emplace();
     parse(state, define.init.value().data);
@@ -514,7 +514,7 @@ void Parser::parse<IrTag::Define>(ParserState & state, IrData<IrTag::Define> & d
 }
 
 template <>
-void Parser::parse<IrTag::Annotate>(ParserState & state, IrData<IrTag::Annotate> & annotate) {
+void Parser::parse<AstTag::Annotate>(ParserState & state, AstData<AstTag::Annotate> & annotate) {
   if (state.match(TokenType::LBRACE)) {
     // Block form: annotate { path as "description"; ... }
     annotate.single_statement = false;
@@ -583,7 +583,7 @@ void Parser::parse<IrTag::Annotate>(ParserState & state, IrData<IrTag::Annotate>
 }
 
 template <>
-void Parser::parse<IrTag::Search>(ParserState & state, IrData<IrTag::Search> & search) {
+void Parser::parse<AstTag::Search>(ParserState & state, AstData<AstTag::Search> & search) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a block of search parameters.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     search.params.emplace_back();
@@ -599,7 +599,7 @@ void Parser::parse<IrTag::Search>(ParserState & state, IrData<IrTag::Search> & s
 }
 
 template <>
-void Parser::parse<IrTag::Field>(ParserState & state, IrData<IrTag::Field> & field) {
+void Parser::parse<AstTag::Field>(ParserState & state, AstData<AstTag::Field> & field) {
   if (state.match(TokenType::LSQUARE)) {
     field.lower.emplace();
     parse(state, field.lower.value().data);
@@ -621,14 +621,14 @@ void Parser::parse<IrTag::Field>(ParserState & state, IrData<IrTag::Field> & fie
 }
 
 template <>
-void Parser::parse<IrTag::Struct>(ParserState & state, IrData<IrTag::Struct> & data) {
+void Parser::parse<AstTag::Struct>(ParserState & state, AstData<AstTag::Struct> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse struct body.")) return;
 
   while (!state.error && !state.match(TokenType::RBRACE)) {
     if (!state.expect(TokenType::IDENTIFIER, " when parsing field name.")) return;
     std::string field_name = state.previous.text;
 
-    data.fields.emplace_back(std::make_unique<IrNode<IrTag::Field>>());
+    data.fields.emplace_back(std::make_unique<AstNode<AstTag::Field>>());
     auto & field = data.fields.back()->data;
     field.name = field_name;
     parse(state, field);
@@ -636,7 +636,7 @@ void Parser::parse<IrTag::Struct>(ParserState & state, IrData<IrTag::Struct> & d
 }
 
 template <>
-void Parser::parse<IrTag::Channel>(ParserState & state, IrData<IrTag::Channel> & data) {
+void Parser::parse<AstTag::Channel>(ParserState & state, AstData<AstTag::Channel> & data) {
   // Channel syntax: channel { to .target from source; to .target call {...}; ... }
   
   if (!state.expect(TokenType::LBRACE, " when starting to parse channel body.")) return;
@@ -734,7 +734,7 @@ void Parser::parse<IrTag::Channel>(ParserState & state, IrData<IrTag::Channel> &
 }
 
 template <>
-void Parser::parse<IrTag::Flow>(ParserState & state, IrData<IrTag::Flow> & data) {
+void Parser::parse<AstTag::Flow>(ParserState & state, AstData<AstTag::Flow> & data) {
   // Flow syntax:
   // flow { to prompt_name as "label"; to prompt[index] as "label"; ... }
   // or single: flow to prompt_name as "label";
@@ -784,7 +784,7 @@ void Parser::parse<IrTag::Flow>(ParserState & state, IrData<IrTag::Flow> & data)
 }
 
 template <>
-void Parser::parse<IrTag::Return>(ParserState & state, IrData<IrTag::Return> & data) {
+void Parser::parse<AstTag::Return>(ParserState & state, AstData<AstTag::Return> & data) {
   // Return syntax:
   // return { as "label"; from .path; from .path as identifier; ... }
   
@@ -814,7 +814,7 @@ void Parser::parse<IrTag::Return>(ParserState & state, IrData<IrTag::Return> & d
 }
 
 template <>
-void Parser::parse<IrTag::Format>(ParserState & state, IrData<IrTag::Format> & data) {
+void Parser::parse<AstTag::Format>(ParserState & state, AstData<AstTag::Format> & data) {
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       state.advance();
@@ -883,7 +883,7 @@ void Parser::parse<IrTag::Format>(ParserState & state, IrData<IrTag::Format> & d
 }
 
 template <>
-void Parser::parse<IrTag::Record>(ParserState & state, IrData<IrTag::Record> & data) {
+void Parser::parse<AstTag::Record>(ParserState & state, AstData<AstTag::Record> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Record.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
@@ -931,7 +931,7 @@ void Parser::parse<IrTag::Record>(ParserState & state, IrData<IrTag::Record> & d
 }
 
 template <>
-void Parser::parse<IrTag::Prompt>(ParserState & state, IrData<IrTag::Prompt> & data) {
+void Parser::parse<AstTag::Prompt>(ParserState & state, AstData<AstTag::Prompt> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Prompt.")) return;
   while (!state.error && !state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
@@ -991,7 +991,7 @@ void Parser::parse<IrTag::Prompt>(ParserState & state, IrData<IrTag::Prompt> & d
 }
 
 template <>
-void Parser::parse<IrTag::Program>(ParserState & state, IrData<IrTag::Program> & data) {
+void Parser::parse<AstTag::Program>(ParserState & state, AstData<AstTag::Program> & data) {
   while (!state.error && !state.match(TokenType::END_OF_FILE)) {
     switch (state.current.type) {
       case TokenType::FROM: {
@@ -1059,7 +1059,7 @@ void Parser::parse<IrTag::Program>(ParserState & state, IrData<IrTag::Program> &
 
 void Parser::parse(std::string const & name, std::string const & source) {
   ParserState state(name, source, diagnostics);
-  parse<IrTag::Program>(state, programs[name].data);
+  parse<AstTag::Program>(state, programs[name].data);
 }
 
 MAPPED(Program) const & Parser::get() const {

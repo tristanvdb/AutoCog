@@ -1,7 +1,7 @@
-#ifndef AUTOCOG_PARSER_STL_IR_CHANNEL_HXX
-#define AUTOCOG_PARSER_STL_IR_CHANNEL_HXX
+#ifndef AUTOCOG_COMPILER_STL_AST_CHANNEL_HXX
+#define AUTOCOG_COMPILER_STL_AST_CHANNEL_HXX
 
-namespace autocog { namespace parser {
+namespace autocog::compiler {
 
 DATA(Kwarg) {
   NODE(Identifier) name;
@@ -25,7 +25,6 @@ DATA(Channel) {
   NODES(Link) links;
 };
 
-} // namespace parser  
-} // namespace autocog
+}
 
-#endif // AUTOCOG_PARSER_STL_IR_CHANNEL_HXX
+#endif // AUTOCOG_COMPILER_STL_AST_CHANNEL_HXX

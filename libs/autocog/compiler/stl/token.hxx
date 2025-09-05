@@ -1,13 +1,12 @@
-#ifndef AUTOCOG_PARSER_STL_TOKEN_HXX
-#define AUTOCOG_PARSER_STL_TOKEN_HXX
+#ifndef AUTOCOG_COMPILER_STL_TOKEN_HXX
+#define AUTOCOG_COMPILER_STL_TOKEN_HXX
 
-#include "autocog/parser/stl/location.hxx"
+#include "autocog/compiler/stl/location.hxx"
 
 #include <string>
 #include <ostream>
 
-namespace autocog {
-namespace parser {
+namespace autocog::compiler {
 
 // Token types
 enum class TokenType : int {
@@ -95,7 +94,6 @@ struct Token {
 // Helper function to get token type name
 const char* token_type_name(TokenType type);
 
-} // namespace parser
-} // namespace autocog
+}
 
-#endif // AUTOCOG_PARSER_STL_TOKEN_HXX
+#endif // AUTOCOG_COMPILER_STL_TOKEN_HXX

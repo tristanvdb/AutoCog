@@ -7,3 +7,4 @@
 ftt.svg
 .venv/
 modules/autocog.egg-info/
+**/__build
