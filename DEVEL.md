@@ -60,15 +60,11 @@ mkdir -p /tmp/autocog
 
 ## Faster CMake build for develop
 
-TODO: what to add in container? (pip uses an ephemeral venv)
-
-Building both executables:
+Building both executables, you can use that to build VERBOSE or DEBUG versions.
 ```
 mkdir -p /tmp/autocog
 cd /tmp/autocog
-cmake /workspace/autocog
+cmake -DCMAKE_INSTALL_PREFIX=/opt/lib64/python3.9/site-packages /workspace/autocog
 make install -j$(nproc)
-xfta --help
-stlc --help
 ```
 

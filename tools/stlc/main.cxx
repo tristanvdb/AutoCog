@@ -24,9 +24,15 @@ void print_usage(const char* program) {
     std::cerr << "  -h                Show this help\n";
 }
 
-bool report_errors(std::list<Diagnostic> & diagnostics, unsigned & errors, unsigned & warnings, unsigned & notes) {
+bool report_errors(
+  std::list<Diagnostic> & diagnostics,
+  std::unordered_map<std::string, int> const & fileids,
+  unsigned & errors,
+  unsigned & warnings,
+  unsigned & notes
+) {
     for (auto const & diag : diagnostics) {
-        std::cerr << diag.format() << std::endl;
+        std::cerr << diag.format(fileids) << std::endl;
         switch (diag.level) {
           case DiagnosticLevel::Error:   errors++;   break;
           case DiagnosticLevel::Warning: warnings++; break;
@@ -109,20 +115,25 @@ int main(int argc, char** argv) {
     unsigned warnings = 0;
     unsigned notes = 0;
     std::list<Diagnostic> diagnostics;
-    Parser parser(diagnostics, search_paths, file_paths);
+    std::unordered_map<std::string, int> fileids;
+    Parser parser(diagnostics, fileids, search_paths, file_paths);
 
     // Parse all files
 
     parser.parse();
-    if (report_errors(diagnostics, errors, warnings, notes)) return 1;
+    if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
 
     // Instantiate all exported prompts associated to input files
 
-    Instantiator instantiator;
+    Instantiator instantiator(diagnostics);
     for (auto const & [filepath,program]: parser.get()) {
-        instantiator.instantiate(program);
+        instantiator.defines(program);
+        instantiator.declarations(program);
+        instantiator.entries(program);
     }
-    if (report_errors(diagnostics, errors, warnings, notes)) return 1;
+    instantiator.collect();
+    instantiator.instantiate();
+    if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
 
     return 0;
 }

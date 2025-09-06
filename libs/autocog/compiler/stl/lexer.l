@@ -6,6 +6,7 @@
 
 %class{
 private:
+    int fid = -1;
     int line_number = 1;
     int column_number = 1;
     int last_column = 1;
@@ -25,8 +26,10 @@ private:
     }
     
 public:
+    void set_file_id(int fid_) { fid = fid_; }
+
     SourceLocation current_location() const {
-        return {line_number, last_column, current_offset};
+        return {fid, line_number, last_column, current_offset};
     }
 
     Token advance() {

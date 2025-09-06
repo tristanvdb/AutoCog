@@ -88,7 +88,7 @@ enum class TokenType : int {
 struct Token {
     TokenType      type{TokenType::NOT_A_VALID_TOKEN};
     std::string    text{""};
-    SourceLocation location{-1,-1,0};
+    SourceLocation location{-1,-1,-1,0};
 };
 
 // Helper function to get token type name

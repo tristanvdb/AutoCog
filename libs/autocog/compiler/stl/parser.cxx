@@ -21,11 +21,10 @@ static std::string get_line(std::string const & source, int line_pos) {
 }
 
 ParserState::ParserState(
-  std::string const & filename_,
+  int fileid,
   std::string const & source_,
   std::list<Diagnostic> & diagnostics_
 ) :
-  filename(filename_), 
   source(source_),
   diagnostics(diagnostics_),
   stream(source),
@@ -33,7 +32,9 @@ ParserState::ParserState(
   previous(),
   current(lexer.advance()),
   error(false)
-{}
+{
+  lexer.set_file_id(fileid);
+}
 
 void ParserState::advance() {
   previous = current;
@@ -73,20 +74,23 @@ void ParserState::emit_error(std::string msg) {
 
 Parser::Parser(
   std::list<Diagnostic> & diagnostics_,
+  std::unordered_map<std::string, int> & fileids_,
   std::list<std::string> const & search_paths_
 ) :
   search_paths(search_paths_),
   diagnostics(diagnostics_),
+  fileids(fileids_),
   queue(),
   programs()
 {}
 
 Parser::Parser(
   std::list<Diagnostic> & diagnostics_,
+  std::unordered_map<std::string, int> & fileids_,
   std::list<std::string> const & search_paths_,
   std::list<std::string> const & filepaths
 ) :
-  Parser(diagnostics_, search_paths_)
+  Parser(diagnostics_, fileids_, search_paths_)
 {
   for (auto & filepath: filepaths) {
     queue.push(filepath);
@@ -114,6 +118,10 @@ void Parser::parse() {
     std::string filepath = queue.front();
     queue.pop();
 
+    if (fileids.find(filepath) != fileids.end()) continue;
+    int fid = fileids.size();
+    fileids.emplace(filepath, fid);
+
     std::string found_path = file_lookup(filepath, search_paths);
     if (found_path.empty()) {
       std::ostringstream oss;
@@ -124,7 +132,7 @@ void Parser::parse() {
       std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       file.close();
 
-      parse(filepath, source);
+      parse(fid, filepath, source);
       programs[filepath].exec.queue_imports(queue);
     }
   }
@@ -1057,8 +1065,9 @@ void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::P
   }
 }
 
-void Parser::parse(std::string const & name, std::string const & source) {
-  ParserState state(name, source, diagnostics);
+void Parser::parse(int fid, std::string const & name, std::string const & source) {
+  ParserState state(fid, source, diagnostics);
+  programs.emplace(name, name);
   parse<ast::Tag::Program>(state, programs[name].data);
 }
 

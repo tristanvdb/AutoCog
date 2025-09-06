@@ -17,6 +17,8 @@ DATA(Import) {
 };
 
 DATA(Program) {
+  std::string filename;
+
   NODES(Import)  imports;
   MAPPED(Export) exports;
 

@@ -18,7 +18,6 @@ class Lexer;
 struct Diagnostic;
 
 struct ParserState {
-  std::string filename;
   std::string source;
   std::list<Diagnostic> & diagnostics;
 
@@ -29,7 +28,7 @@ struct ParserState {
   Token current;
   bool error;
 
-  ParserState(std::string const & filename_, std::string const & source_, std::list<Diagnostic> & diagnostics_);
+  ParserState(int fid, std::string const & source_, std::list<Diagnostic> & diagnostics_);
 
   void advance();
 
@@ -47,6 +46,7 @@ class Parser {
   private:
     std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
+    std::unordered_map<std::string, int> & fileids;
     std::queue<std::string> queue;
     file_to_program_map_t programs;
 
@@ -56,11 +56,11 @@ class Parser {
     void parse(ParserState & state, ast::Data<tag> & data);
 
   public:
-    Parser(std::list<Diagnostic> &, std::list<std::string> const &);
-    Parser(std::list<Diagnostic> &, std::list<std::string> const &, std::list<std::string> const &);
+    Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &);
+    Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &, std::list<std::string> const &);
 
     void parse();
-    void parse(std::string const & filename, std::string const & source);
+    void parse(int fid, std::string const & filename, std::string const & source);
 
     file_to_program_map_t const & get() const;
 

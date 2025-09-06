@@ -23,12 +23,20 @@ Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, std::
   notes()
 {}
 
-std::string Diagnostic::format() const {
+std::string Diagnostic::format(std::unordered_map<std::string, int> const & fileids) const {
     std::stringstream ss;
     
     // Main error message
     if (location) {
-      ss << location.value().line << ":" << location.value().column << ": ";
+      auto const & loc = location.value();
+      std::string filepath = "unknown";
+      for (auto [fpath,fid]: fileids) {
+        if (fid == loc.fid) {
+          filepath = fpath;
+          break;
+        }
+      }
+      ss << filepath << ":"  << loc.line << ":" << loc.column << ": ";
     }
     switch (level) {
         case DiagnosticLevel::Error:   ss << "error: ";   break;
