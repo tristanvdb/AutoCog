@@ -3,8 +3,6 @@
 
 #include "autocog/compiler/stl/ast.hxx"
 
-#include "ir.pb.h"  // Generated protobuf header
-
 #include <unordered_map>
 #include <variant>
 #include <string>
@@ -12,12 +10,12 @@
 namespace autocog::compiler::stl {
 
 namespace ir {
+  using Value = std::variant<int, float, bool, std::string>;
   struct Record {};
+  struct Prompt {};
 }
 
-using Value = std::variant<int, float, bool, std::string>;
-
-using VarMap = std::unordered_map<std::string, Value>;
+using VarMap = std::unordered_map<std::string, ir::Value>;
 
 struct Instantiation {
   std::list<Diagnostic> & diagnostics;

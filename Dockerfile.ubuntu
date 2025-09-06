@@ -15,30 +15,47 @@ RUN apt-get update && \
         graphviz && \
     rm -rf /var/lib/apt/lists/*
 
+# Venv
+
+RUN python3 -m venv /opt
+
+ENV PATH="/opt/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
+ENV PYTHONPATH=""
+
+RUN pip install --upgrade pip && \
+    pip install graphviz
+
+# RE/Flex
+
+COPY vendors/reflex /tmp/reflex
+
+RUN cd /tmp/reflex && \
+    ./build.sh && \
+    mkdir -p /opt/include/reflex && \
+    cp lib/*.a lib/*.so /opt/lib && \
+    cp bin/reflex /opt/bin && \
+    cp include/reflex/*.h /opt/include/reflex && \
+    rm -rf /tmp/reflex
+
 # LLama.cpp
 
 COPY vendors/llama /tmp/llama_cpp
 
 RUN cd /tmp/llama_cpp && \
-      cmake -DLLAMA_BUILD_COMMON=OFF -B build && \
-      make -C build -j$(nproc) install
-
-ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
-
-# Venv
-
-RUN python3 -m venv /opt
-ENV PATH="/opt/bin:$PATH"
-ENV PYTHONPATH="/opt/bin:$PATH"
-RUN pip install --upgrade pip && \
-    pip install graphviz 
+    cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=/opt \
+          -DLLAMA_BUILD_COMMON=OFF \
+          -DLLAMA_CUDA=ON && \
+    cmake --build build --parallel $(nproc) && \
+    cmake --install build && \
+    rm -rf /tmp/llama_cpp
 
 # Autocog
 
 COPY . /workspace/autocog
 
-RUN rm -rf /workspace/autocog/vendors && \
-    pip install /workspace/autocog && \
+RUN pip install /workspace/autocog && \
     rm -rf /workspace/autocog
 
 WORKDIR /workspace

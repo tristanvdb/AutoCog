@@ -24,8 +24,11 @@ endif()
 
 find_program(REFLEX reflex REQUIRED)
 find_library(REFLEX_LIB reflex REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(absl REQUIRED)
+find_path(REFLEX_INC
+    NAMES reflex/flexlexer.h
+    HINTS /opt/include /usr/local/include
+    REQUIRED
+)
 
 find_library(LLAMA_LIB 
     NAMES llama
@@ -33,7 +36,7 @@ find_library(LLAMA_LIB
     REQUIRED
 )
 
-find_path(LLAMA_INCLUDE_DIR
+find_path(LLAMA_INC
     NAMES llama.h
     HINTS /opt/include /usr/local/include
     REQUIRED

@@ -13,7 +13,7 @@ add_library(autocog_llama_xfta_lib STATIC
 target_include_directories(autocog_llama_xfta_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/libs
     ${PROJECT_SOURCE_DIR}/vendors/headers
-     ${LLAMA_INCLUDE_DIR}
+     ${LLAMA_INC}
 )
 
 target_link_libraries(autocog_llama_xfta_lib PUBLIC

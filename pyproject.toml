@@ -3,8 +3,7 @@ requires = [
     "setuptools>=64",
     "wheel",
     "pybind11>=2.6.0",
-    "cmake>=3.18",
-    "protobuf>=6.32.0",  # Match your C++ protobuf version
+    "cmake>=3.18"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -34,8 +33,7 @@ dependencies = [
     "pydantic>=2",
     "typing_extensions",
     "parsimonious",
-    "pybind11>=2.6.0",
-    "protobuf>=6.32.0",  # Add protobuf runtime dependency
+    "pybind11>=2.6.0"
 ]
 
 [project.urls]
@@ -55,7 +53,6 @@ include = ["autocog", "autocog.*"]
 autocog = [
     "py.typed",
     "compiler/stl/*.so",
-    "compiler/stl/*_pb2.py",  # Include protobuf generated files
     "llama/xfta/*.so"
 ]
 
@@ -64,3 +61,4 @@ autocog = [
 "share/autocog/library/dfl" = ["share/library/dfl/*"] 
 "share/autocog/library/elementary" = ["share/library/elementary/*"]
 "share/autocog/library/tools" = ["share/library/tools/*"]
+
