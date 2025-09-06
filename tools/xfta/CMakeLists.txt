@@ -7,8 +7,8 @@ add_executable(autocog_xfta
   convert.cxx
 )
 target_include_directories(autocog_xfta PRIVATE
-  ../../libs
-  ../../vendors/headers
+  ${PROJECT_SOURCE_DIR}/libs
+  ${PROJECT_SOURCE_DIR}/vendors/headers
 )
 target_link_libraries(autocog_xfta PUBLIC
   autocog_llama_xfta_lib

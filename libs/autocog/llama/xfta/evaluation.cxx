@@ -74,7 +74,7 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
   return num_token_eval;
 }
 
-FTT const & Evaluation::get() const {
+FTT const & Evaluation::retrieve() const {
   return *(this->root);
 }
 

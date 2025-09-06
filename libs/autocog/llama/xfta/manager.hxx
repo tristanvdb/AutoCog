@@ -6,6 +6,7 @@
 #include "autocog/llama/xfta/evaluation.hxx"
 
 #include <unordered_map>
+#include <optional>
 #include <string>
 
 namespace autocog::llama::xfta {
@@ -36,6 +37,8 @@ class Manager {
 
     static EvalID add_eval(ModelID const model_, FTA const & fta);
     static Evaluation & get_eval(EvalID id);
+    static unsigned advance(EvalID id, std::optional<unsigned> max_token_eval=std::nullopt);
+    static FTT const & retrieve(EvalID id);
     static void rm_eval(EvalID id);
 };
 

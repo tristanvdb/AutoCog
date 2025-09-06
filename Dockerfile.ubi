@@ -9,66 +9,69 @@ RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
         python3 \
         python3-pip \
         python3-devel \
+        git \
         graphviz && \
     dnf clean all
+
+# Venv
+
+RUN python3 -m venv /opt
+
+ENV PATH="/opt/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
+ENV PYTHONPATH=""
+
+RUN pip install --upgrade pip && \
+    pip install graphviz
+
+# Protobuf
+
+COPY vendors/protobuf /tmp/protobuf
+
+RUN cd /tmp/protobuf && \
+    cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -Dprotobuf_BUILD_TESTS=OFF \
+        -DCMAKE_INSTALL_PREFIX=/opt \
+        -Dprotobuf_BUILD_SHARED_LIBS=ON && \
+    cmake --build build --parallel $(nproc) && \
+    cmake --install build && \
+    ldconfig && \
+    rm -rf /tmp/protobuf
+
+# RE/Flex
+
+COPY vendors/reflex /tmp/reflex
+
+RUN cd /tmp/reflex && \
+    ./build.sh && \
+    mkdir -p /opt/include/reflex && \
+    cp lib/*.a lib/*.so /opt/lib && \
+    cp bin/reflex /opt/bin && \
+    cp include/reflex/*.h /opt/include/reflex && \
+    rm -rf /tmp/reflex
 
 # LLama.cpp
 
 COPY vendors/llama /tmp/llama_cpp
 
 RUN cd /tmp/llama_cpp && \
-    cmake -DLLAMA_BUILD_COMMON=OFF -DLLAMA_CUDA=ON -B build && \
-    make -C build -j$(nproc) install && \
-    rm -rf /tmp/llama_cpp
-
-ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
-
-# RE/Flex
-
-RUN git clone https://github.com/Genivia/RE-flex.git /tmp/reflex && \
-    cd /tmp/reflex && \
-    ./build.sh && \
-    ./allinstall.sh && \
-    cp lib/*.so /usr/local/lib && \
-    rm -rf /tmp/reflex
-
-# Protobuf
-
-# Download specific release (not master!)
-ARG PROTOBUF_VERSION=32.0
-RUN git clone -b v${PROTOBUF_VERSION} https://github.com/protocolbuffers/protobuf.git /tmp/protobuf && \
-    cd /tmp/protobuf && \
-    cmake -S . -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -Dprotobuf_BUILD_SHARED_LIBS=ON && \
+    cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=/opt \
+          -DLLAMA_BUILD_COMMON=OFF \
+          -DLLAMA_CUDA=OFF && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build && \
-    ldconfig && \
-    cd python && \
-    python3 setup.py build && \
-    python3 setup.py install && \
-    rm -rf /tmp/protobuf
-
-# Install Python protobuf (matches C++ version)
-RUN pip3 install protobuf==6.32.0
-
-
-# Venv
-
-RUN python3 -m venv /opt
-ENV PATH="/opt/bin:$PATH"
-ENV PYTHONPATH="/opt/bin:$PATH"
-RUN pip install --upgrade pip && \
-    pip install graphviz
+    rm -rf /tmp/llama_cpp
 
 # Autocog
 
-COPY . /workspace/autocog
+COPY . /tmp/autocog
 
-RUN rm -rf /workspace/autocog/vendors && \
-    pip install /workspace/autocog && \
-    rm -rf /workspace/autocog
+RUN pip install /tmp/autocog && \
+    rm -rf /tmp/autocog
+
+ENV PATH="/opt/lib64/python3.9/site-packages/bin/:$PATH"
 
 WORKDIR /workspace
+

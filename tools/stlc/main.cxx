@@ -6,6 +6,7 @@
 #include "autocog/compiler/stl/ast.hxx"
 #include "autocog/compiler/stl/instantiate.hxx"
 
+#include <optional>
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -13,6 +14,7 @@
 
 using namespace autocog::compiler::stl;
 
+// TODO long form args like for xfta
 void print_usage(const char* program) {
     std::cerr << "Usage: " << program << " [options] <input.stl>\n";
     std::cerr << "Options:\n";
@@ -44,9 +46,8 @@ bool report_errors(std::list<Diagnostic> & diagnostics, unsigned & errors, unsig
     return errors > 0;
 }
 
-bool parse_args(
-    int argc,
-    char** argv,
+std::optional<int> parse_args(
+    int argc, char** argv,
     std::list<std::string> & input_files,
     std::string & output_file,
     std::list<std::string> & search_paths,
@@ -55,32 +56,39 @@ bool parse_args(
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-h") == 0) {
             print_usage(argv[0]);
-            return true;
+            return 0;
         } else if (std::strcmp(argv[i], "-o") == 0) {
             if (i + 1 < argc) {
                 output_file = argv[++i];
             } else {
                 std::cerr << "Error: -o requires an argument" << std::endl;
-                return false;
+                return 1;
             }
         } else if (std::strcmp(argv[i], "-I") == 0) {
             if (i + 1 < argc) {
                 search_paths.push_back(argv[++i]);
             } else {
                 std::cerr << "Error: -I requires an argument" << std::endl;
-                return false;
+                return 1;
             }
         } else if (std::strcmp(argv[i], "-V") == 0) {
             verbose = true;
         } else if (argv[i][0] == '-') {
             std::cerr << "Error: Unknown option " << argv[i] << std::endl;
             print_usage(argv[0]);
-            return false;
+            return 1;
         } else {
             input_files.push_back(argv[i]);
         }
     }
-    return true;
+
+    if (input_files.empty()) {
+        std::cerr << "Error: No input file specified" << std::endl;
+        print_usage(argv[0]);
+        return 1;
+    }
+
+    return std::nullopt;
 }
 
 int main(int argc, char** argv) {
@@ -91,13 +99,9 @@ int main(int argc, char** argv) {
     std::list<std::string> file_paths;
     std::list<std::string> search_paths;
     bool verbose = false;
-    if (!parse_args(argc, argv, file_paths, output_file, search_paths, verbose)) return 1;
     
-    if (file_paths.empty()) {
-        std::cerr << "Error: No input file specified" << std::endl;
-        print_usage(argv[0]);
-        return 1;
-    }
+    std::optional<int> retval = parse_args(argc, argv, file_paths, output_file, search_paths, verbose);
+    if (retval) return retval.value();
     
     // Create parser
 

@@ -76,11 +76,11 @@ PYBIND11_MODULE(xfta_cxx, module) {
 #if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): EVAL" << std::endl;
 #endif
-      Manager::get_eval(eval).advance(std::nullopt);
+      Manager::advance(eval, std::nullopt);
 #if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): FTT" << std::endl;
 #endif
-      FTT const & ftt = Manager::get_eval(eval).get();
+      FTT const & ftt = Manager::retrieve(eval);
 #if DEBUG_pybind_evaluate
       std::cerr << "IN evaluate (pybind): RES" << std::endl;
 #endif

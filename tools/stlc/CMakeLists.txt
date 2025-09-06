@@ -7,8 +7,8 @@ add_executable(autocog_stlc
   convert.cxx
 )
 target_include_directories(autocog_stlc PRIVATE
-  ../../libs
-  ../../vendors/headers
+  ${PROJECT_SOURCE_DIR}/libs
+  ${PROJECT_SOURCE_DIR}/vendors/headers
 )
 target_link_libraries(autocog_stlc PUBLIC
   autocog_compiler_stl_lib

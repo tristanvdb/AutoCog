@@ -55,7 +55,7 @@ class Evaluation {
     Evaluation(EvaluationConfig const & config_, ModelID const model_, FTA const & fta_);
     ~Evaluation();
     unsigned advance(std::optional<unsigned> max_token_eval);
-    FTT const & get() const;
+    FTT const & retrieve() const;
 };
 
 }

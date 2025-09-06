@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 import sys, json, html, math, string, graphviz
 
@@ -9,8 +10,7 @@ from autocog.fta.automaton import FiniteThoughtAutomaton as FTA
 
 from autocog.utility.models import loader
 
-import autocog.llama
-from autocog.llama import tokenize, detokenize
+from autocog.llama.xfta import tokenize, detokenize
 
 def main(argv):
     sta_file = argv[1]

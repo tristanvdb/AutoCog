@@ -8,3 +8,6 @@ ftt.svg
 .venv/
 modules/autocog.egg-info/
 **/__build
+
+*.sta.json
+*.ftt.json

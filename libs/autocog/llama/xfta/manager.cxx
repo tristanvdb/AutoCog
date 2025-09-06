@@ -88,6 +88,16 @@ Evaluation & Manager::get_eval(EvalID id) {
   return it->second;
 }
 
+unsigned Manager::advance(EvalID id, std::optional<unsigned> max_token_eval) {
+  auto & eval = get_eval(id);
+  return eval.advance(max_token_eval);
+}
+
+FTT const & Manager::retrieve(EvalID id) {
+  auto & eval = get_eval(id);
+  return eval.retrieve();
+}
+
 void Manager::rm_eval(EvalID id) {
   auto & manager = instance();
   manager.evaluations.erase(id);

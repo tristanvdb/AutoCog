@@ -7,8 +7,8 @@ pybind11_add_module(autocog_llama_xfta_pybind
   convert.cxx
 )
 target_include_directories(autocog_llama_xfta_pybind PRIVATE
-  ../../libs
-  ../../vendors/headers
+  ${PROJECT_SOURCE_DIR}/libs
+  ${PROJECT_SOURCE_DIR}/vendors/headers
 )
 target_link_libraries(autocog_llama_xfta_pybind PRIVATE
   autocog_llama_xfta_lib

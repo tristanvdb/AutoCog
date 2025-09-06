@@ -27,6 +27,18 @@ find_library(REFLEX_LIB reflex REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(absl REQUIRED)
 
+find_library(LLAMA_LIB 
+    NAMES llama
+    HINTS /opt/lib /opt/lib64 /usr/local/lib /usr/local/lib64
+    REQUIRED
+)
+
+find_path(LLAMA_INCLUDE_DIR
+    NAMES llama.h
+    HINTS /opt/include /usr/local/include
+    REQUIRED
+)
+
 add_subdirectory(libs/autocog/compiler/stl)
 add_subdirectory(tools/stlc)
 add_subdirectory(bindings/compiler-stl)

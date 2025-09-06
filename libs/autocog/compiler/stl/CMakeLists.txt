@@ -35,10 +35,10 @@ add_library(autocog_compiler_stl_lib STATIC
 )
 
 target_include_directories(autocog_compiler_stl_lib PUBLIC
-    ../../..
+    ${PROJECT_SOURCE_DIR}/libs
+    ${PROJECT_SOURCE_DIR}/vendors/headers
     ${CMAKE_CURRENT_BINARY_DIR}
     ${Protobuf_INCLUDE_DIRS}
-    ../../../../vendors/headers
 )
 
 target_link_libraries(autocog_compiler_stl_lib PUBLIC
