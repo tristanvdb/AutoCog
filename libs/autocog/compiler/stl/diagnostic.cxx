@@ -15,6 +15,14 @@ Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_) :
   notes()
 {}
 
+Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, SourceLocation location_) :
+  level(level_),
+  message(message_),
+  source_line(std::nullopt),
+  location(location_),
+  notes()
+{}
+
 Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, std::string source_line_, SourceLocation location_) :
   level(level_),
   message(message_),

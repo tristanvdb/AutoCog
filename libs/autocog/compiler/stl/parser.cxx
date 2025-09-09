@@ -6,6 +6,10 @@
 
 #include <stdexcept>
 
+#if VERBOSE
+#  include <iostream>
+#endif
+
 namespace autocog::compiler::stl {
 
 static std::string get_line(std::string const & source, int line_pos) {
@@ -30,8 +34,7 @@ ParserState::ParserState(
   stream(source),
   lexer(stream),
   previous(),
-  current(lexer.advance()),
-  error(false)
+  current(lexer.advance())
 {
   lexer.set_file_id(fileid);
 }
@@ -69,7 +72,6 @@ void ParserState::emit_error(std::string msg) {
   auto & loc = current.location;
   auto line = get_line(source, loc.line);
   diagnostics.emplace_back(DiagnosticLevel::Error, msg, line, loc);
-  error = true;
 }
 
 Parser::Parser(
@@ -253,7 +255,12 @@ static bool is_conditional(TokenType tok) {
 //  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
 //};
 
+#define DEBUG_parse_primary VERBOSE && 0
+
 static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
+#if DEBUG_parse_primary
+  std::cerr << "parse_primary" << std::endl;
+#endif
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       state.advance();
@@ -301,8 +308,13 @@ static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> &
   }
 }
 
+#define DEBUG_Parse_Expression VERBOSE && 0
+
 template <>
 void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
+#if DEBUG_Parse_Expression
+  std::cerr << "Parser::parse<ast::Tag::Expression>" << std::endl;
+#endif
   if (is_primary(state.current.type)) {
     parse_primary(state, expr);
 
@@ -311,6 +323,7 @@ void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag
     expr.expr.emplace<5>();
     auto & data = std::get<5>(expr.expr).data;
     data.kind = token_to_operator_kind(state.previous.type);
+    if (data.kind == ast::OpKind::Sub) data.kind = ast::OpKind::Neg;
     data.operand = std::make_unique<ast::Expression>();
     if (!is_primary(state.current.type) && state.current.type != TokenType::LPAREN ) {
       state.emit_error("Unary operator expects primary or parenthesized operand!");
@@ -512,8 +525,13 @@ void Parser::parse<ast::Tag::Export>(ParserState & state, ast::Data<ast::Tag::Ex
   if (!state.expect(TokenType::SEMICOLON, " to end export statement.")) return;
 }
 
+#define DEBUG_Parser_Define VERBOSE && 0
+
 template <>
 void Parser::parse<ast::Tag::Define>(ParserState & state, ast::Data<ast::Tag::Define> & define) {
+#if DEBUG_Parser_Define
+    std::cerr << "Parser::parse<ast::Tag::Define>" << std::endl;
+#endif
   if (state.match(TokenType::EQUAL)) {
     define.init.emplace();
     parse(state, define.init.value().data);
@@ -527,7 +545,7 @@ void Parser::parse<ast::Tag::Annotate>(ParserState & state, ast::Data<ast::Tag::
     // Block form: annotate { path as "description"; ... }
     annotate.single_statement = false;
     
-    while (!state.error && !state.match(TokenType::RBRACE)) {
+    while (!state.match(TokenType::RBRACE)) {
       annotate.annotations.emplace_back();
       auto & annotation = annotate.annotations.back().data;
       
@@ -593,7 +611,7 @@ void Parser::parse<ast::Tag::Annotate>(ParserState & state, ast::Data<ast::Tag::
 template <>
 void Parser::parse<ast::Tag::Search>(ParserState & state, ast::Data<ast::Tag::Search> & search) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a block of search parameters.")) return;
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     search.params.emplace_back();
     auto & data = search.params.back().data;
     while (state.match(TokenType::IDENTIFIER)) {
@@ -632,7 +650,7 @@ template <>
 void Parser::parse<ast::Tag::Struct>(ParserState & state, ast::Data<ast::Tag::Struct> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse struct body.")) return;
 
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     if (!state.expect(TokenType::IDENTIFIER, " when parsing field name.")) return;
     std::string field_name = state.previous.text;
 
@@ -649,7 +667,7 @@ void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::C
   
   if (!state.expect(TokenType::LBRACE, " when starting to parse channel body.")) return;
   
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     // Each link starts with "to"
     if (!state.expect(TokenType::TO, " when starting channel link.")) return;
     
@@ -674,7 +692,7 @@ void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::C
       if (!state.expect(TokenType::LBRACE, " to start call block.")) return;
       
       // Parse call components
-      while (!state.error && !state.match(TokenType::RBRACE)) {
+      while (!state.match(TokenType::RBRACE)) {
         if (state.match(TokenType::EXTERN)) {
           // extern identifier;
           if (!state.expect(TokenType::IDENTIFIER, " for extern name.")) return;
@@ -751,7 +769,7 @@ void Parser::parse<ast::Tag::Flow>(ParserState & state, ast::Data<ast::Tag::Flow
     // Block form
     data.single_statement = false;
     
-    while (!state.error && !state.match(TokenType::RBRACE)) {
+    while (!state.match(TokenType::RBRACE)) {
       if (!state.expect(TokenType::TO, " when starting flow edge.")) return;
       
       data.edges.emplace_back();
@@ -807,7 +825,7 @@ void Parser::parse<ast::Tag::Return>(ParserState & state, ast::Data<ast::Tag::Re
   }
   
   // Parse field mappings
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     if (!state.expect(TokenType::FROM, " when parsing return field.")) return;
     
     data.fields.emplace_back();
@@ -848,7 +866,7 @@ void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Fo
       if (!state.expect(TokenType::LPAREN, "")) return;
       if (!state.expect(TokenType::STRING_LITERAL, " when parsing enumerators.")) return;
       type.enumerators.emplace_back(state.previous.text);
-      while (!state.error && !state.match(TokenType::RPAREN)) {
+      while (!state.match(TokenType::RPAREN)) {
         if (!state.expect(TokenType::COMMA, " when parsing enumerators.")) return;
         if (!state.expect(TokenType::STRING_LITERAL, " when parsing enumerators.")) return;
         type.enumerators.emplace_back(state.previous.text);     
@@ -893,7 +911,7 @@ void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Fo
 template <>
 void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Record> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Record.")) return;
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
       case TokenType::DEFINE:
       case TokenType::ARGUMENT: {
@@ -941,7 +959,7 @@ void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Re
 template <>
 void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Prompt> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Prompt.")) return;
-  while (!state.error && !state.match(TokenType::RBRACE)) {
+  while (!state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
       case TokenType::DEFINE:
       case TokenType::ARGUMENT: {
@@ -1000,7 +1018,7 @@ void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Pr
 
 template <>
 void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::Program> & data) {
-  while (!state.error && !state.match(TokenType::END_OF_FILE)) {
+  while (!state.match(TokenType::END_OF_FILE)) {
     switch (state.current.type) {
       case TokenType::FROM: {
         state.advance();

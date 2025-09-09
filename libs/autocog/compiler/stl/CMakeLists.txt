@@ -10,7 +10,7 @@ add_custom_command(
 )
 
 add_library(autocog_compiler_stl_lib STATIC
-    token.cxx parser.cxx instantiate.cxx
+    token.cxx parser.cxx instantiate.cxx evaluate.cxx
     ast/program.cxx
     diagnostic.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx

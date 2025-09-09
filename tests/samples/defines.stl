@@ -72,3 +72,87 @@ define v45 = ((score > 90) ? "A" : ((score > 80) ? "B" : "C"));
 define MAX_VALUE = 1000;
 define v46 = (v0 < MAX_VALUE);
 define v47 = ((count % 2) == 0);
+
+// String concatenation
+define v48 = ("hello" + " world");
+define v49 = (v4 + " world");
+
+// Mixed int/float arithmetic
+define v50 = (42 + 3.14);        // int + float -> float
+define v51 = (10.5 - 3);         // float - int -> float
+define v52 = (2 * 3.14159);      // int * float -> float
+define v53 = (100 / 3);          // int / int -> float (per your implementation)
+
+// Float operations
+define v54 = -3.14;
+define v55 = (3.14 + 2.86);
+define v56 = (10.0 / 3.0);
+
+// String comparisons
+define v57 = ("apple" < "banana");
+define v58 = ("zebra" > "aardvark");
+define v59 = ("hello" == "hello");
+define v60 = ("hello" != "world");
+
+// Boolean equality
+define v61 = (true == true);
+define v62 = (false != true);
+define v63 = (v2 == v3);
+
+// Complex format strings
+define name = "Alice";
+define age = 30;
+define v64 = f"Hello {name}, you are {age} years old";
+define v65 = f"{v0} + {v1} = {v16}";  // Using computed values
+
+// Format strings with escaped braces
+define v66 = f"Use {{braces}} like {v4}";
+define v67 = f"{{{{nested}}}} {name}";
+
+// Format strings with all types
+define v68 = f"int: {v0}, float: {v1}, bool: {v2}, string: {v4}";
+
+// Chained variable references
+define x = 10;
+define y = 20;
+define z = (x + y);
+define w = (z * 2);
+define v69 = (w - x);
+
+// Very deeply nested
+define v70 = ((((1 + 2) + 3) + 4) + 5);
+define v71 = (1 + (2 + (3 + (4 + 5))));
+
+// All comparison operators with same types
+define v72 = (3.14 < 3.15);
+define v73 = (3.14 <= 3.14);
+define v74 = (3.14 > 3.13);
+define v75 = (3.14 >= 3.14);
+define v76 = (3.14 == 3.14);
+define v77 = (3.14 != 3.15);
+
+// Mixed type equality (should work per implementation)
+define v78 = (42 == 42.0);       // int == float -> true
+define v79 = (42 != 42.1);       // int != float -> true
+
+// Triple nested conditionals
+define v80 = ((true) ? ((false) ? 1 : 2) : 3);
+
+// Parenthesized string literals
+define v81 = ("a string in parens");
+
+// Double negation
+define v82 = !(!true);
+define v83 = -(-(-42));
+
+// For error testing (these should fail):
+// define err1 = (5 / 0);           // Division by zero
+// define err2 = (10 % 0);          // Modulo by zero
+// define err3 = ("hello" * 3);     // Invalid operation
+// define err4 = (true + false);    // Invalid operation
+// define err5 = f"{undefined}";    // Undefined variable
+// define err6 = f"{}";             // Empty variable name
+// define err7 = f"{123invalid}";   // Invalid identifier
+// define err8 = f"unclosed {v0";   // Unclosed brace
+// define err9 = f"unmatched }";    // Unmatched brace
+// define err10 = ((5 < 3) ? 10);   // Missing false branch (if that's an error)

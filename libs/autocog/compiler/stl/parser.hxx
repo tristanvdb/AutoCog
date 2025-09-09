@@ -26,7 +26,6 @@ struct ParserState {
 
   Token previous;
   Token current;
-  bool error;
 
   ParserState(int fid, std::string const & source_, std::list<Diagnostic> & diagnostics_);
 

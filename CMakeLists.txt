@@ -5,10 +5,27 @@ project(autocog)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(VERBOSE=1)
+    add_compile_definitions(DEBUG=1)
+else()
+    add_compile_definitions(VERBOSE=0)
+    add_compile_definitions(NDEBUG=1)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+endif()
+
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 QUIET)
 if(NOT pybind11_FOUND)
-    # Get pybind11 from Python
     execute_process(
         COMMAND ${Python_EXECUTABLE} -c "import pybind11; print(pybind11.get_cmake_dir())"
         OUTPUT_VARIABLE pybind11_DIR

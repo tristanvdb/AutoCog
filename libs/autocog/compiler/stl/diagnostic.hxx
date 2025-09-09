@@ -20,6 +20,7 @@ struct Diagnostic {
   std::vector<std::string> notes;
 
   Diagnostic(DiagnosticLevel const level_, std::string message_);
+  Diagnostic(DiagnosticLevel const level_, std::string message_, SourceLocation location_);
   Diagnostic(DiagnosticLevel const level_, std::string message_, std::string source_line_, SourceLocation location_);
 
   std::string format(std::unordered_map<std::string, int> const & fileids) const;
