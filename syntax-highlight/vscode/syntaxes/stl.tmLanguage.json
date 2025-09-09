@@ -1,0 +1,133 @@
+{
+  "name": "STL",
+  "scopeName": "source.stl",
+  "fileTypes": ["stl"],
+  "patterns": [
+    {"include": "#comments"},
+    {"include": "#keywords"},
+    {"include": "#strings"},
+    {"include": "#numbers"},
+    {"include": "#constants"},
+    {"include": "#operators"},
+    {"include": "#identifiers"}
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.stl",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.stl",
+          "match": "\\b(define|argument|prompt|record|struct|flow|channel|return|export|import|from|to|as|is|annotate|search)\\b"
+        },
+        {
+          "name": "keyword.other.stl",
+          "match": "\\b(call|bind|kwarg|entry|extern|map)\\b"
+        },
+        {
+          "name": "storage.type.stl",
+          "match": "\\b(text|int|float|bool|enum|select|repeat)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.interpolated.stl",
+          "begin": "f\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.stl",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.embedded.expression.stl",
+              "begin": "(?<!\\{)\\{(?!\\{)",
+              "end": "\\}",
+              "patterns": [
+                {
+                  "name": "variable.other.interpolated.stl",
+                  "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+                }
+              ]
+            },
+            {
+              "name": "constant.character.escape.brace.stl",
+              "match": "\\{\\{|\\}\\}"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.stl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.stl",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.stl",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.stl",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.stl",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.stl",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.stl",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.arithmetic.stl",
+          "match": "\\+|-|\\*|/|%"
+        },
+        {
+          "name": "keyword.operator.assignment.stl",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.ternary.stl",
+          "match": "\\?|:"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.stl",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

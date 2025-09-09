@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="stl" name="STL" version="2.0" _section="Source">
+  <metadata>
+    <property name="globs">*.stl</property>
+    <property name="line-comment-start">//</property>
+  </metadata>
+
+  <styles>
+    <style id="keyword" name="Keyword" map-to="def:keyword"/>
+    <style id="type" name="Data Type" map-to="def:type"/>
+    <style id="string" name="String" map-to="def:string"/>
+    <style id="format-string" name="Format String" map-to="def:special-char"/>
+    <style id="number" name="Number" map-to="def:decimal"/>
+    <style id="boolean" name="Boolean" map-to="def:boolean"/>
+    <style id="operator" name="Operator" map-to="def:operator"/>
+    <style id="comment" name="Comment" map-to="def:comment"/>
+    <style id="interpolation" name="Interpolation" map-to="def:identifier"/>
+  </styles>
+
+  <definitions>  <!-- THIS WAS MISSING -->
+    <context id="line-comment" style-ref="comment" end-at-line-end="true">
+      <start>//</start>
+    </context>
+
+    <context id="keywords" style-ref="keyword">
+      <keyword>define</keyword>
+      <keyword>argument</keyword>
+      <keyword>prompt</keyword>
+      <keyword>record</keyword>
+      <keyword>flow</keyword>
+      <keyword>channel</keyword>
+      <keyword>return</keyword>
+      <keyword>as</keyword>
+      <keyword>from</keyword>
+      <keyword>to</keyword>
+      <keyword>is</keyword>
+      <keyword>annotate</keyword>
+      <keyword>search</keyword>
+      <keyword>export</keyword>
+      <keyword>import</keyword>
+    </context>
+
+    <context id="types" style-ref="type">
+      <keyword>text</keyword>
+      <keyword>int</keyword>
+      <keyword>float</keyword>
+      <keyword>bool</keyword>
+      <keyword>enum</keyword>
+      <keyword>select</keyword>
+      <keyword>repeat</keyword>
+    </context>
+
+    <context id="boolean" style-ref="boolean">
+      <keyword>true</keyword>
+      <keyword>false</keyword>
+    </context>
+
+    <context id="operators" style-ref="operator">
+      <match>[+\-*/!&lt;&gt;=|&amp;%]+|\?|:</match>
+    </context>
+
+    <context id="number" style-ref="number">
+      <match>\b[0-9]+(\.[0-9]+)?\b</match>
+    </context>
+
+    <context id="format-string" style-ref="format-string">
+      <start>f"</start>
+      <end>"</end>
+      <include>
+        <context id="interpolation" style-ref="interpolation">
+          <match>\{[a-zA-Z_][a-zA-Z0-9_]*\}</match>
+        </context>
+        <context id="escaped-brace">
+          <match>\{\{|\}\}</match>
+        </context>
+      </include>
+    </context>
+
+    <context id="string" style-ref="string">
+      <start>"</start>
+      <end>"</end>
+      <include>
+        <context ref="def:escape"/>
+      </include>
+    </context>
+
+    <context id="stl">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="keywords"/>
+        <context ref="types"/>
+        <context ref="boolean"/>
+        <context ref="format-string"/>
+        <context ref="string"/>
+        <context ref="number"/>
+        <context ref="operators"/>
+      </include>
+    </context>
+  </definitions>  <!-- CLOSING TAG -->
+</language>
