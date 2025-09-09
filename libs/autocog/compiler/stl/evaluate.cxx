@@ -190,18 +190,22 @@ static ir::Value evaluateLogical(ir::Value const & lhs_val, ir::Value const & rh
   }, lhs_val, rhs_val);
 }
 
-ir::Value Instantiator::evaluateIdentifier(std::string const & filename, ast::Identifier const & id, ir::VarMap & varmap) {
-  // Look up in local variable map
+ir::Value Instantiator::evaluateIdentifier(ast::Program const & program, ast::Identifier const & id, ir::VarMap & varmap) {
   auto it = varmap.find(id.data.name);
-  if (it != varmap.end()) {
-    return it->second;
+  if (it == varmap.end()) {
+    if (!define_one(program, id.data.name, varmap)) {
+      throw EvaluationError("Could not find symbol for " + id.data.name, id.location);
+    }
+    it = varmap.find(id.data.name);
+    if (it == varmap.end()) {
+      throw std::runtime_error("");
+    }
   }
-  
-  throw EvaluationError("Undefined variable: " + id.data.name, id.location);
+  return it->second;
 }
 
-ir::Value Instantiator::evaluateUnaryOp(std::string const & filename, ast::Unary const & op, ir::VarMap & varmap) {
-  ir::Value operand_val = evaluate(filename, *op.data.operand, varmap);
+ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary const & op, ir::VarMap & varmap) {
+  ir::Value operand_val = evaluate(program, *op.data.operand, varmap);
   
   switch (op.data.kind) {
     case ast::OpKind::Neg:
@@ -231,9 +235,9 @@ ir::Value Instantiator::evaluateUnaryOp(std::string const & filename, ast::Unary
   }
 }
 
-ir::Value Instantiator::evaluateBinaryOp(std::string const & filename, ast::Binary const & op, ir::VarMap & varmap) {
-  ir::Value lhs_val = evaluate(filename, *op.data.lhs, varmap);
-  ir::Value rhs_val = evaluate(filename, *op.data.rhs, varmap);
+ir::Value Instantiator::evaluateBinaryOp(ast::Program const & program, ast::Binary const & op, ir::VarMap & varmap) {
+  ir::Value lhs_val = evaluate(program, *op.data.lhs, varmap);
+  ir::Value rhs_val = evaluate(program, *op.data.rhs, varmap);
   
   switch (op.data.kind) {
     // Arithmetic operators
@@ -273,8 +277,8 @@ ir::Value Instantiator::evaluateBinaryOp(std::string const & filename, ast::Bina
   }
 }
 
-ir::Value Instantiator::evaluateConditionalOp(std::string const & filename, ast::Conditional const & op, ir::VarMap & varmap) {
-  ir::Value cond_val = evaluate(filename, *op.data.cond, varmap);
+ir::Value Instantiator::evaluateConditionalOp(ast::Program const & program, ast::Conditional const & op, ir::VarMap & varmap) {
+  ir::Value cond_val = evaluate(program, *op.data.cond, varmap);
   
   bool condition = std::visit([&op](auto const & v) -> bool {
     using V = std::decay_t<decltype(v)>;
@@ -286,17 +290,17 @@ ir::Value Instantiator::evaluateConditionalOp(std::string const & filename, ast:
   }, cond_val);
   
   if (condition) {
-    return evaluate(filename, *op.data.e_true, varmap);
+    return evaluate(program, *op.data.e_true, varmap);
   } else {
-    return evaluate(filename, *op.data.e_false, varmap);
+    return evaluate(program, *op.data.e_false, varmap);
   }
 }
 
-ir::Value Instantiator::evaluateParens(std::string const & filename, ast::Parenthesis const & parens, ir::VarMap & varmap) {
-  return evaluate(filename, *parens.data.expr, varmap);
+ir::Value Instantiator::evaluateParens(ast::Program const & program, ast::Parenthesis const & parens, ir::VarMap & varmap) {
+  return evaluate(program, *parens.data.expr, varmap);
 }
 
-std::string Instantiator::formatString(ast::String const & fstring, ir::VarMap & varmap) {
+std::string Instantiator::formatString(ast::Program const & program, ast::String const & fstring, ir::VarMap & varmap) {
   if (!fstring.data.is_format) {
     return fstring.data.value;
   }
@@ -354,7 +358,13 @@ std::string Instantiator::formatString(ast::String const & fstring, ir::VarMap &
       // Look up variable
       auto it = varmap.find(var_name);
       if (it == varmap.end()) {
-        throw EvaluationError("Undefined variable in format string: " + var_name, fstring.location);
+        if (!define_one(program, var_name, varmap)) {
+          throw EvaluationError("Undefined variable in format string: " + var_name, fstring.location);
+        }
+        it = varmap.find(var_name);
+        if (it == varmap.end()) {
+          throw std::runtime_error("Inconsistency expect to find the value for " + var_name);
+        }
       }
       
       // Convert value to string and append
@@ -399,7 +409,7 @@ std::string Instantiator::formatString(ast::String const & fstring, ir::VarMap &
   return result;
 }
 
-ir::Value Instantiator::evaluate(std::string const & filename, ast::Expression const & expr, ir::VarMap & varmap) {
+ir::Value Instantiator::evaluate(ast::Program const & program, ast::Expression const & expr, ir::VarMap & varmap) {
   try {
     return std::visit([&](auto const & e) -> ir::Value {
       using T = std::decay_t<decltype(e)>;
@@ -415,23 +425,23 @@ ir::Value Instantiator::evaluate(std::string const & filename, ast::Expression c
         return e.data.value;
       }
       else if constexpr (std::is_same_v<T, ast::String>) {
-        return formatString(e, varmap);
+        return formatString(program, e, varmap);
       }
       // Delegate complex cases to helper functions
       else if constexpr (std::is_same_v<T, ast::Identifier>) {
-        return evaluateIdentifier(filename, e, varmap);
+        return evaluateIdentifier(program, e, varmap);
       }
       else if constexpr (std::is_same_v<T, ast::Unary>) {
-        return evaluateUnaryOp(filename, e, varmap);
+        return evaluateUnaryOp(program, e, varmap);
       }
       else if constexpr (std::is_same_v<T, ast::Binary>) {
-        return evaluateBinaryOp(filename, e, varmap);
+        return evaluateBinaryOp(program, e, varmap);
       }
       else if constexpr (std::is_same_v<T, ast::Conditional>) {
-        return evaluateConditionalOp(filename, e, varmap);
+        return evaluateConditionalOp(program, e, varmap);
       }
       else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
-        return evaluateParens(filename, e, varmap);
+        return evaluateParens(program, e, varmap);
       }
       else {
         throw std::runtime_error("Unknown expression variant type");

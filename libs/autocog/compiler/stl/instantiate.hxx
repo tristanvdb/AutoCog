@@ -30,16 +30,19 @@ class Instantiator {
   private:
     void emit_error(std::string msg, std::optional<SourceRange> const & loc);
 
-    ir::Value assign   (std::string const &, std::string const &, ast::Expression const &, ir::VarMap &);
-    ir::Value evaluate (std::string const &, ast::Expression const &, ir::VarMap &);
+    ir::Value assign   (ast::Program const &, std::string const &, ast::Expression const &, ir::VarMap &);
+    ir::Value evaluate (ast::Program const &, ast::Expression const &, ir::VarMap &);
 
-    ir::Value evaluateIdentifier    (std::string const & filename, ast::Identifier  const & id,     ir::VarMap & varmap);
-    ir::Value evaluateUnaryOp       (std::string const & filename, ast::Unary       const & op,     ir::VarMap & varmap);
-    ir::Value evaluateBinaryOp      (std::string const & filename, ast::Binary      const & op,     ir::VarMap & varmap);
-    ir::Value evaluateConditionalOp (std::string const & filename, ast::Conditional const & op,     ir::VarMap & varmap);
-    ir::Value evaluateParens        (std::string const & filename, ast::Parenthesis const & parens, ir::VarMap & varmap);
+    ir::Value evaluateIdentifier    (ast::Program const &, ast::Identifier  const & id,     ir::VarMap & varmap);
+    ir::Value evaluateUnaryOp       (ast::Program const &, ast::Unary       const & op,     ir::VarMap & varmap);
+    ir::Value evaluateBinaryOp      (ast::Program const &, ast::Binary      const & op,     ir::VarMap & varmap);
+    ir::Value evaluateConditionalOp (ast::Program const &, ast::Conditional const & op,     ir::VarMap & varmap);
+    ir::Value evaluateParens        (ast::Program const &, ast::Parenthesis const & parens, ir::VarMap & varmap);
     
-    std::string formatString(ast::String const & fstring, ir::VarMap & varmap);
+    std::string formatString(ast::Program const &, ast::String const & fstring, ir::VarMap & varmap);
+
+    void define_one(ast::Program const &, ast::Define const & defn, ir::VarMap & varmap);
+    bool define_one(ast::Program const &, std::string const & varname, ir::VarMap & varmap);
 
   public:
     Instantiator(std::list<Diagnostic> & diagnostics_);

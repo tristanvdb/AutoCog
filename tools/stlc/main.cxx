@@ -128,11 +128,11 @@ int main(int argc, char** argv) {
     Instantiator instantiator(diagnostics);
     for (auto const & [filepath,program]: parser.get()) {
         instantiator.defines(program);
-        instantiator.declarations(program);
-        instantiator.entries(program);
+//        instantiator.declarations(program);
+//        instantiator.entries(program);
     }
-    instantiator.collect();
-    instantiator.instantiate();
+//    instantiator.collect();
+//    instantiator.instantiate();
     if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
 
     return 0;

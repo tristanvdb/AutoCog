@@ -53,11 +53,11 @@ define v34 = -(-(42));
 define v35 = ((5 > 3) ? 10 : 20);
 define v36 = ((v2) ? "yes" : "no");
 define v37 = ((v0 > 100) ? (v0 * 2) : (v0 / 2));
-define v38 = (((x > 0) && (y < 0)) ? -x : x);
+define v38 = (((v1 > 0) && (v0 < 0)) ? -v35 : v35);
 
 // Complex nested conditionals
-define v39 = ((a > b) ? ((c > d) ? c : d) : ((e > f) ? e : f));
-define v40 = (((x > 0) ? (x * 2) : -x) + 10);
+define v39 = ((v34 > v32) ? ((v35 > v1) ? v35 : v1) : ((v1 > v38) ? v38 : v35));
+define v40 = (((v32 > 0) ? (v32 * 2) : -v32) + 10);
 
 // Just parentheses (no operator)
 define v41 = (42);
@@ -65,13 +65,13 @@ define v42 = ((42));
 define v43 = (((v0)));
 
 // Mixed types in conditionals
-define v44 = ((flag) ? 1 : 0);
-define v45 = ((score > 90) ? "A" : ((score > 80) ? "B" : "C"));
+define v44 = ((v33) ? 1 : 0);
+define v45 = ((v42 > 90) ? "A" : ((v42 > 80) ? "B" : "C"));
 
 // Edge cases with identifiers
 define MAX_VALUE = 1000;
 define v46 = (v0 < MAX_VALUE);
-define v47 = ((count % 2) == 0);
+define v47 = ((MAX_VALUE % 2) == 0);
 
 // String concatenation
 define v48 = ("hello" + " world");
