@@ -21,7 +21,7 @@ const char * CompileError::what() const noexcept {
   return message.c_str();
 }
 
-#define DEBUG_Instantiator_emit_error VERBOSE && 1
+#define DEBUG_Instantiator_emit_error VERBOSE && 0
 
 void Instantiator::emit_error(std::string msg, std::optional<SourceRange> const & loc) {
 #if DEBUG_Instantiator_emit_error
@@ -111,8 +111,7 @@ void Instantiator::evaluate_defines() {
   }
 }
 
-void Instantiator::scan_import_statement(ast::Program const & program, ast::Import const & import) {
-  auto & local_symbols = symbols[program.data.filename];
+void Instantiator::scan_import_statement(SymbolTable & symtbl, ast::Import const & import) {
   auto const & filename = import.data.file;
   bool has_stl_ext = filename.size() >= 4 && ( filename.rfind(".stl") == filename.size() - 4 );
   bool has_py_ext = filename.size() >= 3 && ( filename.rfind(".py") == filename.size() - 3 );
@@ -121,29 +120,30 @@ void Instantiator::scan_import_statement(ast::Program const & program, ast::Impo
     if (prog_it == programs.end()) {
       throw std::runtime_error("STL file `" + filename + "` in import statement was not parsed.");
     }
-    auto const & imported_program = prog_it->second;
     for (auto [alias,target]: import.data.targets) {
-      auto record_it = imported_program.data.records.find(target);
-      auto prompt_it = imported_program.data.prompts.find(target);
-
-      if (record_it != imported_program.data.records.end()) {
-        local_symbols.emplace(alias, RecordSymbol(imported_program, record_it->second, alias));
-
-      } else if (prompt_it != imported_program.data.prompts.end()) {
-        local_symbols.emplace(alias, PromptSymbol(imported_program, prompt_it->second, alias));
-
-      } else {
-        local_symbols.emplace(alias, UnresolvedImport(imported_program, import, alias));
-
-      }
+      symtbl.emplace(alias, UnresolvedImport(filename, target, import));
     }
   } else if (has_py_ext) {
     for (auto const & [alias,target]: import.data.targets) {
-      local_symbols.emplace(alias, PythonSymbol(filename, target, alias));
+      symtbl.emplace(alias, PythonSymbol(filename, target, alias));
     }
   } else {
     emit_error("Imported file with unknown extension.", import.location);
   }
+}
+
+static void replace_symbol(SymbolTable & symtbl, std::string const & alias, AnySymbol const & source) {
+  symtbl.erase(alias);
+  std::visit([&symtbl, &alias](auto const & sym) {
+    using T = std::decay_t<decltype(sym)>;
+    if constexpr (std::is_same_v<T, RecordSymbol> || std::is_same_v<T, PromptSymbol>) {
+      symtbl.emplace(alias, T(sym.scope, sym.node, sym.name));
+    } else if constexpr (std::is_same_v<T, PythonSymbol>) {
+      symtbl.emplace(alias, T(sym.filename, sym.callable, sym.name));
+    } else {
+      throw std::runtime_error("Helper function `replace_symbol` should never have been called with an `UnresolvedImport`.");
+    }
+  }, source);
 }
 
 #define DEBUG_Instantiator_generate_symbols VERBOSE && 0
@@ -153,14 +153,65 @@ void Instantiator::generate_symbols() {
     std::cerr << "Instantiator::generate_symbols" << std::endl;
 #endif
   for (auto const & [filename, program]: programs) {
+    SymbolTable & symtbl = symbols[program.data.filename];
     for (auto const & import_statement: program.data.imports) {
-      scan_import_statement(program, import_statement);
+      scan_import_statement(symtbl, import_statement);
+    }
+    for (auto const & [name, record]: program.data.records) {
+      symtbl.emplace(name, RecordSymbol(program, record, name));
+    }
+    for (auto const & [name, prompt]: program.data.prompts) {
+      symtbl.emplace(name, PromptSymbol(program, prompt, name));
     }
   }
-  bool resolved_symbols = false;
-  do {
-    // TODO resolve any `UnresolvedImport`
-  } while (resolved_symbols);
+  bool resolved_symbols = true;
+  while (resolved_symbols) {
+    resolved_symbols = false;
+    for (auto & [fname, symtbl]: symbols) {
+#if DEBUG_Instantiator_generate_symbols
+      std::cerr << "  IN " << fname << std::endl;
+#endif
+      std::vector<std::pair<std::string, UnresolvedImport>> unresolved_symbols;
+      for (auto & [alias, symbol]: symtbl) {
+#if DEBUG_Instantiator_generate_symbols
+        std::cerr << "    SEE " << alias << std::endl;
+#endif
+        if (std::holds_alternative<UnresolvedImport>(symbol)) {
+          auto & unresolved = std::get<UnresolvedImport>(symbol);
+#if DEBUG_Instantiator_generate_symbols
+          std::cerr << "      unresolved " << unresolved.objname << " from " << unresolved.filename << std::endl;
+#endif
+          unresolved_symbols.emplace_back(alias, unresolved);
+        }
+      }
+#if DEBUG_Instantiator_generate_symbols
+      std::cerr << "    FOUND " << unresolved_symbols.size() << " unresolved symbols" << std::endl;
+#endif
+      for (auto & [alias, unresolved]: unresolved_symbols) {
+        auto & imported_symtbl = symbols[unresolved.filename];
+        auto sym_it = imported_symtbl.find(unresolved.objname);
+        if (sym_it == imported_symtbl.end()) {
+          emit_error("Trying to import a non-existant object `" + unresolved.objname + "`", unresolved.import.location);
+          symtbl.erase(alias);
+        } else if (!std::holds_alternative<UnresolvedImport>(sym_it->second)) {
+#if DEBUG_Instantiator_generate_symbols
+          std::cerr << "      resolving " << alias << " from " << fname << std::endl;
+#endif
+          replace_symbol(symtbl, alias, sym_it->second);
+          resolved_symbols = true;
+        }
+      }
+    }
+  }
+  
+  for (auto & [fname, symtbl]: symbols) {
+    for (auto & [alias, symbol]: symtbl) {
+      if (std::holds_alternative<UnresolvedImport>(symbol)) {
+        auto & unresolved = std::get<UnresolvedImport>(symbol);
+        emit_error("Could not resolve `" + unresolved.objname + "` (likely a circular dependency).", unresolved.import.location);
+      }
+    }
+  }
 }
 
 #define DEBUG_Instantiator_instantiate VERBOSE && 0

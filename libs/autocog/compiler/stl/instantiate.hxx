@@ -39,6 +39,8 @@ struct AstSymbol {
     arguments()
   {}
 };
+using RecordSymbol = AstSymbol<ast::Record>;
+using PromptSymbol = AstSymbol<ast::Prompt>;
 
 struct PythonSymbol {
   std::string filename;
@@ -56,14 +58,26 @@ struct PythonSymbol {
   {}
 };
 
-class Instantiator {
-  public:
-    using RecordSymbol = AstSymbol<ast::Record>;
-    using PromptSymbol = AstSymbol<ast::Prompt>;
-    using UnresolvedImport = AstSymbol<ast::Import>;
-    using AnySymbol = std::variant<RecordSymbol, PromptSymbol, PythonSymbol, UnresolvedImport>;
-    using SymbolTable = std::unordered_map<std::string, AnySymbol>;
+struct UnresolvedImport {
+  std::string filename;
+  std::string objname;
+  ast::Import const & import;
+  
+  UnresolvedImport(
+    std::string const & filename_,
+    std::string const & objname_,
+    ast::Import const & import_
+  ) :
+    filename(filename_),
+    objname(objname_),
+    import(import_)
+  {}
+};
 
+using AnySymbol = std::variant<RecordSymbol, PromptSymbol, PythonSymbol, UnresolvedImport>;
+using SymbolTable = std::unordered_map<std::string, AnySymbol>;
+
+class Instantiator {
   private:
     std::unordered_map<std::string, ast::Program> const & programs;
     std::list<Diagnostic> & diagnostics;
@@ -94,7 +108,7 @@ class Instantiator {
 
   private:    
     void scan_import_statement(
-      ast::Program const & program,
+      SymbolTable & symtbl,
       ast::Import const & import
     );
 
