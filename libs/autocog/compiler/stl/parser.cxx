@@ -510,6 +510,8 @@ void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Im
 
 template <>
 void Parser::parse<ast::Tag::Export>(ParserState & state, ast::Data<ast::Tag::Export> & entry) {
+  if (!state.expect(TokenType::IDENTIFIER, " when parsing exported entry point.")) break;
+  entry.alias = state.previous.text;
   if (!state.expect(TokenType::IS, " in export statement.")) return;
   if (!state.expect(TokenType::IDENTIFIER, " when parsing export target.")) return;
   entry.target = state.previous.text;
@@ -1028,11 +1030,8 @@ void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::P
       }
       case TokenType::EXPORT: {
         state.advance();
-        if (!state.expect(TokenType::IDENTIFIER, " when parsing aliased entry point.")) break;
-        auto alias = state.previous.text;
-        auto & data_ = data.exports[alias].data;
-        data_.alias = alias;
-        parse(state, data_);
+        data.exports.emplace_back();
+        parse(state, data.exports.back().data);
         break;
       }
       case TokenType::DEFINE: {

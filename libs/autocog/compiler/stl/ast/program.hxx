@@ -19,8 +19,8 @@ DATA(Import) {
 DATA(Program) {
   std::string filename;
 
-  NODES(Import)  imports{};
-  MAPPED(Export) exports{};
+  NODES(Import) imports{};
+  NODES(Export) exports{};
 
   MAPPED(Define)  defines{};
   ONODE(Annotate) annotate{};

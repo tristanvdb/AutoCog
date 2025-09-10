@@ -214,17 +214,23 @@ void Instantiator::generate_symbols() {
   }
 }
 
-#define DEBUG_Instantiator_instantiate VERBOSE && 0
+#define DEBUG_Instantiator_instantiate VERBOSE && 1
 
 void Instantiator::instantiate() {
 #if DEBUG_Instantiator_instantiate
     std::cerr << "Instantiator::instantiate" << std::endl;
 #endif
-//  for (auto const & [filename, program]: programs) {
-//    for (auto const & [name, exported]: program.data.exports) {
-//      // TODO ???
-//    }
-//  }
+  for (auto const & [filename, program]: programs) {
+#if DEBUG_Instantiator_instantiate
+    std::cerr << "  IN " << filename << std::endl;
+#endif
+    for (auto const & [name, exported]: program.data.exports) {
+#if DEBUG_Instantiator_instantiate
+      std::cerr << "  IN " << filename << std::endl;
+#endif
+      // TODO ???
+    }
+  }
 }
 
 } // namespace autocog::compiler
