@@ -19,15 +19,15 @@ DATA(Import) {
 DATA(Program) {
   std::string filename;
 
-  NODES(Import)  imports;
-  MAPPED(Export) exports;
+  NODES(Import)  imports{};
+  MAPPED(Export) exports{};
 
-  MAPPED(Define)  defines;
-  ONODE(Annotate) annotate;
-  ONODE(Search)   search;
+  MAPPED(Define)  defines{};
+  ONODE(Annotate) annotate{};
+  ONODE(Search)   search{};
 
-  MAPPED(Record) records;
-  MAPPED(Prompt) prompts;
+  MAPPED(Record) records{};
+  MAPPED(Prompt) prompts{};
 };
 
 EXEC(Program) {

@@ -7,7 +7,7 @@
 
 namespace autocog::compiler::stl::ir {
 
-using Value = std::variant<int, float, bool, std::string>;
+using Value = std::variant<int, float, bool, std::string, std::nullptr_t>;
 
 struct Record {
   // TODO

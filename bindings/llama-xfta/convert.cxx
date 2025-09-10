@@ -133,7 +133,7 @@ FTA convert_pydict_to_fta(ModelID const id, pybind11::dict const & pydata) {
 }
 
 pybind11::dict convert_ftt_to_pydict(ModelID const id, FTT const & ftt) {
-  Model & model = Manager::get_model(id);
+  [[maybe_unused]] Model & model = Manager::get_model(id);
 
   pybind11::dict result;
   result["action"] = ftt.action;

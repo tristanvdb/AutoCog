@@ -189,7 +189,7 @@ static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
   return max_logit + std::log(log_sum_exp);
 }
 
-static void retrieve_logprobs(llama_context * ctx, unsigned vocab_size, std::vector<float> & logprobs) {
+[[maybe_unused]] static void retrieve_logprobs(llama_context * ctx, unsigned vocab_size, std::vector<float> & logprobs) {
   float * logits = llama_get_logits(ctx);
   float log_sum_exp = logit_to_log_sum_exp(logits, vocab_size);
   logprobs.resize(vocab_size);
@@ -217,7 +217,7 @@ static float retrieve_logprob(llama_context * ctx, unsigned vocab_size, TokenID 
 static llama_pos find_common_prefix(const TokenSequence& a, const TokenSequence& b) {
   llama_pos common = 0;
   size_t min_size = std::min(a.size(), b.size());
-  while (common < min_size && a[common] == b[common]) {
+  while (static_cast<size_t>(common) < min_size && a[common] == b[common]) {
     common++;
   }
   return common;
@@ -266,11 +266,11 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
     }
     num_token_eval += target_tokens.size();
   } else {
-    if (common_prefix < current_tokens.size()) {
+    if (static_cast<size_t>(common_prefix) < current_tokens.size()) {
       llama_memory_seq_rm(mem, 0, common_prefix, -1);
     }
 
-    if (common_prefix < target_tokens.size()) {
+    if (static_cast<size_t>(common_prefix) < target_tokens.size()) {
       TokenSequence extension(target_tokens.begin() + common_prefix, target_tokens.end());
 
       llama_batch batch = llama_batch_get_one(const_cast<TokenID*>(extension.data()), extension.size());
@@ -350,7 +350,6 @@ unsigned Model::eval_topk_tokens(
   }
 
   llama_context * ctx = this->get_context(id);
-  TokenSequence const & current_tokens = this->get_tokens_const(id);
 
   topk_tokens.clear();
   topk_lobprobs.clear();

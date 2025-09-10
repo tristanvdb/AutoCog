@@ -62,12 +62,6 @@ class Parser {
     void parse(int fid, std::string const & filename, std::string const & source);
 
     file_to_program_map_t const & get() const;
-
-    bool has_prompt(std::string const & filename, std::string const & objname) const;
-    ast::Prompt const & get_prompt(std::string const & filename, std::string const & objname) const;
-
-    bool has_record(std::string const & filename, std::string const & objname) const;
-    ast::Record const & get_record(std::string const & filename, std::string const & objname) const;
 };
 
 }

@@ -195,7 +195,7 @@ static ast::OpKind token_to_operator_kind(TokenType type) {
 }
 
 // Operator precedence (higher number = higher precedence)
-static int get_precedence(TokenType type) {
+[[maybe_unused]] static int get_precedence(TokenType type) {
   switch (type) {
     case TokenType::STAR:
     case TokenType::SLASH:
@@ -247,7 +247,7 @@ static bool is_primary(TokenType tok) {
          tok == TokenType::IDENTIFIER;
 }
 
-static bool is_conditional(TokenType tok) {
+[[maybe_unused]] static bool is_conditional(TokenType tok) {
   return tok == TokenType::QUESTION;
 }
 
@@ -852,7 +852,7 @@ void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Fo
     case TokenType::TEXT: {
       state.advance();
       data.type.emplace<1>();
-      auto & type = std::get<1>(data.type).data;
+      [[maybe_unused]] auto & type = std::get<1>(data.type).data;
       if (state.match(TokenType::LPAREN)) {
         // TODO how should we represent vocab source???
         if (!state.expect(TokenType::RPAREN, ".")) return;
@@ -1091,26 +1091,6 @@ void Parser::parse(int fid, std::string const & name, std::string const & source
 
 Parser::file_to_program_map_t const & Parser::get() const {
     return programs;
-}
-
-bool Parser::has_prompt(std::string const & filename, std::string const & objname) const {
-    auto & program = programs.at(filename);
-    return program.data.prompts.find(objname) != program.data.prompts.end();
-}
-
-ast::Prompt const & Parser::get_prompt(std::string const & filename, std::string const & objname) const {
-    auto & program = programs.at(filename);
-    return program.data.prompts.at(objname);
-}
-
-bool Parser::has_record(std::string const & filename, std::string const & objname) const {
-    auto & program = programs.at(filename);
-    return program.data.records.find(objname) != program.data.records.end();
-}
-
-ast::Record const & Parser::get_record(std::string const & filename, std::string const & objname) const {
-    auto & program = programs.at(filename);
-    return program.data.records.at(objname);
 }
 
 }

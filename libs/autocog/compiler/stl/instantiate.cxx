@@ -9,6 +9,18 @@
 
 namespace autocog::compiler::stl {
 
+CompileError::CompileError(
+  std::string msg,
+  std::optional<SourceRange> loc
+) :
+  message(std::move(msg)),
+  location(loc)
+{}
+  
+const char * CompileError::what() const noexcept {
+  return message.c_str();
+}
+
 #define DEBUG_Instantiator_emit_error VERBOSE && 1
 
 void Instantiator::emit_error(std::string msg, std::optional<SourceRange> const & loc) {
@@ -23,29 +35,17 @@ void Instantiator::emit_error(std::string msg, std::optional<SourceRange> const 
   }
 }
 
-Instantiator::Instantiator(std::list<Diagnostic> & diagnostics_) :
+Instantiator::Instantiator(
+  std::unordered_map<std::string, ast::Program> const & programs_,
+  std::list<Diagnostic> & diagnostics_
+) :
+  programs(programs_),
   diagnostics(diagnostics_),
   globals(),
-  declaration_to_file(),
-  records(),
-  prompts(),
-  instances(),
-  record_cache(),
-  instantiations()
+  symbols()
 {}
 
-ir::Value Instantiator::assign(ast::Program const & program, std::string const & varname, ast::Expression const & expr, ir::VarMap & env) {
-  auto vit = env.find(varname);
-  if (vit == env.end()) {
-    ir::Value res = evaluate(program, expr, env);
-    env[varname] = res;
-    return res;
-  } else {
-    return vit->second;
-  }
-}
-
-static std::string valueToString(ir::Value const & value) {
+[[maybe_unused]] static std::string valueToString(ir::Value const & value) {
   return std::visit([](auto const & v) -> std::string {
     using V = std::decay_t<decltype(v)>;
     if constexpr (std::is_same_v<V, int>) {
@@ -70,71 +70,110 @@ static std::string valueToString(ir::Value const & value) {
   }, value);
 }
 
-#define DEBUG_Instantiator_defines VERBOSE && 1
+#define DEBUG_Instantiator_evaluate_defines VERBOSE && 0
 
-void Instantiator::define_one(ast::Program const & program, ast::Define const & defn, ir::VarMap & varmap) {
-#if DEBUG_Instantiator_defines
-  std::cerr << "Instantiator::define_one(defn=" << defn.data.name << ")" << std::endl;
+void Instantiator::evaluate_defines() {
+#if DEBUG_Instantiator_evaluate_defines
+    std::cerr << "Instantiator::evaluate_defines" << std::endl;
 #endif
-
-  if (defn.data.argument) {
-    emit_error("Top level definition must be arguments!", defn.location);
-    return;
-  }
-
-  if (!defn.data.init) {
-    emit_error("Define without initializer!", defn.location);
-    return;
-  }
-
-  if (varmap.find(defn.data.name) == varmap.end()) {
-    assign(program, defn.data.name, defn.data.init.value(), varmap);
-  }
-}
-
-bool Instantiator::define_one(ast::Program const & program, std::string const & varname, ir::VarMap & varmap) {
-#if DEBUG_Instantiator_defines
-  std::cerr << "Instantiator::define_one(string=" << varname << ")" << std::endl;
+  for (auto const & [filename, program]: programs) {
+#if DEBUG_Instantiator_evaluate_defines
+    std::cerr << "    " << filename << std::endl;
 #endif
-  auto it = program.data.defines.find(varname);
-  if (it == program.data.defines.end()) {
-    return false;
-  } else {
-    define_one(program, it->second, varmap);
-    return true;
-  }
-}
-
-void Instantiator::defines(ast::Program const & program) {
-#if DEBUG_Instantiator_defines
-    std::cerr << "Instantiator::defines" << std::endl;
-#endif
-  auto & varmap = globals[program.data.filename];
-  for (auto const & [varname, defn]: program.data.defines) {
-    if (defn.data.name != varname) {
-      throw std::runtime_error("Inconsistency of Define statement name.");
+    if (filename != program.data.filename) {
+      throw std::runtime_error("Inconsistency of Program's filename.");
     }
-    define_one(program, defn, varmap);
-#if DEBUG_Instantiator_defines
-    std::cerr << "> varmap[" << defn.data.name << "] = " << valueToString(varmap[defn.data.name]) << std::endl;
+    auto & varmap = globals[filename];
+    for (auto const & [varname, defn]: program.data.defines) {
+      if (defn.data.name != varname) {
+        throw std::runtime_error("Inconsistency of Define statement name.");
+      }
+
+      if (defn.data.argument) {
+        emit_error("Top level definition must be arguments!", defn.location);
+        return;
+      }
+
+      if (!defn.data.init) {
+        emit_error("Define without initializer!", defn.location);
+        return;
+      }
+
+      try {
+        retrieve_value(program, defn.data.name, varmap, defn.location);
+      } catch (CompileError const & e) {
+        emit_error(e.message, e.location);
+      }
+#if DEBUG_Instantiator_evaluate_defines
+      std::cerr << "> varmap[" << defn.data.name << "] = " << valueToString(varmap[defn.data.name]) << std::endl;
 #endif
+    }
   }
 }
 
-void Instantiator::declarations(ast::Program const & program) {
-  throw std::runtime_error("NIY: Instantiator::declarations");
+void Instantiator::scan_import_statement(ast::Program const & program, ast::Import const & import) {
+  auto & local_symbols = symbols[program.data.filename];
+  auto const & filename = import.data.file;
+  bool has_stl_ext = filename.size() >= 4 && ( filename.rfind(".stl") == filename.size() - 4 );
+  bool has_py_ext = filename.size() >= 3 && ( filename.rfind(".py") == filename.size() - 3 );
+  if (has_stl_ext) {
+    auto prog_it = programs.find(filename);
+    if (prog_it == programs.end()) {
+      throw std::runtime_error("STL file `" + filename + "` in import statement was not parsed.");
+    }
+    auto const & imported_program = prog_it->second;
+    for (auto [alias,target]: import.data.targets) {
+      auto record_it = imported_program.data.records.find(target);
+      auto prompt_it = imported_program.data.prompts.find(target);
+
+      if (record_it != imported_program.data.records.end()) {
+        local_symbols.emplace(alias, RecordSymbol(imported_program, record_it->second, alias));
+
+      } else if (prompt_it != imported_program.data.prompts.end()) {
+        local_symbols.emplace(alias, PromptSymbol(imported_program, prompt_it->second, alias));
+
+      } else {
+        local_symbols.emplace(alias, UnresolvedImport(imported_program, import, alias));
+
+      }
+    }
+  } else if (has_py_ext) {
+    for (auto const & [alias,target]: import.data.targets) {
+      local_symbols.emplace(alias, PythonSymbol(filename, target, alias));
+    }
+  } else {
+    emit_error("Imported file with unknown extension.", import.location);
+  }
 }
 
-void Instantiator::entries(ast::Program const & program) {
-  throw std::runtime_error("NIY: Instantiator::entries");
+#define DEBUG_Instantiator_generate_symbols VERBOSE && 0
+
+void Instantiator::generate_symbols() {
+#if DEBUG_Instantiator_generate_symbols
+    std::cerr << "Instantiator::generate_symbols" << std::endl;
+#endif
+  for (auto const & [filename, program]: programs) {
+    for (auto const & import_statement: program.data.imports) {
+      scan_import_statement(program, import_statement);
+    }
+  }
+  bool resolved_symbols = false;
+  do {
+    // TODO resolve any `UnresolvedImport`
+  } while (resolved_symbols);
 }
 
-void Instantiator::collect() {
-  throw std::runtime_error("NIY: Instantiator::collect");
-}
+#define DEBUG_Instantiator_instantiate VERBOSE && 0
 
 void Instantiator::instantiate() {
-  throw std::runtime_error("NIY: Instantiator::instantiate");
+#if DEBUG_Instantiator_instantiate
+    std::cerr << "Instantiator::instantiate" << std::endl;
+#endif
+//  for (auto const & [filename, program]: programs) {
+//    for (auto const & [name, exported]: program.data.exports) {
+//      // TODO ???
+//    }
+//  }
 }
 
 } // namespace autocog::compiler

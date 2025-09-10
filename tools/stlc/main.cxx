@@ -125,14 +125,15 @@ int main(int argc, char** argv) {
 
     // Instantiate all exported prompts associated to input files
 
-    Instantiator instantiator(diagnostics);
-    for (auto const & [filepath,program]: parser.get()) {
-        instantiator.defines(program);
-//        instantiator.declarations(program);
-//        instantiator.entries(program);
-    }
-//    instantiator.collect();
-//    instantiator.instantiate();
+    Instantiator instantiator(parser.get(), diagnostics);
+
+    instantiator.evaluate_defines();
+    if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
+
+    instantiator.generate_symbols();
+    if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
+
+    instantiator.instantiate();
     if (report_errors(diagnostics, fileids, errors, warnings, notes)) return 1;
 
     return 0;

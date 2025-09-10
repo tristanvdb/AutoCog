@@ -20,29 +20,16 @@ static std::string opKindToString(ast::OpKind op) {
     case ast::OpKind::Div: return "Div";
     case ast::OpKind::Mod: return "Mod";
     case ast::OpKind::And: return "And";
-    case ast::OpKind::Or: return "Or";
-    case ast::OpKind::Lt: return "Lt";
-    case ast::OpKind::Gt: return "Gt";
+    case ast::OpKind::Or:  return "Or";
+    case ast::OpKind::Lt:  return "Lt";
+    case ast::OpKind::Gt:  return "Gt";
     case ast::OpKind::Lte: return "Lte";
     case ast::OpKind::Gte: return "Gte";
-    case ast::OpKind::Eq: return "Eq";
+    case ast::OpKind::Eq:  return "Eq";
     case ast::OpKind::Neq: return "Neq";
     default: return "Unknown(" + std::to_string(static_cast<int>(op)) + ")";
   }
 }
-
-// Exception for evaluation errors with source location
-struct EvaluationError : std::exception {
-  std::string message;
-  std::optional<SourceRange> location;
-  
-  EvaluationError(std::string msg, std::optional<SourceRange> loc = std::nullopt) 
-    : message(std::move(msg)), location(loc) {}
-  
-  const char* what() const noexcept override {
-    return message.c_str();
-  }
-};
 
 // Static helper function for arithmetic operations
 template<ast::OpKind Op>
@@ -63,11 +50,11 @@ static ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const &
     if constexpr (Op == ast::OpKind::Mod) {
       if constexpr (std::is_same_v<L, int> && std::is_same_v<R, int>) {
         if (r == 0) {
-          throw EvaluationError("Modulo by zero", loc);
+          throw CompileError("Modulo by zero", loc);
         }
         return l % r;
       } else {
-        throw EvaluationError("Modulo requires integer operands", loc);
+        throw CompileError("Modulo requires integer operands", loc);
       }
     }
     
@@ -77,7 +64,7 @@ static ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const &
       else if constexpr (Op == ast::OpKind::Sub) return l - r;
       else if constexpr (Op == ast::OpKind::Mul) return l * r;
       else if constexpr (Op == ast::OpKind::Div) {
-        if (r == 0) throw EvaluationError("Division by zero", loc);
+        if (r == 0) throw CompileError("Division by zero", loc);
         // Integer division promotes to float
         return static_cast<float>(l) / static_cast<float>(r);
       }
@@ -91,22 +78,22 @@ static ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const &
       else if constexpr (Op == ast::OpKind::Sub) return lf - rf;
       else if constexpr (Op == ast::OpKind::Mul) return lf * rf;
       else if constexpr (Op == ast::OpKind::Div) {
-        if (rf == 0.0f) throw EvaluationError("Division by zero", loc);
+        if (rf == 0.0f) throw CompileError("Division by zero", loc);
         return lf / rf;
       }
       else throw std::runtime_error("Invalid arithmetic operator: " + opKindToString(Op));
     } 
     else {
       if constexpr (Op == ast::OpKind::Add) {
-        throw EvaluationError("Invalid types for addition", loc);
+        throw CompileError("Invalid types for addition", loc);
       } else if constexpr (Op == ast::OpKind::Sub) {
-        throw EvaluationError("Invalid types for subtraction", loc);
+        throw CompileError("Invalid types for subtraction", loc);
       } else if constexpr (Op == ast::OpKind::Mul) {
-        throw EvaluationError("Invalid types for multiplication", loc);
+        throw CompileError("Invalid types for multiplication", loc);
       } else if constexpr (Op == ast::OpKind::Div) {
-        throw EvaluationError("Invalid types for division", loc);
+        throw CompileError("Invalid types for division", loc);
       } else {
-        throw EvaluationError("Invalid types for arithmetic operation", loc);
+        throw CompileError("Invalid types for arithmetic operation", loc);
       }
     }
   }, lhs_val, rhs_val);
@@ -160,7 +147,7 @@ static ir::Value evaluateComparison(ir::Value const & lhs_val, ir::Value const &
         else throw std::runtime_error("Invalid comparison operator");
       } 
       else {
-        throw EvaluationError("Invalid types for ordering comparison", loc);
+        throw CompileError("Invalid types for ordering comparison", loc);
       }
     }
   }, lhs_val, rhs_val);
@@ -180,28 +167,14 @@ static ir::Value evaluateLogical(ir::Value const & lhs_val, ir::Value const & rh
       else throw std::runtime_error("Invalid logical operator: " + opKindToString(Op));
     } else {
       if constexpr (Op == ast::OpKind::And) {
-        throw EvaluationError("Logical AND requires boolean operands", loc);
+        throw CompileError("Logical AND requires boolean operands", loc);
       } else if constexpr (Op == ast::OpKind::Or) {
-        throw EvaluationError("Logical OR requires boolean operands", loc);
+        throw CompileError("Logical OR requires boolean operands", loc);
       } else {
         throw std::runtime_error("Invalid logical operator: " + opKindToString(Op));
       }
     }
   }, lhs_val, rhs_val);
-}
-
-ir::Value Instantiator::evaluateIdentifier(ast::Program const & program, ast::Identifier const & id, ir::VarMap & varmap) {
-  auto it = varmap.find(id.data.name);
-  if (it == varmap.end()) {
-    if (!define_one(program, id.data.name, varmap)) {
-      throw EvaluationError("Could not find symbol for " + id.data.name, id.location);
-    }
-    it = varmap.find(id.data.name);
-    if (it == varmap.end()) {
-      throw std::runtime_error("");
-    }
-  }
-  return it->second;
 }
 
 ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary const & op, ir::VarMap & varmap) {
@@ -216,7 +189,7 @@ ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary
         } else if constexpr (std::is_same_v<V, float>) {
           return -v;
         } else {
-          throw EvaluationError("Cannot negate non-numeric value", op.location);
+          throw CompileError("Cannot negate non-numeric value", op.location);
         }
       }, operand_val);
       
@@ -226,7 +199,7 @@ ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary
         if constexpr (std::is_same_v<V, bool>) {
           return !v;
         } else {
-          throw EvaluationError("Cannot apply 'not' to non-boolean value", op.location);
+          throw CompileError("Cannot apply 'not' to non-boolean value", op.location);
         }
       }, operand_val);
       
@@ -285,7 +258,7 @@ ir::Value Instantiator::evaluateConditionalOp(ast::Program const & program, ast:
     if constexpr (std::is_same_v<V, bool>) {
       return v;
     } else {
-      throw EvaluationError("Conditional expression requires boolean condition", op.location);
+      throw CompileError("Conditional expression requires boolean condition", op.location);
     }
   }, cond_val);
   
@@ -296,10 +269,6 @@ ir::Value Instantiator::evaluateConditionalOp(ast::Program const & program, ast:
   }
 }
 
-ir::Value Instantiator::evaluateParens(ast::Program const & program, ast::Parenthesis const & parens, ir::VarMap & varmap) {
-  return evaluate(program, *parens.data.expr, varmap);
-}
-
 std::string Instantiator::formatString(ast::Program const & program, ast::String const & fstring, ir::VarMap & varmap) {
   if (!fstring.data.is_format) {
     return fstring.data.value;
@@ -307,7 +276,7 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
   
   const std::string & fmt = fstring.data.value;
   std::string result;
-  result.reserve(fmt.length() * 1.5); // Reserve some extra space
+  result.reserve(fmt.length() * 1.5);
   
   size_t i = 0;
   while (i < fmt.length()) {
@@ -334,7 +303,7 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
       }
       
       if (j >= fmt.length()) {
-        throw EvaluationError("Unclosed '{' in format string", fstring.location);
+        throw CompileError("Unclosed '{' in format string", fstring.location);
       }
       
       // Extract variable name
@@ -342,30 +311,21 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
       
       // Validate it's a valid identifier
       if (var_name.empty()) {
-        throw EvaluationError("Empty variable name in format string", fstring.location);
+        throw CompileError("Empty variable name in format string", fstring.location);
       }
       
       // Simple identifier validation (first char is letter or _, rest are alphanumeric or _)
       if (!std::isalpha(var_name[0]) && var_name[0] != '_') {
-        throw EvaluationError("Invalid variable name in format string: " + var_name, fstring.location);
+        throw CompileError("Invalid variable name in format string: " + var_name, fstring.location);
       }
       for (size_t k = 1; k < var_name.length(); k++) {
         if (!std::isalnum(var_name[k]) && var_name[k] != '_') {
-          throw EvaluationError("Invalid variable name in format string: " + var_name, fstring.location);
+          throw CompileError("Invalid variable name in format string: " + var_name, fstring.location);
         }
       }
       
       // Look up variable
-      auto it = varmap.find(var_name);
-      if (it == varmap.end()) {
-        if (!define_one(program, var_name, varmap)) {
-          throw EvaluationError("Undefined variable in format string: " + var_name, fstring.location);
-        }
-        it = varmap.find(var_name);
-        if (it == varmap.end()) {
-          throw std::runtime_error("Inconsistency expect to find the value for " + var_name);
-        }
-      }
+      ir::Value value = retrieve_value(program, var_name, varmap);
       
       // Convert value to string and append
       result += std::visit([](auto const & v) -> std::string {
@@ -391,16 +351,12 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
         } else {
           return "<unknown>";
         }
-      }, it->second);
+      }, value);
       
       i = j + 1;
-    }
-    // Handle stray closing brace
-    else if (fmt[i] == '}') {
-      throw EvaluationError("Unmatched '}' in format string", fstring.location);
-    }
-    // Regular character
-    else {
+    } else if (fmt[i] == '}') {
+      throw CompileError("Unmatched '}' in format string", fstring.location);
+    } else {
       result += fmt[i];
       i++;
     }
@@ -410,50 +366,75 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
 }
 
 ir::Value Instantiator::evaluate(ast::Program const & program, ast::Expression const & expr, ir::VarMap & varmap) {
-  try {
-    return std::visit([&](auto const & e) -> ir::Value {
-      using T = std::decay_t<decltype(e)>;
+  return std::visit([&](auto const & e) -> ir::Value {
+    using T = std::decay_t<decltype(e)>;
+    if constexpr (std::is_same_v<T, ast::Integer>) {
+      return e.data.value;
+    } else if constexpr (std::is_same_v<T, ast::Float>) {
+      return e.data.value;
+    } else if constexpr (std::is_same_v<T, ast::Boolean>) {
+      return e.data.value;
+    } else if constexpr (std::is_same_v<T, ast::String>) {
+      return formatString(program, e, varmap);
+    } else if constexpr (std::is_same_v<T, ast::Identifier>) {
+      return retrieve_value(program, e.data.name, varmap);
+    } else if constexpr (std::is_same_v<T, ast::Unary>) {
+      return evaluateUnaryOp(program, e, varmap);
+    } else if constexpr (std::is_same_v<T, ast::Binary>) {
+      return evaluateBinaryOp(program, e, varmap);
+    } else if constexpr (std::is_same_v<T, ast::Conditional>) {
+      return evaluateConditionalOp(program, e, varmap);
+    } else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
+      return evaluate(program, *(e.data.expr), varmap);
+    } else {
+      throw std::runtime_error("Unknown expression variant type");
+    }
+  }, expr.data.expr);
+}
+
+#define DEBUG_Instantiator_retrieve_value VERBOSE && 0
+
+ir::Value Instantiator::retrieve_value(
+  ast::Program const & program,
+  std::string const & varname,
+  ir::VarMap & varmap,
+  std::optional<SourceRange> const & loc
+) {
+#if DEBUG_Instantiator_retrieve_value
+  std::cerr << "Instantiator::retrieve_value(" << varname << ")" << std::endl;
+#endif
+  ir::Value value = nullptr;
+
+  auto varmap_it = varmap.find(varname);
+  if (varmap_it != varmap.end()) {
+    value = varmap_it->second;
+  } else {
+    auto it = program.data.defines.find(varname);
+    if (it != program.data.defines.end()) {
+      auto const & defn = it->second;
       
-      // Handle literals directly
-      if constexpr (std::is_same_v<T, ast::Integer>) {
-        return e.data.value;
+      if (defn.data.argument) {
+        throw std::runtime_error("Argument `" + varname + "` should have been found in the variable map.");
       }
-      else if constexpr (std::is_same_v<T, ast::Float>) {
-        return e.data.value;
+
+      if (!defn.data.init) {
+        throw CompileError("Define `" + varname + "` has no initializer to evaluate.", loc);
       }
-      else if constexpr (std::is_same_v<T, ast::Boolean>) {
-        return e.data.value;
-      }
-      else if constexpr (std::is_same_v<T, ast::String>) {
-        return formatString(program, e, varmap);
-      }
-      // Delegate complex cases to helper functions
-      else if constexpr (std::is_same_v<T, ast::Identifier>) {
-        return evaluateIdentifier(program, e, varmap);
-      }
-      else if constexpr (std::is_same_v<T, ast::Unary>) {
-        return evaluateUnaryOp(program, e, varmap);
-      }
-      else if constexpr (std::is_same_v<T, ast::Binary>) {
-        return evaluateBinaryOp(program, e, varmap);
-      }
-      else if constexpr (std::is_same_v<T, ast::Conditional>) {
-        return evaluateConditionalOp(program, e, varmap);
-      }
-      else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
-        return evaluateParens(program, e, varmap);
-      }
-      else {
-        throw std::runtime_error("Unknown expression variant type");
-      }
-    }, expr.data.expr);
-  } catch (EvaluationError const & e) {
-    emit_error(e.message, e.location);
-    // Return a default value - ideally we'd know the expected type here
-    // For now, return 0 as a generic default
-    return 0;
+      
+      varmap[varname] = nullptr; // causes cycles to return error values
+      value = evaluate(program, defn.data.init.value(), varmap);
+      varmap[varname] = value;
+    }
   }
-  // Let std::runtime_error propagate for impossible cases
+  if (std::holds_alternative<std::nullptr_t>(value)) {
+    throw CompileError(
+              "Found error value when retriving variable `" + varname + "`." +
+                "If no previous error was reported then it is likely a circular " +
+                "dependency between variable initializers.",
+              loc
+          );
+  }
+  return value;
 }
 
 } // namespace autocog::compiler
