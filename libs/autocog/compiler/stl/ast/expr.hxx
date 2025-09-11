@@ -10,6 +10,7 @@ enum class OpKind {
     And, Or,                     // Logical
     Lt, Gt, Lte, Gte, Eq, Neq    // Comparison
 };
+std::string opKindToString(ast::OpKind op);
 
 DATA(Identifier) {
   std::string name;

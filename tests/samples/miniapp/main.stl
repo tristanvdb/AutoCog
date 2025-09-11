@@ -44,7 +44,7 @@ record Question {
 
 // Main prompt using parameterized records
 prompt quiz_generator {
-    define num_questions = 5;
+    argument num_questions = 5;
     argument topic = "general";
     
     annotate {

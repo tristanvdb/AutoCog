@@ -1,16 +1,9 @@
 
-#include "instantiate.hxx"
-
-#include <stdexcept>
-
-#if VERBOSE
-#  include <iostream>
-#endif
-
 namespace autocog::compiler::stl {
 
-ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary const & op, ir::VarMap & varmap) {
-  ir::Value operand_val = evaluate(program, *op.data.operand, varmap);
+template <class ScopeT>
+ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Unary const & op, ir::VarMap & varmap) {
+  ir::Value operand_val = evaluate(scope, *op.data.operand, varmap);
   
   switch (op.data.kind) {
     case ast::OpKind::Neg:
@@ -40,9 +33,10 @@ ir::Value Instantiator::evaluateUnaryOp(ast::Program const & program, ast::Unary
   }
 }
 
-ir::Value Instantiator::evaluateBinaryOp(ast::Program const & program, ast::Binary const & op, ir::VarMap & varmap) {
-  ir::Value lhs_val = evaluate(program, *op.data.lhs, varmap);
-  ir::Value rhs_val = evaluate(program, *op.data.rhs, varmap);
+template <class ScopeT>
+ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Binary const & op, ir::VarMap & varmap) {
+  ir::Value lhs_val = evaluate(scope, *op.data.lhs, varmap);
+  ir::Value rhs_val = evaluate(scope, *op.data.rhs, varmap);
   
   switch (op.data.kind) {
     // Arithmetic operators
@@ -82,8 +76,9 @@ ir::Value Instantiator::evaluateBinaryOp(ast::Program const & program, ast::Bina
   }
 }
 
-ir::Value Instantiator::evaluateConditionalOp(ast::Program const & program, ast::Conditional const & op, ir::VarMap & varmap) {
-  ir::Value cond_val = evaluate(program, *op.data.cond, varmap);
+template <class ScopeT>
+ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
+  ir::Value cond_val = evaluate(scope, *op.data.cond, varmap);
   
   bool condition = std::visit([&op](auto const & v) -> bool {
     using V = std::decay_t<decltype(v)>;
@@ -95,13 +90,14 @@ ir::Value Instantiator::evaluateConditionalOp(ast::Program const & program, ast:
   }, cond_val);
   
   if (condition) {
-    return evaluate(program, *op.data.e_true, varmap);
+    return evaluate(scope, *op.data.e_true, varmap);
   } else {
-    return evaluate(program, *op.data.e_false, varmap);
+    return evaluate(scope, *op.data.e_false, varmap);
   }
 }
 
-std::string Instantiator::formatString(ast::Program const & program, ast::String const & fstring, ir::VarMap & varmap) {
+template <class ScopeT>
+ir::Value Instantiator::evaluate(ScopeT const & scope, ast::String const & fstring, ir::VarMap & varmap) {
   if (!fstring.data.is_format) {
     return fstring.data.value;
   }
@@ -157,7 +153,7 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
       }
       
       // Look up variable
-      ir::Value value = retrieve_value(program, var_name, varmap);
+      ir::Value value = retrieve_value(scope, var_name, varmap);
       
       // Convert value to string and append
       result += std::visit([](auto const & v) -> std::string {
@@ -197,7 +193,8 @@ std::string Instantiator::formatString(ast::Program const & program, ast::String
   return result;
 }
 
-ir::Value Instantiator::evaluate(ast::Program const & program, ast::Expression const & expr, ir::VarMap & varmap) {
+template <class ScopeT>
+ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Expression const & expr, ir::VarMap & varmap) {
   return std::visit([&](auto const & e) -> ir::Value {
     using T = std::decay_t<decltype(e)>;
     if constexpr (std::is_same_v<T, ast::Integer>) {
@@ -207,17 +204,17 @@ ir::Value Instantiator::evaluate(ast::Program const & program, ast::Expression c
     } else if constexpr (std::is_same_v<T, ast::Boolean>) {
       return e.data.value;
     } else if constexpr (std::is_same_v<T, ast::String>) {
-      return formatString(program, e, varmap);
+      return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Identifier>) {
-      return retrieve_value(program, e.data.name, varmap);
+      return retrieve_value(scope, e.data.name, varmap);
     } else if constexpr (std::is_same_v<T, ast::Unary>) {
-      return evaluateUnaryOp(program, e, varmap);
+      return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Binary>) {
-      return evaluateBinaryOp(program, e, varmap);
+      return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Conditional>) {
-      return evaluateConditionalOp(program, e, varmap);
+      return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
-      return evaluate(program, *(e.data.expr), varmap);
+      return evaluate(scope, *(e.data.expr), varmap);
     } else {
       throw std::runtime_error("Unknown expression variant type");
     }
@@ -226,8 +223,9 @@ ir::Value Instantiator::evaluate(ast::Program const & program, ast::Expression c
 
 #define DEBUG_Instantiator_retrieve_value VERBOSE && 0
 
+template <class ScopeT>
 ir::Value Instantiator::retrieve_value(
-  ast::Program const & program,
+  ScopeT const & scope,
   std::string const & varname,
   ir::VarMap & varmap,
   std::optional<SourceRange> const & loc
@@ -241,8 +239,8 @@ ir::Value Instantiator::retrieve_value(
   if (varmap_it != varmap.end()) {
     value = varmap_it->second;
   } else {
-    auto it = program.data.defines.find(varname);
-    if (it != program.data.defines.end()) {
+    auto it = scope.data.defines.find(varname);
+    if (it != scope.data.defines.end()) {
       auto const & defn = it->second;
       
       if (defn.data.argument) {
@@ -254,7 +252,7 @@ ir::Value Instantiator::retrieve_value(
       }
       
       varmap[varname] = nullptr; // causes cycles to return error values
-      value = evaluate(program, defn.data.init.value(), varmap);
+      value = evaluate(scope, defn.data.init.value(), varmap);
       varmap[varname] = value;
     }
   }

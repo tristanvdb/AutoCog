@@ -50,9 +50,14 @@ class Parser {
     file_to_program_map_t programs;
 
     template <ast::Tag tag>
-    void parse(ParserState & state, ast::Data<tag> & data, int min_precedence);
-    template <ast::Tag tag>
     void parse(ParserState & state, ast::Data<tag> & data);
+
+    template <ast::Tag tag>
+    void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start/* = std::nullopt*/) {
+      SourceLocation start_loc{start?start.value():state.current.location};
+      parse(state, node.data);
+      node.location.emplace(SourceRange{start_loc, state.current.location});
+    }
 
   public:
     Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &);

@@ -1,6 +1,9 @@
 
 #include "instantiate.hxx"
 
+#include <sstream>
+#include <cmath>
+#include <algorithm>
 #include <stdexcept>
 
 #if VERBOSE
@@ -42,7 +45,10 @@ Instantiator::Instantiator(
   programs(programs_),
   diagnostics(diagnostics_),
   globals(),
-  symbols()
+  symbols(),
+  exports(),
+  instantiations(),
+  record_cache()
 {}
 
 [[maybe_unused]] static std::string valueToString(ir::Value const & value) {
@@ -68,6 +74,68 @@ Instantiator::Instantiator(
       return "unknown()";
     }
   }, value);
+}
+
+// FNV-1a 64-bit hash for deterministic cross-platform hashing
+uint64_t fnv1a_hash(const std::string& str) {
+  uint64_t hash = 0xcbf29ce484222325ULL; // FNV-1a 64-bit offset basis
+  for (unsigned char c : str) {
+    hash ^= static_cast<uint64_t>(c);    // XOR with byte
+    hash *= 0x100000001b3ULL;            // Multiply by FNV-1a 64-bit prime
+  }
+  return hash;
+}
+
+std::string mangle(std::string const & name, ir::VarMap const & varmap) {
+  if (varmap.empty()) {
+    return name;
+  }
+  
+  std::string mangled = name;
+  
+  // Sort parameters by name for deterministic mangling
+  std::vector<std::pair<std::string, ir::Value>> sorted_params(varmap.begin(), varmap.end());
+  std::sort(sorted_params.begin(), sorted_params.end());
+  
+  for (auto const & [param_name, value] : sorted_params) {
+    mangled += "__" + param_name + "_";
+    
+    std::visit([&mangled](auto const & v) {
+      using V = std::decay_t<decltype(v)>;
+      if constexpr (std::is_same_v<V, int>) {
+        mangled += "i" + std::to_string(v);
+      } else if constexpr (std::is_same_v<V, float>) {
+        // Handle special float values
+        if (std::isnan(v)) {
+          mangled += "fNaN";
+        } else if (std::isinf(v)) {
+          mangled += v > 0 ? "fInf" : "fNegInf";
+        } else {
+          // Use hex float representation for exact value preservation
+          std::ostringstream oss;
+          oss << std::hexfloat << v;
+          std::string hex_str = oss.str();
+          // Replace problematic characters
+          std::replace(hex_str.begin(), hex_str.end(), '.', 'd');
+          std::replace(hex_str.begin(), hex_str.end(), '+', 'p');
+          std::replace(hex_str.begin(), hex_str.end(), '-', 'm');
+          mangled += "f" + hex_str;
+        }
+      } else if constexpr (std::is_same_v<V, bool>) {
+        mangled += v ? "bT" : "bF";
+      } else if constexpr (std::is_same_v<V, std::string>) {
+        // Use FNV-1a hash for string values
+        uint64_t hash_value = fnv1a_hash(v);
+        std::ostringstream oss;
+        oss << "s" << std::hex << hash_value;
+        mangled += oss.str();
+      } else if constexpr (std::is_same_v<V, std::nullptr_t>) {
+        mangled += "null";
+      }
+    }, value);
+  }
+  
+  return mangled;
 }
 
 #define DEBUG_Instantiator_evaluate_defines VERBOSE && 0
@@ -153,7 +221,7 @@ void Instantiator::generate_symbols() {
     std::cerr << "Instantiator::generate_symbols" << std::endl;
 #endif
   for (auto const & [filename, program]: programs) {
-    SymbolTable & symtbl = symbols[program.data.filename];
+    SymbolTable & symtbl = symbols[filename];
     for (auto const & import_statement: program.data.imports) {
       scan_import_statement(symtbl, import_statement);
     }
@@ -214,21 +282,157 @@ void Instantiator::generate_symbols() {
   }
 }
 
+#define DEBUG_Instantiator_scoped_context VERBOSE && 0
+
+template <class ScopeT>
+ir::VarMap Instantiator::scoped_context(
+  ScopeT const & scope,
+  Kwargs const & kwargs,
+  ir::VarMap const & parent_context,
+  std::optional<SourceRange> const & loc
+) {
+#if DEBUG_Instantiator_scoped_context
+  std::cerr << "Instantiator::scoped_context" << std::endl;
+#endif
+
+  // Step 1: Validate all kwargs correspond to actual arguments
+  for (auto const& [name, expr] : kwargs) {
+#if DEBUG_Instantiator_scoped_context
+    std::cerr << "  kwargs: " << name << std::endl;
+#endif
+    auto def_it = scope.data.defines.find(name);
+    if (def_it == scope.data.defines.end()) {
+      throw CompileError("Unknown parameter: " + name, loc);
+    }
+    auto const & defn = def_it->second;
+#if DEBUG_Instantiator_scoped_context
+    std::cerr << "  defn: " << defn.data.name << std::endl;
+    std::cerr << "    arg:  " << defn.data.argument << std::endl;
+    std::cerr << "    init: " << (defn.data.init?"present":"") << std::endl;
+#endif
+    if (!defn.data.argument) {
+      throw CompileError("Non-argument parameter: " + name, defn.location);
+    }
+  }
+  
+  // Step 2: Evaluate kwargs in parent context ONLY
+  ir::VarMap evaluated_kwargs;
+  ir::VarMap parent_copy = parent_context;  // for const correctness
+  for (auto const& [name, expr] : kwargs) {
+    evaluated_kwargs[name] = evaluate(scope, expr, parent_copy);
+  }
+  
+  // Step 3: Build object varmap
+  ir::VarMap object_context = parent_context;
+  
+  // Step 4: Remove shadowed variables (all defines shadow parent scope)
+  for (auto const& [name, define] : scope.data.defines) {
+    object_context.erase(name);
+  }
+  
+  // Step 5: Insert evaluated kwargs into object varmap
+  for (auto const& [name, value] : evaluated_kwargs) {
+    object_context[name] = value;
+  }
+  
+  // Step 6: Validate all arguments have values (kwargs or init)
+  for (auto const& [name, define] : scope.data.defines) {
+    if (define.data.argument) {
+      if (kwargs.find(name) == kwargs.end() && !define.data.init) {
+        throw CompileError("Missing required argument: " + name);
+      }
+    }
+  }
+  
+  // Step 7: Force evaluation of all defines (both arguments and locals)
+  for (auto const& [name, define] : scope.data.defines) {
+    retrieve_value(scope, name, object_context);
+  }
+  
+  return object_context;
+}
+
+template <class ObjectT>
+std::string mangle(
+  ObjectT const & object,
+  ir::VarMap const & context__
+) {
+  ir::VarMap context;
+  for (auto const& [name, define] : object.data.defines) {
+    if (define.data.argument) {
+      context[name] = context__.at(name);
+    }
+  }
+  return mangle(object.data.name, context);
+}
+
 #define DEBUG_Instantiator_instantiate VERBOSE && 1
+
+template <>
+std::string Instantiator::instantiate<ast::Record>(
+  ast::Record const & record, 
+  Kwargs const & kwargs,
+  ir::VarMap const & context__,
+  std::optional<SourceRange> const & loc
+) {
+  ir::VarMap context = scoped_context(record, kwargs, context__, loc);
+  std::string mangled_name = mangle(record.data.name, context);
+
+  if (record_cache.find(mangled_name) == record_cache.end()) {
+    record_cache.emplace(mangled_name, ir::Record{record.data.name, context, mangled_name});
+    // TODO
+  }
+
+  return mangled_name;
+}
+
+template <>
+std::string Instantiator::instantiate<ast::Prompt>(
+  ast::Prompt const & prompt, 
+  Kwargs const & kwargs,
+  ir::VarMap const & context__,
+  std::optional<SourceRange> const & loc
+) {
+  ir::VarMap context = scoped_context(prompt, kwargs, context__, loc);
+  std::string mangled_name = mangle(prompt.data.name, context);
+
+  if (instantiations.find(mangled_name) == instantiations.end()) {
+    instantiations.emplace(mangled_name, ir::Prompt{prompt.data.name, context, mangled_name});
+    // TODO explore this prompt's channels and flow to find references for more instantiations 
+  }
+
+  return mangled_name;
+}
 
 void Instantiator::instantiate() {
 #if DEBUG_Instantiator_instantiate
-    std::cerr << "Instantiator::instantiate" << std::endl;
+  std::cerr << "Instantiator::instantiate" << std::endl;
 #endif
   for (auto const & [filename, program]: programs) {
+    SymbolTable const & symtbl = symbols[filename];
 #if DEBUG_Instantiator_instantiate
     std::cerr << "  IN " << filename << std::endl;
 #endif
-    for (auto const & [name, exported]: program.data.exports) {
+    for (auto const & exported: program.data.exports) {
 #if DEBUG_Instantiator_instantiate
-      std::cerr << "  IN " << filename << std::endl;
+      std::cerr << "    EXPORT " << exported.data.alias << " from " << exported.data.target << std::endl;
 #endif
-      // TODO ???
+      auto target_it = symtbl.find(exported.data.target);
+      if (target_it == symtbl.end()) {
+        emit_error("Trying to export something that does not exist.", exported.location);
+        continue;
+      } else if (!std::holds_alternative<PromptSymbol>(target_it->second)) {
+        emit_error("Only prompt can be exported.", exported.location);
+        continue;
+      }
+
+      auto const & symbol = std::get<PromptSymbol>(target_it->second);
+      try {
+        std::string mangled_name = instantiate(symbol.node, exported.data.kwargs, globals[symbol.scope.data.filename]);
+        exports.emplace(exported.data.alias, mangled_name);
+      } catch (CompileError const & e) {
+        emit_error(e.message, e.location);
+      }
     }
   }
 }

@@ -510,7 +510,7 @@ void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Im
 
 template <>
 void Parser::parse<ast::Tag::Export>(ParserState & state, ast::Data<ast::Tag::Export> & entry) {
-  if (!state.expect(TokenType::IDENTIFIER, " when parsing exported entry point.")) break;
+  if (!state.expect(TokenType::IDENTIFIER, " when parsing exported entry point.")) return;
   entry.alias = state.previous.text;
   if (!state.expect(TokenType::IS, " in export statement.")) return;
   if (!state.expect(TokenType::IDENTIFIER, " when parsing export target.")) return;
@@ -900,10 +900,11 @@ void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Fo
   }
   if (state.match(TokenType::LT)) {
     do {
+      auto start = state.current.location;
       if (!state.expect(TokenType::IDENTIFIER, " when parsing format argument name.")) return;
       std::string arg_name = state.previous.text;
       if (!state.expect(TokenType::EQUAL, " when parsing format argument.")) return;
-      parse(state, data.kwargs[arg_name].data);
+      parse_with_location(state, data.kwargs[arg_name], start);
     } while (state.match(TokenType::COMMA));
     if (!state.expect(TokenType::GT, " to close format arguments.")) return;
   }
@@ -914,38 +915,41 @@ template <>
 void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Record> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Record.")) return;
   while (!state.match(TokenType::RBRACE)) {
+    auto start = state.current.location;
     switch (state.current.type) {
       case TokenType::DEFINE:
       case TokenType::ARGUMENT: {
+        bool is_argument = (state.current.type == TokenType::ARGUMENT);
         state.advance();
         if (!state.expect(TokenType::IDENTIFIER, " when determining defined identifier.")) break;
         auto name = state.previous.text;
-        auto & data_ = data.defines[name].data;
+        auto & node_ = data.defines[name];
+        auto & data_ = node_.data;
         data_.name = name;
-        data_.argument = (state.current.type == TokenType::ARGUMENT);
-        parse(state, data_);
+        data_.argument = is_argument;
+        parse_with_location(state, node_, start);
         break;
       }
       case TokenType::ANNOTATE: {
         state.advance();
         data.annotate.emplace();
-        parse(state, data.annotate.value().data);
+        parse_with_location(state, data.annotate.value(), start);
         break;
       }
       case TokenType::SEARCH: {
         state.advance();
         data.search.emplace();
-        parse(state, data.search.value().data);
+        parse_with_location(state, data.search.value(), start);
         break;
       }
       case TokenType::IS: {
         state.advance();
         if (state.check(TokenType::LBRACE)) {
           data.record.emplace<0>();
-          parse(state, std::get<0>(data.record).data);
+          parse_with_location(state, std::get<0>(data.record), start);
         } else {
           data.record.emplace<1>();
-          parse(state, std::get<1>(data.record).data);
+          parse_with_location(state, std::get<1>(data.record), start);
         }
         break;
       }
@@ -962,51 +966,54 @@ template <>
 void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Prompt> & data) {
   if (!state.expect(TokenType::LBRACE, " when starting to parse a Prompt.")) return;
   while (!state.match(TokenType::RBRACE)) {
+    auto start = state.current.location;
     switch (state.current.type) {
       case TokenType::DEFINE:
       case TokenType::ARGUMENT: {
+        bool is_argument = (state.current.type == TokenType::ARGUMENT);
         state.advance();
         if (!state.expect(TokenType::IDENTIFIER, " when determining defined identifier.")) break;
         auto name = state.previous.text;
-        auto & data_ = data.defines[name].data;
+        auto & node_ = data.defines[name];
+        auto & data_ = node_.data;
         data_.name = name;
-        data_.argument = (state.current.type == TokenType::ARGUMENT);
-        parse(state, data_);
+        data_.argument = is_argument;
+        parse_with_location(state, node_, start);
         break;
       }
       case TokenType::ANNOTATE: {
         state.advance();
         data.annotate.emplace();
-        parse(state, data.annotate.value().data);
+        parse_with_location(state, data.annotate.value(), start);
         break;
       }
       case TokenType::SEARCH: {
         state.advance();
         data.search.emplace();
-        parse(state, data.search.value().data);
+        parse_with_location(state, data.search.value(), start);
         break;
       }
       case TokenType::IS: {
         state.advance();
-        parse(state, data.fields.data);
+        parse_with_location(state, data.fields, start);
         break;
       }
       case TokenType::CHANNEL: {
         state.advance();
         data.channel.emplace();
-        parse(state, data.channel.value().data);
+        parse_with_location(state, data.channel.value(), start);
         break;
       }
       case TokenType::FLOW: {
         state.advance();
         data.flow.emplace();
-        parse(state, data.flow.value().data);
+        parse_with_location(state, data.flow.value(), start);
         break;
       }
       case TokenType::RETURN: {
         state.advance();
         data.retstmt.emplace();
-        parse(state, data.retstmt.value().data);
+        parse_with_location(state, data.retstmt.value(), start);
         break;
       }
       default: {
@@ -1021,56 +1028,60 @@ void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Pr
 template <>
 void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::Program> & data) {
   while (!state.match(TokenType::END_OF_FILE)) {
+    auto start = state.current.location;
     switch (state.current.type) {
       case TokenType::FROM: {
         state.advance();
         data.imports.emplace_back();
-        parse(state, data.imports.back().data);
+        parse_with_location(state, data.imports.back(), start);
         break;
       }
       case TokenType::EXPORT: {
         state.advance();
         data.exports.emplace_back();
-        parse(state, data.exports.back().data);
+        parse_with_location(state, data.exports.back(), start);
         break;
       }
       case TokenType::DEFINE: {
         state.advance();
         if (!state.expect(TokenType::IDENTIFIER, " when determining defined identifier.")) break;
         auto name = state.previous.text;
-        auto & data_ = data.defines[name].data;
+        auto & node_ = data.defines[name];
+        auto & data_ = node_.data;
         data_.name = name;
-        parse(state, data_);
+        parse_with_location(state, node_, start);
         break;
       }
       case TokenType::ANNOTATE: {
         state.advance();
         data.annotate.emplace();
-        parse(state, data.annotate.value().data);
+        parse_with_location(state, data.annotate.value(), start);
         break;
       }
       case TokenType::SEARCH: {
         state.advance();
         data.search.emplace();
-        parse(state, data.search.value().data);
+        parse_with_location(state, data.search.value(), start);
         break;
       }
       case TokenType::RECORD: {
         state.advance();
         if (!state.expect(TokenType::IDENTIFIER, " when parsing name of a Record.")) break;
         auto name = state.previous.text;
-        auto & data_ = data.records[name].data;
+        auto & node_ = data.records[name];
+        auto & data_ = node_.data;
         data_.name = name;
-        parse(state, data_);
+        parse_with_location(state, node_, start);
         break;
       }
       case TokenType::PROMPT: {
         state.advance();
         if (!state.expect(TokenType::IDENTIFIER, " when parsing name of a Prompt.")) break;
         auto name = state.previous.text;
-        auto & data_ = data.prompts[name].data;
+        auto & node_ = data.prompts[name];
+        auto & data_ = node_.data;
         data_.name = name;
-        parse(state, data_);
+        parse_with_location(state, node_, start);
         break;
       }
       default: {

@@ -26,7 +26,6 @@ struct AstSymbol {
   ast::Program const & scope;
   AstNode const & node;
   std::string name;
-  ir::VarMap arguments;
 
   AstSymbol(
     ast::Program const & scope_,
@@ -35,8 +34,7 @@ struct AstSymbol {
   ) :
     scope(scope_),
     node(node_),
-    name(name_),
-    arguments()
+    name(name_)
   {}
 };
 using RecordSymbol = AstSymbol<ast::Record>;
@@ -77,6 +75,19 @@ struct UnresolvedImport {
 using AnySymbol = std::variant<RecordSymbol, PromptSymbol, PythonSymbol, UnresolvedImport>;
 using SymbolTable = std::unordered_map<std::string, AnySymbol>;
 
+std::string mangle(
+  std::string const &,
+  ir::VarMap const &
+);
+
+using Kwargs = std::unordered_map<std::string, ast::Expression>;
+
+template <class ObjectT>
+std::string mangle(
+  ObjectT const &,
+  ir::VarMap const &
+);
+
 class Instantiator {
   private:
     std::unordered_map<std::string, ast::Program> const & programs;
@@ -85,25 +96,44 @@ class Instantiator {
     std::unordered_map<std::string, ir::VarMap> globals;
     std::unordered_map<std::string, SymbolTable> symbols;
 
-//  std::queue<std::pair<std::string, ir::VarMap>> instantiation_queue;
+    std::unordered_map<std::string, std::string> exports;
+    std::unordered_map<std::string, ir::Prompt> instantiations;
 
-//  std::unordered_map<std::string, ir::Record> record_cache;
-//  std::unordered_map<std::string, ir::Prompt> instantiations;
+    std::unordered_map<std::string, ir::Record> record_cache;
 
   private:
     void emit_error(std::string msg, std::optional<SourceRange> const & loc);
 
   private:
-    ir::Value evaluate (ast::Program const &, ast::Expression const &, ir::VarMap &);
-    ir::Value evaluateUnaryOp       (ast::Program const &, ast::Unary       const & op,     ir::VarMap & varmap);
-    ir::Value evaluateBinaryOp      (ast::Program const &, ast::Binary      const & op,     ir::VarMap & varmap);
-    ir::Value evaluateConditionalOp (ast::Program const &, ast::Conditional const & op,     ir::VarMap & varmap);
-    std::string formatString(ast::Program const &, ast::String const & fstring, ir::VarMap & varmap);
+    template <class ScopeT>
+    ir::Value evaluate(
+      ScopeT const &, ast::Expression  const &, ir::VarMap &
+    );
+
+    template <class ScopeT>
+    ir::Value evaluate(
+      ScopeT const &, ast::Unary const &, ir::VarMap &
+    );
+
+    template <class ScopeT>
+    ir::Value evaluate(
+      ScopeT const &, ast::Binary const &, ir::VarMap &
+    );
+
+    template <class ScopeT>
+    ir::Value evaluate(
+      ScopeT const &, ast::Conditional const &, ir::VarMap &
+    );
+
+    template <class ScopeT>
+    ir::Value evaluate(
+      ScopeT const &, ast::String const &, ir::VarMap &
+    );
+
+    template <class ScopeT>
     ir::Value retrieve_value(
-      ast::Program const & program,
-      std::string const & varname,
-      ir::VarMap & varmap,
-      std::optional<SourceRange> const & loc = std::nullopt
+      ScopeT const &, std::string const &, ir::VarMap &,
+      std::optional<SourceRange> const & = std::nullopt
     );
 
   private:    
@@ -111,6 +141,24 @@ class Instantiator {
       SymbolTable & symtbl,
       ast::Import const & import
     );
+
+  private:    
+    template <class ScopeT>
+    ir::VarMap scoped_context(
+      ScopeT const &,
+      Kwargs const &,
+      ir::VarMap const &,
+      std::optional<SourceRange> const & = std::nullopt
+    );
+
+    template <class ObjectT>
+    std::string instantiate(
+      ObjectT const &, 
+      Kwargs const &,
+      ir::VarMap const &,
+      std::optional<SourceRange> const & = std::nullopt
+    );
+
 
   public:
     Instantiator(
@@ -123,5 +171,8 @@ class Instantiator {
 };
 
 }
+
+#include "autocog/compiler/stl/eval-utils.txx"
+#include "autocog/compiler/stl/evaluate.txx"
 
 #endif // AUTOCOG_COMPILER_STL_INSTANTIATE_HXX
