@@ -64,7 +64,6 @@ prompt QueryProcessor {
     
     // Call to external text processor
     to .processed_query call {
-      extern nlp_service;
       entry preprocess;
       kwarg string from .raw_input;
       kwarg language from .customer_context.preferred_language;
@@ -75,7 +74,6 @@ prompt QueryProcessor {
     
     // Call to classifier
     to .classification_result call {
-      extern classifier_service;
       entry analyze;
       kwarg input from .processed_query;
       kwarg context from .customer_context;
@@ -107,7 +105,6 @@ prompt ClassificationHandler {
     to .result from classification_data;
     
     to .confidence_check call {
-      extern validator;
       entry check;
       kwarg value from .result.confidence;
       kwarg threshold from threshold;
@@ -143,7 +140,6 @@ prompt HighConfidenceHandler {
   
   channel {
     to .automated_response call {
-      extern responder;
       entry generate;
       kwarg category from ?classification.category;
       kwarg context from ?customer_context;
@@ -173,7 +169,6 @@ prompt LowConfidenceHandler {
   
   channel {
     to .clarification_request call {
-      extern dialogue;
       entry create_clarification;
       kwarg original from ?query;
       kwarg confidence from ?confidence;
@@ -209,7 +204,6 @@ prompt EscalationHandler {
   
   channel {
     to .ticket_id call {
-      extern ticketing;
       entry create;
       kwarg customer from ?input_data.customer_id;
       kwarg priority from ?input_data.priority;
@@ -219,7 +213,6 @@ prompt EscalationHandler {
     };
     
     to .assigned_agent call {
-      extern routing;
       entry assign;
       kwarg ticket from .ticket_id;
       kwarg urgent from .priority_override;
@@ -269,7 +262,6 @@ prompt ReviewPrompt {
     to .all_results[2] from EscalationHandler.ticket_id;
     
     to .summary call {
-      extern summarizer;
       entry create;
       kwarg inputs map .all_results;
       kwarg max_length from max_summary_length;

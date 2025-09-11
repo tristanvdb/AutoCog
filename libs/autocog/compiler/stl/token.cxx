@@ -20,7 +20,6 @@ const char * token_type_name(TokenType type) {
         case TokenType::TO: return "to";
         case TokenType::FROM: return "from";
         case TokenType::CALL: return "call";
-        case TokenType::EXTERN: return "extern";
         case TokenType::KWARG: return "kwarg";
         case TokenType::MAP: return "map";
         case TokenType::BIND: return "bind";

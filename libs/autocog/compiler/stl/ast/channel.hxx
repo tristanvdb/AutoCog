@@ -10,7 +10,6 @@ DATA(Kwarg) {
 };
 
 DATA(Call) {
-  NODE(Identifier) extcog;
   NODE(Identifier) entry;
   NODES(Kwarg) kwargs;
   MAPPED(Path) binds;

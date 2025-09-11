@@ -71,7 +71,6 @@ public:
 "to"                    { update_location(); return (int)TokenType::TO; }
 "from"                  { update_location(); return (int)TokenType::FROM; }
 "call"                  { update_location(); return (int)TokenType::CALL; }
-"extern"                { update_location(); return (int)TokenType::EXTERN; }
 "kwarg"                 { update_location(); return (int)TokenType::KWARG; }
 "map"                   { update_location(); return (int)TokenType::MAP; }
 "bind"                  { update_location(); return (int)TokenType::BIND; }

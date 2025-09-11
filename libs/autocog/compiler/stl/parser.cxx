@@ -680,7 +680,7 @@ void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::C
     // Parse target path
     parse(state, link.target.data);
     
-    // Check what follows: "from" for path or "call" for external call
+    // Check what follows: "from" for dataflow or "call" for call
     if (state.match(TokenType::FROM)) {
       // Source is a path
       link.source.emplace<0>();  // Path variant
@@ -695,13 +695,7 @@ void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::C
       
       // Parse call components
       while (!state.match(TokenType::RBRACE)) {
-        if (state.match(TokenType::EXTERN)) {
-          // extern identifier;
-          if (!state.expect(TokenType::IDENTIFIER, " for extern name.")) return;
-          call.extcog.data.name = state.previous.text;
-          if (!state.expect(TokenType::SEMICOLON, " after extern declaration.")) return;
-          
-        } else if (state.match(TokenType::ENTRY)) {
+        if (state.match(TokenType::ENTRY)) {
           // entry identifier;
           if (!state.expect(TokenType::IDENTIFIER, " for entry name.")) return;
           call.entry.data.name = state.previous.text;
@@ -748,7 +742,7 @@ void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::C
           if (!state.expect(TokenType::SEMICOLON, " after bind declaration.")) return;
           
         } else {
-          state.emit_error("Unexpected token in call block. Expected 'extern', 'entry', 'kwarg', or 'bind'.");
+          state.emit_error("Unexpected token in call block. Expected 'entry', 'kwarg', or 'bind'.");
           return;
         }
       }

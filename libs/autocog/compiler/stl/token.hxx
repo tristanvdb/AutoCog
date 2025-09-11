@@ -26,7 +26,6 @@ enum class TokenType : int {
     TO,
     FROM,
     CALL,
-    EXTERN,
     KWARG,
     MAP,
     BIND,
