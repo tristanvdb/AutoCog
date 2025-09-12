@@ -11,3 +11,4 @@ modules/autocog.egg-info/
 
 *.sta.json
 *.ftt.json
+**/DEBUG.log
