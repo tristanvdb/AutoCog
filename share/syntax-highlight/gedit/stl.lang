@@ -34,6 +34,16 @@
       <keyword>from</keyword>
       <keyword>to</keyword>
       <keyword>is</keyword>
+      <keyword>use</keyword>
+      <keyword>get</keyword>
+      <keyword>kwarg</keyword>
+      <keyword>bind</keyword>
+      <keyword>wrap</keyword>
+      <keyword>prune</keyword>
+      <keyword>entry</keyword>
+      <keyword>call</keyword>
+      <keyword>mapped</keyword>
+      <keyword>ravel</keyword>
       <keyword>annotate</keyword>
       <keyword>search</keyword>
       <keyword>export</keyword>

@@ -43,8 +43,15 @@ enum class Tag {
   Format,
   Text,
   Prompt,
+  FieldRef,
+  PromptRef,
   Channel,
   Link,
+  Bind,
+  Ravel,
+  Mapped,
+  Prune,
+  Wrap,
   Call,
   Kwarg,
   Path,
@@ -129,6 +136,7 @@ struct Node {
 #define PNODES(tag) std::list< PNODE(tag) >
 #define MAPPED(tag) std::unordered_map<std::string, NODE(tag)>
 #define VARIANT(...) std::variant<FOR_EACH(NODE, __VA_ARGS__)>
+#define VARIANTS(...) std::list< std::variant<FOR_EACH(NODE, __VA_ARGS__)> >
 
 #define DATA(tag) template <> struct Data< Tag::tag >
 #define DATA_CTOR(tag) Data< Tag::tag >
@@ -166,6 +174,11 @@ using Annotate = NODE(Annotate);
 using Kwarg = NODE(Kwarg);
 using Call = NODE(Call);
 using Link = NODE(Link);
+using Bind = NODE(Bind);
+using Ravel = NODE(Ravel);
+using Mapped = NODE(Mapped);
+using Prune = NODE(Prune);
+using Wrap = NODE(Wrap);
 using Channel = NODE(Channel);
 using Define = NODE(Define);
 using Identifier = NODE(Identifier);
@@ -185,6 +198,8 @@ using Path = NODE(Path);
 using Export = NODE(Export);
 using Import = NODE(Import);
 using Program = NODE(Program);
+using FieldRef = NODE(FieldRef);
+using PromptRef = NODE(PromptRef);
 using Prompt = NODE(Prompt);
 using Record = NODE(Record);
 

@@ -1,0 +1,77 @@
+
+from "stlib/thoughts.stl" import Thought;
+from "template.stl" import Step;
+
+record Sentence {
+  argument length=10;
+  is text<length=length>;
+}
+
+record Title {
+  is Sentence<length=50>;
+}
+
+record Page {
+  is {
+    short is Though<length=30>;
+    illustration[1:3] is Sentence<length=50>;
+    content[1:10] is Sentence<length=100>;
+  }
+}
+
+record Book {
+  is {
+    title is Title;
+    pages[5:100] is Page<ages=ages>;
+  }
+}
+
+prompt edit_title {
+  is {
+    topic[3:10] is text;
+    current is Title;
+    pondering[1:5] is Thought;
+    edited is Title;
+  }
+  channel {
+    topic get topic;
+    current get current;
+  }
+  return use edited; // return a Title (string)
+}
+
+prompt create_pages {
+  is {
+    topic[3:10] is text;
+    step is Step;
+    prepare[1:5] is Thought;
+    pages[1:10] is {
+      imagine[1:5] is Thought;
+      page is Page;
+    }
+  }
+  channel {
+    topic get topic;
+    step get step;
+  }
+  return use pages.page; // return a list of Page
+}
+
+prompt edit_page {
+  is {
+    task[1:10] is text;
+    topic[3:10] is text;
+    edits[1:10] is text;
+    current is Page;
+    pondering[1:5] is Thought;
+    edited is Page;
+  }
+  channel {
+    task get task;
+    topic get topic;
+    edits get edits;
+    current get page;
+  }
+  return use edited; // return a Page
+}
+

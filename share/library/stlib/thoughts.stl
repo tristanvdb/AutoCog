@@ -1,0 +1,44 @@
+
+define default_length = 20;
+define default_mode = "simple";
+define default_goal = "show your work";
+
+record Thought {
+  argument length=default_length;
+  argument mode=default_mode;
+  argument goal=default_goal;
+
+  is text<length=length>;
+
+  annotate f"A {mode} thought to {goal}.";
+}
+
+prompt reflexion {
+  argument subject;
+
+  argument length = default_length;
+  argument mode = default_mode;
+  argument goal = default_goal;
+  
+  argument num_steps = 10;
+  argument len_steps = 20;
+  argument min_response = 3;
+  argument max_response = 10;
+
+  is {
+    task[1:10] is text;
+    initial[1:10] is text;
+    work[1:num_steps] is Thought<length=len_steps, mode="working", goal="prepare a response">;
+    response[min_response:max_response] is Thought<length=length, mode=mode, goal=goal>;
+  }
+  channel {
+    task get task;
+    initial get initial;
+  }
+  return {
+    subject is f"Though about {subject}";
+    intermediate use work;
+    use response;
+  }
+}
+

@@ -3,21 +3,43 @@
 
 namespace autocog::compiler::stl::ast {
 
+DATA(Bind) {
+  NODE(Path) source;
+  ONODE(Path) target; // if missing then '_'
+};
+
+DATA(Ravel) {
+  ONODE(Expression) depth; // if missing then 1
+  ONODE(Path) target; // if missing then '_'
+};
+
+DATA(Wrap) {
+  ONODE(Path) target; // if missing then '_'
+};
+
+DATA(Prune) {
+  NODE(Path) target;
+};
+
+DATA(Mapped) {
+  ONODE(Path) target; // if missing then '_'
+};
+
 DATA(Kwarg) {
   NODE(Identifier) name;
-  NODE(Path) source;
-  bool mapped;
+  VARIANT(FieldRef, Path, Expression) source; // "use" (a field), "get" (an input), "is" (a compile-time value),
+  VARIANTS(Bind, Ravel, Wrap, Prune, Mapped) clauses;
 };
 
 DATA(Call) {
-  NODE(Identifier) entry;
-  NODES(Kwarg) kwargs;
-  MAPPED(Path) binds;
+  NODE(PromptRef) entry; //< Could resolve to a python symbol but use PromptRef as there is no difference at parse time
+  NODES(Kwarg) arguments;
 };
 
 DATA(Link) {
   NODE(Path) target;
-  VARIANT(Path, Call) source;
+  VARIANT(FieldRef, Path, Expression, Call) source; // "use" (a field), "get" (an input), "is" (a compile-time value), or "call" (a callable)
+  VARIANTS(Bind, Ravel, Prune, Wrap) clauses;
 };
 
 DATA(Channel) {

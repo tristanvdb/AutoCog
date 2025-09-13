@@ -1,0 +1,33 @@
+
+#include "autocog/compiler/stl/parser.hxx"
+
+#if VERBOSE
+#  include <iostream>
+#endif
+
+namespace autocog::compiler::stl {
+
+template <>
+void Parser::parse<ast::Tag::Field>(ParserState & state, ast::Data<ast::Tag::Field> & field) {
+  if (state.match(TokenType::LSQUARE)) {
+    field.lower.emplace();
+    parse(state, field.lower.value().data);
+    
+    if (state.match(TokenType::COLON)) {
+      field.upper.emplace();
+      parse(state, field.upper.value().data);
+    }    
+    state.expect(TokenType::RSQUARE, " to close array dimension.");
+  }
+  state.expect(TokenType::IS, " between field name and type.");
+  if (state.check(TokenType::LBRACE)) {
+    field.type.emplace<1>();
+    parse(state, std::get<1>(field.type).data);
+  } else {
+    field.type.emplace<0>();
+    parse(state, std::get<0>(field.type).data);
+  }
+}
+
+}
+

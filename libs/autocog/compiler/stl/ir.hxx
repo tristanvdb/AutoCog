@@ -5,7 +5,9 @@
 #include <string>
 #include <optional>
 #include <variant>
+#include <set>
 #include <memory>
+
 namespace autocog::compiler::stl::ir {
 
 using Value = std::variant<int, float, bool, std::string, std::nullptr_t>;

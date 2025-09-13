@@ -7,12 +7,21 @@ DATA(Step) {
   NODE(Identifier) field;
   ONODE(Expression) lower;
   ONODE(Expression) upper;
+  bool bounds;
 };
 
 DATA(Path) {
-  bool input;
-  ONODE(Identifier) prompt;
   NODES(Step) steps;
+};
+
+DATA(PromptRef) {
+  NODE(Identifier) name;
+  MAPPED(Expression) config;
+};
+
+DATA(FieldRef) {
+  ONODE(PromptRef) prompt;
+  NODE(Path) field;
 };
 
 }

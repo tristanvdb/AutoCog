@@ -4,14 +4,25 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Edge) {
-  NODE(Identifier) prompt;
-  ONODE(String) label;
+  NODE(PromptRef) prompt;
+  ONODE(Expression) limit;
+  ONODE(Expression) label;
 };
 
 DATA(Flow) {
-  bool single_statement; //< Keyword followed by single element instead of block
+  bool short_form;
   NODES(Edge) edges;
 };
+
+/**
+ * Short form:
+ *   `flow my_prompt;`
+ *   `flow my_prompt[3] as "XXX";`
+ * is equivalent to:
+ *   `flow { my_prompt; }`
+ *   `flow { my_prompt[3] as "XXX"; }`
+ * 
+ */
 
 }
 

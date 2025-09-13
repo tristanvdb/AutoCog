@@ -1,0 +1,204 @@
+
+from "stlib/thoughts.stl" import Thought, reflexion;
+from "stlib/datastore.py" import store as stlib_store, retrieve as stlib_retrieve;
+
+from "template.stl" import Age, TplDesc, Template;
+from "template.py" import list_templates, open_template, collate_task;
+
+from "book.stl" import Title, Book;
+from "book.stl" import edit_title, create_pages, edit_page;
+from "book.py" import write as book_write;
+
+prompt init_idea {
+  is {
+    query is text;
+    age is Age;
+    templates[1:10] is TplDesc;
+    pick is repeat(templates.template);
+    ideas[1:5] is Thought<mode="rough", goal="brainstorm ideas">;
+    title is Title;
+  }
+  flow init_template;
+  channel {
+    query get query;
+    age get age;
+    templates call list_templates {
+      age use .age;
+    };
+  }
+}
+
+prompt init_task {
+  is {
+    task[1:10] is text;
+    template is Template;
+  }
+  channel {
+    task call collate_task {
+      query get query;
+      age get age;
+      key use init_idea.pick;
+    };
+    template call open_template {
+      key get init_idea.pick;
+    };
+  }
+  flow init_topic;
+}
+
+prompt init_topic {
+  is {
+    topic[3:10] is text; // Call to reflexion produces Thought<length=50, mode="refined", goal=f"guide ...">
+  }
+  channel {
+    topic call reflexion<
+      subject="From rough book idea to refined book topic.",
+      length=50,
+      mode="refined",
+      goal=f"guide the writing of a children book",
+      num_steps=10,
+      len_steps=20,
+      min_response=3,
+      max_response=10
+    > {
+      task use init_task.task;
+      initial use init_idea.idea;
+    } bind(_,response);
+  }
+  flow init_draft;
+}
+
+prompt init_draft {
+  is {
+    book is Book;
+  }
+  channel {
+    book.title call edit_title {
+      topic use init_topic.topic;
+      current use init_idea.title;
+    };
+    book.pages call create_pages {
+      topic use init_topic.topic;
+      step use init_task.template.steps mapped;
+    } ravel;
+  }
+  flow init_commit;
+}
+
+prompt init_commit {
+  is {
+    keys is {
+      pkey is text;
+      skey is text;
+    }
+  }
+  channel {
+    done call stlib_store {
+      pkey is "book";
+      data use init_draft.book;
+    };
+  }
+  flow loop_cond;
+}
+
+prompt loop_cond {
+  argument max_loops=10;
+  is {
+    task[1:10] is text;
+    topic[3:10] is text;
+    book is Book;
+    comments[1:10] is Thought<length=10, mode="rough">;
+  }
+  channel {
+    task use init_task.task;
+    topic use init_topic.topic;
+    book call stlib_retrieve {
+      pkey is "book";
+    };
+  }
+  flow {
+    loop_analyse[max_loops] as "edit";
+    done as "done";
+  }
+}
+
+prompt loop_collate {
+  is {
+    collated[1:100] is text;
+  }
+  channel {
+    collated call collate_comment {
+      topic use loop_cond.topic;
+      comments use loop_cond.comments;
+    };
+  }
+  flow loop_analyse;
+}
+
+prompt loop_analyse {
+  is {
+    edits[1:10] is Thought<length=50, mode="elaborated">;
+  }
+  channel {
+    edits call reflexion<
+      subject="From editor comments to elaborated edit directives.",
+      length=50,
+      mode="elaborated",
+      goal=f"provide clear edit guidance",
+      num_steps=10,
+      len_steps=20,
+      min_response=1,
+      max_response=10
+    > {
+      task use loop_cond.task;
+      initial use loop_collate.collated;
+    };
+  }
+  flow loop_dispatch;
+}
+
+prompt loop_dispatch {
+  is {
+    book is Book;
+  }
+  channel {
+    book.title use loop_cond.book.title;
+    book.pages call edit_page {
+      task use loop_cond.task;
+      topic use loop_cond.topic;
+      edit use loop_analyse.edits;
+      page use loop_cond.book.pages mapped;
+    };
+  }
+  flow loop_commit;
+}
+
+prompt loop_commit {
+  is {
+    keys is {
+      pkey is text;
+      skey is text;
+    }
+  }
+  channel {
+    done call stlib_store {
+      pkey is "book";
+      data use loop_dispatch.book;
+    };
+  }
+  flow loop_cond;
+}
+
+prompt done {
+  is {
+    done is text;
+  }
+  channel {
+    done call book_write {
+      book use loop_cond.book;
+    };
+  }
+}
+
+export main is init_idea;
+
