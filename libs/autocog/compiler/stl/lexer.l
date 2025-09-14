@@ -89,8 +89,8 @@ public:
 
 // Identifiers and literals  
 [a-zA-Z_][a-zA-Z0-9_]*  { update_location(); return (int)TokenType::IDENTIFIER; }
+[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+  { update_location(); return (int)TokenType::FLOAT_LITERAL; }
 [0-9]+                  { update_location(); return (int)TokenType::INTEGER_LITERAL; }
-[0-9]+\.[0-9]+          { update_location(); return (int)TokenType::FLOAT_LITERAL; }
 
 [fF]\"([^"\\]|\\.)*\"   { update_location(); return (int)TokenType::STRING_LITERAL; }
 [fF]'([^'\\]|\\.)*'     { update_location(); return (int)TokenType::STRING_LITERAL; }

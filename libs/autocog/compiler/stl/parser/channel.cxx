@@ -9,6 +9,7 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Channel>(ParserState & state, ast::Data<ast::Tag::Channel> & data) {
+  state.expect(TokenType::CHANNEL, "when parsing Channel statement.");
   state.expect(TokenType::LBRACE, " when starting to parse channel body.");
   while (!state.match(TokenType::RBRACE)) {
     data.links.emplace_back();

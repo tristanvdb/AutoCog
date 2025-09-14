@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(autocog)
-
+  
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -59,6 +59,8 @@ find_path(LLAMA_INC
     REQUIRED
 )
 
+enable_testing()
+
 add_subdirectory(libs/autocog/compiler/stl)
 add_subdirectory(tools/stlc)
 add_subdirectory(bindings/compiler-stl)
@@ -66,4 +68,8 @@ add_subdirectory(bindings/compiler-stl)
 add_subdirectory(libs/autocog/llama/xfta)
 add_subdirectory(tools/xfta)
 add_subdirectory(bindings/llama-xfta)
+
+add_subdirectory(tests/units)
+
+add_subdirectory(share/demos)
 

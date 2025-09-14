@@ -1,0 +1,146 @@
+[
+  {
+    "description": "Simple record with text format",
+    "tag": "Program",
+    "code": "record Message { is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with struct",
+    "tag": "Program",
+    "code": "record Person { is { name is text; age is integer; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with enum format",
+    "tag": "Program",
+    "code": "record Status { is enum(\"active\", \"inactive\", \"pending\"); }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with text and parameters",
+    "tag": "Program",
+    "code": "record Title { is text<length=100>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with identifier reference",
+    "tag": "Program",
+    "code": "record Alias { is OtherType; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with annotation",
+    "tag": "Program",
+    "code": "record Item { annotate \"An item in the system\"; is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with search block",
+    "tag": "Program",
+    "code": "record Config { search { model is \"gpt-4\"; } is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with define",
+    "tag": "Program",
+    "code": "record Box { define max_size = 100; is text<length=max_size>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with argument",
+    "tag": "Program",
+    "code": "record Template { argument size = 50; is text<length=size>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with multiple defines",
+    "tag": "Program",
+    "code": "record Multi { define a = 1; define b = 2; is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with all elements",
+    "tag": "Program",
+    "code": "record Complete { argument mode = \"strict\"; define max = 100; annotate \"Complete record\"; search { temperature is 0.7; } is { content is text<length=max>; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with complex struct",
+    "tag": "Program",
+    "code": "record Data { is { items[1:10] is { value is text; score is integer; } total is integer; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with choice format",
+    "tag": "Program",
+    "code": "record Selection { is select(options); }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with repeat choice",
+    "tag": "Program",
+    "code": "record Multiple { is repeat(items); }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with annotation block",
+    "tag": "Program",
+    "code": "record Doc { annotate { _ as \"Main description\"; field as \"Field description\"; } is { field is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with underscore name",
+    "tag": "Program",
+    "code": "record _Private { is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record with numbers in name",
+    "tag": "Program",
+    "code": "record Data123 { is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record missing 'is' - fails",
+    "tag": "Program",
+    "code": "record Message { text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Record missing type - fails",
+    "tag": "Program",
+    "code": "record Message { is; }",
+    "should_pass": false
+  },
+  {
+    "description": "Record missing name - fails",
+    "tag": "Program",
+    "code": "record { is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Record with reserved keyword name - fails",
+    "tag": "Program",
+    "code": "record return { is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Record missing braces - fails",
+    "tag": "Program",
+    "code": "record Message is text;",
+    "should_pass": false
+  },
+  {
+    "description": "Record with unclosed brace - fails",
+    "tag": "Program",
+    "code": "record Message { is text;",
+    "should_pass": false
+  },
+  {
+    "description": "Record with number starting name - fails",
+    "tag": "Program",
+    "code": "record 123Data { is text; }",
+    "should_pass": false
+  }
+]

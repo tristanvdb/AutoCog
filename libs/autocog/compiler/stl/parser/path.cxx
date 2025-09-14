@@ -15,13 +15,17 @@ void Parser::parse<ast::Tag::Path>(ParserState & state, ast::Data<ast::Tag::Path
     path.steps.emplace_back();
     auto & step = path.steps.back().data;
     step.field.data.name = state.previous.text;
+    step.is_range = false;
     if (state.match(TokenType::LSQUARE)) {
-      step.lower.emplace();
-      parse(state, step.lower.value().data);
+      if (!state.check(TokenType::COLON)) {
+        step.lower.emplace();
+        parse(state, step.lower.value().data);
+      }
 
       if (state.match(TokenType::COLON)) {
-        step.upper.emplace();
+        step.is_range = true;
         if (!state.check(TokenType::RSQUARE)) {
+          step.upper.emplace();
           parse(state, step.upper.value().data);
         }
       }

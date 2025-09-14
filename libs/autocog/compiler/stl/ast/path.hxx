@@ -7,7 +7,7 @@ DATA(Step) {
   NODE(Identifier) field;
   ONODE(Expression) lower;
   ONODE(Expression) upper;
-  bool bounds;
+  bool is_range;
 };
 
 DATA(Path) {

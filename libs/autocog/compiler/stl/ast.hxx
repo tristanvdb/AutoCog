@@ -68,6 +68,8 @@ enum class Tag {
   Parenthesis
 };
 
+extern const std::unordered_map<std::string, Tag> tags;
+
 template <Tag tagT>
 struct Node;
 

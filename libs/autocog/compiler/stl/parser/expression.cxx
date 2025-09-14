@@ -188,7 +188,9 @@ void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag
     state.expect(TokenType::RPAREN, " to end parenthesized expression.");
     
   } else {
-    state.throw_error("Expression must be primary, unary, or parenthesized (for binary and conditional)!");
+    std::ostringstream oss;
+    oss << "Expression must be primary, unary, or parenthesized (for binary and conditional)! `" << token_type_name(state.current.type) << "`";
+    state.throw_error(oss.str());
   }
 }
 

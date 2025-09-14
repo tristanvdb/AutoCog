@@ -25,23 +25,32 @@ void Parser::parse<ast::Tag::Kwarg>(ParserState & state, ast::Data<ast::Tag::Kwa
   }
 
   while (!state.match(TokenType::SEMICOLON)) {
-    if (state.match(TokenType::BIND)) {
-      kwarg.clauses.emplace_back(std::in_place_index<0>);
-      parse(state, std::get<0>(kwarg.clauses.back()).data);
-    } else if (state.match(TokenType::RAVEL)) {
-      kwarg.clauses.emplace_back(std::in_place_index<1>);
-      parse(state, std::get<1>(kwarg.clauses.back()).data);
-    } else if (state.match(TokenType::WRAP)) {
-      kwarg.clauses.emplace_back(std::in_place_index<2>);
-      parse(state, std::get<2>(kwarg.clauses.back()).data);
-    } else if (state.match(TokenType::PRUNE)) {
-      kwarg.clauses.emplace_back(std::in_place_index<3>);
-      parse(state, std::get<3>(kwarg.clauses.back()).data);
-    } else if (state.match(TokenType::MAPPED)) {
-      kwarg.clauses.emplace_back(std::in_place_index<4>);
-      parse(state, std::get<4>(kwarg.clauses.back()).data);
-    } else {
-      state.throw_error("Channel clauses can only be `bind`, `ravel`, `wrap`, `prune`, or `mapped`");
+    switch (state.current.type) {
+      case TokenType::BIND:
+        kwarg.clauses.emplace_back(std::in_place_index<0>);
+        parse(state, std::get<0>(kwarg.clauses.back()).data);
+        break;
+      case TokenType::RAVEL:
+        kwarg.clauses.emplace_back(std::in_place_index<1>);
+        parse(state, std::get<1>(kwarg.clauses.back()).data);
+        break;
+      case TokenType::WRAP:
+        kwarg.clauses.emplace_back(std::in_place_index<2>);
+        parse(state, std::get<2>(kwarg.clauses.back()).data);
+        break;
+      case TokenType::PRUNE:
+        kwarg.clauses.emplace_back(std::in_place_index<3>);
+        parse(state, std::get<3>(kwarg.clauses.back()).data);
+        break;
+      case TokenType::MAPPED:
+        kwarg.clauses.emplace_back(std::in_place_index<4>);
+        parse(state, std::get<4>(kwarg.clauses.back()).data);
+        break;
+      default: {
+        std::ostringstream oss;
+        oss << "Call channel argument's clauses can only be `bind`, `ravel`, `wrap`, `prune`, or `mapped`. Found " << token_type_name(state.current.type) << "`.";
+        state.throw_error(oss.str());
+      }
     }
   }
 }

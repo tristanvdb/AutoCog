@@ -18,3 +18,6 @@ set_target_properties(autocog_xfta PROPERTIES
 )
 install(TARGETS autocog_xfta DESTINATION bin)
 
+add_test(NAME xfta_smoke_test 
+         COMMAND xfta --help)
+

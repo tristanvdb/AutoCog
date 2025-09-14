@@ -22,26 +22,35 @@ void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::
   }
 
   while (!state.match(TokenType::SEMICOLON)) {
-    if (state.match(TokenType::BIND)) {
-      data.clauses.emplace_back(std::in_place_index<0>);
-      parse(state, std::get<0>(data.clauses.back()).data);
-    } else if (state.match(TokenType::RAVEL)) {
-      data.clauses.emplace_back(std::in_place_index<1>);
-      parse(state, std::get<1>(data.clauses.back()).data);
-    } else if (state.match(TokenType::WRAP)) {
-      data.clauses.emplace_back(std::in_place_index<2>);
-      parse(state, std::get<2>(data.clauses.back()).data);
-    } else if (state.match(TokenType::PRUNE)) {
-      data.clauses.emplace_back(std::in_place_index<3>);
-      parse(state, std::get<3>(data.clauses.back()).data);
-    } else {
-      state.throw_error("Return clauses can only be `bind`, `ravel`, `wrap`, or `prune`");
+    switch (state.current.type) {
+      case TokenType::BIND:
+        data.clauses.emplace_back(std::in_place_index<0>);
+        parse(state, std::get<0>(data.clauses.back()).data);
+        break;
+      case TokenType::RAVEL:
+        data.clauses.emplace_back(std::in_place_index<1>);
+        parse(state, std::get<1>(data.clauses.back()).data);
+        break;
+      case TokenType::WRAP:
+        data.clauses.emplace_back(std::in_place_index<2>);
+        parse(state, std::get<2>(data.clauses.back()).data);
+        break;
+      case TokenType::PRUNE:
+        data.clauses.emplace_back(std::in_place_index<3>);
+        parse(state, std::get<3>(data.clauses.back()).data);
+        break;
+      default: {
+        std::ostringstream oss;
+        oss << "Return clauses can only be `bind`, `ravel`, `wrap`, or `prune`. Found " << token_type_name(state.current.type) << "`.";
+        state.throw_error(oss.str());
+      }
     }
   }
 }
 
 template <>
 void Parser::parse<ast::Tag::Return>(ParserState & state, ast::Data<ast::Tag::Return> & data) {
+  state.expect(TokenType::RETURN, "when parsing Return statement.");
   if (!state.check(TokenType::LBRACE) && !state.check(TokenType::USE) && !state.check(TokenType::SEMICOLON)) {
     data.label.emplace();
     parse(state, data.label.value().data);

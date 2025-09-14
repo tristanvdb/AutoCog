@@ -11,7 +11,7 @@ add_custom_command(
 
 add_library(autocog_compiler_stl_lib STATIC
     token.cxx parser.cxx parser-state.cxx instantiate.cxx diagnostic.cxx
-    ast/program.cxx ast/expr.cxx
+    ast.cxx ast/program.cxx ast/expr.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
     parser/define.cxx parser/export.cxx parser/expression.cxx
     parser/field.cxx parser/fieldref.cxx parser/flow.cxx

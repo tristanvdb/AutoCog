@@ -24,6 +24,7 @@ void Parser::parse<ast::Tag::Edge>(ParserState & state, ast::Data<ast::Tag::Edge
 
 template <>
 void Parser::parse<ast::Tag::Flow>(ParserState & state, ast::Data<ast::Tag::Flow> & data) {
+  state.expect(TokenType::FLOW, "when parsing Flow statement.");
   if (state.match(TokenType::LBRACE)) {
     data.short_form = false;
     while (!state.match(TokenType::RBRACE)) {

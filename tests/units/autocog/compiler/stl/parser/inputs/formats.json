@@ -1,0 +1,182 @@
+[
+  {
+    "description": "Simple text format",
+    "tag": "Format",
+    "code": "text;",
+    "should_pass": true
+  },
+  {
+    "description": "Text format with length parameter",
+    "tag": "Format",
+    "code": "text<length=50>;",
+    "should_pass": true
+  },
+  {
+    "description": "Text format with multiple parameters",
+    "tag": "Format",
+    "code": "text<length=100, mode=\"strict\">;",
+    "should_pass": true
+  },
+  {
+    "description": "Text format with expression parameter",
+    "tag": "Format",
+    "code": "text<length=(max_len * 2)>;",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with single value",
+    "tag": "Format",
+    "code": "enum(\"single\");",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with two values",
+    "tag": "Format",
+    "code": "enum(\"yes\", \"no\");",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with multiple values",
+    "tag": "Format",
+    "code": "enum(\"red\", \"green\", \"blue\", \"yellow\");",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with empty strings",
+    "tag": "Format",
+    "code": "enum(\"\", \"value\");",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with f-strings",
+    "tag": "Format",
+    "code": "enum(f\"option_{x}\", \"other\");",
+    "should_pass": true
+  },
+  {
+    "description": "Repeat choice with simple path",
+    "tag": "Format",
+    "code": "repeat(items);",
+    "should_pass": true
+  },
+  {
+    "description": "Repeat choice with nested path",
+    "tag": "Format",
+    "code": "repeat(data.items);",
+    "should_pass": true
+  },
+  {
+    "description": "Repeat choice with indexed path",
+    "tag": "Format",
+    "code": "repeat(items[0:5]);",
+    "should_pass": true
+  },
+  {
+    "description": "Select choice with simple path",
+    "tag": "Format",
+    "code": "select(options);",
+    "should_pass": true
+  },
+  {
+    "description": "Select choice with complex path",
+    "tag": "Format",
+    "code": "select(menu.options[1:3].value);",
+    "should_pass": true
+  },
+  {
+    "description": "Format as identifier reference",
+    "tag": "Format",
+    "code": "MyCustomType;",
+    "should_pass": true
+  },
+  {
+    "description": "Format as identifier with parameters",
+    "tag": "Format",
+    "code": "CustomFormat<size=10, validate=true>;",
+    "should_pass": true
+  },
+  {
+    "description": "Format with nested expression parameters",
+    "tag": "Format",
+    "code": "text<length=((width + margin) * 2)>;",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with complex parameters",
+    "tag": "Format",
+    "code": "Template<mode=\"strict\", count=(n + 1), flag=true>;",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with numeric-looking strings",
+    "tag": "Format",
+    "code": "enum(\"1\", \"2\", \"3\");",
+    "should_pass": true
+  },
+  {
+    "description": "Enum with special characters in strings",
+    "tag": "Format",
+    "code": "enum(\"opt-1\", \"opt_2\", \"opt.3\");",
+    "should_pass": true
+  },
+  {
+    "description": "Empty enum - fails",
+    "tag": "Format",
+    "code": "enum();",
+    "should_pass": false
+  },
+  {
+    "description": "Enum without parentheses - fails",
+    "tag": "Format",
+    "code": "enum\"value\";",
+    "should_pass": false
+  },
+  {
+    "description": "Enum with non-string value - fails",
+    "tag": "Format",
+    "code": "enum(42);",
+    "should_pass": false
+  },
+  {
+    "description": "Enum with identifier instead of string - fails",
+    "tag": "Format",
+    "code": "enum(value);",
+    "should_pass": false
+  },
+  {
+    "description": "Repeat without parentheses - fails",
+    "tag": "Format",
+    "code": "repeat items;",
+    "should_pass": false
+  },
+  {
+    "description": "Select without path - fails",
+    "tag": "Format",
+    "code": "select();",
+    "should_pass": false
+  },
+  {
+    "description": "Text with unclosed angle bracket - fails",
+    "tag": "Format",
+    "code": "text<length=50;",
+    "should_pass": false
+  },
+  {
+    "description": "Text with missing angle bracket - fails",
+    "tag": "Format",
+    "code": "text length=50>;",
+    "should_pass": false
+  },
+  {
+    "description": "Invalid choice keyword - fails",
+    "tag": "Format",
+    "code": "choose(items);",
+    "should_pass": false
+  },
+  {
+    "description": "Mixed enum value types - fails",
+    "tag": "Format",
+    "code": "enum(\"string\", 42);",
+    "should_pass": false
+  }
+]

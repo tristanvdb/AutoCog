@@ -21,3 +21,10 @@ set_target_properties(autocog_llama_xfta_pybind PROPERTIES
 )
 install(TARGETS autocog_llama_xfta_pybind DESTINATION autocog/llama/xfta)
 
+add_test(NAME python_xfta_binding_smoke_test
+         COMMAND ${Python_EXECUTABLE} -c "import autocog.llama.xfta"
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    
+set_tests_properties(python_xfta_binding_smoke_test PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:$ENV{PYTHONPATH}")
+

@@ -16,10 +16,9 @@ namespace autocog::compiler::stl {
 
 struct ParseError : std::exception {
   std::string message;
-  std::string line;
   SourceLocation location;
   
-  ParseError(std::string msg, std::string line_, SourceLocation loc);
+  ParseError(std::string msg, SourceLocation loc);
   
   const char * what() const noexcept override;
 };
@@ -28,16 +27,14 @@ class Lexer;
 struct Diagnostic;
 
 struct ParserState {
-  std::string source;
-  std::list<Diagnostic> & diagnostics;
-
   std::istringstream stream;
   Lexer lexer;
 
   Token previous;
   Token current;
 
-  ParserState(int fid, std::string const & source_, std::list<Diagnostic> & diagnostics_);
+  ParserState(std::string const & source_);
+  ParserState(int fid, std::string const & source_);
 
   void advance();
 
@@ -45,7 +42,6 @@ struct ParserState {
   bool match(TokenType type);
   void expect(TokenType type, std::string context);
 
-  void emit_error(std::string msg);
   void throw_error(std::string msg);
 };
 
@@ -61,14 +57,18 @@ class Parser {
     file_to_program_map_t programs;
 
     template <ast::Tag tag>
-    void parse(ParserState & state, ast::Data<tag> & data);
+    static void parse(ParserState & state, ast::Data<tag> & data);
 
     template <ast::Tag tag>
-    void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start/* = std::nullopt*/) {
+    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start/* = std::nullopt*/) {
       SourceLocation start_loc{start?start.value():state.current.location};
       parse(state, node.data);
       node.location.emplace(SourceRange{start_loc, state.current.location});
     }
+
+    /// For testing purpose
+    template <ast::Tag tag>
+    static bool parse_fragment(std::string const & code);
 
   public:
     Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &);
@@ -78,7 +78,20 @@ class Parser {
     void parse(int fid, std::string const & filename, std::string const & source);
 
     file_to_program_map_t const & get() const;
+
+    /// For testing purpose
+    static bool parse_fragment(std::string const & tag, std::string const & code);
 };
+
+template <ast::Tag tag>
+bool Parser::parse_fragment(
+  std::string const & code
+) {
+  ParserState state(code);
+  ast::Data<tag> data;
+  parse(state, data);
+  return state.check(TokenType::END_OF_FILE);
+}
 
 void clean_raw_string(std::string raw_text, ast::Data<ast::Tag::String> & data);
 
@@ -113,6 +126,13 @@ template <> void Parser::parse<ast::Tag::Prune>(ParserState & state, ast::Data<a
 template <> void Parser::parse<ast::Tag::Edge>(ParserState & state, ast::Data<ast::Tag::Edge> &);
 
 template <> void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::Retfield> &);
+
+template <> void Parser::parse<ast::Tag::Text>(ParserState & state, ast::Data<ast::Tag::Text> &);
+template <> void Parser::parse<ast::Tag::Enum>(ParserState & state, ast::Data<ast::Tag::Enum> &);
+template <> void Parser::parse<ast::Tag::Choice>(ParserState & state, ast::Data<ast::Tag::Choice> &);
+
+template <> void Parser::parse<ast::Tag::Annotation>(ParserState & state, ast::Data<ast::Tag::Annotation> &);
+template <> void Parser::parse<ast::Tag::Param>(ParserState & state, ast::Data<ast::Tag::Param> &);
 
 
 }

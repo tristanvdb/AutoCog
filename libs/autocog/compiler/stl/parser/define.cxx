@@ -12,7 +12,7 @@ namespace autocog::compiler::stl {
 template <>
 void Parser::parse<ast::Tag::Define>(ParserState & state, ast::Data<ast::Tag::Define> & define) {
 #if DEBUG_Parser_Define
-    std::cerr << "Parser::parse<ast::Tag::Define>" << std::endl;
+  std::cerr << "Parser::parse<ast::Tag::Define>" << std::endl;
 #endif
   if (state.match(TokenType::EQUAL)) {
     define.init.emplace();

@@ -9,7 +9,8 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Import> & import) {
-  state.expect(TokenType::STRING_LITERAL, " when parsing import file path.");
+  state.expect(TokenType::FROM, "when parsing Import statement.");
+  state.expect(TokenType::STRING_LITERAL, "when parsing import file path.");
   
   std::string raw_text = state.previous.text;
   

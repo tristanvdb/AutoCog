@@ -21,3 +21,9 @@ set_target_properties(autocog_compiler_stl_pybind PROPERTIES
 )
 install(TARGETS autocog_compiler_stl_pybind DESTINATION autocog/compiler/stl)
 
+add_test(NAME python_stlc_binding_smoke_test
+         COMMAND ${Python_EXECUTABLE} -c "import autocog.compiler.stl"
+         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    
+set_tests_properties(python_stlc_binding_smoke_test PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:$ENV{PYTHONPATH}")

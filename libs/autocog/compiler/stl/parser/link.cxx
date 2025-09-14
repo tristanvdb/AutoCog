@@ -28,20 +28,25 @@ void Parser::parse<ast::Tag::Link>(ParserState & state, ast::Data<ast::Tag::Link
   }
 
   while (!state.match(TokenType::SEMICOLON)) {
-    if (state.match(TokenType::BIND)) {
-      link.clauses.emplace_back(std::in_place_index<0>);
-      parse(state, std::get<0>(link.clauses.back()).data);
-    } else if (state.match(TokenType::RAVEL)) {
-      link.clauses.emplace_back(std::in_place_index<1>);
-      parse(state, std::get<1>(link.clauses.back()).data);
-    } else if (state.match(TokenType::WRAP)) {
-      link.clauses.emplace_back(std::in_place_index<2>);
-      parse(state, std::get<2>(link.clauses.back()).data);
-    } else if (state.match(TokenType::PRUNE)) {
-      link.clauses.emplace_back(std::in_place_index<3>);
-      parse(state, std::get<3>(link.clauses.back()).data);
-    } else {
-      state.throw_error("Channel clauses can only be `bind`, `ravel`, `wrap`, or `prune`");
+    switch (state.current.type) {
+      case TokenType::BIND:
+        link.clauses.emplace_back(std::in_place_index<0>);
+        parse(state, std::get<0>(link.clauses.back()).data);
+        break;
+      case TokenType::RAVEL:
+        link.clauses.emplace_back(std::in_place_index<1>);
+        parse(state, std::get<1>(link.clauses.back()).data);
+        break;
+      case TokenType::PRUNE:
+        link.clauses.emplace_back(std::in_place_index<2>);
+        parse(state, std::get<2>(link.clauses.back()).data);
+        break;
+      case TokenType::WRAP:
+        link.clauses.emplace_back(std::in_place_index<3>);
+        parse(state, std::get<3>(link.clauses.back()).data);
+        break;
+      default:
+        state.throw_error("Channel clauses can only be `bind`, `ravel`, `prune`, or `wrap`");
     }
   }
 }

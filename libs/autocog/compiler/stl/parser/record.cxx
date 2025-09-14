@@ -26,18 +26,6 @@ void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Re
         parse_with_location(state, node_, start);
         break;
       }
-      case TokenType::ANNOTATE: {
-        state.advance();
-        data.annotate.emplace();
-        parse_with_location(state, data.annotate.value(), start);
-        break;
-      }
-      case TokenType::SEARCH: {
-        state.advance();
-        data.search.emplace();
-        parse_with_location(state, data.search.value(), start);
-        break;
-      }
       case TokenType::IS: {
         state.advance();
         if (state.check(TokenType::LBRACE)) {
@@ -47,6 +35,16 @@ void Parser::parse<ast::Tag::Record>(ParserState & state, ast::Data<ast::Tag::Re
           data.record.emplace<1>();
           parse_with_location(state, std::get<1>(data.record), start);
         }
+        break;
+      }
+      case TokenType::ANNOTATE: {
+        data.annotate.emplace();
+        parse_with_location(state, data.annotate.value(), start);
+        break;
+      }
+      case TokenType::SEARCH: {
+        data.search.emplace();
+        parse_with_location(state, data.search.value(), start);
         break;
       }
       default: {

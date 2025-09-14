@@ -1,0 +1,194 @@
+[
+  {
+    "description": "Empty channel block",
+    "tag": "Channel",
+    "code": "channel { }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with single link using 'use'",
+    "tag": "Channel",
+    "code": "channel { result use source.data; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with single link using 'get'",
+    "tag": "Channel",
+    "code": "channel { input get user_data; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with single link using 'is'",
+    "tag": "Channel",
+    "code": "channel { count is 5; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with expression after 'is'",
+    "tag": "Channel",
+    "code": "channel { total is (width * height); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with string literal after 'is'",
+    "tag": "Channel",
+    "code": "channel { message is \"hello\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'use' and field reference",
+    "tag": "Channel",
+    "code": "channel { output use previous.result; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'use' and prompt field reference",
+    "tag": "Channel",
+    "code": "channel { data use other_prompt.field; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'use' and configured prompt reference",
+    "tag": "Channel",
+    "code": "channel { data use a_prompt<mode=\"fast\">.result; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'call' and no arguments",
+    "tag": "Channel",
+    "code": "channel { result call process { }; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'call' and single argument",
+    "tag": "Channel",
+    "code": "channel { result call process { input use a_prompt.data; }; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with 'call' and multiple arguments",
+    "tag": "Channel",
+    "code": "channel { result call process { input use source.data; count is 5; mode get config; }; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with configured call",
+    "tag": "Channel",
+    "code": "channel { result call process<debug=true> { input use source.data; }; }",
+    "should_pass": true
+  },
+  {
+    "description": "Multiple links in channel",
+    "tag": "Channel",
+    "code": "channel { x get input_x; y get input_y; result is (x + y); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with nested path in target",
+    "tag": "Channel",
+    "code": "channel { data.items[0] use source.value; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with array bounds in target",
+    "tag": "Channel",
+    "code": "channel { items[1:5] use source.items; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with bind clause",
+    "tag": "Channel",
+    "code": "channel { result use source.data bind(source, target); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with bind using underscore",
+    "tag": "Channel",
+    "code": "channel { result use source.data bind(_, target); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with ravel clause",
+    "tag": "Channel",
+    "code": "channel { flat use source.nested ravel; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with ravel and depth",
+    "tag": "Channel",
+    "code": "channel { flat use source.nested ravel(2); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with wrap clause",
+    "tag": "Channel",
+    "code": "channel { singleton use source.value wrap; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with prune clause",
+    "tag": "Channel",
+    "code": "channel { cleaned use source.data prune(temp); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with mapped clause in call",
+    "tag": "Channel",
+    "code": "channel { results call process { items use source.data.values mapped; }; }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with multiple clauses",
+    "tag": "Channel",
+    "code": "channel { result use source.data bind(_, output) ravel wrap; }",
+    "should_pass": true
+  },
+  {
+    "description": "Complex channel with mixed links",
+    "tag": "Channel",
+    "code": "channel { input get user_data; processed call transform { data use source.input; }; output use source.processed.result bind(_, final); }",
+    "should_pass": true
+  },
+  {
+    "description": "Channel with missing source - fails",
+    "tag": "Channel",
+    "code": "channel { result use; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel use whole prompt - fails",
+    "tag": "Channel",
+    "code": "channel { field use source; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel with missing target - fails",
+    "tag": "Channel",
+    "code": "channel { use source.data; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel with invalid verb - fails",
+    "tag": "Channel",
+    "code": "channel { result take data; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel with missing semicolon - fails",
+    "tag": "Channel",
+    "code": "channel { x get input y get output; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel with unclosed call block - fails",
+    "tag": "Channel",
+    "code": "channel { result call process { input use data; }",
+    "should_pass": false
+  },
+  {
+    "description": "Channel with invalid clause order - fails",
+    "tag": "Channel",
+    "code": "channel { result use data mapped bind(_, target); }",
+    "should_pass": false
+  }
+]

@@ -14,7 +14,6 @@ templates = {
         "name": "protagonist",
         "description" : "present the main character of the story",
         "pages" : [1,3]
-        
       }, {
         "name": "perturbation"
         "description" : "the event that trigger the story",

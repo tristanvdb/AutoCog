@@ -5,7 +5,7 @@ namespace autocog::compiler::stl::ast {
 
 DATA(Annotation) {
   ONODE(Path) path;
-  NODE(String) description;
+  NODE(Expression) description;
 };
 
 DATA(Annotate) {

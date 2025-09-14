@@ -1,0 +1,194 @@
+[
+  {
+    "description": "Simple identifier",
+    "tag": "Expression",
+    "code": "x",
+    "should_pass": true
+  },
+  {
+    "description": "Longer identifier",
+    "tag": "Expression",
+    "code": "variable",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with underscore",
+    "tag": "Expression",
+    "code": "my_var",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier starting with underscore",
+    "tag": "Expression",
+    "code": "_private",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with multiple underscores",
+    "tag": "Expression",
+    "code": "__dunder__",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with numbers",
+    "tag": "Expression",
+    "code": "var123",
+    "should_pass": true
+  },
+  {
+    "description": "Mixed case identifier",
+    "tag": "Expression",
+    "code": "myVariable",
+    "should_pass": true
+  },
+  {
+    "description": "All caps identifier",
+    "tag": "Expression",
+    "code": "CONSTANT",
+    "should_pass": true
+  },
+  {
+    "description": "Single letter identifier",
+    "tag": "Expression",
+    "code": "i",
+    "should_pass": true
+  },
+  {
+    "description": "Underscore only",
+    "tag": "Expression",
+    "code": "_",
+    "should_pass": true
+  },
+  {
+    "description": "Complex valid identifier",
+    "tag": "Expression",
+    "code": "_complex_var_123_ABC",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier that looks like keyword but isn't",
+    "tag": "Expression",
+    "code": "returns",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with define prefix",
+    "tag": "Expression",
+    "code": "defined",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier with prompt suffix",
+    "tag": "Expression",
+    "code": "my_prompt",
+    "should_pass": true
+  },
+  {
+    "description": "Very long identifier",
+    "tag": "Expression",
+    "code": "this_is_a_very_long_identifier_name_that_should_still_be_valid",
+    "should_pass": true
+  },
+  {
+    "description": "Reserved keyword 'define' - fails as identifier",
+    "tag": "Expression",
+    "code": "define",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'prompt' - fails as identifier",
+    "tag": "Expression",
+    "code": "prompt",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'record' - fails as identifier",
+    "tag": "Expression",
+    "code": "record",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'channel' - fails as identifier",
+    "tag": "Expression",
+    "code": "channel",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'flow' - fails as identifier",
+    "tag": "Expression",
+    "code": "flow",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'return' - fails as identifier",
+    "tag": "Expression",
+    "code": "return",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'is' - fails as identifier",
+    "tag": "Expression",
+    "code": "is",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'use' - fails as identifier",
+    "tag": "Expression",
+    "code": "use",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'get' - fails as identifier",
+    "tag": "Expression",
+    "code": "get",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'call' - fails as identifier",
+    "tag": "Expression",
+    "code": "call",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'text' - fails as identifier",
+    "tag": "Expression",
+    "code": "text",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword 'enum' - fails as identifier",
+    "tag": "Expression",
+    "code": "enum",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier starting with number - fails",
+    "tag": "Expression",
+    "code": "123var",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier with hyphen - fails",
+    "tag": "Expression",
+    "code": "my-var",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier with space - fails",
+    "tag": "Expression",
+    "code": "my var",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier with dot - fails",
+    "tag": "Expression",
+    "code": "my.var",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier with special character - fails",
+    "tag": "Expression",
+    "code": "var$",
+    "should_pass": false
+  }
+]

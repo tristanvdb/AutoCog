@@ -18,3 +18,5 @@ set_target_properties(autocog_stlc PROPERTIES
 )
 install(TARGETS autocog_stlc DESTINATION bin)
 
+add_test(NAME stlc_smoke_test 
+         COMMAND stlc -h)

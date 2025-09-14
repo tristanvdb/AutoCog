@@ -9,6 +9,8 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Field>(ParserState & state, ast::Data<ast::Tag::Field> & field) {
+  state.expect(TokenType::IDENTIFIER, " when parsing field name.");
+  field.name = state.previous.text;
   if (state.match(TokenType::LSQUARE)) {
     field.lower.emplace();
     parse(state, field.lower.value().data);
@@ -16,7 +18,7 @@ void Parser::parse<ast::Tag::Field>(ParserState & state, ast::Data<ast::Tag::Fie
     if (state.match(TokenType::COLON)) {
       field.upper.emplace();
       parse(state, field.upper.value().data);
-    }    
+    }
     state.expect(TokenType::RSQUARE, " to close array dimension.");
   }
   state.expect(TokenType::IS, " between field name and type.");

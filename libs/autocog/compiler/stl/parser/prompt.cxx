@@ -26,37 +26,32 @@ void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Pr
         parse_with_location(state, node_, start);
         break;
       }
-      case TokenType::ANNOTATE: {
-        state.advance();
-        data.annotate.emplace();
-        parse_with_location(state, data.annotate.value(), start);
-        break;
-      }
-      case TokenType::SEARCH: {
-        state.advance();
-        data.search.emplace();
-        parse_with_location(state, data.search.value(), start);
-        break;
-      }
       case TokenType::IS: {
         state.advance();
         parse_with_location(state, data.fields, start);
         break;
       }
+      case TokenType::ANNOTATE: {
+        data.annotate.emplace();
+        parse_with_location(state, data.annotate.value(), start);
+        break;
+      }
+      case TokenType::SEARCH: {
+        data.search.emplace();
+        parse_with_location(state, data.search.value(), start);
+        break;
+      }
       case TokenType::CHANNEL: {
-        state.advance();
         data.channel.emplace();
         parse_with_location(state, data.channel.value(), start);
         break;
       }
       case TokenType::FLOW: {
-        state.advance();
         data.flow.emplace();
         parse_with_location(state, data.flow.value(), start);
         break;
       }
       case TokenType::RETURN: {
-        state.advance();
         data.retstmt.emplace();
         parse_with_location(state, data.retstmt.value(), start);
         break;

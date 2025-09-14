@@ -1,0 +1,182 @@
+[
+  {
+    "description": "Simple define with integer",
+    "tag": "Program",
+    "code": "define max_length = 100;",
+    "should_pass": true
+  },
+  {
+    "description": "Simple define with string",
+    "tag": "Program",
+    "code": "define default_name = \"untitled\";",
+    "should_pass": true
+  },
+  {
+    "description": "Simple define with boolean",
+    "tag": "Program",
+    "code": "define is_debug = true;",
+    "should_pass": true
+  },
+  {
+    "description": "Simple define with float",
+    "tag": "Program",
+    "code": "define threshold = 0.95;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with identifier reference",
+    "tag": "Program",
+    "code": "define alias = other_value;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with expression",
+    "tag": "Program",
+    "code": "define double = (value * 2);",
+    "should_pass": true
+  },
+  {
+    "description": "Define with complex expression",
+    "tag": "Program",
+    "code": "define area = ((width + margin) * (height + margin));",
+    "should_pass": true
+  },
+  {
+    "description": "Define with conditional expression",
+    "tag": "Program",
+    "code": "define result = (flag ? option_a : option_b);",
+    "should_pass": true
+  },
+  {
+    "description": "Define with f-string",
+    "tag": "Program",
+    "code": "define message = f\"Count: {n}\";",
+    "should_pass": true
+  },
+  {
+    "description": "Define without initialization",
+    "tag": "Program",
+    "code": "define placeholder;",
+    "should_pass": true
+  },
+  {
+    "description": "Argument with initialization",
+    "tag": "Program",
+    "code": "argument count = 5;",
+    "should_pass": true
+  },
+  {
+    "description": "Argument with string initialization",
+    "tag": "Program",
+    "code": "argument mode = \"strict\";",
+    "should_pass": true
+  },
+  {
+    "description": "Argument with expression initialization",
+    "tag": "Program",
+    "code": "argument size = (default_size * 2);",
+    "should_pass": true
+  },
+  {
+    "description": "Argument without initialization",
+    "tag": "Program",
+    "code": "argument required_param;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with underscore in name",
+    "tag": "Program",
+    "code": "define my_constant = 42;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with numbers in name",
+    "tag": "Program",
+    "code": "define value123 = 999;",
+    "should_pass": true
+  },
+  {
+    "description": "Define starting with underscore",
+    "tag": "Program",
+    "code": "define _private = \"hidden\";",
+    "should_pass": true
+  },
+  {
+    "description": "Define with negative number",
+    "tag": "Program",
+    "code": "define offset = -10;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with unary NOT expression",
+    "tag": "Program",
+    "code": "define inverted = !flag;",
+    "should_pass": true
+  },
+  {
+    "description": "Argument with boolean",
+    "tag": "Program",
+    "code": "argument verbose = false;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with all caps name",
+    "tag": "Program",
+    "code": "define CONSTANT = 100;",
+    "should_pass": true
+  },
+  {
+    "description": "Define with single character name",
+    "tag": "Program",
+    "code": "define x = 0;",
+    "should_pass": true
+  },
+  {
+    "description": "Define missing equals - fails",
+    "tag": "Program",
+    "code": "define max_length 100;",
+    "should_pass": false
+  },
+  {
+    "description": "Define with reserved keyword as name - fails",
+    "tag": "Program",
+    "code": "define return = 5;",
+    "should_pass": false
+  },
+  {
+    "description": "Define with number starting name - fails",
+    "tag": "Program",
+    "code": "define 123value = 10;",
+    "should_pass": false
+  },
+  {
+    "description": "Argument missing equals - fails",
+    "tag": "Program",
+    "code": "argument count 5;",
+    "should_pass": false
+  },
+  {
+    "description": "Define with missing value after equals - fails",
+    "tag": "Program",
+    "code": "define value =;",
+    "should_pass": false
+  },
+  {
+    "description": "Define with multiple equals - fails",
+    "tag": "Program",
+    "code": "define x = y = z;",
+    "should_pass": false
+  },
+  {
+    "description": "Using define keyword without name - fails",
+    "tag": "Program",
+    "code": "define = 5;",
+    "should_pass": false
+  },
+  {
+    "description": "Using argument keyword without name - fails",
+    "tag": "Program",
+    "code": "argument = \"value\";",
+    "should_pass": false
+  }
+]

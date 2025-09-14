@@ -13,37 +13,36 @@ void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::P
     auto start = state.current.location;
     switch (state.current.type) {
       case TokenType::FROM: {
-        state.advance();
         data.imports.emplace_back();
         parse_with_location(state, data.imports.back(), start);
         break;
       }
       case TokenType::EXPORT: {
-        state.advance();
         data.exports.emplace_back();
         parse_with_location(state, data.exports.back(), start);
         break;
       }
-      case TokenType::DEFINE: {
+      case TokenType::ANNOTATE: {
+        data.annotate.emplace();
+        parse_with_location(state, data.annotate.value(), start);
+        break;
+      }
+      case TokenType::SEARCH: {
+        data.search.emplace();
+        parse_with_location(state, data.search.value(), start);
+        break;
+      }
+      case TokenType::DEFINE:
+      case TokenType::ARGUMENT: {
+        bool is_argument = (state.current.type == TokenType::ARGUMENT);
         state.advance();
         state.expect(TokenType::IDENTIFIER, " when determining defined identifier.");
         auto name = state.previous.text;
         auto & node_ = data.defines[name];
         auto & data_ = node_.data;
         data_.name = name;
+        data_.argument = is_argument;
         parse_with_location(state, node_, start);
-        break;
-      }
-      case TokenType::ANNOTATE: {
-        state.advance();
-        data.annotate.emplace();
-        parse_with_location(state, data.annotate.value(), start);
-        break;
-      }
-      case TokenType::SEARCH: {
-        state.advance();
-        data.search.emplace();
-        parse_with_location(state, data.search.value(), start);
         break;
       }
       case TokenType::RECORD: {

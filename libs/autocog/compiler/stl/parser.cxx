@@ -14,11 +14,9 @@ namespace autocog::compiler::stl {
 
 ParseError::ParseError(
   std::string msg,
-  std::string line_,
   SourceLocation loc
 ) :
   message(std::move(msg)),
-  line(line_),
   location(loc)
 {}
   
@@ -121,18 +119,74 @@ void clean_raw_string(std::string raw_text, ast::Data<ast::Tag::String> & data) 
   data.value = raw_text.substr(1, raw_text.length() - 2);
 }
 
+static std::string get_line(std::string const & source, int line_pos) {
+  if (line_pos <= 0) throw std::runtime_error("In get_line(): line number must be greater than 0");
+  std::stringstream ss(source);
+  int cnt = 0;
+  std::string line;
+  while (std::getline(ss, line)) {
+    cnt++;
+    if (cnt == line_pos) return line;
+  }
+  throw std::runtime_error("In get_line(): line number must be less than the number of lines in the file");
+}
+
 void Parser::parse(int fid, std::string const & name, std::string const & source) {
-  ParserState state(fid, source, diagnostics);
+  ParserState state(fid, source);
   programs.emplace(name, name);
   try {
     parse<ast::Tag::Program>(state, programs[name].data);
   } catch (ParseError const & e) {
-    diagnostics.emplace_back(DiagnosticLevel::Error, e.message, e.line, e.location);
+    auto line = get_line(source, e.location.line);
+    diagnostics.emplace_back(DiagnosticLevel::Error, e.message, line, e.location);
   }
 }
 
 Parser::file_to_program_map_t const & Parser::get() const {
   return programs;
+}
+
+
+bool Parser::parse_fragment(
+  std::string const & tag_,
+  std::string const & code
+) {
+  switch (ast::tags.at(tag_)) {
+    case ast::Tag::Expression: return parse_fragment<ast::Tag::Expression>(code);
+    case ast::Tag::Path:       return parse_fragment<ast::Tag::Path>(code);
+    case ast::Tag::FieldRef:   return parse_fragment<ast::Tag::FieldRef>(code);
+    case ast::Tag::PromptRef:  return parse_fragment<ast::Tag::PromptRef>(code);
+    case ast::Tag::Field:      return parse_fragment<ast::Tag::Field>(code);
+    case ast::Tag::Struct:     return parse_fragment<ast::Tag::Struct>(code);
+    case ast::Tag::Format:     return parse_fragment<ast::Tag::Format>(code);
+    case ast::Tag::Enum:       return parse_fragment<ast::Tag::Enum>(code);
+    case ast::Tag::Choice:     return parse_fragment<ast::Tag::Choice>(code);
+    case ast::Tag::Text:       return parse_fragment<ast::Tag::Text>(code);
+    case ast::Tag::Define:     return parse_fragment<ast::Tag::Define>(code);
+    case ast::Tag::Annotate:   return parse_fragment<ast::Tag::Annotate>(code);
+    case ast::Tag::Annotation: return parse_fragment<ast::Tag::Annotation>(code);
+    case ast::Tag::Search:     return parse_fragment<ast::Tag::Search>(code);
+    case ast::Tag::Param:      return parse_fragment<ast::Tag::Param>(code);
+    case ast::Tag::Channel:    return parse_fragment<ast::Tag::Channel>(code);
+    case ast::Tag::Link:       return parse_fragment<ast::Tag::Link>(code);
+    case ast::Tag::Call:       return parse_fragment<ast::Tag::Call>(code);
+    case ast::Tag::Kwarg:      return parse_fragment<ast::Tag::Kwarg>(code);
+    case ast::Tag::Bind:       return parse_fragment<ast::Tag::Bind>(code);
+    case ast::Tag::Ravel:      return parse_fragment<ast::Tag::Ravel>(code);
+    case ast::Tag::Mapped:     return parse_fragment<ast::Tag::Mapped>(code);
+    case ast::Tag::Wrap:       return parse_fragment<ast::Tag::Wrap>(code);
+    case ast::Tag::Prune:      return parse_fragment<ast::Tag::Prune>(code);
+    case ast::Tag::Flow:       return parse_fragment<ast::Tag::Flow>(code);
+    case ast::Tag::Edge:       return parse_fragment<ast::Tag::Edge>(code);
+    case ast::Tag::Return:     return parse_fragment<ast::Tag::Return>(code);
+    case ast::Tag::Retfield:   return parse_fragment<ast::Tag::Retfield>(code);
+    case ast::Tag::Import:     return parse_fragment<ast::Tag::Import>(code);
+    case ast::Tag::Export:     return parse_fragment<ast::Tag::Export>(code);
+    case ast::Tag::Record:     return parse_fragment<ast::Tag::Record>(code);
+    case ast::Tag::Prompt:     return parse_fragment<ast::Tag::Prompt>(code);
+    case ast::Tag::Program:    return parse_fragment<ast::Tag::Program>(code);
+    default: throw std::runtime_error("Unrecognized ast::Tag!");
+  }
 }
 
 }
