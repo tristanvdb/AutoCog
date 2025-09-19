@@ -27,22 +27,15 @@ const char * ParseError::what() const noexcept {
 Parser::Parser(
   std::list<Diagnostic> & diagnostics_,
   std::unordered_map<std::string, int> & fileids_,
-  std::list<std::string> const & search_paths_
+  std::list<std::string> const & search_paths_,
+  std::list<ast::Program> & programs_,
+  std::list<std::string> const & filepaths
 ) :
   search_paths(search_paths_),
   diagnostics(diagnostics_),
   fileids(fileids_),
-  queue(),
-  programs()
-{}
-
-Parser::Parser(
-  std::list<Diagnostic> & diagnostics_,
-  std::unordered_map<std::string, int> & fileids_,
-  std::list<std::string> const & search_paths_,
-  std::list<std::string> const & filepaths
-) :
-  Parser(diagnostics_, fileids_, search_paths_)
+  programs(programs_),
+  queue()
 {
   for (auto & filepath: filepaths) {
     queue.push(filepath);
@@ -63,6 +56,14 @@ static std::string file_lookup(std::string const & filepath, std::list<std::stri
     }
   }
   return found_path;
+}
+
+void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std::string> & queue) {
+  for (auto & import: program.imports) {
+    std::string const & file = import.data.file;
+    bool has_stl_extension = file.size() >= 4 && ( file.rfind(".stl") == file.size() - 4 );
+    if (has_stl_extension) queue.push(file);
+  }
 }
 
 #define DEBUG_Parser_parse VERBOSE && 1
@@ -94,7 +95,7 @@ void Parser::parse() {
       file.close();
 
       parse(fid, filepath, source);
-      programs[filepath].exec.queue_imports(queue);
+      queue_imports(programs.back().data, queue);
     }
   }
 #if DEBUG_Parser_parse
@@ -133,17 +134,13 @@ static std::string get_line(std::string const & source, int line_pos) {
 
 void Parser::parse(int fid, std::string const & name, std::string const & source) {
   ParserState state(fid, source);
-  programs.emplace(name, name);
+  programs.emplace_back(name);
   try {
-    parse<ast::Tag::Program>(state, programs[name].data);
+    parse<ast::Tag::Program>(state, programs.back().data);
   } catch (ParseError const & e) {
     auto line = get_line(source, e.location.line);
     diagnostics.emplace_back(DiagnosticLevel::Error, e.message, line, e.location);
   }
-}
-
-Parser::file_to_program_map_t const & Parser::get() const {
-  return programs;
 }
 
 

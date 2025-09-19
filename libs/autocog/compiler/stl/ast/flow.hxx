@@ -8,11 +8,13 @@ DATA(Edge) {
   ONODE(Expression) limit;
   ONODE(Expression) label;
 };
+TRAVERSE_CHILDREN(Edge, prompt, limit, label)
 
 DATA(Flow) {
   bool short_form;
   NODES(Edge) edges;
 };
+TRAVERSE_CHILDREN(Flow, edges)
 
 /**
  * Short form:

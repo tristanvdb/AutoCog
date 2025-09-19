@@ -13,7 +13,13 @@ DATA(Prompt) {
   ONODE(Channel) channel;
   ONODE(Flow)    flow;
   ONODE(Return)  retstmt;
+
+// TODO
+//   NODE(Struct) fields;
+//   VARIANTS(Define, Annotate, Search, Channel, Flow, Return) constructs;
 };
+TRAVERSE_CHILDREN(Prompt, defines, annotate, search, fields, channel, flow, retstmt)
+// TRAVERSE_CHILDREN(Prompt, fields, constructs)
 
 }
 

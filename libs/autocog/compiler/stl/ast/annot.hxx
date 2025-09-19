@@ -7,11 +7,15 @@ DATA(Annotation) {
   ONODE(Path) path;
   NODE(Expression) description;
 };
+TRAVERSE_CHILDREN(Annotation, path, description)
 
 DATA(Annotate) {
   bool single_statement; //< Keyword followed by single element instead of block
   NODES(Annotation) annotations;
 };
+TRAVERSE_CHILDREN(Annotate, annotations)
+
+
 
 }
 

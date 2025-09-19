@@ -10,7 +10,13 @@ DATA(Record) {
   ONODE(Search)   search;
 
   VARIANT(Struct, Format) record;
+
+// TODO
+//   VARIANT(Struct, Format) record;
+//   VARIANTS(Define, Annotate, Search) constructs;
 };
+TRAVERSE_CHILDREN(Record, defines, annotate, search, record)
+// TRAVERSE_CHILDREN(Record, record, constructs)
 
 }
 

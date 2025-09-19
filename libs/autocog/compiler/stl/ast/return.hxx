@@ -8,12 +8,14 @@ DATA(Retfield) {
   VARIANT(Path, Expression) source;
   VARIANTS(Bind, Ravel, Wrap, Prune) clauses;
 };
+TRAVERSE_CHILDREN(Retfield, alias, source, clauses)
 
 DATA(Return) {
   ONODE(Expression) label;
   bool short_form;
   NODES(Retfield) fields;
 };
+TRAVERSE_CHILDREN(Return, label, fields)
 
 /**
  * Block form does not accept "_" as a field alias

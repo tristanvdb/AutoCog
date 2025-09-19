@@ -8,6 +8,7 @@ DATA(Define) {
   std::string name;
   ONODE(Expression) init;
 };
+TRAVERSE_CHILDREN(Define, init)
 
 }
 

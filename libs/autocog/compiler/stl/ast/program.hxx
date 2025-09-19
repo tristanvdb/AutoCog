@@ -4,17 +4,17 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Export) {
-  // Syntax: "export my_alias is my_target<arg=expr, arg=expr>;"
   std::string alias;
   std::string target;
   MAPPED(Expression) kwargs;
 };
+TRAVERSE_CHILDREN(Export, kwargs)
 
 DATA(Import) {
-  // Syntax: "from file import target as alias, target;"
   std::string file;
   std::unordered_map<std::string,std::string> targets;
 };
+TRAVERSE_CHILDREN_EMPTY(Import)
 
 DATA(Program) {
   std::string filename;
@@ -28,13 +28,11 @@ DATA(Program) {
 
   MAPPED(Record) records{};
   MAPPED(Prompt) prompts{};
-};
 
-EXEC(Program) {
-  EXEC_CTOR(Program) {}
-
-  void queue_imports(std::queue<std::string> & queue) const;
+// TODO VARIANTS(Import, Export, Define, Annotate, Search, Record, Prompt) statements;
 };
+TRAVERSE_CHILDREN(Program, imports, exports, defines, annotate, search, records, prompts)
+// TODO TRAVERSE_CHILDREN(Program, statements)
 
 }
 

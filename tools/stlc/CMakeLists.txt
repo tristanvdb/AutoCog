@@ -4,6 +4,7 @@
 
 add_executable(autocog_stlc
   main.cxx
+  args.cxx
   convert.cxx
 )
 target_include_directories(autocog_stlc PRIVATE

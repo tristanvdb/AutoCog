@@ -10,8 +10,9 @@ add_custom_command(
 )
 
 add_library(autocog_compiler_stl_lib STATIC
-    token.cxx parser.cxx parser-state.cxx instantiate.cxx diagnostic.cxx
-    ast.cxx ast/program.cxx ast/expr.cxx
+    driver.cxx diagnostic.cxx
+    token.cxx ast.cxx ast/expr.cxx
+    parser.cxx parser-state.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
     parser/define.cxx parser/export.cxx parser/expression.cxx
     parser/field.cxx parser/fieldref.cxx parser/flow.cxx
@@ -20,6 +21,7 @@ add_library(autocog_compiler_stl_lib STATIC
     parser/prompt.cxx parser/promptref.cxx parser/record.cxx
     parser/return.cxx parser/search.cxx parser/clauses.cxx
     parser/struct.cxx
+    symbol-table.cxx instantiate.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
 )
 

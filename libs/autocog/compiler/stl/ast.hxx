@@ -23,7 +23,7 @@ struct Diagnostic;
 namespace autocog::compiler::stl::ast {
 
 enum class Tag {
-  Program,
+  Program, // 0
   Import,
   Export,
   Enum,
@@ -33,7 +33,7 @@ enum class Tag {
   Define,
   Flow,
   Edge,
-  Struct,
+  Struct, // 10
   Field,
   Search,
   Param,
@@ -43,7 +43,7 @@ enum class Tag {
   Format,
   Text,
   Prompt,
-  FieldRef,
+  FieldRef, // 20
   PromptRef,
   Channel,
   Link,
@@ -53,7 +53,7 @@ enum class Tag {
   Prune,
   Wrap,
   Call,
-  Kwarg,
+  Kwarg, // 30
   Path,
   Step,
   Expression,
@@ -63,7 +63,7 @@ enum class Tag {
   Boolean,
   String,
   Unary,
-  Binary,
+  Binary, // 40
   Conditional,
   Parenthesis
 };
@@ -71,30 +71,16 @@ enum class Tag {
 extern const std::unordered_map<std::string, Tag> tags;
 
 template <Tag tagT>
-struct Node;
-
-template <Tag tagT>
 struct Data;
-
-template <Tag tagT>
-struct BaseExec {
-  Node<tagT> & node;
-  BaseExec(Node<tagT> & node_) : node(node_) {}
-};
-
-template <Tag tagT>
-struct Exec : BaseExec<tagT> {
-  Exec(Node<tagT> & node) : BaseExec<tagT>(node) {}
-};
 
 template <Tag tagT>
 struct Node {
   static constexpr Tag tag = tagT;
 
-  Node() : data(), exec(*this) {}
+  Node() : data() {}
 
   template<typename... Args>
-  Node(Args&&... args) : data{std::forward<Args>(args)...}, exec(*this) {}
+  Node(Args&&... args) : data{std::forward<Args>(args)...} {}
 
   template<typename... Args>
   static std::unique_ptr<Node> make(Args&&... args) {
@@ -108,43 +94,57 @@ struct Node {
 
   std::optional<SourceRange> location;
   Data<tagT> data;
-  Exec<tagT> exec;
+
+  template <class TraversalT>
+  void traverse(TraversalT & traversal) const {
+    traversal.pre(location, data);
+    traverse_children(traversal);
+    traversal.post(location, data);
+  }
+
+  template <class TraversalT>
+  void traverse_children(TraversalT & traversal) const;
 };
 
 }
 
-// Recursive expansion helpers
-#define EXPAND(...) __VA_ARGS__
-#define FOR_EACH_1(what, x) what(x)
-#define FOR_EACH_2(what, x, ...) what(x), EXPAND(FOR_EACH_1(what, __VA_ARGS__))
-#define FOR_EACH_3(what, x, ...) what(x), EXPAND(FOR_EACH_2(what, __VA_ARGS__))
-#define FOR_EACH_4(what, x, ...) what(x), EXPAND(FOR_EACH_3(what, __VA_ARGS__))
-#define FOR_EACH_5(what, x, ...) what(x), EXPAND(FOR_EACH_4(what, __VA_ARGS__))
-#define FOR_EACH_6(what, x, ...) what(x), EXPAND(FOR_EACH_5(what, __VA_ARGS__))
-#define FOR_EACH_7(what, x, ...) what(x), EXPAND(FOR_EACH_6(what, __VA_ARGS__))
-#define FOR_EACH_8(what, x, ...) what(x), EXPAND(FOR_EACH_7(what, __VA_ARGS__))
-#define FOR_EACH_9(what, x, ...) what(x), EXPAND(FOR_EACH_8(what, __VA_ARGS__))
+#include "autocog/compiler/stl/ast/traits.hxx"
 
-// Argument counting
-#define GET_MACRO(_1,_2,_3,_4,_5,_6,_7,_8,_9,NAME,...) NAME
-#define FOR_EACH(action, ...) \
-  GET_MACRO(__VA_ARGS__, FOR_EACH_9, FOR_EACH_8, FOR_EACH_7, FOR_EACH_6, FOR_EACH_5, \
-            FOR_EACH_4, FOR_EACH_3, FOR_EACH_2, FOR_EACH_1)(action, __VA_ARGS__)
+namespace autocog::compiler::stl::ast {
 
-#define NODE(tag) Node< Tag::tag >
-#define PNODE(tag) std::unique_ptr< Node< Tag::tag > >
-#define ONODE(tag) std::optional< Node< Tag::tag > >
-#define NODES(tag) std::list< NODE(tag) >
-#define PNODES(tag) std::list< PNODE(tag) >
-#define MAPPED(tag) std::unordered_map<std::string, NODE(tag)>
-#define VARIANT(...) std::variant<FOR_EACH(NODE, __VA_ARGS__)>
-#define VARIANTS(...) std::list< std::variant<FOR_EACH(NODE, __VA_ARGS__)> >
+template<class TraversalT, typename T>
+std::enable_if_t<is_any_node_container_v<T>> traverse_generic(
+  TraversalT & traversal, T const & container
+) {
+  if constexpr (is_node_v<T>) {
+    container.traverse(traversal);
+  } else if constexpr (is_pnode_v<T>) {
+    if (container) container->traverse(traversal);
+  } else if constexpr (is_onode_v<T>) {
+    if (container) container->traverse(traversal);
+  } else if constexpr (is_nodes_v<T>) {
+    for (auto const & node : container)
+      node.traverse(traversal);
+  } else if constexpr (is_pnodes_v<T>) {
+    for (auto const & pnode : container)
+      if (pnode)
+        pnode->traverse(traversal);
+  } else if constexpr (is_mapped_v<T>) {
+    for (auto const & [key, node] : container)
+      node.traverse(traversal);
+  } else if constexpr (is_variant_v<T>) {
+    std::visit([&traversal](auto const & node) {
+      node.traverse(traversal);
+    }, container);
+  } else if constexpr (is_variants_v<T>) {
+    for (auto const & vnode : container)
+      traverse_generic(traversal, vnode);
+  }
+}
 
-#define DATA(tag) template <> struct Data< Tag::tag >
-#define DATA_CTOR(tag) Data< Tag::tag >
-#define DATA_CTOR_EMPTY(tag) Data< Tag::tag >()
-#define EXEC(tag) template <> struct Exec< Tag::tag > : BaseExec<Tag::tag>
-#define EXEC_CTOR(tag) Exec(Node<Tag::tag> & node) : BaseExec<Tag::tag>(node)
+}
+
+#include "autocog/compiler/stl/ast/macros.hxx"
 
 #include "autocog/compiler/stl/ast/expr.hxx"
 #include "autocog/compiler/stl/ast/path.hxx"
@@ -206,18 +206,5 @@ using Prompt = NODE(Prompt);
 using Record = NODE(Record);
 
 }
-
-#undef NODE
-#undef PNODE
-#undef ONODE
-#undef NODES
-#undef PNODES
-#undef MAPPED
-#undef VARIANT
-#undef DATA
-#undef DATA_CTOR
-#undef DATA_CTOR_EMPTY
-#undef EXEC
-#undef EXEC_CTOR
 
 #endif // AUTOCOG_COMPILER_STL_AST_HXX

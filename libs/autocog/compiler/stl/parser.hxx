@@ -46,15 +46,15 @@ struct ParserState {
 };
 
 class Parser {
-  public:
-    using file_to_program_map_t = std::unordered_map<std::string, ast::Program>;
-
   private:
     std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
     std::unordered_map<std::string, int> & fileids;
+    std::list<ast::Program> & programs;
     std::queue<std::string> queue;
-    file_to_program_map_t programs;
+
+  private:
+    void parse(int fid, std::string const & filename, std::string const & source);
 
     template <ast::Tag tag>
     static void parse(ParserState & state, ast::Data<tag> & data);
@@ -71,13 +71,15 @@ class Parser {
     static bool parse_fragment(std::string const & code);
 
   public:
-    Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &);
-    Parser(std::list<Diagnostic> &, std::unordered_map<std::string, int> &, std::list<std::string> const &, std::list<std::string> const &);
+    Parser(
+      std::list<Diagnostic> &,
+      std::unordered_map<std::string, int> &,
+      std::list<std::string> const &,
+      std::list<ast::Program> &,
+      std::list<std::string> const &
+    );
 
     void parse();
-    void parse(int fid, std::string const & filename, std::string const & source);
-
-    file_to_program_map_t const & get() const;
 
     /// For testing purpose
     static bool parse_fragment(std::string const & tag, std::string const & code);
