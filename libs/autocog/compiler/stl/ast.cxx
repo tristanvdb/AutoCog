@@ -10,7 +10,6 @@ namespace autocog::compiler::stl::ast {
 const std::unordered_map<std::string, Tag> tags = {
     {"Program", Tag::Program},
     {"Import", Tag::Import},
-    {"Export", Tag::Export},
     {"Enum", Tag::Enum},
     {"Choice", Tag::Choice},
     {"Annotate", Tag::Annotate},
@@ -29,7 +28,7 @@ const std::unordered_map<std::string, Tag> tags = {
     {"Text", Tag::Text},
     {"Prompt", Tag::Prompt},
     {"FieldRef", Tag::FieldRef},
-    {"PromptRef", Tag::PromptRef},
+    {"ObjectRef", Tag::ObjectRef},
     {"Channel", Tag::Channel},
     {"Link", Tag::Link},
     {"Bind", Tag::Bind},
@@ -50,7 +49,9 @@ const std::unordered_map<std::string, Tag> tags = {
     {"Unary", Tag::Unary},
     {"Binary", Tag::Binary},
     {"Conditional", Tag::Conditional},
-    {"Parenthesis", Tag::Parenthesis}
+    {"Parenthesis", Tag::Parenthesis},
+    {"Assign",Tag::Assign},
+    {"Alias",Tag::Alias}
 };
 
 }

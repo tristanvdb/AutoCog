@@ -42,6 +42,7 @@ struct ParseDriver {
             
             try {
                 parse_succeeded = Parser::parse_fragment(tag, code);
+                if (!parse_succeeded) error_message = "Parser::parse_fragment returned false. Likely because of remaining tokens in the stream.";
             } catch (ParseError const & e) {
                 parse_succeeded = false;
                 error_message = e.message;

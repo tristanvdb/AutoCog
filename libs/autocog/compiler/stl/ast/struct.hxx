@@ -24,7 +24,7 @@ TRAVERSE_CHILDREN_EMPTY(Text)
 DATA(Format) {
   VARIANT(Identifier, Text, Enum, Choice) type;
   NODES(Expression) args;
-  MAPPED(Expression) kwargs;
+  NODES(Assign) kwargs;
 };
 TRAVERSE_CHILDREN(Format, type, args, kwargs)
 
@@ -34,12 +34,12 @@ DATA(Struct) {
 TRAVERSE_CHILDREN(Struct, fields)
 
 DATA(Field) {
-  std::string name;
+  NODE(Identifier) name;
   ONODE(Expression) lower;
   ONODE(Expression) upper;
   VARIANT(Format, Struct) type;
 };
-TRAVERSE_CHILDREN(Field, lower, upper, type)
+TRAVERSE_CHILDREN(Field, name, lower, upper, type)
 
 }
 

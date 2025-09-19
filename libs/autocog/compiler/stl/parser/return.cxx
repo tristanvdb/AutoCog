@@ -14,11 +14,11 @@ void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::
     parse(state, data.alias.value().data);
   }
   if (state.match(TokenType::USE)) {
-    data.source.emplace<0>();
-    parse(state, std::get<0>(data.source).data);
-  } else if (state.match(TokenType::IS)) {
     data.source.emplace<1>();
     parse(state, std::get<1>(data.source).data);
+  } else if (state.match(TokenType::IS)) {
+    data.source.emplace<2>();
+    parse(state, std::get<2>(data.source).data);
   }
 
   while (!state.match(TokenType::SEMICOLON)) {

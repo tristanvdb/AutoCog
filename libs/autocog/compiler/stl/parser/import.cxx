@@ -7,8 +7,13 @@
 
 namespace autocog::compiler::stl {
 
+#define DEBUG_Parser_Import VERBOSE && 1
+
 template <>
 void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Import> & import) {
+#if DEBUG_Parser_Import
+  std::cerr << "Parser::parse<ast::Tag::Import>" << std::endl;
+#endif
   state.expect(TokenType::FROM, "when parsing Import statement.");
   state.expect(TokenType::STRING_LITERAL, "when parsing import file path.");
   
@@ -31,14 +36,11 @@ void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Im
   state.expect(TokenType::IMPORT, " after file path in import statement.");
   
   do {
-    state.expect(TokenType::IDENTIFIER, " when parsing import target.");
-    std::string target = state.previous.text;
-    std::string alias = target;
-    if (state.match(TokenType::AS)) {
-      state.expect(TokenType::IDENTIFIER, " when parsing import alias.");
-      alias = state.previous.text;
-    }
-    import.targets[alias] = target;
+    import.targets.emplace_back();
+#if DEBUG_Parser_Import
+    std::cerr << "  alias #" << import.targets.size() << std::endl;
+#endif
+    parse_with_location(state, import.targets.back());
   } while (state.match(TokenType::COMMA));
   
   state.expect(TokenType::SEMICOLON, " to end import statement.");

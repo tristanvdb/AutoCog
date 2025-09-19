@@ -25,7 +25,6 @@ namespace autocog::compiler::stl::ast {
 enum class Tag {
   Program, // 0
   Import,
-  Export,
   Enum,
   Choice,
   Annotate,
@@ -33,8 +32,8 @@ enum class Tag {
   Define,
   Flow,
   Edge,
-  Struct, // 10
-  Field,
+  Struct,
+  Field, // 10
   Search,
   Param,
   Retfield,
@@ -43,8 +42,8 @@ enum class Tag {
   Format,
   Text,
   Prompt,
-  FieldRef, // 20
-  PromptRef,
+  FieldRef,
+  ObjectRef, // 20
   Channel,
   Link,
   Bind,
@@ -53,8 +52,8 @@ enum class Tag {
   Prune,
   Wrap,
   Call,
-  Kwarg, // 30
-  Path,
+  Kwarg,
+  Path, // 30
   Step,
   Expression,
   Identifier,
@@ -63,9 +62,11 @@ enum class Tag {
   Boolean,
   String,
   Unary,
-  Binary, // 40
-  Conditional,
-  Parenthesis
+  Binary,
+  Conditional, // 40
+  Parenthesis,
+  Assign,
+  Alias
 };
 
 extern const std::unordered_map<std::string, Tag> tags;
@@ -129,16 +130,17 @@ std::enable_if_t<is_any_node_container_v<T>> traverse_generic(
     for (auto const & pnode : container)
       if (pnode)
         pnode->traverse(traversal);
-  } else if constexpr (is_mapped_v<T>) {
-    for (auto const & [key, node] : container)
-      node.traverse(traversal);
   } else if constexpr (is_variant_v<T>) {
     std::visit([&traversal](auto const & node) {
-      node.traverse(traversal);
+      if constexpr (is_node_v<decltype(node)>) {
+        node.traverse(traversal);
+      }
     }, container);
   } else if constexpr (is_variants_v<T>) {
     for (auto const & vnode : container)
-      traverse_generic(traversal, vnode);
+      std::visit([&traversal](auto const & node) {
+        node.traverse(traversal);
+      }, vnode);
   }
 }
 
@@ -197,13 +199,14 @@ using Edge = NODE(Edge);
 using Flow = NODE(Flow);
 using Step = NODE(Step);
 using Path = NODE(Path);
-using Export = NODE(Export);
 using Import = NODE(Import);
 using Program = NODE(Program);
 using FieldRef = NODE(FieldRef);
-using PromptRef = NODE(PromptRef);
+using ObjectRef = NODE(ObjectRef);
 using Prompt = NODE(Prompt);
 using Record = NODE(Record);
+using Assign = NODE(Assign);
+using Alias = NODE(Alias);
 
 }
 

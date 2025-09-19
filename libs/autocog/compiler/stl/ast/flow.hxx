@@ -4,7 +4,7 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Edge) {
-  NODE(PromptRef) prompt;
+  NODE(ObjectRef) prompt;
   ONODE(Expression) limit;
   ONODE(Expression) label;
 };

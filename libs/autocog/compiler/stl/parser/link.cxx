@@ -12,17 +12,17 @@ void Parser::parse<ast::Tag::Link>(ParserState & state, ast::Data<ast::Tag::Link
   parse(state, link.target.data);
 
   if (state.match(TokenType::USE)) {
-    link.source.emplace<0>();
-    parse(state, std::get<0>(link.source).data);
-  } else if (state.match(TokenType::GET)) {
     link.source.emplace<1>();
     parse(state, std::get<1>(link.source).data);
-  } else if (state.match(TokenType::IS)) {
+  } else if (state.match(TokenType::GET)) {
     link.source.emplace<2>();
     parse(state, std::get<2>(link.source).data);
-  } else if (state.match(TokenType::CALL)) {
+  } else if (state.match(TokenType::IS)) {
     link.source.emplace<3>();
     parse(state, std::get<3>(link.source).data);
+  } else if (state.match(TokenType::CALL)) {
+    link.source.emplace<4>();
+    parse(state, std::get<4>(link.source).data);
   } else {
     state.throw_error("Expected 'use', 'get', 'is' or 'call' to define channel's source.");
   }

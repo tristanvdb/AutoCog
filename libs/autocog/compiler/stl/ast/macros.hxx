@@ -23,7 +23,6 @@
 #define ONODE(tag) ::autocog::compiler::stl::ast::onode_t<Tag::tag>
 #define NODES(tag) ::autocog::compiler::stl::ast::nodes_t<Tag::tag>
 #define PNODES(tag) ::autocog::compiler::stl::ast::pnodes_t<Tag::tag>
-#define MAPPED(tag) ::autocog::compiler::stl::ast::mapped_t<Tag::tag>
 #define VARIANT(...) ::autocog::compiler::stl::ast::variant_t<FOR_EACH_TAG(__VA_ARGS__)>
 #define VARIANTS(...) ::autocog::compiler::stl::ast::variants_t<FOR_EACH_TAG(__VA_ARGS__)>
 

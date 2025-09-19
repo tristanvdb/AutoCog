@@ -11,6 +11,7 @@ const char * token_type_name(TokenType type) {
         case TokenType::RECORD: return "record";
         case TokenType::IMPORT: return "import";
         case TokenType::EXPORT: return "export";
+        case TokenType::ALIAS: return "alias";
         case TokenType::PROMPT: return "prompt";
         case TokenType::CHANNEL: return "channel";
         case TokenType::FLOW: return "flow";

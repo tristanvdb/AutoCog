@@ -3,36 +3,24 @@
 
 namespace autocog::compiler::stl::ast {
 
-DATA(Export) {
-  std::string alias;
-  std::string target;
-  MAPPED(Expression) kwargs;
+DATA(Alias) {
+  NODE(ObjectRef) target;
+  ONODE(Identifier) alias;
+  bool is_export;
 };
-TRAVERSE_CHILDREN(Export, kwargs)
+TRAVERSE_CHILDREN(Alias, target, alias)
 
 DATA(Import) {
   std::string file;
-  std::unordered_map<std::string,std::string> targets;
+  NODES(Alias) targets;
 };
-TRAVERSE_CHILDREN_EMPTY(Import)
+TRAVERSE_CHILDREN(Import, targets)
 
 DATA(Program) {
   std::string filename;
-
-  NODES(Import) imports{};
-  NODES(Export) exports{};
-
-  MAPPED(Define)  defines{};
-  ONODE(Annotate) annotate{};
-  ONODE(Search)   search{};
-
-  MAPPED(Record) records{};
-  MAPPED(Prompt) prompts{};
-
-// TODO VARIANTS(Import, Export, Define, Annotate, Search, Record, Prompt) statements;
+  VARIANTS(Import, Alias, Define, Annotate, Search, Record, Prompt) statements{};
 };
-TRAVERSE_CHILDREN(Program, imports, exports, defines, annotate, search, records, prompts)
-// TODO TRAVERSE_CHILDREN(Program, statements)
+TRAVERSE_CHILDREN(Program, statements)
 
 }
 

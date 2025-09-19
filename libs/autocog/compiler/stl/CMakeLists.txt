@@ -14,14 +14,14 @@ add_library(autocog_compiler_stl_lib STATIC
     token.cxx ast.cxx ast/expr.cxx
     parser.cxx parser-state.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
-    parser/define.cxx parser/export.cxx parser/expression.cxx
+    parser/define.cxx parser/alias.cxx parser/expression.cxx
     parser/field.cxx parser/fieldref.cxx parser/flow.cxx
     parser/format.cxx parser/import.cxx parser/kwarg.cxx
     parser/link.cxx parser/path.cxx parser/program.cxx
-    parser/prompt.cxx parser/promptref.cxx parser/record.cxx
+    parser/prompt.cxx parser/objectref.cxx parser/record.cxx
     parser/return.cxx parser/search.cxx parser/clauses.cxx
-    parser/struct.cxx
-    symbol-table.cxx instantiate.cxx
+    parser/struct.cxx parser/assign.cxx
+    symbol-table.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
 )
 

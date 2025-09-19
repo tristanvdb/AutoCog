@@ -83,49 +83,53 @@ static bool is_primary(TokenType tok) {
   return tok == TokenType::QUESTION;
 }
 
+template <>
+void Parser::parse<ast::Tag::Identifier>(ParserState & state, ast::Data<ast::Tag::Identifier> & identifier) {
+  state.expect(TokenType::IDENTIFIER, " when parsing identifier.");
+  identifier.name = state.previous.text;
+}
+
 #define DEBUG_parse_primary VERBOSE && 0
 
-static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
+void Parser::parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
 #if DEBUG_parse_primary
   std::cerr << "parse_primary" << std::endl;
 #endif
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
-      state.advance();
-      expr.expr.emplace<0>();
-      auto & data = std::get<0>(expr.expr).data;
-      data.name = state.previous.text;
+      expr.expr.emplace<1>();
+      parse(state, std::get<1>(expr.expr));
       break;
     }
     
     case TokenType::INTEGER_LITERAL: {
       state.advance();
-      expr.expr.emplace<1>();
-      auto & data = std::get<1>(expr.expr).data;
+      expr.expr.emplace<2>();
+      auto & data = std::get<2>(expr.expr).data;
       data.value = std::stoi(state.previous.text);
       break;
     }
     
     case TokenType::FLOAT_LITERAL: {
       state.advance();
-      expr.expr.emplace<2>();
-      auto & data = std::get<2>(expr.expr).data;
+      expr.expr.emplace<3>();
+      auto & data = std::get<3>(expr.expr).data;
       data.value = std::stof(state.previous.text);
       break;
     }
     
     case TokenType::BOOLEAN_LITERAL: {
       state.advance();
-      expr.expr.emplace<3>();
-      auto & data = std::get<3>(expr.expr).data;
+      expr.expr.emplace<4>();
+      auto & data = std::get<4>(expr.expr).data;
       data.value = (state.previous.text == "true");
       break;
     }
     
     case TokenType::STRING_LITERAL: {
       state.advance();
-      expr.expr.emplace<4>();
-      auto & data = std::get<4>(expr.expr).data;
+      expr.expr.emplace<5>();
+      auto & data = std::get<5>(expr.expr).data;
       clean_raw_string(state.previous.text, data);
       break;
     }
@@ -148,40 +152,40 @@ void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag
 
   } else if (is_unary(state.current.type)) {
     state.advance();
-    expr.expr.emplace<5>();
-    auto & data = std::get<5>(expr.expr).data;
+    expr.expr.emplace<6>();
+    auto & data = std::get<6>(expr.expr).data;
     data.kind = token_to_operator_kind(state.previous.type);
     if (data.kind == ast::OpKind::Sub) data.kind = ast::OpKind::Neg;
     data.operand = std::make_unique<ast::Expression>();
     if (!is_primary(state.current.type) && state.current.type != TokenType::LPAREN ) {
       state.throw_error("Unary operator expects primary or parenthesized operand!");
     }
-    parse(state, data.operand->data);
+    parse(state, *(data.operand));
   } else if (state.match(TokenType::LPAREN)) {
     auto operand = std::make_unique<ast::Expression>();
-    parse(state, operand->data);
+    parse(state, *operand);
     if (is_binary(state.current.type)) {
       state.advance();
-      expr.expr.emplace<6>();
-      auto & data = std::get<6>(expr.expr).data;
+      expr.expr.emplace<7>();
+      auto & data = std::get<7>(expr.expr).data;
       data.kind = token_to_operator_kind(state.previous.type);
       data.lhs = std::move(operand);
       data.rhs = std::make_unique<ast::Expression>();
-      parse(state, data.rhs->data);
+      parse(state, *(data.rhs));
 
     } else if (state.match(TokenType::QUESTION)) {
-      expr.expr.emplace<7>();
-      auto & data = std::get<7>(expr.expr).data;
-      data.cond = std::move(operand);
-      data.e_true = std::make_unique<ast::Expression>();
-      parse(state, data.e_true->data);
-      state.expect(TokenType::COLON, " within conditional expression.");
-      data.e_false = std::make_unique<ast::Expression>();
-      parse(state, data.e_false->data);
-
-    } else {
       expr.expr.emplace<8>();
       auto & data = std::get<8>(expr.expr).data;
+      data.cond = std::move(operand);
+      data.e_true = std::make_unique<ast::Expression>();
+      parse(state, *(data.e_true));
+      state.expect(TokenType::COLON, " within conditional expression.");
+      data.e_false = std::make_unique<ast::Expression>();
+      parse(state, *(data.e_false));
+
+    } else {
+      expr.expr.emplace<9>();
+      auto & data = std::get<9>(expr.expr).data;
       data.expr = std::move(operand);
 
     }

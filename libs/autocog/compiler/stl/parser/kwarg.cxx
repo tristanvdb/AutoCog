@@ -12,14 +12,14 @@ void Parser::parse<ast::Tag::Kwarg>(ParserState & state, ast::Data<ast::Tag::Kwa
   state.expect(TokenType::IDENTIFIER, " for argument name.");
   kwarg.name.data.name = state.previous.text;
   if (state.match(TokenType::USE)) {
-    kwarg.source.emplace<0>();
-    parse(state, std::get<0>(kwarg.source).data);
-  } else if (state.match(TokenType::GET)) {
     kwarg.source.emplace<1>();
     parse(state, std::get<1>(kwarg.source).data);
-  } else if (state.match(TokenType::IS)) {
+  } else if (state.match(TokenType::GET)) {
     kwarg.source.emplace<2>();
     parse(state, std::get<2>(kwarg.source).data);
+  } else if (state.match(TokenType::IS)) {
+    kwarg.source.emplace<3>();
+    parse(state, std::get<3>(kwarg.source).data);
   } else {
     state.throw_error("Expected 'use', 'get', or 'is' to define call argument source.");
   }

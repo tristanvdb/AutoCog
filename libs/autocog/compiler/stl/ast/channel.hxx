@@ -38,7 +38,7 @@ DATA(Kwarg) {
 TRAVERSE_CHILDREN(Kwarg, name, source, clauses)
 
 DATA(Call) {
-  NODE(PromptRef) entry; //< Could resolve to a python symbol but use PromptRef as there is no difference at parse time
+  NODE(ObjectRef) entry; //< Could resolve to a python symbol
   NODES(Kwarg) arguments;
 };
 TRAVERSE_CHILDREN(Call, entry, arguments)

@@ -36,7 +36,7 @@ void Parser::parse<ast::Tag::Choice>(ParserState & state, ast::Data<ast::Tag::Ch
   }
 
   state.expect(TokenType::LPAREN, " when parsing a choice format.");
-  parse(state, type.source.data);
+  parse(state, type.source);
   state.expect(TokenType::RPAREN, " at the end of a choice format.");
 }
 
@@ -44,29 +44,27 @@ template <>
 void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Format> & data) {
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
-      state.advance();
-      data.type.emplace<0>();
-      auto & type = std::get<0>(data.type).data;
-      type.name = state.previous.text;
+      data.type.emplace<1>();
+      parse(state, std::get<1>(data.type));
       break;
     }
     case TokenType::TEXT: {
       state.advance();
-      data.type.emplace<1>();
-      parse(state, std::get<1>(data.type).data);
+      data.type.emplace<2>();
+      parse(state, std::get<2>(data.type));
       break;
     }
     case TokenType::ENUM: {
       state.advance();
-      data.type.emplace<2>();
-      parse(state, std::get<2>(data.type).data);
+      data.type.emplace<3>();
+      parse(state, std::get<3>(data.type));
       break;
     }
     case TokenType::REPEAT:
     case TokenType::SELECT: {
       state.advance();
-      data.type.emplace<3>();
-      parse(state, std::get<3>(data.type).data);
+      data.type.emplace<4>();
+      parse(state, std::get<4>(data.type));
       break;
     }
     default: {
@@ -77,11 +75,8 @@ void Parser::parse<ast::Tag::Format>(ParserState & state, ast::Data<ast::Tag::Fo
   }
   if (state.match(TokenType::LT)) {
     do {
-      auto start = state.current.location;
-      state.expect(TokenType::IDENTIFIER, " when parsing format argument name.");
-      std::string arg_name = state.previous.text;
-      state.expect(TokenType::EQUAL, " when parsing format argument.");
-      parse_with_location(state, data.kwargs[arg_name], start);
+      data.kwargs.emplace_back();
+      parse(state, data.kwargs.back());
     } while (state.match(TokenType::COMMA));
     state.expect(TokenType::GT, " to close format arguments.");
   }

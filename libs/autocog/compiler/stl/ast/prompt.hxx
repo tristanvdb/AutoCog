@@ -4,22 +4,11 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Prompt) {
-  std::string     name;
-  MAPPED(Define)  defines;
-  ONODE(Annotate) annotate;
-  ONODE(Search)   search;
-
-  NODE(Struct)   fields;
-  ONODE(Channel) channel;
-  ONODE(Flow)    flow;
-  ONODE(Return)  retstmt;
-
-// TODO
-//   NODE(Struct) fields;
-//   VARIANTS(Define, Annotate, Search, Channel, Flow, Return) constructs;
+  NODE(Identifier) name;
+  ONODE(Struct) fields;
+  VARIANTS(Define, Annotate, Search, Alias, Channel, Flow, Return) constructs;
 };
-TRAVERSE_CHILDREN(Prompt, defines, annotate, search, fields, channel, flow, retstmt)
-// TRAVERSE_CHILDREN(Prompt, fields, constructs)
+TRAVERSE_CHILDREN(Prompt, name, fields, constructs)
 
 }
 

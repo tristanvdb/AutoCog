@@ -16,14 +16,20 @@ DATA(Path) {
 };
 TRAVERSE_CHILDREN(Path, steps)
 
-DATA(PromptRef) {
-  NODE(Identifier) name;
-  MAPPED(Expression) config;
+DATA(Assign) {
+  NODE(Identifier) argument;
+  NODE(Expression) value;
 };
-TRAVERSE_CHILDREN(PromptRef, name, config)
+TRAVERSE_CHILDREN(Assign, argument, value)
+
+DATA(ObjectRef) {
+  NODE(Identifier) name;
+  NODES(Assign) config;
+};
+TRAVERSE_CHILDREN(ObjectRef, name, config)
 
 DATA(FieldRef) {
-  ONODE(PromptRef) prompt;
+  ONODE(ObjectRef) prompt;
   NODE(Path) field;
 };
 TRAVERSE_CHILDREN(FieldRef, prompt, field)

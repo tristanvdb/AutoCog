@@ -17,6 +17,7 @@ enum class TokenType : int {
     RECORD,
     IMPORT,
     EXPORT,
+    ALIAS,
     PROMPT,
     CHANNEL,
     FLOW,

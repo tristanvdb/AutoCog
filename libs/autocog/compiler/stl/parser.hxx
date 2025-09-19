@@ -59,8 +59,17 @@ class Parser {
     template <ast::Tag tag>
     static void parse(ParserState & state, ast::Data<tag> & data);
 
+    static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr);
+
+    template <ast::Tag tag> // TODO remove
+    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
+      SourceLocation start_loc{start?start.value():state.current.location};
+      parse(state, node.data);
+      node.location.emplace(SourceRange{start_loc, state.current.location});
+    }
+
     template <ast::Tag tag>
-    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start/* = std::nullopt*/) {
+    static void parse(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
       SourceLocation start_loc{start?start.value():state.current.location};
       parse(state, node.data);
       node.location.emplace(SourceRange{start_loc, state.current.location});
@@ -101,7 +110,7 @@ template <> void Parser::parse<ast::Tag::Annotate>   (ParserState & state, ast::
 template <> void Parser::parse<ast::Tag::Call>       (ParserState & state, ast::Data<ast::Tag::Call>       &);
 template <> void Parser::parse<ast::Tag::Channel>    (ParserState & state, ast::Data<ast::Tag::Channel>    &);
 template <> void Parser::parse<ast::Tag::Define>     (ParserState & state, ast::Data<ast::Tag::Define>     &);
-template <> void Parser::parse<ast::Tag::Export>     (ParserState & state, ast::Data<ast::Tag::Export>     &);
+template <> void Parser::parse<ast::Tag::Alias>      (ParserState & state, ast::Data<ast::Tag::Alias>     &);
 template <> void Parser::parse<ast::Tag::Expression> (ParserState & state, ast::Data<ast::Tag::Expression> &);
 template <> void Parser::parse<ast::Tag::Field>      (ParserState & state, ast::Data<ast::Tag::Field>      &);
 template <> void Parser::parse<ast::Tag::FieldRef>   (ParserState & state, ast::Data<ast::Tag::FieldRef>   &);
@@ -113,7 +122,7 @@ template <> void Parser::parse<ast::Tag::Link>       (ParserState & state, ast::
 template <> void Parser::parse<ast::Tag::Path>       (ParserState & state, ast::Data<ast::Tag::Path>       &);
 template <> void Parser::parse<ast::Tag::Program>    (ParserState & state, ast::Data<ast::Tag::Program>    &);
 template <> void Parser::parse<ast::Tag::Prompt>     (ParserState & state, ast::Data<ast::Tag::Prompt>     &);
-template <> void Parser::parse<ast::Tag::PromptRef>  (ParserState & state, ast::Data<ast::Tag::PromptRef>  &);
+template <> void Parser::parse<ast::Tag::ObjectRef>  (ParserState & state, ast::Data<ast::Tag::ObjectRef>  &);
 template <> void Parser::parse<ast::Tag::Record>     (ParserState & state, ast::Data<ast::Tag::Record>     &);
 template <> void Parser::parse<ast::Tag::Return>     (ParserState & state, ast::Data<ast::Tag::Return>     &);
 template <> void Parser::parse<ast::Tag::Search>     (ParserState & state, ast::Data<ast::Tag::Search>     &);

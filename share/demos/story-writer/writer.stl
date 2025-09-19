@@ -9,13 +9,15 @@ from "book.stl" import Title, Book;
 from "book.stl" import edit_title, create_pages, edit_page;
 from "book.py" import write as book_write;
 
+alias Thought<mode="rough", goal="brainstorm ideas"> as BrainstormThought;
+
 prompt init_idea {
   is {
     query is text;
     age is Age;
     templates[1:10] is TplDesc;
     pick is repeat(templates.template);
-    ideas[1:5] is Thought<mode="rough", goal="brainstorm ideas">;
+    ideas[1:5] is BrainstormThought;
     title is Title;
   }
   flow init_template;
@@ -200,5 +202,5 @@ prompt done {
   }
 }
 
-export main is init_idea;
+export init_idea as main;
 

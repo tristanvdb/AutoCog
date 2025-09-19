@@ -31,13 +31,9 @@ using nodes_t = std::list<Node<tag>>;
 template<Tag tag>
 using pnodes_t = std::list<std::unique_ptr<Node<tag>>>;
 
-// Map of string to nodes
-template<Tag tag>
-using mapped_t = std::unordered_map<std::string, Node<tag>>;
-
 // Variant of nodes (variadic)
 template<Tag... tags>
-using variant_t = std::variant<Node<tags>...>;
+using variant_t = std::variant<std::monostate, Node<tags>...>;
 
 // List of variant nodes
 template<Tag... tags>
@@ -97,16 +93,6 @@ struct is_pnodes<pnodes_t<tag>> : std::true_type {};
 template<typename T>
 inline constexpr bool is_pnodes_v = is_pnodes<T>::value;
 
-// Trait for mapped nodes
-template<typename T>
-struct is_mapped : std::false_type {};
-
-template<Tag tag>
-struct is_mapped<mapped_t<tag>> : std::true_type {};
-
-template<typename T>
-inline constexpr bool is_mapped_v = is_mapped<T>::value;
-
 // Trait for variant nodes
 template<typename T>
 struct is_variant : std::false_type {};
@@ -134,13 +120,12 @@ inline constexpr bool is_variants_v = is_variants<T>::value;
 // Combined trait to check if type is any kind of node container
 template<typename T>
 inline constexpr bool is_any_node_container_v = 
-    is_node_v<T> || 
-    is_pnode_v<T> || 
-    is_onode_v<T> || 
-    is_nodes_v<T> || 
-    is_pnodes_v<T> || 
-    is_mapped_v<T> ||
-    is_variant_v<T> || 
+    is_node_v<T> ||
+    is_pnode_v<T> ||
+    is_onode_v<T> ||
+    is_nodes_v<T> ||
+    is_pnodes_v<T> ||
+    is_variant_v<T> ||
     is_variants_v<T>;
 
 // Trait to extract the Tag from a single-tag node container
@@ -175,12 +160,6 @@ struct extract_tag<nodes_t<tag>> {
 
 template<Tag tag>
 struct extract_tag<pnodes_t<tag>> {
-    static constexpr bool has_single_tag = true;
-    static constexpr Tag value = tag;
-};
-
-template<Tag tag>
-struct extract_tag<mapped_t<tag>> {
     static constexpr bool has_single_tag = true;
     static constexpr Tag value = tag;
 };

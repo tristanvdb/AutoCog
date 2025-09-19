@@ -62,6 +62,7 @@ public:
 "record"                { update_location(); return (int)TokenType::RECORD; }
 "import"                { update_location(); return (int)TokenType::IMPORT; }
 "export"                { update_location(); return (int)TokenType::EXPORT; }
+"alias"                 { update_location(); return (int)TokenType::ALIAS; }
 "prompt"                { update_location(); return (int)TokenType::PROMPT; }
 "channel"               { update_location(); return (int)TokenType::CHANNEL; }
 "flow"                  { update_location(); return (int)TokenType::FLOW; }

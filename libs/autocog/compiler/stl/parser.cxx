@@ -59,10 +59,13 @@ static std::string file_lookup(std::string const & filepath, std::list<std::stri
 }
 
 void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std::string> & queue) {
-  for (auto & import: program.imports) {
-    std::string const & file = import.data.file;
-    bool has_stl_extension = file.size() >= 4 && ( file.rfind(".stl") == file.size() - 4 );
-    if (has_stl_extension) queue.push(file);
+  for (auto & stmt: program.statements) {
+    if (stmt.index() == 0) {
+      auto & import = std::get<0>(stmt);
+      std::string const & file = import.data.file;
+      bool has_stl_extension = file.size() >= 4 && ( file.rfind(".stl") == file.size() - 4 );
+      if (has_stl_extension) queue.push(file);
+    }
   }
 }
 
@@ -152,7 +155,7 @@ bool Parser::parse_fragment(
     case ast::Tag::Expression: return parse_fragment<ast::Tag::Expression>(code);
     case ast::Tag::Path:       return parse_fragment<ast::Tag::Path>(code);
     case ast::Tag::FieldRef:   return parse_fragment<ast::Tag::FieldRef>(code);
-    case ast::Tag::PromptRef:  return parse_fragment<ast::Tag::PromptRef>(code);
+    case ast::Tag::ObjectRef:  return parse_fragment<ast::Tag::ObjectRef>(code);
     case ast::Tag::Field:      return parse_fragment<ast::Tag::Field>(code);
     case ast::Tag::Struct:     return parse_fragment<ast::Tag::Struct>(code);
     case ast::Tag::Format:     return parse_fragment<ast::Tag::Format>(code);
@@ -178,7 +181,7 @@ bool Parser::parse_fragment(
     case ast::Tag::Return:     return parse_fragment<ast::Tag::Return>(code);
     case ast::Tag::Retfield:   return parse_fragment<ast::Tag::Retfield>(code);
     case ast::Tag::Import:     return parse_fragment<ast::Tag::Import>(code);
-    case ast::Tag::Export:     return parse_fragment<ast::Tag::Export>(code);
+    case ast::Tag::Alias:      return parse_fragment<ast::Tag::Alias>(code);
     case ast::Tag::Record:     return parse_fragment<ast::Tag::Record>(code);
     case ast::Tag::Prompt:     return parse_fragment<ast::Tag::Prompt>(code);
     case ast::Tag::Program:    return parse_fragment<ast::Tag::Program>(code);

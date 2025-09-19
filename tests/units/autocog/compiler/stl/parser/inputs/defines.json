@@ -26,7 +26,7 @@
   {
     "description": "Define with identifier reference",
     "tag": "Program",
-    "code": "define alias = other_value;",
+    "code": "define an_alias = other_value;",
     "should_pass": true
   },
   {
