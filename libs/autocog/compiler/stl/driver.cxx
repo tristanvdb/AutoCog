@@ -57,7 +57,7 @@ std::optional<int> Driver::fileid(std::string const & filename) const {
   return std::nullopt;
 }
 
-std::optional<int> Driver::compile() {
+std::optional<int> Driver::compile__() {
   Parser parser(this->diagnostics, this->fileids, this->includes, this->programs, this->inputs);
 
   // Parse all files
@@ -89,6 +89,10 @@ std::optional<int> Driver::compile() {
 //  if (report_errors()) return 6;
 
   return std::nullopt;
+}
+
+std::optional<int> Driver::compile() {
+  return autocog::utilities::wrap_exception(&Driver::compile__, *this);
 }
 
 int Driver::backend() {

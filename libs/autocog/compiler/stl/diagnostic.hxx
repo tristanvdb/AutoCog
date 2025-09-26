@@ -1,12 +1,15 @@
 #ifndef AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX
 #define AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX
 
+#include "autocog/utilities/exception.hxx"
 #include "autocog/compiler/stl/location.hxx"
 
 #include <string>
 #include <vector>
+#include <iostream>
 #include <unordered_map>
 #include <optional>
+#include <functional>
 
 namespace autocog::compiler::stl {
 

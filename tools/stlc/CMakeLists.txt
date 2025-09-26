@@ -13,6 +13,7 @@ target_include_directories(autocog_stlc PRIVATE
 )
 target_link_libraries(autocog_stlc PUBLIC
   autocog_compiler_stl_lib
+  autocog_utilities_lib
 )
 set_target_properties(autocog_stlc PROPERTIES
   OUTPUT_NAME "stlc"

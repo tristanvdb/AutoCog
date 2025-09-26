@@ -12,6 +12,7 @@ target_include_directories(autocog_llama_xfta_pybind PRIVATE
 )
 target_link_libraries(autocog_llama_xfta_pybind PRIVATE
   autocog_llama_xfta_lib
+  autocog_utilities_lib
 )
 set_property(TARGET autocog_llama_xfta_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(autocog_llama_xfta_pybind PROPERTIES

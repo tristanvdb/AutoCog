@@ -52,11 +52,13 @@ class Driver {
   private:
     SymbolTable tables;
 
+  private:
+    std::optional<int> compile__();
+
   public:
     std::optional<int> compile();
-
     int backend();
-    
+
   friend class SymbolScanner;
 };
 

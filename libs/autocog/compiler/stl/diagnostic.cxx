@@ -1,7 +1,13 @@
 
 #include "autocog/compiler/stl/diagnostic.hxx"
 
+#include <iostream>
+#include <exception>
+#include <execinfo.h>
+#include <cxxabi.h>
+#include <dlfcn.h>
 #include <sstream>
+#include <vector>
 
 #include <stdexcept>
 

@@ -8,6 +8,7 @@ target_include_directories(stl_parser_test_driver PRIVATE
 )
 target_link_libraries(stl_parser_test_driver PUBLIC
   autocog_compiler_stl_lib
+  autocog_utilities_lib
 )
 
 file(GLOB TEST_JSON_FILES ${CMAKE_CURRENT_SOURCE_DIR}/inputs/*.json)
