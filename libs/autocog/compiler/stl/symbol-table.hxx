@@ -20,6 +20,7 @@ class SymbolScanner {
 
     std::optional<int> fileid;
     std::vector<std::string> scopes;
+    bool shortcut_flag = false;
 
     std::string scope() const;
     
@@ -31,10 +32,19 @@ class SymbolScanner {
 
   public:
     template <ast::Tag tagT>
-    void pre(ast::Node<tagT> const &) {}
+    bool shortcut(ast::Node<tagT> const &) const {
+      return shortcut_flag;
+    }
 
     template <ast::Tag tagT>
-    void post(ast::Node<tagT> const &) {}
+    void pre(ast::Node<tagT> const &) {
+      shortcut_flag = true;
+    }
+
+    template <ast::Tag tagT>
+    void post(ast::Node<tagT> const &) {
+      shortcut_flag = false;
+    }
 };
 
 template <>

@@ -48,6 +48,7 @@ void SymbolScanner::post<ast::Tag::Program>(ast::Program const &) {
 
 template <>
 void SymbolScanner::pre<ast::Tag::Import>(ast::Import const & node) {
+  this->shortcut_flag = true;
   auto scope = this->scope();
   auto const & filename = node.data.file;
   bool has_stl_ext = filename.size() >= 4 && ( filename.rfind(".stl") == filename.size() - 4 );
@@ -59,34 +60,32 @@ void SymbolScanner::pre<ast::Tag::Import>(ast::Import const & node) {
     }
     for (auto const & alias_node: node.data.targets) {
       auto const & target = alias_node.data.target;
-      std::string alias; // TODO this->make_alias(alias_node)
+      auto alias = scope + "::";
       if (alias_node.data.alias) {
-        alias = alias_node.data.alias.value().data.name;
+        alias += alias_node.data.alias.value().data.name;
       } else {
         if (target.data.config.size() > 0) {
           this->driver.emit_error("Imported parametrized objects must be given a local alias (\"as\" keyword).", alias_node.location);
           continue;
         }
-        alias = target.data.name.data.name;
+        alias += target.data.name.data.name;
       }
-      alias = scope + "::" + alias;
       auto sym = UnresolvedImport(fid.value(), alias, target, node);
       this->driver.tables.symbols.emplace(alias, sym);
     }
   } else if (has_py_ext) {
     for (auto const & alias_node: node.data.targets) {
       auto const & target = alias_node.data.target;
-      std::string alias; // TODO this->make_alias(alias_node)
+      auto alias = scope + "::";
       if (alias_node.data.alias) {
-        alias = alias_node.data.alias.value().data.name;
+        alias += alias_node.data.alias.value().data.name;
       } else {
         if (target.data.config.size() > 0) {
           this->driver.emit_error("Imported parametrized objects must be given a local alias (\"as\" keyword).", alias_node.location);
           continue;
         }
-        alias = target.data.name.data.name;
+        alias += target.data.name.data.name;
       }
-      alias = scope + "::" + alias;
       auto sym = PythonSymbol(filename, alias, target);
       this->driver.tables.symbols.emplace(alias, sym);
     }
@@ -97,16 +96,27 @@ void SymbolScanner::pre<ast::Tag::Import>(ast::Import const & node) {
 
 template <>
 void SymbolScanner::pre<ast::Tag::Alias>(ast::Alias const & node) {
-  if (!node.data.alias) {
-    this->driver.emit_error("Alias statement without specifying an alias name.", node.location);
+  this->shortcut_flag = true;
+  auto alias = this->scope() + "::";
+  if (node.data.alias) {
+    alias += node.data.alias.value().data.name;
+  } else {
+    if (!node.data.is_export) {
+      this->driver.emit_error("Alias without specifying an alias name.", node.location);
+      return;
+    } else if (node.data.target.data.config.size() > 0) {
+      this->driver.emit_error("Export parametrized object without specifying an alias name.", node.location);
+      return;
+    }
+    alias += node.data.target.data.name.data.name;
   }
-  auto alias = this->scope() + "::" + node.data.alias.value().data.name;
   auto sym = UnresolvedAlias(this->fileid.value(), alias, node.data.target, node);
   this->driver.tables.symbols.emplace(alias, sym);
 }
 
 template <>
 void SymbolScanner::pre<ast::Tag::Define>(ast::Define const & node) {
+  this->shortcut_flag = true;
   auto alias = this->scope() + "::" + node.data.name.data.name;
   auto sym = DefineSymbol(node, alias);
   this->driver.tables.symbols.emplace(alias, sym);

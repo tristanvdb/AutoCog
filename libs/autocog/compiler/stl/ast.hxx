@@ -58,7 +58,8 @@ struct Node {
   template <class TraversalT>
   void traverse(TraversalT & traversal) const {
     traversal.pre(*this);
-    traverse_children(traversal);
+    if (!traversal.shortcut(*this))
+      traverse_children(traversal);
     traversal.post(*this);
   }
 
