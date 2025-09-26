@@ -137,7 +137,7 @@ static std::string get_line(std::string const & source, int line_pos) {
 
 void Parser::parse(int fid, std::string const & name, std::string const & source) {
   ParserState state(fid, source);
-  programs.emplace_back(name);
+  programs.emplace_back(name, fid);
   try {
     parse<ast::Tag::Program>(state, programs.back().data);
   } catch (ParseError const & e) {

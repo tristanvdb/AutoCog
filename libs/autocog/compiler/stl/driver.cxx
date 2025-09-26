@@ -15,6 +15,18 @@
 
 namespace autocog::compiler::stl {
 
+void Driver::emit_error(std::string msg, std::optional<SourceRange> const & loc) {
+#if DEBUG_Instantiator_emit_error
+  std::cerr << "Instantiator::emit_error" << std::endl;
+#endif
+  if (loc) {
+    auto start = loc.value().start;
+    diagnostics.emplace_back(DiagnosticLevel::Error, msg, start);
+  } else {
+    diagnostics.emplace_back(DiagnosticLevel::Error, msg);
+  }
+}
+
 bool Driver::report_errors() {
   for (auto const & diag : diagnostics) {
     std::cerr << diag.format(fileids) << std::endl;
@@ -37,24 +49,31 @@ bool Driver::report_errors() {
   return errors > 0;
 }
 
+std::optional<int> Driver::fileid(std::string const & filename) const {
+  auto it = this->fileids.find(filename);
+  if (it != this->fileids.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
 std::optional<int> Driver::compile() {
-  Parser parser(diagnostics, fileids, includes, programs, inputs);
+  Parser parser(this->diagnostics, this->fileids, this->includes, this->programs, this->inputs);
 
   // Parse all files
 
   parser.parse();
-  if (report_errors()) return 2;
+  if (this->report_errors()) return 2;
 
-  // Semantic analysis
+  // Collect symbols
 
-  SymbolTablesBuilder symbol_tables_builder(diagnostics, symbol_tables);
-  traverse_ast(symbol_tables_builder);
-  SymbolTablesChecker symbol_tables_checker(diagnostics, symbol_tables);
-  traverse_ast(symbol_tables_checker);
+  SymbolScanner scanner(*this);
+  this->traverse_ast(scanner);
+  if (this->report_errors()) return 3;
 
   // Instantiate all exported prompts associated to input files
 
-//  Instantiator instantiator(parser.get(), diagnostics);
+//  Instantiator instantiator(programs, diagnostics, symbol_tables);
 //
 //  instantiator.evaluate_defines();
 //  if (report_errors()) return 3;
@@ -62,8 +81,12 @@ std::optional<int> Driver::compile() {
 //  instantiator.generate_symbols();
 //  if (report_errors()) return 4;
 //
-//  instantiator.instantiate();
+//  SymbolTablesChecker symbol_tables_checker(diagnostics, symbol_tables);
+//  traverse_ast(symbol_tables_checker);
 //  if (report_errors()) return 5;
+//
+//  instantiator.instantiate();
+//  if (report_errors()) return 6;
 
   return std::nullopt;
 }

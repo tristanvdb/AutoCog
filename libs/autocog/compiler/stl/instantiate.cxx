@@ -12,18 +12,6 @@
 
 namespace autocog::compiler::stl {
 
-CompileError::CompileError(
-  std::string msg,
-  std::optional<SourceRange> loc
-) :
-  message(std::move(msg)),
-  location(loc)
-{}
-  
-const char * CompileError::what() const noexcept {
-  return message.c_str();
-}
-
 #define DEBUG_Instantiator_emit_error VERBOSE && 0
 
 void Instantiator::emit_error(std::string msg, std::optional<SourceRange> const & loc) {
@@ -39,13 +27,13 @@ void Instantiator::emit_error(std::string msg, std::optional<SourceRange> const 
 }
 
 Instantiator::Instantiator(
-  std::unordered_map<std::string, ast::Program> const & programs_,
-  std::list<Diagnostic> & diagnostics_
+  std::list<, ast::Program> const & programs_,
+  std::list<Diagnostic> & diagnostics_,
+  SymbolTables & tables_
 ) :
   programs(programs_),
   diagnostics(diagnostics_),
-  globals(),
-  symbols(),
+  tables(tables_),
   exports(),
   instantiations(),
   record_cache()
@@ -144,21 +132,18 @@ void Instantiator::evaluate_defines() {
 #if DEBUG_Instantiator_evaluate_defines
     std::cerr << "Instantiator::evaluate_defines" << std::endl;
 #endif
-  for (auto const & [filename, program]: programs) {
+  for (auto const & program: programs) {
 #if DEBUG_Instantiator_evaluate_defines
-    std::cerr << "    " << filename << std::endl;
+    std::cerr << "    " << program.data.filename << std::endl;
 #endif
-    if (filename != program.data.filename) {
-      throw std::runtime_error("Inconsistency of Program's filename.");
-    }
-    auto & varmap = globals[filename];
+    auto & varmap = tables.globals[program.data.filename];
     for (auto const & [varname, defn]: program.data.defines) {
       if (defn.data.name != varname) {
         throw std::runtime_error("Inconsistency of Define statement name.");
       }
 
       if (defn.data.argument) {
-        emit_error("Top level definition must be arguments!", defn.location);
+        emit_error("Top level definition must not be arguments!", defn.location);
         return;
       }
 
@@ -184,7 +169,11 @@ void Instantiator::scan_import_statement(SymbolTable & symtbl, ast::Import const
   bool has_stl_ext = filename.size() >= 4 && ( filename.rfind(".stl") == filename.size() - 4 );
   bool has_py_ext = filename.size() >= 3 && ( filename.rfind(".py") == filename.size() - 3 );
   if (has_stl_ext) {
-    auto prog_it = programs.find(filename);
+    auto prog_it = programs.begin();
+    while (prog_it != programs.end()) {
+      if (program.data.filename == filename) break;
+      ++prog_it;
+    }
     if (prog_it == programs.end()) {
       throw std::runtime_error("STL file `" + filename + "` in import statement was not parsed.");
     }
@@ -220,8 +209,8 @@ void Instantiator::generate_symbols() {
 #if DEBUG_Instantiator_generate_symbols
     std::cerr << "Instantiator::generate_symbols" << std::endl;
 #endif
-  for (auto const & [filename, program]: programs) {
-    SymbolTable & symtbl = symbols[filename];
+  for (auto const & program: programs) {
+    SymbolTable & symtbl = tables.symbols[program.data.filename];
     for (auto const & import_statement: program.data.imports) {
       scan_import_statement(symtbl, import_statement);
     }
@@ -235,7 +224,7 @@ void Instantiator::generate_symbols() {
   bool resolved_symbols = true;
   while (resolved_symbols) {
     resolved_symbols = false;
-    for (auto & [fname, symtbl]: symbols) {
+    for (auto & [fname, symtbl]: tables.symbols) {
 #if DEBUG_Instantiator_generate_symbols
       std::cerr << "  IN " << fname << std::endl;
 #endif
@@ -256,7 +245,7 @@ void Instantiator::generate_symbols() {
       std::cerr << "    FOUND " << unresolved_symbols.size() << " unresolved symbols" << std::endl;
 #endif
       for (auto & [alias, unresolved]: unresolved_symbols) {
-        auto & imported_symtbl = symbols[unresolved.filename];
+        auto & imported_symtbl = tables.symbols[unresolved.filename];
         auto sym_it = imported_symtbl.find(unresolved.objname);
         if (sym_it == imported_symtbl.end()) {
           emit_error("Trying to import a non-existant object `" + unresolved.objname + "`", unresolved.import.location);
@@ -272,7 +261,7 @@ void Instantiator::generate_symbols() {
     }
   }
   
-  for (auto & [fname, symtbl]: symbols) {
+  for (auto & [fname, symtbl]: tables.symbols) {
     for (auto & [alias, symbol]: symtbl) {
       if (std::holds_alternative<UnresolvedImport>(symbol)) {
         auto & unresolved = std::get<UnresolvedImport>(symbol);
@@ -408,10 +397,10 @@ void Instantiator::instantiate() {
 #if DEBUG_Instantiator_instantiate
   std::cerr << "Instantiator::instantiate" << std::endl;
 #endif
-  for (auto const & [filename, program]: programs) {
-    SymbolTable const & symtbl = symbols[filename];
+  for (auto const & program: programs) {
+    SymbolTable const & symtbl = tables.symbols[program.data.filename];
 #if DEBUG_Instantiator_instantiate
-    std::cerr << "  IN " << filename << std::endl;
+    std::cerr << "  IN " << program.data.filename << std::endl;
 #endif
     for (auto const & exported: program.data.exports) {
 #if DEBUG_Instantiator_instantiate
@@ -428,8 +417,8 @@ void Instantiator::instantiate() {
 
       auto const & symbol = std::get<PromptSymbol>(target_it->second);
       try {
-        std::string mangled_name = instantiate(symbol.node, exported.data.kwargs, globals[symbol.scope.data.filename]);
-        exports.emplace(exported.data.alias, mangled_name);
+        std::string mangled_name = instantiate(symbol.node, exported.data.kwargs, tables.globals[symbol.scope.data.filename]);
+        tables.exports.emplace(exported.data.alias, mangled_name);
       } catch (CompileError const & e) {
         emit_error(e.message, e.location);
       }

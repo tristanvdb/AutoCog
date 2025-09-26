@@ -2,7 +2,7 @@
 namespace autocog::compiler::stl {
 
 template <class ScopeT>
-ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Unary const & op, ir::VarMap & varmap) {
+ir::Value Evaluator::evaluate(ScopeT const & scope, ast::Unary const & op, ir::VarMap & varmap) {
   ir::Value operand_val = evaluate(scope, *op.data.operand, varmap);
   
   switch (op.data.kind) {
@@ -34,7 +34,7 @@ ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Unary const & op, ir
 }
 
 template <class ScopeT>
-ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Binary const & op, ir::VarMap & varmap) {
+ir::Value Evaluator::evaluate(ScopeT const & scope, ast::Binary const & op, ir::VarMap & varmap) {
   ir::Value lhs_val = evaluate(scope, *op.data.lhs, varmap);
   ir::Value rhs_val = evaluate(scope, *op.data.rhs, varmap);
   
@@ -77,7 +77,7 @@ ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Binary const & op, i
 }
 
 template <class ScopeT>
-ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
+ir::Value Evaluator::evaluate(ScopeT const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
   ir::Value cond_val = evaluate(scope, *op.data.cond, varmap);
   
   bool condition = std::visit([&op](auto const & v) -> bool {
@@ -97,7 +97,7 @@ ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Conditional const & 
 }
 
 template <class ScopeT>
-ir::Value Instantiator::evaluate(ScopeT const & scope, ast::String const & fstring, ir::VarMap & varmap) {
+ir::Value Evaluator::evaluate(ScopeT const & scope, ast::String const & fstring, ir::VarMap & varmap) {
   if (!fstring.data.is_format) {
     return fstring.data.value;
   }
@@ -194,7 +194,7 @@ ir::Value Instantiator::evaluate(ScopeT const & scope, ast::String const & fstri
 }
 
 template <class ScopeT>
-ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Expression const & expr, ir::VarMap & varmap) {
+ir::Value Evaluator::evaluate(ScopeT const & scope, ast::Expression const & expr, ir::VarMap & varmap) {
   return std::visit([&](auto const & e) -> ir::Value {
     using T = std::decay_t<decltype(e)>;
     if constexpr (std::is_same_v<T, ast::Integer>) {
@@ -221,17 +221,17 @@ ir::Value Instantiator::evaluate(ScopeT const & scope, ast::Expression const & e
   }, expr.data.expr);
 }
 
-#define DEBUG_Instantiator_retrieve_value VERBOSE && 0
+#define DEBUG_Evaluator_retrieve_value VERBOSE && 0
 
 template <class ScopeT>
-ir::Value Instantiator::retrieve_value(
+ir::Value Evaluator::retrieve_value(
   ScopeT const & scope,
   std::string const & varname,
   ir::VarMap & varmap,
   std::optional<SourceRange> const & loc
 ) {
-#if DEBUG_Instantiator_retrieve_value
-  std::cerr << "Instantiator::retrieve_value(" << varname << ")" << std::endl;
+#if DEBUG_Evaluator_retrieve_value
+  std::cerr << "Evaluator::retrieve_value(" << varname << ")" << std::endl;
 #endif
   ir::Value value = nullptr;
 

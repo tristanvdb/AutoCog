@@ -18,6 +18,7 @@ TRAVERSE_CHILDREN(Import, targets)
 
 DATA(Program) {
   std::string filename;
+  int fid;
   VARIANTS(Import, Alias, Define, Annotate, Search, Record, Prompt) statements{};
 };
 TRAVERSE_CHILDREN(Program, statements)

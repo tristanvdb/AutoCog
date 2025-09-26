@@ -23,53 +23,12 @@ struct Diagnostic;
 namespace autocog::compiler::stl::ast {
 
 enum class Tag {
-  Program, // 0
-  Import,
-  Enum,
-  Choice,
-  Annotate,
-  Annotation,
-  Define,
-  Flow,
-  Edge,
-  Struct,
-  Field, // 10
-  Search,
-  Param,
-  Retfield,
-  Return,
-  Record,
-  Format,
-  Text,
-  Prompt,
-  FieldRef,
-  ObjectRef, // 20
-  Channel,
-  Link,
-  Bind,
-  Ravel,
-  Mapped,
-  Prune,
-  Wrap,
-  Call,
-  Kwarg,
-  Path, // 30
-  Step,
-  Expression,
-  Identifier,
-  Integer,
-  Float,
-  Boolean,
-  String,
-  Unary,
-  Binary,
-  Conditional, // 40
-  Parenthesis,
-  Assign,
-  Alias
+#define X(etag,stag) etag,
+#include "autocog/compiler/stl/ast/nodes.def"
 };
 
 extern const std::unordered_map<std::string, Tag> tags;
+extern const std::unordered_map<Tag, std::string> rtags;
 
 template <Tag tagT>
 struct Data;
@@ -98,9 +57,9 @@ struct Node {
 
   template <class TraversalT>
   void traverse(TraversalT & traversal) const {
-    traversal.pre(location, data);
+    traversal.pre(*this);
     traverse_children(traversal);
-    traversal.post(location, data);
+    traversal.post(*this);
   }
 
   template <class TraversalT>
@@ -163,50 +122,8 @@ std::enable_if_t<is_any_node_container_v<T>> traverse_generic(
 
 namespace autocog::compiler::stl::ast {
 
-using Param = NODE(Param);
-using Search = NODE(Search);
-using Retfield = NODE(Retfield);
-using Return = NODE(Return);
-using Enum = NODE(Enum);
-using Choice = NODE(Choice);
-using Text = NODE(Text);
-using Format = NODE(Format);
-using Struct = NODE(Struct);
-using Field = NODE(Field);
-using Annotation = NODE(Annotation);
-using Annotate = NODE(Annotate);
-using Kwarg = NODE(Kwarg);
-using Call = NODE(Call);
-using Link = NODE(Link);
-using Bind = NODE(Bind);
-using Ravel = NODE(Ravel);
-using Mapped = NODE(Mapped);
-using Prune = NODE(Prune);
-using Wrap = NODE(Wrap);
-using Channel = NODE(Channel);
-using Define = NODE(Define);
-using Identifier = NODE(Identifier);
-using Integer = NODE(Integer);
-using Float = NODE(Float);
-using Boolean = NODE(Boolean);
-using String = NODE(String);
-using Unary = NODE(Unary);
-using Binary = NODE(Binary);
-using Conditional = NODE(Conditional);
-using Parenthesis = NODE(Parenthesis);
-using Expression = NODE(Expression);
-using Edge = NODE(Edge);
-using Flow = NODE(Flow);
-using Step = NODE(Step);
-using Path = NODE(Path);
-using Import = NODE(Import);
-using Program = NODE(Program);
-using FieldRef = NODE(FieldRef);
-using ObjectRef = NODE(ObjectRef);
-using Prompt = NODE(Prompt);
-using Record = NODE(Record);
-using Assign = NODE(Assign);
-using Alias = NODE(Alias);
+#define X(etag,stag) using etag = NODE(etag);
+#include "autocog/compiler/stl/ast/nodes.def"
 
 }
 

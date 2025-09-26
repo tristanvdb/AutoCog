@@ -21,7 +21,8 @@ add_library(autocog_compiler_stl_lib STATIC
     parser/prompt.cxx parser/objectref.cxx parser/record.cxx
     parser/return.cxx parser/search.cxx parser/clauses.cxx
     parser/struct.cxx parser/assign.cxx
-    symbol-table.cxx
+    symbols.cxx symbol-table.cxx
+    evaluate.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
 )
 

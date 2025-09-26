@@ -26,6 +26,15 @@ struct Diagnostic {
   std::string format(std::unordered_map<std::string, int> const & fileids) const;
 };
 
+struct CompileError : std::exception {
+  std::string message;
+  std::optional<SourceRange> location;
+  
+  CompileError(std::string msg, std::optional<SourceRange> loc = std::nullopt);
+  
+  const char * what() const noexcept override;
+};
+
 }
 
 #endif /* AUTOCOG_COMPILER_STL_DIAGNOSTIC_HXX */

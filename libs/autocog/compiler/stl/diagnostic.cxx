@@ -69,5 +69,17 @@ std::string Diagnostic::format(std::unordered_map<std::string, int> const & file
     return ss.str();
 }
 
+CompileError::CompileError(
+  std::string msg,
+  std::optional<SourceRange> loc
+) :
+  message(std::move(msg)),
+  location(loc)
+{}
+  
+const char * CompileError::what() const noexcept {
+  return message.c_str();
+}
+
 }
 

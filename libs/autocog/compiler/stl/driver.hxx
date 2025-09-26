@@ -30,24 +30,34 @@ class Driver {
     std::unordered_map<std::string, int> fileids;
 
     bool report_errors();
+    void emit_error(std::string msg, std::optional<SourceRange> const & loc);
+
+  public:
+    std::optional<int> fileid(std::string const & filename) const;
 
   private:
     std::list<ast::Program> programs;
 
     template <class TraversalT>
-    void traverse_ast(TraversalT & traversal) const {
+    void traverse_ast(TraversalT & traversal) {
       for (auto const & program: programs) {
-        program.traverse(traversal);
+        try {
+          program.traverse(traversal);
+        } catch (CompileError const & e) {
+          emit_error(e.message, e.location);
+        }
       }
     }
 
   private:
-    SymbolTables symbol_tables;
+    SymbolTable tables;
 
   public:
     std::optional<int> compile();
 
     int backend();
+    
+  friend class SymbolScanner;
 };
 
 }
