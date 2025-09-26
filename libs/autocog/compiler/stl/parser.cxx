@@ -69,7 +69,7 @@ void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std:
   }
 }
 
-#define DEBUG_Parser_parse VERBOSE && 1
+#define DEBUG_Parser_parse VERBOSE && 0
 
 void Parser::parse() {
 #if DEBUG_Parser_parse

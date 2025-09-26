@@ -7,7 +7,7 @@
 
 namespace autocog::compiler::stl {
 
-#define DEBUG_Parser_Alias VERBOSE && 1
+#define DEBUG_Parser_Alias VERBOSE && 0
 
 template <>
 void Parser::parse<ast::Tag::Alias>(ParserState & state, ast::Data<ast::Tag::Alias> & data) {

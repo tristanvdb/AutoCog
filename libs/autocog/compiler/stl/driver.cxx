@@ -58,18 +58,29 @@ std::optional<int> Driver::fileid(std::string const & filename) const {
 }
 
 std::optional<int> Driver::compile__() {
+  // 1 - Parse all files
+
   Parser parser(this->diagnostics, this->fileids, this->includes, this->programs, this->inputs);
-
-  // Parse all files
-
   parser.parse();
-  if (this->report_errors()) return 2;
+  if (this->report_errors()) return 101;
 
-  // Collect symbols
+#if !defined(NDEBUG)
+  std::cerr << "After parsing (#1):" << std::endl;
+  for (auto const & program: programs) {
+    std::cerr << "  " << program.data.fid << ": " << program.data.filename << std::endl;
+  }
+#endif
+
+  // 2 - Collect symbols
 
   SymbolScanner scanner(*this);
   this->traverse_ast(scanner);
-  if (this->report_errors()) return 3;
+  if (this->report_errors()) return 102;
+
+#if !defined(NDEBUG)
+  std::cerr << "After collecting symbol (#2):" << std::endl;
+  this->tables.dump(std::cerr);
+#endif
 
   // Instantiate all exported prompts associated to input files
 
