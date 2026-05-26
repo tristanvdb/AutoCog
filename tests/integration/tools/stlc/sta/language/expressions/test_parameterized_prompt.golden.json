@@ -1,6 +1,16 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "worker__10_6390854715352638587"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "worker__10_6390854715352638587"
+    }
   },
   "prompts": {
     "worker__10_6390854715352638587": {

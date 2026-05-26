@@ -1,6 +1,28 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "main"
+    "main": {
+      "inputs": {
+        "creative": {
+          "max_length": 50,
+          "required": true,
+          "type": "text"
+        },
+        "greeting": {
+          "max_length": 50,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "max_length": 50,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
   },
   "prompts": {
     "main": {

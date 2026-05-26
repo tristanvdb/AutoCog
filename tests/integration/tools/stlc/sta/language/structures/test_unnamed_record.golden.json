@@ -1,6 +1,16 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "calculator"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "object"
+        }
+      },
+      "prompt": "calculator"
+    }
   },
   "prompts": {
     "calculator": {

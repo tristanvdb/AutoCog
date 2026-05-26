@@ -9,6 +9,12 @@ Usage:
     result = engine.run(program, topic="Science", question="2+2?")
 """
 
-from .program import compile, Program
+from importlib.metadata import version as _pkg_version
+try:
+    __version__ = _pkg_version("autocog")
+except Exception:
+    __version__ = "unknown"
+
+from .program import compile, load, Program
 from .engine import Engine
 from .context import Context

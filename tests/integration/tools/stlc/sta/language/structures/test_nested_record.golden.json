@@ -1,6 +1,20 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "location"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "city": {
+          "required": true,
+          "type": "text"
+        },
+        "street": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "location"
+    }
   },
   "prompts": {
     "location": {

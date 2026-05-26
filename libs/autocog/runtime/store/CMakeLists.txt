@@ -11,3 +11,5 @@ target_include_directories(autocog_runtime_store PUBLIC
 target_link_libraries(autocog_runtime_store PUBLIC
     autocog_runtime_sta_lib
 )
+
+install(TARGETS autocog_runtime_store DESTINATION autocog)

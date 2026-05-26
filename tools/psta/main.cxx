@@ -51,7 +51,7 @@ int main(int argc, char ** argv) {
     if (prompt_name.empty()) {
         auto const & entries = sta_json["entry_points"];
         if (entries.empty()) { std::cerr << "Error: no entry points in STA\n"; return 1; }
-        prompt_name = entries.begin().value().get<std::string>();
+        prompt_name = entries.begin().value()["prompt"].get<std::string>();
     }
 
     if (!sta_json["prompts"].contains(prompt_name)) {

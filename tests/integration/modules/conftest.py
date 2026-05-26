@@ -1,58 +1,12 @@
 """
-pytest configuration — sets up paths to find C++ bindings.
+pytest configuration for autocog tests.
 
-Run with: BUILD_DIR=/path/to/build pytest tests/python/
-Or from the build directory: cd build && pytest ../tests/python/
+Tests run against the installed package (pip install -e . or pip install .).
 """
 
-import os
-import sys
 import pathlib
 
 import pytest
-
-
-def find_build_dir():
-    """Find the build directory containing the compiled bindings."""
-    # 1. Explicit BUILD_DIR env var
-    env = os.environ.get("BUILD_DIR")
-    if env and pathlib.Path(env).is_dir():
-        return pathlib.Path(env)
-
-    # 2. Common locations relative to repo root
-    repo = pathlib.Path(__file__).parent.parent.parent.parent
-    for candidate in [
-        repo / "builds" / "autocog-dbg",
-        repo / "builds" / "autocog",
-        repo / "build",
-    ]:
-        if candidate.is_dir():
-            return candidate
-
-    return None
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_paths():
-    """Add binding directories to sys.path before any imports."""
-    build = find_build_dir()
-    if build is None:
-        pytest.skip("No build directory found. Set BUILD_DIR env var.")
-
-    binding_dirs = [
-        build / "bindings" / "compiler-stl",
-        build / "bindings" / "runtime-sta",
-        build / "bindings" / "backend-llama",
-    ]
-    for d in binding_dirs:
-        if d.is_dir():
-            sys.path.insert(0, str(d))
-
-    # Also add the modules directory
-    repo = pathlib.Path(__file__).parent.parent.parent.parent
-    modules = repo / "modules"
-    if modules.is_dir():
-        sys.path.insert(0, str(modules))
 
 
 @pytest.fixture(scope="session")

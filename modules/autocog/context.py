@@ -2,9 +2,6 @@
 Context — execution state for one program invocation.
 """
 
-import runtime_sta_cxx
-import backend_llama_cxx
-
 from .channels import resolve_channels
 
 
@@ -34,40 +31,22 @@ class Context:
         if self.done:
             return
 
-        # 1. Resolve channels → content dict
+        # 1. Resolve channels → content dict (always local)
         content = resolve_channels(
             self.program, self.prompt,
             self.inputs, self.frames,
             self.engine, self.externals
         )
 
-        # 2. Instantiate STA → FTA (C++)
-        fta_id = runtime_sta_cxx.instantiate(
-            self.program.id, self.prompt,
-            content, self.engine.syntax_id
+        # 2. Evaluate prompt → frame (dispatch: local or remote)
+        frame = self.engine.evaluate_prompt(
+            self.program, self.prompt, content
         )
 
-        # 3. Evaluate FTA → FTT (C++)
-        ftt_id = backend_llama_cxx.evaluate(self.engine.model_id, fta_id)
-
-        # 4. Get best path text (C++)
-        paths = backend_llama_cxx.get_best(self.engine.model_id, ftt_id, 1)
-        text = paths[0] if paths else ""
-
-        # 5. Parse text → frame (C++), pass content for select resolution
-        frame = runtime_sta_cxx.parse_text(
-            self.program.id, self.prompt,
-            self.engine.syntax_id, text, content
-        )
-
-        # 6. Cleanup
-        backend_llama_cxx.release_ftt(ftt_id)
-        runtime_sta_cxx.release_fta(fta_id)
-
-        # 7. Store frame
+        # 3. Store frame
         self.frames[self.prompt] = frame
 
-        # 8. Flow control
+        # 4. Flow control
         flows = self.program.prompt_flows(self.prompt)
 
         if not flows:

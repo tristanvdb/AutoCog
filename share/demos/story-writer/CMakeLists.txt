@@ -1,6 +1,6 @@
 
 add_test(NAME demo-stlc-story-writer
-         COMMAND $<TARGET_FILE:autocog_stlc> --emit ir -I ${PROJECT_SOURCE_DIR}/share/library -I ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/writer.stl
+         COMMAND $<TARGET_FILE:autocog_stlc> --emit ir -I ${PROJECT_SOURCE_DIR}/share/library/stlib -I ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/writer.stl
         )
 set_tests_properties(demo-stlc-story-writer PROPERTIES
     LABELS "stlc;demo"
@@ -9,7 +9,7 @@ set_tests_properties(demo-stlc-story-writer PROPERTIES
 
 add_test(NAME demo-ista-story-writer
     COMMAND ${CMAKE_COMMAND} -E env
-        bash -c "$<TARGET_FILE:autocog_stlc> --emit sta -I ${PROJECT_SOURCE_DIR}/share/library -I ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/writer.stl | $<TARGET_FILE:autocog_ista> --text -p init_idea /dev/stdin > /dev/null"
+        bash -c "$<TARGET_FILE:autocog_stlc> --emit sta -I ${PROJECT_SOURCE_DIR}/share/library/stlib -I ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/writer.stl | $<TARGET_FILE:autocog_ista> --text -p init_idea /dev/stdin > /dev/null"
 )
 set_tests_properties(demo-ista-story-writer PROPERTIES
     LABELS "ista;demo"

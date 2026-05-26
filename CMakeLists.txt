@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
 project(autocog)
+
+# Read version from VERSION file
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" AUTOCOG_VERSION_RAW)
+string(STRIP "${AUTOCOG_VERSION_RAW}" AUTOCOG_VERSION_RAW)
+# Strip leading 'v' if present
+string(REGEX REPLACE "^v" "" AUTOCOG_VERSION "${AUTOCOG_VERSION_RAW}")
+add_compile_definitions(AUTOCOG_VERSION="${AUTOCOG_VERSION}")
   
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -47,10 +54,48 @@ if(NOT pybind11_FOUND)
   endif()
 endif()
 
-find_package(Reflex REQUIRED)
-get_target_property(REFLEX_EXECUTABLE Reflex::Reflex LOCATION)
+find_package(Reflex QUIET)
+if(NOT Reflex_FOUND)
+  message(STATUS "Reflex not found — building from vendored submodule")
+  set(REFLEX_SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendors/reflex")
+  if(NOT EXISTS "${REFLEX_SOURCE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "Vendored RE-flex not found. Run: git submodule update --init --recursive")
+  endif()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  add_subdirectory("${REFLEX_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_vendor/reflex" EXCLUDE_FROM_ALL)
+  # Mark vendored includes as SYSTEM to suppress warnings in consumer code
+  get_target_property(_reflex_inc ReflexLibStatic INTERFACE_INCLUDE_DIRECTORIES)
+  if(_reflex_inc)
+    set_target_properties(ReflexLibStatic PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+    target_include_directories(ReflexLibStatic SYSTEM INTERFACE ${_reflex_inc})
+  endif()
+  # Create namespaced aliases matching installed package
+  if(TARGET ReflexLibStatic AND NOT TARGET Reflex::ReflexLibStatic)
+    add_library(Reflex::ReflexLibStatic ALIAS ReflexLibStatic)
+  endif()
+  set(REFLEX_EXECUTABLE "$<TARGET_FILE:Reflex>")
+else()
+  get_target_property(REFLEX_EXECUTABLE Reflex::Reflex LOCATION)
+endif()
 
-find_package(llama REQUIRED)
+find_package(llama QUIET)
+if(NOT llama_FOUND)
+  message(STATUS "llama.cpp not found — building from vendored submodule")
+  set(LLAMA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendors/llama")
+  if(NOT EXISTS "${LLAMA_SOURCE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "Vendored llama.cpp not found. Run: git submodule update --init --recursive")
+  endif()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_APP OFF CACHE BOOL "" FORCE)
+  set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+  set(LLAMA_CUDA OFF CACHE BOOL "" FORCE)
+  add_subdirectory("${LLAMA_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_vendor/llama" EXCLUDE_FROM_ALL)
+endif()
 
 enable_testing()
 
@@ -84,4 +129,10 @@ add_subdirectory(tests/integration/tools/e2e)
 add_subdirectory(tests/integration/bindings)
 
 add_subdirectory(share/demos)
+
+# Install stdlib alongside the Python package
+install(DIRECTORY share/library/stlib
+        DESTINATION autocog
+        FILES_MATCHING PATTERN "*.stl" PATTERN "*.py"
+        PATTERN "__pycache__" EXCLUDE)
 

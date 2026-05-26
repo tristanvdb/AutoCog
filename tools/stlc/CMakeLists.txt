@@ -16,7 +16,11 @@ target_link_libraries(autocog_stlc PUBLIC
 set_target_properties(autocog_stlc PROPERTIES
   OUTPUT_NAME "stlc"
 )
-install(TARGETS autocog_stlc DESTINATION bin)
+if(SKBUILD_SCRIPTS_DIR)
+  install(TARGETS autocog_stlc DESTINATION ${SKBUILD_SCRIPTS_DIR})
+else()
+  install(TARGETS autocog_stlc DESTINATION bin)
+endif()
 
 add_test(NAME stlc_smoke_test 
          COMMAND stlc -h)

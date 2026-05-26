@@ -1,0 +1,11 @@
+{
+  "main": {
+    "inputs": {
+      "query": {"description": "What kind of story to write (e.g. 'bedtime story', 'adventure')"},
+      "age": {"description": "Target reader age (1-12)"}
+    },
+    "outputs": {
+      "done": {"description": "The formatted story as markdown"}
+    }
+  }
+}

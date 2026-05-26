@@ -1,6 +1,26 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "person"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "age": {
+          "enum": [
+            "child",
+            "teen",
+            "adult",
+            "senior"
+          ],
+          "required": true,
+          "type": "text"
+        },
+        "name": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "person"
+    }
   },
   "prompts": {
     "person": {

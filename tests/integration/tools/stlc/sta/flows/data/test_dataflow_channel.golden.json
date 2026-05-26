@@ -1,6 +1,25 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "thinker"
+    "main": {
+      "inputs": {
+        "problem": {
+          "required": true,
+          "type": "text"
+        },
+        "reflection": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "thinker"
+    }
   },
   "prompts": {
     "thinker": {

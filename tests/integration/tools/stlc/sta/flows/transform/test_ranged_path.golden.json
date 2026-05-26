@@ -1,6 +1,27 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "producer"
+    "main": {
+      "inputs": {
+        "items": {
+          "items": {
+            "max_length": 10,
+            "type": "text"
+          },
+          "length": 10,
+          "required": true,
+          "type": "array"
+        }
+      },
+      "outputs": {
+        "_": {
+          "max_length": 20,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "producer"
+    }
   },
   "prompts": {
     "consumer": {

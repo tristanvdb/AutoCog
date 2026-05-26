@@ -16,7 +16,11 @@ target_link_libraries(autocog_xfta PUBLIC
 set_target_properties(autocog_xfta PROPERTIES
   OUTPUT_NAME "xfta"
 )
-install(TARGETS autocog_xfta DESTINATION bin)
+if(SKBUILD_SCRIPTS_DIR)
+  install(TARGETS autocog_xfta DESTINATION ${SKBUILD_SCRIPTS_DIR})
+else()
+  install(TARGETS autocog_xfta DESTINATION bin)
+endif()
 
 add_test(NAME xfta_smoke_test 
          COMMAND xfta --help)

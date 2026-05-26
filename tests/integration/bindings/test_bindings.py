@@ -9,9 +9,9 @@ import sys
 import os
 import json
 
-import compiler_stl_cxx
-import runtime_sta_cxx
-import backend_llama_cxx
+from autocog.compiler.stl import compiler_stl_cxx
+from autocog.runtime.sta import runtime_sta_cxx
+from autocog.backend.llama import backend_llama_cxx
 
 FIXTURES = sys.argv[1]  # path to tests/fixtures/stl/
 SYNTAX   = sys.argv[2]  # path to share/syntax/default.json

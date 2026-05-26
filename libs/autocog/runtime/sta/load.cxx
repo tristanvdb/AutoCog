@@ -174,10 +174,46 @@ PromptSTA load_prompt(json const & j) {
     return p;
 }
 
+static SchemaField load_schema_field(json const & j) {
+    SchemaField s;
+    s.type = j.value("type", "text");
+    s.required = j.value("required", true);
+    if (s.type == "array") {
+        if (j.contains("items")) {
+            s.items_type = j["items"].value("type", "text");
+            if (j["items"].contains("max_length")) s.items_max_length = j["items"]["max_length"];
+        }
+        if (j.contains("length")) s.length = j["length"];
+        if (j.contains("min_items")) s.min_items = j["min_items"];
+        if (j.contains("max_items")) s.max_items = j["max_items"];
+    } else {
+        if (j.contains("max_length")) s.max_length = j["max_length"];
+        if (j.contains("enum")) {
+            for (auto const & v : j["enum"]) s.enum_values.push_back(v.get<std::string>());
+        }
+    }
+    return s;
+}
+
 Program load_program(json const & j) {
     Program prog;
-    for (auto const & [name, mangled] : j["entry_points"].items()) {
-        prog.entry_points[name] = mangled;
+    if (j.contains("abi_version")) {
+        prog.abi_version = j["abi_version"].get<std::string>();
+    }
+    for (auto const & [name, entry_json] : j["entry_points"].items()) {
+        EntryPoint ep;
+        ep.prompt = entry_json["prompt"];
+        if (entry_json.contains("inputs")) {
+            for (auto const & [iname, ij] : entry_json["inputs"].items()) {
+                ep.inputs[iname] = load_schema_field(ij);
+            }
+        }
+        if (entry_json.contains("outputs")) {
+            for (auto const & [oname, oj] : entry_json["outputs"].items()) {
+                ep.outputs[oname] = load_schema_field(oj);
+            }
+        }
+        prog.entry_points[name] = std::move(ep);
     }
     if (j.contains("python_imports")) {
         for (auto const & [name, imp] : j["python_imports"].items()) {
@@ -342,10 +378,45 @@ json serialize_prompt(PromptSTA const & p) {
     return j;
 }
 
+static json schema_field_to_json(SchemaField const & s) {
+    json j;
+    j["type"] = s.type;
+    j["required"] = s.required;
+    if (s.type == "array") {
+        json items;
+        items["type"] = s.items_type.empty() ? "text" : s.items_type;
+        if (s.items_max_length) items["max_length"] = *s.items_max_length;
+        j["items"] = items;
+        if (s.length) j["length"] = *s.length;
+        if (s.min_items) j["min_items"] = *s.min_items;
+        if (s.max_items) j["max_items"] = *s.max_items;
+    } else {
+        if (s.max_length) j["max_length"] = *s.max_length;
+        if (!s.enum_values.empty()) {
+            j["enum"] = json::array();
+            for (auto const & v : s.enum_values) j["enum"].push_back(v);
+        }
+    }
+    return j;
+}
+
 json serialize_program(Program const & prog) {
     json output;
+    output["abi_version"] = prog.abi_version;
     output["entry_points"] = json::object();
-    for (auto const & [name, mangled] : prog.entry_points) output["entry_points"][name] = mangled;
+    for (auto const & [name, ep] : prog.entry_points) {
+        json entry;
+        entry["prompt"] = ep.prompt;
+        entry["inputs"] = json::object();
+        for (auto const & [iname, sf] : ep.inputs) {
+            entry["inputs"][iname] = schema_field_to_json(sf);
+        }
+        entry["outputs"] = json::object();
+        for (auto const & [oname, sf] : ep.outputs) {
+            entry["outputs"][oname] = schema_field_to_json(sf);
+        }
+        output["entry_points"][name] = entry;
+    }
     output["python_imports"] = json::object();
     for (auto const & [name, imp] : prog.python_imports) {
         output["python_imports"][name] = {{"file", imp.file}, {"target", imp.target}};

@@ -1,5 +1,5 @@
 
-from "stlib/thoughts.stl" import Thought;
+from "thoughts.stl" import Thought;
 from "template.stl" import Step;
 
 record Sentence {

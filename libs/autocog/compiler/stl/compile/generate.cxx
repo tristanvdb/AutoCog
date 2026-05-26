@@ -6,6 +6,7 @@
 #include <climits>
 #include <functional>
 #include <iostream>
+#include <set>
 
 namespace autocog::compiler::stl {
 
@@ -559,11 +560,225 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
 } // anonymous namespace
 
 // ============================================================================
+// Schema generation: collect inputs and outputs for each entry point
+// ============================================================================
+
+static sta::SchemaField format_to_schema(sta::FieldFormat const & fmt) {
+    sta::SchemaField s;
+    s.type = "text";
+    if (auto * cf = std::get_if<sta::CompletionFormat>(&fmt)) {
+        s.type = "text";
+        if (cf->length > 0) s.max_length = cf->length;
+    } else if (auto * ef = std::get_if<sta::EnumFormat>(&fmt)) {
+        s.type = "text";
+        for (auto const & v : ef->values) {
+            // Strip surrounding quotes if present
+            if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
+                s.enum_values.push_back(v.substr(1, v.size() - 2));
+            } else {
+                s.enum_values.push_back(v);
+            }
+        }
+    } else if (std::holds_alternative<sta::ChoiceFormat>(fmt)) {
+        s.type = "text";
+    } else if (std::holds_alternative<std::monostate>(fmt)) {
+        s.type = "object";
+    }
+    return s;
+}
+
+static std::set<std::string> reachable_via_flow(
+    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::string const & entry
+) {
+    std::set<std::string> visited;
+    std::vector<std::string> queue = {entry};
+    while (!queue.empty()) {
+        auto p = queue.back(); queue.pop_back();
+        if (visited.count(p)) continue;
+        visited.insert(p);
+        auto it = prompts.find(p);
+        if (it == prompts.end()) continue;
+        for (auto const & [fname, fentry] : it->second.flows) {
+            if (auto * ft = std::get_if<sta::FlowTarget>(&fentry)) {
+                queue.push_back(ft->prompt);
+            }
+        }
+    }
+    return visited;
+}
+
+static void collect_inputs(
+    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::set<std::string> const & reachable,
+    std::string const & entry_prompt,
+    std::map<std::string, sta::SchemaField> & inputs
+) {
+    for (auto const & pname : reachable) {
+        auto it = prompts.find(pname);
+        if (it == prompts.end()) continue;
+        auto const & prompt = it->second;
+
+        for (auto const & ch : prompt.channels) {
+            if (auto * ic = std::get_if<sta::InputChannel>(&ch)) {
+                // Direct input channel
+                if (ic->source.empty()) continue;
+                std::string name = ic->source.back().name;
+                std::string target_name = ic->target.empty() ? name : ic->target.back().name;
+
+                // Find target field format and range
+                sta::SchemaField schema;
+                schema.type = "text";
+                for (auto const & f : prompt.fields) {
+                    if (f.name == target_name) {
+                        schema = format_to_schema(f.format);
+                        // Array field?
+                        if (f.range.has_value()) {
+                            auto items = format_to_schema(f.format);
+                            schema.type = "array";
+                            schema.items_type = items.type;
+                            schema.items_max_length = items.max_length;
+                            schema.enum_values.clear();
+                            auto [lo, hi] = f.range.value();
+                            if (lo == hi) {
+                                schema.length = lo;
+                            } else {
+                                schema.min_items = lo;
+                                schema.max_items = hi;
+                            }
+                        }
+                        break;
+                    }
+                }
+                // InputChannel format takes precedence
+                if (inputs.count(name) == 0 || schema.type != "text") {
+                    schema.required = (pname == entry_prompt);
+                    inputs[name] = schema;
+                }
+
+            } else if (auto * cc = std::get_if<sta::CallChannel>(&ch)) {
+                for (auto const & kw : cc->kwargs) {
+                    if (kw.is_input && !kw.value.has_value()) {
+                        if (kw.path.empty()) continue;
+                        std::string name = kw.path.back().name;
+                        if (inputs.count(name) == 0) {
+                            sta::SchemaField schema;
+                            schema.type = "text";
+                            schema.required = (pname == entry_prompt);
+                            inputs[name] = schema;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Mark required: inputs used in entry prompt or on unconditional chain
+    std::string current = entry_prompt;
+    std::set<std::string> unconditional;
+    while (!current.empty() && unconditional.count(current) == 0) {
+        unconditional.insert(current);
+        auto it = prompts.find(current);
+        if (it == prompts.end()) break;
+        // Count control flows
+        std::string next;
+        int control_count = 0;
+        for (auto const & [fname, fentry] : it->second.flows) {
+            if (auto * ft = std::get_if<sta::FlowTarget>(&fentry)) {
+                control_count++;
+                next = ft->prompt;
+            }
+        }
+        current = (control_count == 1) ? next : "";
+    }
+    // Inputs used in unconditional prompts are required
+    for (auto & [name, schema] : inputs) {
+        for (auto const & pname : reachable) {
+            if (unconditional.count(pname) == 0) continue;
+            auto it = prompts.find(pname);
+            if (it == prompts.end()) continue;
+            for (auto const & ch : it->second.channels) {
+                bool found = false;
+                if (auto * ic = std::get_if<sta::InputChannel>(&ch)) {
+                    if (!ic->source.empty() && ic->source.back().name == name) found = true;
+                } else if (auto * cc = std::get_if<sta::CallChannel>(&ch)) {
+                    for (auto const & kw : cc->kwargs) {
+                        if (kw.is_input && !kw.path.empty() && kw.path.back().name == name) found = true;
+                    }
+                }
+                if (found) { schema.required = true; break; }
+            }
+        }
+    }
+}
+
+static void collect_outputs(
+    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::set<std::string> const & reachable,
+    std::map<std::string, sta::SchemaField> & outputs
+) {
+    for (auto const & pname : reachable) {
+        auto it = prompts.find(pname);
+        if (it == prompts.end()) continue;
+        auto const & prompt = it->second;
+
+        // Check for return flows
+        for (auto const & [fname, fentry] : prompt.flows) {
+            auto * rt = std::get_if<sta::ReturnTarget>(&fentry);
+            if (!rt) continue;
+            for (auto const & rf : rt->fields) {
+                std::string name = rf.alias.empty() ? "_" : rf.alias;
+                sta::SchemaField schema;
+                schema.type = "text";
+                if (!rf.path.empty()) {
+                    std::string field_name = rf.path.back().first;
+                    for (auto const & f : prompt.fields) {
+                        if (f.name == field_name) {
+                            schema = format_to_schema(f.format);
+                            if (f.range.has_value()) {
+                                auto items = format_to_schema(f.format);
+                                schema.type = "array";
+                                schema.items_type = items.type;
+                                schema.items_max_length = items.max_length;
+                                schema.enum_values.clear();
+                                auto [lo, hi] = f.range.value();
+                                if (lo == hi) schema.length = lo;
+                                else { schema.min_items = lo; schema.max_items = hi; }
+                            }
+                            break;
+                        }
+                    }
+                }
+                outputs[name] = schema;
+            }
+        }
+
+        // Terminal prompts (no flows): output is the full frame
+        if (prompt.flows.empty()) {
+            for (auto const & f : prompt.fields) {
+                if (std::holds_alternative<std::monostate>(f.format)) continue; // skip records
+                sta::SchemaField schema = format_to_schema(f.format);
+                if (f.range.has_value()) {
+                    auto items = format_to_schema(f.format);
+                    schema.type = "array";
+                    schema.items_type = items.type;
+                    schema.items_max_length = items.max_length;
+                    schema.enum_values.clear();
+                    auto [lo, hi] = f.range.value();
+                    if (lo == hi) schema.length = lo;
+                    else { schema.min_items = lo; schema.max_items = hi; }
+                }
+                outputs[f.name] = schema;
+            }
+        }
+    }
+}
+
+// ============================================================================
 // Stage 6: Generate STA
 // ============================================================================
 
 std::optional<int> Driver::run_generate() {
-    sta.entry_points.insert(entry_point_map.begin(), entry_point_map.end());
 
     // Populate Python imports from symbol table
     for (auto const & [key, sym] : tables.symbols) {
@@ -644,6 +859,21 @@ std::optional<int> Driver::run_generate() {
                   << pstas.sequence.size() << " sequence" << std::endl;
     }
 #endif
+
+    // Set ABI version
+    sta.abi_version = AUTOCOG_VERSION;
+
+    // Build entry points with schemas (must be after prompts are populated)
+    for (auto const & [entry_name, mangled] : entry_point_map) {
+        sta::EntryPoint ep;
+        ep.prompt = mangled;
+
+        auto reachable = reachable_via_flow(sta.prompts, mangled);
+        collect_inputs(sta.prompts, reachable, mangled, ep.inputs);
+        collect_outputs(sta.prompts, reachable, ep.outputs);
+
+        sta.entry_points[entry_name] = std::move(ep);
+    }
 
     return std::nullopt;
 }

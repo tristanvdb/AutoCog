@@ -1,9 +1,11 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
+#include "autocog/runtime/sta/load.hxx"
 #include "autocog/runtime/sta/parse.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
 #include "autocog/runtime/store/store.hxx"
 
+#include <fstream>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -61,6 +63,20 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
             return store::syntaxes().add(sta::load_syntax(path));
         },
         "Load a syntax description from a JSON file and return a SyntaxID",
+        py::arg("path")
+    );
+
+    module.def("load_program",
+        [](std::string const & path) -> int {
+            std::ifstream f(path);
+            if (!f.is_open()) {
+                throw std::runtime_error("Cannot open STA file: " + path);
+            }
+            auto j = nlohmann::json::parse(f);
+            auto program = sta::load_program(j);
+            return store::programs().add(std::move(program));
+        },
+        "Load a pre-compiled STA program from a JSON file and return a ProgramID",
         py::arg("path")
     );
 

@@ -1,6 +1,17 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "storage"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 10,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "storage"
+    }
   },
   "prompts": {
     "storage": {

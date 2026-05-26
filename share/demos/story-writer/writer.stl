@@ -1,6 +1,6 @@
 
-from "stlib/thoughts.stl" import Thought, reflexion;
-from "stlib/datastore.py" import store as stlib_store, retrieve as stlib_retrieve;
+from "thoughts.stl" import Thought, reflexion;
+from "datastore.py" import store as stlib_store, retrieve as stlib_retrieve;
 
 from "template.stl" import Age, TplDesc, Template;
 from "template.py" import list_templates, open_template, collate_task, collate_comment;

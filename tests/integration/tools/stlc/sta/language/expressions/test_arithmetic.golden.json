@@ -1,6 +1,17 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "test__2"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 10,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "test__2"
+    }
   },
   "prompts": {
     "test__2": {

@@ -1,6 +1,17 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "grid__2"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 14,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "grid__2"
+    }
   },
   "prompts": {
     "grid__2": {

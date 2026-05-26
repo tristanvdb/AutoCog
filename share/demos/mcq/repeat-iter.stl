@@ -2,7 +2,7 @@
 // Uses reflexive thinking with retry capability
 // The LLM can loop back to improve its answer based on reflection
 
-from "stlib/thoughts.stl" import Thought;
+from "thoughts.stl" import Thought;
 
 prompt main {
   is {

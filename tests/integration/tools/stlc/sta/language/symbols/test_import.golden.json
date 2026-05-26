@@ -1,6 +1,26 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "main"
+    "main": {
+      "inputs": {
+        "container": {
+          "required": true,
+          "type": "object"
+        },
+        "data": {
+          "max_length": 10,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "object"
+        }
+      },
+      "prompt": "main"
+    }
   },
   "prompts": {
     "LibPrompt": {

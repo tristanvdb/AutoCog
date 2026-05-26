@@ -1,6 +1,21 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "quiz"
+    "main": {
+      "inputs": {
+        "question": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "quiz"
+    }
   },
   "prompts": {
     "quiz": {

@@ -16,7 +16,11 @@ target_link_libraries(autocog_ista PUBLIC
 set_target_properties(autocog_ista PROPERTIES
   OUTPUT_NAME "ista"
 )
-install(TARGETS autocog_ista DESTINATION bin)
+if(SKBUILD_SCRIPTS_DIR)
+  install(TARGETS autocog_ista DESTINATION ${SKBUILD_SCRIPTS_DIR})
+else()
+  install(TARGETS autocog_ista DESTINATION bin)
+endif()
 
 add_test(NAME ista_smoke_test
          COMMAND ista --help)

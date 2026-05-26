@@ -1,6 +1,25 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "processor"
+    "main": {
+      "inputs": {
+        "input": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "intermediate": {
+          "required": true,
+          "type": "text"
+        },
+        "output": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "processor"
+    }
   },
   "prompts": {
     "processor": {

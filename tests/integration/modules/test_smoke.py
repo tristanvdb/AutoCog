@@ -9,15 +9,15 @@ class TestBindings:
     """Verify all three bindings import and respond."""
 
     def test_compiler_import(self):
-        import compiler_stl_cxx
+        from autocog.compiler.stl import compiler_stl_cxx
         assert hasattr(compiler_stl_cxx, "compile")
 
     def test_runtime_import(self):
-        import runtime_sta_cxx
+        from autocog.runtime.sta import runtime_sta_cxx
         assert hasattr(runtime_sta_cxx, "instantiate")
 
     def test_backend_import(self):
-        import backend_llama_cxx
+        from autocog.backend.llama import backend_llama_cxx
         assert backend_llama_cxx.vocab_size(0) == 258  # RNG model
 
 
@@ -84,12 +84,12 @@ class TestRealModel:
     def test_llama3_engine(self, real_engine):
         """Verify Engine initializes with the llama3-test model."""
         assert real_engine.model_id > 0
-        import backend_llama_cxx
+        from autocog.backend.llama import backend_llama_cxx
         assert backend_llama_cxx.vocab_size(real_engine.model_id) == 128256
 
     def test_llama3_tokenize_roundtrip(self, real_engine):
         """Verify tokenization roundtrip with real tokenizer."""
-        import backend_llama_cxx
+        from autocog.backend.llama import backend_llama_cxx
         text = "topic:Science\nquestion:What is H2O?\n"
         tokens = backend_llama_cxx.tokenize(real_engine.model_id, text, False)
         assert len(tokens) > 0
@@ -146,3 +146,146 @@ class TestWriterDemo:
             steps += 1
         assert ctx.done, f"Writer did not complete after {steps} steps, at prompt={ctx.prompt}"
         assert steps <= 30, f"Writer took too many steps: {steps}"
+
+
+
+class TestSchema:
+    """Test input/output schema in STA entry_points."""
+
+    def test_mcq_schema(self, repo_root):
+        import autocog
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        s = prog.input_schema("main")
+        assert "topic" in s
+        assert "question" in s
+        assert "choices" in s
+        assert s["topic"]["type"] == "text"
+        assert s["topic"]["required"] is True
+        assert s["choices"]["type"] == "array"
+        assert s["choices"]["items"]["type"] == "text"
+        assert s["choices"]["length"] == 4
+        # Output schema
+        o = prog.output_schema("main")
+        assert "_" in o
+
+    def test_writer_schema(self, repo_root):
+        import autocog
+        prog = autocog.compile(
+            str(repo_root / "share/demos/story-writer/writer.stl"),
+            includes=[str(repo_root / "share/demos/story-writer")]
+        )
+        s = prog.input_schema("main")
+        assert "query" in s
+        assert "age" in s
+        assert s["query"]["required"] is True
+        assert s["age"]["required"] is True
+        assert "enum" in s["age"]
+        assert len(s["age"]["enum"]) == 12
+        # Output schema
+        o = prog.output_schema("main")
+        assert "done" in o
+
+    def test_loaded_program_schema(self, repo_root):
+        import autocog, json, tempfile, os
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(prog.sta, f)
+            tmp = f.name
+        try:
+            prog2 = autocog.load(tmp)
+            s = prog2.input_schema("main")
+            assert "topic" in s
+        finally:
+            os.unlink(tmp)
+
+
+class TestStapp:
+    """Test .stapp pack and run."""
+
+    def test_pack_and_run(self, repo_root):
+        import autocog, tempfile, os
+        from autocog.stapp import pack, load_stapp
+        import shutil
+
+        stl = str(repo_root / "share/demos/mcq/select.stl")
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+
+        try:
+            pack(stl, [], stapp_path)
+            prog, manifest, temp_dir, inc = load_stapp(stapp_path)
+            try:
+                assert "main" in prog.entry_points
+                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
+                result = engine.run(prog, externals={}, topic="Sci", question="2+2?", choices=["3","4","5"])
+                assert isinstance(result, str)
+            finally:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            os.unlink(stapp_path)
+
+    def test_pack_no_source(self, repo_root):
+        import tempfile, os, zipfile
+        from autocog.stapp import pack
+
+        stl = str(repo_root / "share/demos/mcq/select.stl")
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+
+        try:
+            pack(stl, [], stapp_path, no_source=True)
+            with zipfile.ZipFile(stapp_path) as zf:
+                names = zf.namelist()
+                assert "program.sta.json" in names
+                assert "select.stl" not in names
+        finally:
+            os.unlink(stapp_path)
+
+    def test_pack_recompile(self, repo_root):
+        import autocog, tempfile, os
+        from autocog.stapp import pack, load_stapp
+        import shutil
+
+        stl = str(repo_root / "share/demos/mcq/select.stl")
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+
+        try:
+            pack(stl, [], stapp_path)
+            prog, manifest, temp_dir, inc = load_stapp(stapp_path, recompile=True)
+            try:
+                assert "main" in prog.entry_points
+            finally:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            os.unlink(stapp_path)
+
+    def test_writer_stapp(self, repo_root):
+        import autocog, tempfile, os
+        from autocog.stapp import pack, load_stapp
+        from autocog.__main__ import load_externals
+        import shutil
+
+        stl = str(repo_root / "share/demos/story-writer/writer.stl")
+        inc = [str(repo_root / "share/demos/story-writer")]
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+
+        try:
+            pack(stl, inc, stapp_path)
+            prog, manifest, temp_dir, inc_paths = load_stapp(stapp_path)
+            try:
+                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
+                externals = load_externals(prog, inc_paths)
+                from autocog.context import Context
+                ctx = Context(prog, engine, prog.entry_prompt("main"),
+                              {"query": "bedtime", "age": "3"}, externals)
+                steps = 0
+                while not ctx.done and steps < 30:
+                    ctx.step()
+                    steps += 1
+                assert ctx.done, f"Writer .stapp did not complete after {steps} steps"
+            finally:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            os.unlink(stapp_path)

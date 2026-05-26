@@ -28,3 +28,5 @@ add_test(NAME runtime_sta_binding_smoke_test
 set_tests_properties(runtime_sta_binding_smoke_test PROPERTIES
     LABELS "bindings"
     ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}")
+
+set_target_properties(autocog_runtime_sta_pybind PROPERTIES INSTALL_RPATH "$ORIGIN/../..")

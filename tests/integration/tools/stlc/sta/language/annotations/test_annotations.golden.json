@@ -1,6 +1,26 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "questioner"
+    "main": {
+      "inputs": {
+        "topic": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "enum": [
+            "yes",
+            "no",
+            "maybe"
+          ],
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "questioner"
+    }
   },
   "prompts": {
     "questioner": {

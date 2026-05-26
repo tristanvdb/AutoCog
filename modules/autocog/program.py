@@ -1,8 +1,11 @@
 """
-Program — compiled STA, wraps a ProgramID.
+Program — compiled or loaded STA, wraps a ProgramID.
 """
 
-import compiler_stl_cxx
+import os
+
+from autocog.compiler.stl import compiler_stl_cxx
+from autocog.runtime.sta import runtime_sta_cxx
 
 
 class Program:
@@ -21,7 +24,23 @@ class Program:
 
     @property
     def entry_points(self):
+        """Map of entry name → {prompt, inputs, outputs}."""
         return self.sta["entry_points"]
+
+    def entry_prompt(self, entry="main"):
+        """Get the prompt name for an entry point."""
+        ep = self.entry_points.get(entry)
+        if ep is None:
+            raise ValueError(f"Entry point '{entry}' not found")
+        return ep["prompt"]
+
+    def input_schema(self, entry="main"):
+        """Get the input schema for an entry point."""
+        return self.entry_points.get(entry, {}).get("inputs", {})
+
+    def output_schema(self, entry="main"):
+        """Get the output schema for an entry point."""
+        return self.entry_points.get(entry, {}).get("outputs", {})
 
     @property
     def prompts(self):
@@ -46,11 +65,36 @@ class Program:
                 pass
 
 
+def _stdlib_path():
+    """Return the path to the installed stlib directory."""
+    pkg_dir = os.path.dirname(os.path.abspath(__file__))
+    stlib = os.path.join(pkg_dir, "stlib")
+    if os.path.isdir(stlib):
+        return stlib
+    # Fallback: development layout (share/library/stlib)
+    repo = os.path.dirname(os.path.dirname(pkg_dir))
+    stlib = os.path.join(repo, "share", "library", "stlib")
+    if os.path.isdir(stlib):
+        return stlib
+    return None
+
+
 def compile(filepath, includes=None, entry_points=None):
     """Compile an STL file into a Program."""
+    inc = list(includes or [])
+    # Add stdlib as implicit include (lowest priority)
+    stdlib = _stdlib_path()
+    if stdlib and stdlib not in inc:
+        inc.append(stdlib)
     pid = compiler_stl_cxx.compile(
         filepath,
-        includes=includes or [],
+        includes=inc,
         entry_points=entry_points or ["main"]
     )
+    return Program(pid)
+
+
+def load(filepath):
+    """Load a pre-compiled STA JSON file into a Program."""
+    pid = runtime_sta_cxx.load_program(filepath)
     return Program(pid)

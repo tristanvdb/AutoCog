@@ -96,6 +96,29 @@ struct ReturnTarget {
 using FlowEntry = std::variant<FlowTarget, ReturnTarget>;
 
 // ============================================================================
+// Input/Output Schema
+// ============================================================================
+
+struct SchemaField {
+    std::string type;                        // "text", "array", "object"
+    bool required{true};
+    std::optional<int> max_length;           // for text fields
+    std::vector<std::string> enum_values;    // for enum fields
+    // For arrays:
+    std::string items_type;                  // element type (for arrays)
+    std::optional<int> items_max_length;     // element max_length (for arrays)
+    std::optional<int> length;               // fixed array length
+    std::optional<int> min_items;
+    std::optional<int> max_items;
+};
+
+struct EntryPoint {
+    std::string prompt;
+    std::map<std::string, SchemaField> inputs;
+    std::map<std::string, SchemaField> outputs;
+};
+
+// ============================================================================
 // Per-prompt STA
 // ============================================================================
 
@@ -119,7 +142,8 @@ struct PythonImport {
 };
 
 struct Program {
-    std::map<std::string, std::string> entry_points;
+    std::string abi_version;
+    std::map<std::string, EntryPoint> entry_points;
     std::map<std::string, PromptSTA> prompts;
     std::map<std::string, PythonImport> python_imports;
 };

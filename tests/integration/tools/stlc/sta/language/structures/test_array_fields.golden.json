@@ -1,6 +1,20 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "collector"
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "items": {
+            "type": "text"
+          },
+          "length": 5,
+          "required": true,
+          "type": "array"
+        }
+      },
+      "prompt": "collector"
+    }
   },
   "prompts": {
     "collector": {

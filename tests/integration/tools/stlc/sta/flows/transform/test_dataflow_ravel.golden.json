@@ -1,6 +1,40 @@
 {
+  "abi_version": "0.4.3",
   "entry_points": {
-    "main": "producer"
+    "main": {
+      "inputs": {
+        "items_a": {
+          "items": {
+            "max_length": 5,
+            "type": "text"
+          },
+          "length": 2,
+          "required": true,
+          "type": "array"
+        },
+        "items_b": {
+          "items": {
+            "max_length": 5,
+            "type": "text"
+          },
+          "length": 2,
+          "required": true,
+          "type": "array"
+        }
+      },
+      "outputs": {
+        "_": {
+          "items": {
+            "max_length": 5,
+            "type": "text"
+          },
+          "length": 2,
+          "required": true,
+          "type": "array"
+        }
+      },
+      "prompt": "producer"
+    }
   },
   "prompts": {
     "producer": {

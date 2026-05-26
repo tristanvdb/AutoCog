@@ -13,7 +13,11 @@ target_link_libraries(autocog_psta PUBLIC
 set_target_properties(autocog_psta PROPERTIES
   OUTPUT_NAME "psta"
 )
-install(TARGETS autocog_psta DESTINATION bin)
+if(SKBUILD_SCRIPTS_DIR)
+  install(TARGETS autocog_psta DESTINATION ${SKBUILD_SCRIPTS_DIR})
+else()
+  install(TARGETS autocog_psta DESTINATION bin)
+endif()
 
 add_test(NAME psta_smoke_test
          COMMAND psta --help)
