@@ -1,0 +1,179 @@
+[
+  {
+    "description": "Simple annotation with string",
+    "tag": "Annotate",
+    "code": "annotate \"This is a description\";",
+    "should_pass": true
+  },
+  {
+    "description": "Simple annotation with f-string",
+    "tag": "Annotate",
+    "code": "annotate f\"Description for {item}\";",
+    "should_pass": true
+  },
+  {
+    "description": "Empty annotation block",
+    "tag": "Annotate",
+    "code": "annotate { }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation block with underscore (self reference)",
+    "tag": "Annotate",
+    "code": "annotate { _ as \"General description\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation block with field",
+    "tag": "Annotate",
+    "code": "annotate { field as \"Description of field\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation block with nested path",
+    "tag": "Annotate",
+    "code": "annotate { field.subfield as \"Description of nested field\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation block with deep nesting",
+    "tag": "Annotate",
+    "code": "annotate { a_prompt.field.subfield.value as \"Deep path annotation\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Multiple annotations in block",
+    "tag": "Annotate",
+    "code": "annotate { field1 as \"First field\"; field2 as \"Second field\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Mixed underscore and field annotations",
+    "tag": "Annotate",
+    "code": "annotate { _ as \"Object description\"; field as \"Field description\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation with empty string",
+    "tag": "Annotate",
+    "code": "annotate \"\";",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation with special characters in string",
+    "tag": "Annotate",
+    "code": "annotate \"Description with \\\"quotes\\\" and \\n newlines\";",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation block with f-strings",
+    "tag": "Annotate",
+    "code": "annotate { field as f\"Dynamic description for {n}\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Top-level annotation referencing prompts",
+    "tag": "Annotate",
+    "code": "annotate { my_prompt as \"Prompt description\"; my_prompt.field as \"Field in prompt\"; }",
+    "should_pass": true,
+    "semantically_correct": true
+  },
+  {
+    "description": "Annotation with underscore in field names",
+    "tag": "Annotate",
+    "code": "annotate { my_field as \"Field with underscore\"; my_field.sub_field as \"Nested field\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation with numbers in identifiers",
+    "tag": "Annotate",
+    "code": "annotate { field1 as \"First\"; field2.subfield3 as \"Numbered fields\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation without string - fails",
+    "tag": "Annotate",
+    "code": "annotate",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with unquoted text - fails",
+    "tag": "Annotate",
+    "code": "annotate This is not quoted",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation block missing 'as' keyword - fails",
+    "tag": "Annotate",
+    "code": "annotate { field \"Description\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation block with reversed order - fails",
+    "tag": "Annotate",
+    "code": "annotate { \"Description\" as field; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with identifier instead of string - fails",
+    "tag": "Annotate",
+    "code": "annotate description",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with number - fails",
+    "tag": "Annotate",
+    "code": "annotate 42",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation block with missing semicolon - fails",
+    "tag": "Annotate",
+    "code": "annotate { field as \"First\" field2 as \"Second\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with unclosed block - fails",
+    "tag": "Annotate",
+    "code": "annotate { field as \"Description\";",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with path but no string - fails",
+    "tag": "Annotate",
+    "code": "annotate { field as; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with array index in path - should parse but semantically incorrect",
+    "tag": "Annotate",
+    "code": "annotate { field[0] as \"Indexed field\"; }",
+    "should_pass": true,
+    "semantically_correct": false
+  },
+  {
+    "description": "Annotation with range in path - should parse but semantically incorrect",
+    "tag": "Annotate",
+    "code": "annotate { items[1:5] as \"Range annotation\"; }",
+    "should_pass": true,
+    "semantically_correct": false
+  },
+  {
+    "description": "Annotation with path starting with dot - fails",
+    "tag": "Annotate",
+    "code": "annotate { .field as \"Description\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with path ending with dot - fails",
+    "tag": "Annotate",
+    "code": "annotate { field. as \"Description\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation with reserved keyword in path - fails",
+    "tag": "Annotate",
+    "code": "annotate { return as \"Description\"; }",
+    "should_pass": false
+  }
+]

@@ -1,0 +1,152 @@
+[
+  {
+    "description": "Simple bind clause",
+    "tag": "Bind",
+    "code": "bind(source, target)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with single argument",
+    "tag": "Bind",
+    "code": "bind(source)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with underscore source",
+    "tag": "Bind",
+    "code": "bind(_, target)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with underscore target",
+    "tag": "Bind",
+    "code": "bind(source, _)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with both underscores",
+    "tag": "Bind",
+    "code": "bind(_, _)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with nested paths",
+    "tag": "Bind",
+    "code": "bind(a.b, x.y)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind with indexed paths",
+    "tag": "Bind",
+    "code": "bind(items[0], target[1])",
+    "should_pass": true
+  },
+  {
+    "description": "Simple ravel clause",
+    "tag": "Ravel",
+    "code": "ravel",
+    "should_pass": true
+  },
+  {
+    "description": "Ravel with depth parameter",
+    "tag": "Ravel",
+    "code": "ravel(2)",
+    "should_pass": true
+  },
+  {
+    "description": "Ravel with expression depth",
+    "tag": "Ravel",
+    "code": "ravel(max_depth)",
+    "should_pass": true
+  },
+  {
+    "description": "Ravel with target path",
+    "tag": "Ravel",
+    "code": "ravel(2, result)",
+    "should_pass": true
+  },
+  {
+    "description": "Ravel with underscore target",
+    "tag": "Ravel",
+    "code": "ravel(1, _)",
+    "should_pass": true
+  },
+  {
+    "description": "Simple wrap clause",
+    "tag": "Wrap",
+    "code": "wrap",
+    "should_pass": true
+  },
+  {
+    "description": "Wrap with target",
+    "tag": "Wrap",
+    "code": "wrap(result)",
+    "should_pass": true
+  },
+  {
+    "description": "Wrap with underscore target",
+    "tag": "Wrap",
+    "code": "wrap(_)",
+    "should_pass": true
+  },
+  {
+    "description": "Simple prune clause",
+    "tag": "Prune",
+    "code": "prune(temp)",
+    "should_pass": true
+  },
+  {
+    "description": "Prune with nested path",
+    "tag": "Prune",
+    "code": "prune(cache.temporary)",
+    "should_pass": true
+  },
+  {
+    "description": "Prune with indexed path",
+    "tag": "Prune",
+    "code": "prune(items[0])",
+    "should_pass": true
+  },
+  {
+    "description": "Mapped clause",
+    "tag": "Mapped",
+    "code": "mapped",
+    "should_pass": true
+  },
+  {
+    "description": "Mapped with target",
+    "tag": "Mapped",
+    "code": "mapped(results)",
+    "should_pass": true
+  },
+  {
+    "description": "Mapped with underscore",
+    "tag": "Mapped",
+    "code": "mapped(_)",
+    "should_pass": true
+  },
+  {
+    "description": "Bind without parentheses - fails",
+    "tag": "Bind",
+    "code": "bind",
+    "should_pass": false
+  },
+  {
+    "description": "Bind with three arguments - fails",
+    "tag": "Bind",
+    "code": "bind(a, b, c)",
+    "should_pass": false
+  },
+  {
+    "description": "Wrap with two arguments - fails",
+    "tag": "Wrap",
+    "code": "wrap(source, target)",
+    "should_pass": false
+  },
+  {
+    "description": "Prune without argument - fails",
+    "tag": "Prune",
+    "code": "prune",
+    "should_pass": false
+  }
+]

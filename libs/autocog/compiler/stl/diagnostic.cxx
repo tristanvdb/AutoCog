@@ -1,7 +1,13 @@
 
 #include "autocog/compiler/stl/diagnostic.hxx"
 
+#include <iostream>
+#include <exception>
+#include <execinfo.h>
+#include <cxxabi.h>
+#include <dlfcn.h>
 #include <sstream>
+#include <vector>
 
 #include <stdexcept>
 
@@ -15,6 +21,14 @@ Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_) :
   notes()
 {}
 
+Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, SourceLocation location_) :
+  level(level_),
+  message(message_),
+  source_line(std::nullopt),
+  location(location_),
+  notes()
+{}
+
 Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, std::string source_line_, SourceLocation location_) :
   level(level_),
   message(message_),
@@ -23,12 +37,20 @@ Diagnostic::Diagnostic(DiagnosticLevel const level_, std::string message_, std::
   notes()
 {}
 
-std::string Diagnostic::format() const {
+std::string Diagnostic::format(std::unordered_map<std::string, int> const & fileids) const {
     std::stringstream ss;
     
     // Main error message
     if (location) {
-      ss << location.value().line << ":" << location.value().column << ": ";
+      auto const & loc = location.value();
+      std::string filepath = "unknown";
+      for (auto [fpath,fid]: fileids) {
+        if (fid == loc.fid) {
+          filepath = fpath;
+          break;
+        }
+      }
+      ss << filepath << ":"  << loc.line << ":" << loc.column << ": ";
     }
     switch (level) {
         case DiagnosticLevel::Error:   ss << "error: ";   break;
@@ -51,6 +73,18 @@ std::string Diagnostic::format() const {
     }
     
     return ss.str();
+}
+
+CompileError::CompileError(
+  std::string msg,
+  std::optional<SourceRange> loc
+) :
+  message(std::move(msg)),
+  location(loc)
+{}
+  
+const char * CompileError::what() const noexcept {
+  return message.c_str();
 }
 
 }

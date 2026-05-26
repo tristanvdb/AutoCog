@@ -1,0 +1,176 @@
+[
+  {
+    "description": "Empty struct",
+    "tag": "Struct",
+    "code": "{}",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with single field",
+    "tag": "Struct",
+    "code": "{ name is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with two fields",
+    "tag": "Struct",
+    "code": "{ name is text; age is integer; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with formatted text field",
+    "tag": "Struct",
+    "code": "{ title is text<length=100>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with enum field",
+    "tag": "Struct",
+    "code": "{ status is enum(\"active\", \"inactive\"); }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with choice field",
+    "tag": "Struct",
+    "code": "{ selection is select(options); }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with bounded array field",
+    "tag": "Struct",
+    "code": "{ items[1:10] is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with fixed size array",
+    "tag": "Struct",
+    "code": "{ pair[2] is integer; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with optional field (lower bound 0)",
+    "tag": "Struct",
+    "code": "{ optional[0:1] is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with unbounded array",
+    "tag": "Struct",
+    "code": "{ items[1:] is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with nested struct",
+    "tag": "Struct",
+    "code": "{ person is { name is text; age is integer; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with multiple nested structs",
+    "tag": "Struct",
+    "code": "{ field_from is { x is integer; y is integer; } field_to is { x is integer; y is integer; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with array of structs",
+    "tag": "Struct",
+    "code": "{ people[1:5] is { name is text; age is integer; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Deeply nested struct",
+    "tag": "Struct",
+    "code": "{ data is { items is { value is text; } } }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with identifier type reference",
+    "tag": "Struct",
+    "code": "{ user is Person; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with parameterized type reference",
+    "tag": "Struct",
+    "code": "{ data is DataType<mode=\"strict\">; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with mixed field types",
+    "tag": "Struct",
+    "code": "{ id is integer; name is text; tags[0:10] is text; metadata is { created is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with expression bounds",
+    "tag": "Struct",
+    "code": "{ items[min:max] is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Struct with complex expression bounds",
+    "tag": "Struct",
+    "code": "{ items[(start + 1):(end * 2)] is text; }",
+    "should_pass": true
+  },
+  {
+    "description": "Format field without semicolon - fails",
+    "tag": "Struct",
+    "code": "{ name is text }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct field missing type - fails",
+    "tag": "Struct",
+    "code": "{ name is; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct field missing 'is' - fails",
+    "tag": "Struct",
+    "code": "{ name text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with trailing comma instead of semicolon - fails",
+    "tag": "Struct",
+    "code": "{ name is text, age is integer; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with unclosed brace - fails",
+    "tag": "Struct",
+    "code": "{ name is text;",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with unmatched closing brace - fails",
+    "tag": "Struct",
+    "code": "name is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with invalid bounds syntax - fails",
+    "tag": "Struct",
+    "code": "{ items[1-10] is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with empty field name - fails",
+    "tag": "Struct",
+    "code": "{ is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with reserved keyword as field name - fails",
+    "tag": "Struct",
+    "code": "{ return is text; }",
+    "should_pass": false
+  },
+  {
+    "description": "Struct with trailing semicolon",
+    "tag": "Struct",
+    "code": "{ person is { name is text; age is integer; }; }",
+    "should_pass": false
+  }
+]

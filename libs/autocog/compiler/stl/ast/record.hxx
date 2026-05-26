@@ -4,13 +4,11 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Record) {
-  std::string name;
-  MAPPED(Define)  defines;
-  ONODE(Annotate) annotate;
-  ONODE(Search)   search;
-
-  VARIANT(Struct, Format) record;
+  NODE(Identifier) name;
+  VARIANT(Struct, FormatRef) record;
+  VARIANTS(Define, Annotate, Search, Alias) constructs;
 };
+TRAVERSE_CHILDREN(Record, name, record, constructs)
 
 }
 

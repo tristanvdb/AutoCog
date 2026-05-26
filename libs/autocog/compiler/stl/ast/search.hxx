@@ -7,10 +7,12 @@ DATA(Param) {
   NODES(Identifier) locator;
   NODE(Expression)  value;
 };
+TRAVERSE_CHILDREN(Param, locator, value)
 
 DATA(Search) {
   NODES(Param) params;
 };
+TRAVERSE_CHILDREN(Search, params)
 
 }
 

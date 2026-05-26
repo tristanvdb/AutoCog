@@ -1,0 +1,171 @@
+[
+  {
+    "description": "Minimal prompt with empty struct",
+    "tag": "Program",
+    "code": "prompt Simple { is { } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with single field",
+    "tag": "Program",
+    "code": "prompt Input { is { field is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with multiple fields",
+    "tag": "Program",
+    "code": "prompt Data { is { name is text; age is integer; active is boolean; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with channel",
+    "tag": "Program",
+    "code": "prompt Process { is { input is text; } channel { output use a_prompt.input; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with flow",
+    "tag": "Program",
+    "code": "prompt Step { is { data is text; } flow next_step; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with return",
+    "tag": "Program",
+    "code": "prompt Calculate { is { x is integer; y is integer; } return use result; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with channel and flow",
+    "tag": "Program",
+    "code": "prompt Transform { is { input is text; } channel { output use a_prompt.input; } flow next; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with channel and return",
+    "tag": "Program",
+    "code": "prompt Compute { is { data is text; } channel { result is \"computed\"; } return use result; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with all sections",
+    "tag": "Program",
+    "code": "prompt Complete { is { input is text; } channel { processed use a_prompt.input; } flow continue; return use processed; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with annotation",
+    "tag": "Program",
+    "code": "prompt Documented { annotate \"This prompt processes data\"; is { data is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with search",
+    "tag": "Program",
+    "code": "prompt Configured { search { model is \"gpt-4\"; } is { query is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with defines",
+    "tag": "Program",
+    "code": "prompt WithConstants { define max = 100; is { value[1:max] is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with arguments",
+    "tag": "Program",
+    "code": "prompt Parameterized { argument mode = \"strict\"; is { data is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with complex channel",
+    "tag": "Program",
+    "code": "prompt Complex { is { input is text; } channel { temp call transform { data use source.input; }; output use temp.result; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with flow block",
+    "tag": "Program",
+    "code": "prompt Branching { is { choice is boolean; } flow { option_a as \"yes\"; option_b as \"no\"; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with return block",
+    "tag": "Program",
+    "code": "prompt MultiReturn { is { a is text; b is integer; } return { first use a; second use b; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with nested struct fields",
+    "tag": "Program",
+    "code": "prompt Nested { is { person is { name is text; address is { city is text; } } } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with all metadata sections",
+    "tag": "Program",
+    "code": "prompt Full { argument size = 10; define max = 100; annotate \"Full example\"; search { temp is 0.8; } is { data[1:size] is text<length=max>; } channel { output use source.data; } flow done; return use output; }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with underscore name",
+    "tag": "Program",
+    "code": "prompt _private { is { } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt with numbers in name",
+    "tag": "Program",
+    "code": "prompt step_123 { is { } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt missing 'is' keyword - fails",
+    "tag": "Program",
+    "code": "prompt Bad { { field is text; } }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt missing struct - fails",
+    "tag": "Program",
+    "code": "prompt NoStruct { is; }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt missing name - fails",
+    "tag": "Program",
+    "code": "prompt { is { } }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt with reserved keyword name - fails",
+    "tag": "Program",
+    "code": "prompt return { is { } }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt missing braces - fails",
+    "tag": "Program",
+    "code": "prompt Simple is { }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt with unclosed brace - fails",
+    "tag": "Program",
+    "code": "prompt Unclosed { is { }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt with number starting name - fails",
+    "tag": "Program",
+    "code": "prompt 123step { is { } }",
+    "should_pass": false
+  },
+  {
+    "description": "Prompt with invalid section order - should parse",
+    "tag": "Program",
+    "code": "prompt Disorder { flow next; channel { } is { } }",
+    "should_pass": true,
+    "semantically_correct": false
+  }
+]

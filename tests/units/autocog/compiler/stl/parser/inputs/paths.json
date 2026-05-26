@@ -1,0 +1,182 @@
+[
+  {
+    "description": "Simple single field path",
+    "tag": "Path",
+    "code": "field",
+    "should_pass": true
+  },
+  {
+    "description": "Two-level nested path",
+    "tag": "Path",
+    "code": "field.subfield",
+    "should_pass": true
+  },
+  {
+    "description": "Three-level nested path",
+    "tag": "Path",
+    "code": "data.items.value",
+    "should_pass": true
+  },
+  {
+    "description": "Path with single index",
+    "tag": "Path",
+    "code": "array[0]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with negative index",
+    "tag": "Path",
+    "code": "array[-1]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with range",
+    "tag": "Path",
+    "code": "array[1:5]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with open start range",
+    "tag": "Path",
+    "code": "array[:10]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with open end range",
+    "tag": "Path",
+    "code": "array[5:]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with full open range",
+    "tag": "Path",
+    "code": "array[:]",
+    "should_pass": true
+  },
+  {
+    "description": "Nested path with single index",
+    "tag": "Path",
+    "code": "data.items[3]",
+    "should_pass": true
+  },
+  {
+    "description": "Nested path with range",
+    "tag": "Path",
+    "code": "data.items[0:5]",
+    "should_pass": true
+  },
+  {
+    "description": "Index followed by field",
+    "tag": "Path",
+    "code": "array[0].field",
+    "should_pass": true
+  },
+  {
+    "description": "Multiple indices in path",
+    "tag": "Path",
+    "code": "matrix[0][1]",
+    "should_pass": false
+  },
+  {
+    "description": "Complex path with multiple indices and fields",
+    "tag": "Path",
+    "code": "data[0:2].items[-1].value",
+    "should_pass": true
+  },
+  {
+    "description": "Path with expression index",
+    "tag": "Path",
+    "code": "array[i]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with expression range",
+    "tag": "Path",
+    "code": "array[start:end]",
+    "should_pass": true
+  },
+  {
+    "description": "Path with complex expression in index",
+    "tag": "Path",
+    "code": "array[(i + 1)]",
+    "should_pass": true
+  },
+  {
+    "description": "Deep nesting with indices",
+    "tag": "Path",
+    "code": "a.b[0].c.d[1:3].e.f",
+    "should_pass": true
+  },
+  {
+    "description": "Path with underscore in identifier",
+    "tag": "Path",
+    "code": "my_field.sub_field",
+    "should_pass": true
+  },
+  {
+    "description": "Path with numbers in identifier",
+    "tag": "Path",
+    "code": "field1.field2",
+    "should_pass": true
+  },
+  {
+    "description": "Empty path - fails",
+    "tag": "Path",
+    "code": "",
+    "should_pass": false
+  },
+  {
+    "description": "Path starting with dot - fails",
+    "tag": "Path",
+    "code": ".field",
+    "should_pass": false
+  },
+  {
+    "description": "Path ending with dot - fails",
+    "tag": "Path",
+    "code": "field.",
+    "should_pass": false
+  },
+  {
+    "description": "Path with double dot - fails",
+    "tag": "Path",
+    "code": "field..subfield",
+    "should_pass": false
+  },
+  {
+    "description": "Path with empty brackets - fails",
+    "tag": "Path",
+    "code": "array[]",
+    "should_pass": false
+  },
+  {
+    "description": "Path with unclosed bracket - fails",
+    "tag": "Path",
+    "code": "array[0",
+    "should_pass": false
+  },
+  {
+    "description": "Path with missing bracket - fails",
+    "tag": "Path",
+    "code": "array0]",
+    "should_pass": false
+  },
+  {
+    "description": "Path with invalid range separator - fails",
+    "tag": "Path",
+    "code": "array[1-5]",
+    "should_pass": false
+  },
+  {
+    "description": "Path with multiple colons in range - fails",
+    "tag": "Path",
+    "code": "array[1:5:2]",
+    "should_pass": false
+  },
+  {
+    "description": "Path starting with index - fails",
+    "tag": "Path",
+    "code": "[0].field",
+    "should_pass": false
+  }
+]

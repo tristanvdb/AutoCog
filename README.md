@@ -18,6 +18,20 @@ We broke down the documentation into a few files:
 
 The libraries have [their own documentation](./share/library/README.md).
 
+## Syntax Highlight
+
+For `gedit`, the path is based on newer version of :
+```
+mkdir -p ~/.local/share/libgedit-gtksourceview-300/language-specs
+cp syntax-highlight/gedit/stl.lang ~/.local/share/libgedit-gtksourceview-300/language-specs
+```
+
+For `vscode` (it does not seem to work but I don't use VSCode):
+```
+mkdir -p ~/.vscode/extensions/stl-language
+cp -r syntax-highlight/vscode/* ~/.vscode/extensions/stl-language
+```
+
 ## Contributing
 
 Contributions are welcome!

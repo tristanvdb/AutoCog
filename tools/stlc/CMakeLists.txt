@@ -4,6 +4,7 @@
 
 add_executable(autocog_stlc
   main.cxx
+  args.cxx
   convert.cxx
 )
 target_include_directories(autocog_stlc PRIVATE
@@ -12,9 +13,12 @@ target_include_directories(autocog_stlc PRIVATE
 )
 target_link_libraries(autocog_stlc PUBLIC
   autocog_compiler_stl_lib
+  autocog_utilities_lib
 )
 set_target_properties(autocog_stlc PROPERTIES
   OUTPUT_NAME "stlc"
 )
 install(TARGETS autocog_stlc DESTINATION bin)
 
+add_test(NAME stlc_smoke_test 
+         COMMAND stlc -h)

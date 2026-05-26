@@ -4,9 +4,10 @@
 namespace autocog::compiler::stl {
 
 struct SourceLocation {
-    int line;
-    int column;
-    unsigned offset;
+  int fid;
+  int line;
+  int column;
+  unsigned offset;
 };
 
 struct SourceRange {

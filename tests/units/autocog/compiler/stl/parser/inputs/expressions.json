@@ -1,0 +1,236 @@
+[
+  {
+    "description": "Integer literal",
+    "tag": "Expression",
+    "code": "42",
+    "should_pass": true
+  },
+  {
+    "description": "Negative integer literal",
+    "tag": "Expression",
+    "code": "-17",
+    "should_pass": true
+  },
+  {
+    "description": "Float literal",
+    "tag": "Expression",
+    "code": "3.14",
+    "should_pass": true
+  },
+  {
+    "description": "Float with exponent",
+    "tag": "Expression",
+    "code": "1.5e-3",
+    "should_pass": true
+  },
+  {
+    "description": "Boolean true",
+    "tag": "Expression",
+    "code": "true",
+    "should_pass": true
+  },
+  {
+    "description": "Boolean false",
+    "tag": "Expression",
+    "code": "false",
+    "should_pass": true
+  },
+  {
+    "description": "Simple string",
+    "tag": "Expression",
+    "code": "\"hello world\"",
+    "should_pass": true
+  },
+  {
+    "description": "Empty string",
+    "tag": "Expression",
+    "code": "\"\"",
+    "should_pass": true
+  },
+  {
+    "description": "F-string",
+    "tag": "Expression",
+    "code": "f\"value is {x}\"",
+    "should_pass": true
+  },
+  {
+    "description": "Simple identifier",
+    "tag": "Expression",
+    "code": "my_var",
+    "should_pass": true
+  },
+  {
+    "description": "Unary negation",
+    "tag": "Expression",
+    "code": "-x",
+    "should_pass": true
+  },
+  {
+    "description": "Unary NOT",
+    "tag": "Expression",
+    "code": "!active",
+    "should_pass": true
+  },
+  {
+    "description": "Unary with parenthesized operand",
+    "tag": "Expression",
+    "code": "-(x)",
+    "should_pass": true
+  },
+  {
+    "description": "Binary addition with parentheses",
+    "tag": "Expression",
+    "code": "(a + b)",
+    "should_pass": true
+  },
+  {
+    "description": "Binary subtraction with parentheses",
+    "tag": "Expression",
+    "code": "(x - 5)",
+    "should_pass": true
+  },
+  {
+    "description": "Binary multiplication with parentheses",
+    "tag": "Expression",
+    "code": "(width * height)",
+    "should_pass": true
+  },
+  {
+    "description": "Binary division with parentheses",
+    "tag": "Expression",
+    "code": "(total / count)",
+    "should_pass": true
+  },
+  {
+    "description": "Binary modulo with parentheses",
+    "tag": "Expression",
+    "code": "(n % 2)",
+    "should_pass": true
+  },
+  {
+    "description": "Logical AND with parentheses",
+    "tag": "Expression",
+    "code": "(valid && ready)",
+    "should_pass": true
+  },
+  {
+    "description": "Logical OR with parentheses",
+    "tag": "Expression",
+    "code": "(done || timeout)",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison less than with parentheses",
+    "tag": "Expression",
+    "code": "(x < 10)",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison greater than with parentheses",
+    "tag": "Expression",
+    "code": "(score > threshold)",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison less or equal with parentheses",
+    "tag": "Expression",
+    "code": "(i <= max)",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison greater or equal with parentheses",
+    "tag": "Expression",
+    "code": "(age >= 18)",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison equality with parentheses",
+    "tag": "Expression",
+    "code": "(status == \"ready\")",
+    "should_pass": true
+  },
+  {
+    "description": "Comparison inequality with parentheses",
+    "tag": "Expression",
+    "code": "(result != null)",
+    "should_pass": true
+  },
+  {
+    "description": "Simple conditional with parentheses",
+    "tag": "Expression",
+    "code": "((x > 0) ? positive : negative)",
+    "should_pass": true
+  },
+  {
+    "description": "Parenthesized expression without operator",
+    "tag": "Expression",
+    "code": "(x)",
+    "should_pass": true
+  },
+  {
+    "description": "Nested binary operations",
+    "tag": "Expression",
+    "code": "((a + b) * (c - d))",
+    "should_pass": true
+  },
+  {
+    "description": "Deeply nested with parentheses",
+    "tag": "Expression",
+    "code": "(((a + b) * c) / (d - (e * f)))",
+    "should_pass": true
+  },
+  {
+    "description": "Binary addition without parentheses - fails",
+    "tag": "Expression",
+    "code": "a + b",
+    "should_pass": false
+  },
+  {
+    "description": "Conditional without parentheses - fails",
+    "tag": "Expression",
+    "code": "x > 0 ? yes : no",
+    "should_pass": false
+  },
+  {
+    "description": "Mixed expression without parentheses - fails",
+    "tag": "Expression",
+    "code": "x > 5 && y < 10",
+    "should_pass": false
+  },
+  {
+    "description": "Missing right operand",
+    "tag": "Expression",
+    "code": "(a +)",
+    "should_pass": false
+  },
+  {
+    "description": "Unmatched left parenthesis",
+    "tag": "Expression",
+    "code": "(a + b",
+    "should_pass": false
+  },
+  {
+    "description": "Unmatched right parenthesis",
+    "tag": "Expression",
+    "code": "a + b)",
+    "should_pass": false
+  },
+  {
+    "description": "Incomplete conditional",
+    "tag": "Expression",
+    "code": "((x > 0) ?)",
+    "should_pass": false
+  },
+  {
+    "description": "Conditional missing colon",
+    "tag": "Expression",
+    "code": "((x > 0) ? yes no)",
+    "should_pass": false
+  },
+  {
+    "description": "Unary with non-primary operand",
+    "tag": "Expression",
+    "code": "-(a + b)",
+    "should_pass": true
+  }
+]

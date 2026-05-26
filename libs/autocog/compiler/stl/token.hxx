@@ -17,21 +17,24 @@ enum class TokenType : int {
     RECORD,
     IMPORT,
     EXPORT,
+    ALIAS,
     PROMPT,
     CHANNEL,
     FLOW,
-    ENTRY,
     RETURN,
     ANNOTATE,
     TO,
     FROM,
     CALL,
-    EXTERN,
-    KWARG,
-    MAP,
+    MAPPED,
+    RAVEL,
     BIND,
+    WRAP,
+    PRUNE,
     AS,
     IS,
+    GET,
+    USE,
     SEARCH,
     TEXT,
     SELECT,
@@ -88,7 +91,7 @@ enum class TokenType : int {
 struct Token {
     TokenType      type{TokenType::NOT_A_VALID_TOKEN};
     std::string    text{""};
-    SourceLocation location{-1,-1,0};
+    SourceLocation location{-1,-1,-1,0};
 };
 
 // Helper function to get token type name

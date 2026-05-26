@@ -8,7 +8,7 @@
 namespace autocog::llama::xfta {
 
 FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
-    Model & model = Manager::get_model(id);
+    [[maybe_unused]] Model & model = Manager::get_model(id);
     FTA fta;
     
     // Get the actions array from JSON FTA

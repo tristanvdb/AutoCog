@@ -14,62 +14,141 @@
 
 namespace autocog::compiler::stl {
 
+struct ParseError : std::exception {
+  std::string message;
+  SourceLocation location;
+  
+  ParseError(std::string msg, SourceLocation loc);
+  
+  const char * what() const noexcept override;
+};
+
 class Lexer;
 struct Diagnostic;
 
 struct ParserState {
-  std::string filename;
-  std::string source;
-  std::list<Diagnostic> & diagnostics;
-
   std::istringstream stream;
   Lexer lexer;
 
   Token previous;
   Token current;
-  bool error;
 
-  ParserState(std::string const & filename_, std::string const & source_, std::list<Diagnostic> & diagnostics_);
+  ParserState(std::string const & source_);
+  ParserState(int fid, std::string const & source_);
 
   void advance();
 
   bool check(TokenType type);
   bool match(TokenType type);
-  bool expect(TokenType type, std::string context);
+  void expect(TokenType type, std::string context);
 
-  void emit_error(std::string msg);
+  void throw_error(std::string msg);
 };
 
 class Parser {
-  public:
-    using file_to_program_map_t = std::unordered_map<std::string, ast::Program>;
-
   private:
     std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
+    std::unordered_map<std::string, int> & fileids;
+    std::list<ast::Program> & programs;
     std::queue<std::string> queue;
-    file_to_program_map_t programs;
+
+  private:
+    void parse(int fid, std::string const & filename, std::string const & source);
 
     template <ast::Tag tag>
-    void parse(ParserState & state, ast::Data<tag> & data, int min_precedence);
+    static void parse(ParserState &, ast::Data<tag> &) {
+      std::ostringstream oss;
+      oss << "Not implemented: autocog::compiler::stl::Parser::parse<" << ast::tag2str(tag) << ">(...)";
+      throw std::runtime_error(oss.str());
+    }
+
+    static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr);
+
+    template <ast::Tag tag> // TODO remove
+    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
+      SourceLocation start_loc{start?start.value():state.current.location};
+      parse(state, node.data);
+      node.location.emplace(SourceRange{start_loc, state.current.location});
+    }
+
     template <ast::Tag tag>
-    void parse(ParserState & state, ast::Data<tag> & data);
+    static void parse(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
+      SourceLocation start_loc{start?start.value():state.current.location};
+      parse(state, node.data);
+      node.location.emplace(SourceRange{start_loc, state.current.location});
+    }
+
+    /// For testing purpose
+    template <ast::Tag tag>
+    static bool parse_fragment(std::string const & code);
 
   public:
-    Parser(std::list<Diagnostic> &, std::list<std::string> const &);
-    Parser(std::list<Diagnostic> &, std::list<std::string> const &, std::list<std::string> const &);
+    Parser(
+      std::list<Diagnostic> &,
+      std::unordered_map<std::string, int> &,
+      std::list<std::string> const &,
+      std::list<ast::Program> &,
+      std::list<std::string> const &
+    );
 
     void parse();
-    void parse(std::string const & filename, std::string const & source);
 
-    file_to_program_map_t const & get() const;
-
-    bool has_prompt(std::string const & filename, std::string const & objname) const;
-    ast::Prompt const & get_prompt(std::string const & filename, std::string const & objname) const;
-
-    bool has_record(std::string const & filename, std::string const & objname) const;
-    ast::Record const & get_record(std::string const & filename, std::string const & objname) const;
+    /// For testing purpose
+    static bool parse_fragment(std::string const & tag, std::string const & code);
 };
+
+template <ast::Tag tag>
+bool Parser::parse_fragment(
+  std::string const & code
+) {
+  ParserState state(code);
+  ast::Data<tag> data;
+  parse(state, data);
+  return state.check(TokenType::END_OF_FILE);
+}
+
+void clean_raw_string(std::string raw_text, ast::Data<ast::Tag::String> & data);
+
+template <> void Parser::parse<ast::Tag::Annotate>   (ParserState & state, ast::Data<ast::Tag::Annotate>   &);
+template <> void Parser::parse<ast::Tag::Call>       (ParserState & state, ast::Data<ast::Tag::Call>       &);
+template <> void Parser::parse<ast::Tag::Channel>    (ParserState & state, ast::Data<ast::Tag::Channel>    &);
+template <> void Parser::parse<ast::Tag::Define>     (ParserState & state, ast::Data<ast::Tag::Define>     &);
+template <> void Parser::parse<ast::Tag::Alias>      (ParserState & state, ast::Data<ast::Tag::Alias>      &);
+template <> void Parser::parse<ast::Tag::Expression> (ParserState & state, ast::Data<ast::Tag::Expression> &);
+template <> void Parser::parse<ast::Tag::Field>      (ParserState & state, ast::Data<ast::Tag::Field>      &);
+template <> void Parser::parse<ast::Tag::FieldRef>   (ParserState & state, ast::Data<ast::Tag::FieldRef>   &);
+template <> void Parser::parse<ast::Tag::Flow>       (ParserState & state, ast::Data<ast::Tag::Flow>       &);
+template <> void Parser::parse<ast::Tag::FormatRef>  (ParserState & state, ast::Data<ast::Tag::FormatRef>  &);
+template <> void Parser::parse<ast::Tag::Import>     (ParserState & state, ast::Data<ast::Tag::Import>     &);
+template <> void Parser::parse<ast::Tag::Kwarg>      (ParserState & state, ast::Data<ast::Tag::Kwarg>      &);
+template <> void Parser::parse<ast::Tag::Link>       (ParserState & state, ast::Data<ast::Tag::Link>       &);
+template <> void Parser::parse<ast::Tag::Path>       (ParserState & state, ast::Data<ast::Tag::Path>       &);
+template <> void Parser::parse<ast::Tag::Program>    (ParserState & state, ast::Data<ast::Tag::Program>    &);
+template <> void Parser::parse<ast::Tag::Prompt>     (ParserState & state, ast::Data<ast::Tag::Prompt>     &);
+template <> void Parser::parse<ast::Tag::ObjectRef>  (ParserState & state, ast::Data<ast::Tag::ObjectRef>  &);
+template <> void Parser::parse<ast::Tag::Record>     (ParserState & state, ast::Data<ast::Tag::Record>     &);
+template <> void Parser::parse<ast::Tag::Return>     (ParserState & state, ast::Data<ast::Tag::Return>     &);
+template <> void Parser::parse<ast::Tag::Search>     (ParserState & state, ast::Data<ast::Tag::Search>     &);
+template <> void Parser::parse<ast::Tag::Struct>     (ParserState & state, ast::Data<ast::Tag::Struct>     &);
+
+template <> void Parser::parse<ast::Tag::Bind>(ParserState & state, ast::Data<ast::Tag::Bind> &);
+template <> void Parser::parse<ast::Tag::Ravel>(ParserState & state, ast::Data<ast::Tag::Ravel> &);
+template <> void Parser::parse<ast::Tag::Mapped>(ParserState & state, ast::Data<ast::Tag::Mapped> &);
+template <> void Parser::parse<ast::Tag::Wrap>(ParserState & state, ast::Data<ast::Tag::Wrap> &);
+template <> void Parser::parse<ast::Tag::Prune>(ParserState & state, ast::Data<ast::Tag::Prune> &);
+
+template <> void Parser::parse<ast::Tag::Edge>(ParserState & state, ast::Data<ast::Tag::Edge> &);
+
+template <> void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::Retfield> &);
+
+template <> void Parser::parse<ast::Tag::Text>(ParserState & state, ast::Data<ast::Tag::Text> &);
+template <> void Parser::parse<ast::Tag::Enum>(ParserState & state, ast::Data<ast::Tag::Enum> &);
+template <> void Parser::parse<ast::Tag::Choice>(ParserState & state, ast::Data<ast::Tag::Choice> &);
+
+template <> void Parser::parse<ast::Tag::Annotation>(ParserState & state, ast::Data<ast::Tag::Annotation> &);
+template <> void Parser::parse<ast::Tag::Param>(ParserState & state, ast::Data<ast::Tag::Param> &);
+template <> void Parser::parse<ast::Tag::Assign>(ParserState & state, ast::Data<ast::Tag::Assign> & data);
 
 }
 

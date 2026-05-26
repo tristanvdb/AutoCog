@@ -12,7 +12,7 @@
 
 namespace autocog::llama::xfta {
 
-void quiet_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
+void quiet_log_callback(enum ggml_log_level level, const char * text, [[maybe_unused]] void * user_data) {
     if (level == GGML_LOG_LEVEL_ERROR) {
         fprintf(stderr, "%s", text);
     }

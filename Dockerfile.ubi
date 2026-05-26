@@ -9,7 +9,6 @@ RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
         python3 \
         python3-pip \
         python3-devel \
-        git \
         graphviz && \
     dnf clean all
 
@@ -23,21 +22,6 @@ ENV PYTHONPATH=""
 
 RUN pip install --upgrade pip && \
     pip install graphviz
-
-# Protobuf
-
-COPY vendors/protobuf /tmp/protobuf
-
-RUN cd /tmp/protobuf && \
-    cmake -S . -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -DCMAKE_INSTALL_PREFIX=/opt \
-        -Dprotobuf_BUILD_SHARED_LIBS=ON && \
-    cmake --build build --parallel $(nproc) && \
-    cmake --install build && \
-    ldconfig && \
-    rm -rf /tmp/protobuf
 
 # RE/Flex
 

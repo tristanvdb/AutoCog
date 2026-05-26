@@ -1,0 +1,35 @@
+
+record Age {
+  is enum("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
+}
+
+record TplDesc {
+  is {
+    template is text;
+    description[1:5] is text;
+    ages[2] is Age;
+  }
+}
+
+record Step {
+  is {
+    name is text;
+    description is text;
+    pages[2] is text;
+  }
+}
+
+record Template {
+  is {
+    description[1:5] is text;
+    ages[2] is Age;
+    sentence is text;
+    vocabulary is text;
+    steps[2:10] is {
+      name is text;
+      description is text;
+      pages[2] is text;
+    }
+  }
+}
+

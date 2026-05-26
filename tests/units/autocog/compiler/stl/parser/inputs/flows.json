@@ -1,0 +1,176 @@
+[
+  {
+    "description": "Simple flow statement",
+    "tag": "Flow",
+    "code": "flow next_prompt;",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with limit",
+    "tag": "Flow",
+    "code": "flow loop_prompt[5];",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with limit and semicolon",
+    "tag": "Flow",
+    "code": "flow loop_prompt[10];",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with expression limit",
+    "tag": "Flow",
+    "code": "flow loop_prompt[max_iterations];",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with complex expression limit",
+    "tag": "Flow",
+    "code": "flow loop_prompt[(n + 1)];",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with label",
+    "tag": "Flow",
+    "code": "flow next_prompt as \"continue\";",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with limit and label",
+    "tag": "Flow",
+    "code": "flow loop_prompt[3] as \"retry\";",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with f-string label",
+    "tag": "Flow",
+    "code": "flow next_prompt as f\"step_{n}\";",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with prompt configuration",
+    "tag": "Flow",
+    "code": "flow process<mode=\"strict\">;",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with prompt configuration and limit",
+    "tag": "Flow",
+    "code": "flow process<debug=true>[5];",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with prompt configuration, limit and label",
+    "tag": "Flow",
+    "code": "flow process<mode=\"fast\">[3] as \"quick\";",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with single edge",
+    "tag": "Flow",
+    "code": "flow { next_prompt; }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with multiple edges",
+    "tag": "Flow",
+    "code": "flow { process_step; final_step; }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with labeled edges",
+    "tag": "Flow",
+    "code": "flow { success_prompt as \"done\"; error_prompt as \"failed\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with limited edges",
+    "tag": "Flow",
+    "code": "flow { loop_prompt[5]; final_prompt; }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with configured prompts",
+    "tag": "Flow",
+    "code": "flow { process<mode=\"fast\">; cleanup<verbose=false>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow block with mixed edge types",
+    "tag": "Flow",
+    "code": "flow { init; loop[10] as \"retry\"; done<final=true> as \"complete\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Empty flow block",
+    "tag": "Flow",
+    "code": "flow { }",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with underscore in prompt name",
+    "tag": "Flow",
+    "code": "flow next_prompt_step;",
+    "should_pass": true
+  },
+  {
+    "description": "Flow with complex prompt configuration",
+    "tag": "Flow",
+    "code": "flow process<mode=\"strict\", timeout=30, retry=true>;",
+    "should_pass": true
+  },
+  {
+    "description": "Flow without prompt name - fails",
+    "tag": "Flow",
+    "code": "flow;",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with invalid limit syntax - fails",
+    "tag": "Flow",
+    "code": "flow prompt(5);",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with empty brackets - fails",
+    "tag": "Flow",
+    "code": "flow prompt[];",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with missing 'as' keyword - fails",
+    "tag": "Flow",
+    "code": "flow prompt \"label\";",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with unclosed bracket - fails",
+    "tag": "Flow",
+    "code": "flow prompt[5;",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with unclosed configuration - fails",
+    "tag": "Flow",
+    "code": "flow prompt<mode=\"strict\";",
+    "should_pass": false
+  },
+  {
+    "description": "Flow block with unclosed brace - fails",
+    "tag": "Flow",
+    "code": "flow { prompt;",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with reserved keyword as prompt name - fails",
+    "tag": "Flow",
+    "code": "flow return;",
+    "should_pass": false
+  },
+  {
+    "description": "Flow with number starting prompt name - fails",
+    "tag": "Flow",
+    "code": "flow 123prompt;",
+    "should_pass": false
+  }
+]

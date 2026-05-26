@@ -1,0 +1,164 @@
+[
+  {
+    "description": "Empty search block",
+    "tag": "Search",
+    "code": "search { }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with single parameter",
+    "tag": "Search",
+    "code": "search { temperature is 0.7; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with integer parameter",
+    "tag": "Search",
+    "code": "search { max_tokens is 100; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with string parameter",
+    "tag": "Search",
+    "code": "search { model is \"gpt-4\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with boolean parameter",
+    "tag": "Search",
+    "code": "search { streaming is true; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with multiple parameters",
+    "tag": "Search",
+    "code": "search { temperature is 0.8; max_tokens is 500; model is \"claude\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with identifier value",
+    "tag": "Search",
+    "code": "search { setting is default_value; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with expression value",
+    "tag": "Search",
+    "code": "search { limit is (base * 2); }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with nested path parameter",
+    "tag": "Search",
+    "code": "search { config.temperature is 0.5; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with deep nested path",
+    "tag": "Search",
+    "code": "search { settings.model.version is \"latest\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with underscore in parameter name",
+    "tag": "Search",
+    "code": "search { max_length is 1000; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with numbers in parameter name",
+    "tag": "Search",
+    "code": "search { param1 is \"value\"; param2 is 42; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with f-string value",
+    "tag": "Search",
+    "code": "search { param1 is f\"Generate {n} items\"; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with negative number",
+    "tag": "Search",
+    "code": "search { offset is -10; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with float value",
+    "tag": "Search",
+    "code": "search { threshold is 0.95; }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with conditional expression",
+    "tag": "Search",
+    "code": "search { mode is (debug ? \"verbose\" : \"quiet\"); }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with complex nested expression",
+    "tag": "Search",
+    "code": "search { size is ((width + margin) * (height + margin)); }",
+    "should_pass": true
+  },
+  {
+    "description": "Search with all parameter types",
+    "tag": "Search",
+    "code": "search { str is \"text\"; num is 42; float is 3.14; bool is false; expr is (a + b); }",
+    "should_pass": true
+  },
+  {
+    "description": "Search missing 'is' keyword - fails",
+    "tag": "Search",
+    "code": "search { temperature 0.7; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search missing value - fails",
+    "tag": "Search",
+    "code": "search { temperature is; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search missing semicolon - fails",
+    "tag": "Search",
+    "code": "search { temp is 0.7 max is 100; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search with unclosed block - fails",
+    "tag": "Search",
+    "code": "search { temperature is 0.7;",
+    "should_pass": false
+  },
+  {
+    "description": "Search without block - fails",
+    "tag": "Search",
+    "code": "search temperature is 0.7",
+    "should_pass": false
+  },
+  {
+    "description": "Search with reserved keyword as parameter - fails",
+    "tag": "Search",
+    "code": "search { return is \"value\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search with number starting parameter name - fails",
+    "tag": "Search",
+    "code": "search { 123param is \"value\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search with array index in path - fails",
+    "tag": "Search",
+    "code": "search { items[0] is \"first\"; }",
+    "should_pass": false
+  },
+  {
+    "description": "Search with range in path - fails",
+    "tag": "Search",
+    "code": "search { data[1:5] is \"subset\"; }",
+    "should_pass": false
+  }
+]

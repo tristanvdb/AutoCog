@@ -1,0 +1,164 @@
+[
+  {
+    "description": "Simple import single item",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper;",
+    "should_pass": true
+  },
+  {
+    "description": "Import multiple items",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper, process, validate;",
+    "should_pass": true
+  },
+  {
+    "description": "Import with alias",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import process as proc;",
+    "should_pass": true
+  },
+  {
+    "description": "Import multiple with aliases",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper as h, process as proc, validate;",
+    "should_pass": true
+  },
+  {
+    "description": "Import all aliases",
+    "tag": "Import",
+    "code": "from \"module.stl\" import first as f, second as s, third as t;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from Python file",
+    "tag": "Import",
+    "code": "from \"helpers.py\" import function;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from path with directory",
+    "tag": "Import",
+    "code": "from \"lib/utils.stl\" import tool;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from nested path",
+    "tag": "Import",
+    "code": "from \"src/lib/helpers.stl\" import assist;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from parent directory",
+    "tag": "Import",
+    "code": "from \"../common.stl\" import shared;",
+    "should_pass": true
+  },
+  {
+    "description": "Import with underscore names",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import _private, public_func;",
+    "should_pass": true
+  },
+  {
+    "description": "Import with numbers in names",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import func1, func2, helper3;",
+    "should_pass": true
+  },
+  {
+    "description": "Import single character names",
+    "tag": "Import",
+    "code": "from \"math.stl\" import x, y, z;",
+    "should_pass": true
+  },
+  {
+    "description": "Import with long aliases",
+    "tag": "Import",
+    "code": "from \"module.stl\" import very_long_function_name as vlfn;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from file with dash in name",
+    "tag": "Import",
+    "code": "from \"my-utils.stl\" import helper;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from file with spaces in path",
+    "tag": "Import",
+    "code": "from \"my utils.stl\" import helper;",
+    "should_pass": true
+  },
+  {
+    "description": "Import from absolute path",
+    "tag": "Import",
+    "code": "from \"/usr/lib/module.stl\" import function;",
+    "should_pass": true
+  },
+  {
+    "description": "Import many items",
+    "tag": "Import",
+    "code": "from \"big.stl\" import a, b, c, d, e, f, g, h, i, j;",
+    "should_pass": true
+  },
+  {
+    "description": "Missing 'from' keyword - fails",
+    "tag": "Import",
+    "code": "\"utils.stl\" import helper;",
+    "should_pass": false
+  },
+  {
+    "description": "Missing 'import' keyword - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" helper;",
+    "should_pass": false
+  },
+  {
+    "description": "Missing file path - fails",
+    "tag": "Import",
+    "code": "from import helper;",
+    "should_pass": false
+  },
+  {
+    "description": "Unquoted file path - fails",
+    "tag": "Import",
+    "code": "from utils.stl import helper;",
+    "should_pass": false
+  },
+  {
+    "description": "Missing import targets - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import;",
+    "should_pass": false
+  },
+  {
+    "description": "Invalid alias syntax - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper = h;",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword as import name - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import return;",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword as alias - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper as return;",
+    "should_pass": false
+  },
+  {
+    "description": "Number starting import name - fails",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import 123func;",
+    "should_pass": false
+  },
+  {
+    "description": "Trailing comma - may fail depending on parser",
+    "tag": "Import",
+    "code": "from \"utils.stl\" import helper, process,;",
+    "should_pass": false
+  }
+]

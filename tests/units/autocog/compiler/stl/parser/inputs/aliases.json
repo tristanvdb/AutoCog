@@ -1,0 +1,176 @@
+[
+  {
+    "description": "Simple export",
+    "tag": "Alias",
+    "code": "entry_prompt as main",
+    "should_pass": true
+  },
+  {
+    "description": "Export with configuration",
+    "tag": "Alias",
+    "code": "entry_prompt<mode=\"production\"> as main",
+    "should_pass": true
+  },
+  {
+    "description": "Export with single parameter",
+    "tag": "Alias",
+    "code": "handler<debug=false> as api",
+    "should_pass": true
+  },
+  {
+    "description": "Export with multiple parameters",
+    "tag": "Alias",
+    "code": "processor<mode=\"fast\", timeout=30, retry=true> as service",
+    "should_pass": true
+  },
+  {
+    "description": "Export with integer parameter",
+    "tag": "Alias",
+    "code": "task<threads=4> as worker",
+    "should_pass": true
+  },
+  {
+    "description": "Export with float parameter",
+    "tag": "Alias",
+    "code": "predictor<threshold=0.95> as model",
+    "should_pass": true
+  },
+  {
+    "description": "Export with string parameter",
+    "tag": "Alias",
+    "code": "frontend<theme=\"dark\"> as app",
+    "should_pass": true
+  },
+  {
+    "description": "Export with boolean parameter",
+    "tag": "Alias",
+    "code": "backend<secure=true> as service",
+    "should_pass": true
+  },
+  {
+    "description": "Export with expression parameter",
+    "tag": "Alias",
+    "code": "calculator<size=(width * height)> as compute",
+    "should_pass": true
+  },
+  {
+    "description": "Export with identifier parameter",
+    "tag": "Alias",
+    "code": "main_prompt<count=max_count> as default",
+    "should_pass": true
+  },
+  {
+    "description": "Export with f-string parameter",
+    "tag": "Alias",
+    "code": "api<path=f\"/v{version}/data\"> as endpoint",
+    "should_pass": true
+  },
+  {
+    "description": "Export with underscore in names",
+    "tag": "Alias",
+    "code": "my_prompt as my_export",
+    "should_pass": true
+  },
+  {
+    "description": "Export with numbers in names",
+    "tag": "Alias",
+    "code": "prompt2 as export1",
+    "should_pass": true
+  },
+  {
+    "description": "Export with single character names",
+    "tag": "Alias",
+    "code": "x as y",
+    "should_pass": true
+  },
+  {
+    "description": "Export with complex expression in parameter",
+    "tag": "Alias",
+    "code": "compute<value=((a + b) * (c - d))> as calc",
+    "should_pass": true
+  },
+  {
+    "description": "Export with conditional in parameter",
+    "tag": "Alias",
+    "code": "process<mode=(debug ? \"verbose\" : \"quiet\")> as handler",
+    "should_pass": true
+  },
+  {
+    "description": "Export with negative number parameter",
+    "tag": "Alias",
+    "code": "transform<delta=-10> as offset",
+    "should_pass": true
+  },
+  {
+    "description": "Export with empty configuration",
+    "tag": "Alias",
+    "code": "a_prompt<> as main",
+    "should_pass": true
+  },
+  {
+    "description": "Export with all parameter types",
+    "tag": "Alias",
+    "code": "complete<str=\"text\", num=42, float=3.14, bool=false, expr=(a + b)> as full",
+    "should_pass": true
+  },
+  {
+    "description": "Missing 'as' keyword - fails",
+    "tag": "Alias",
+    "code": "entry_prompt main",
+    "should_pass": false
+  },
+  {
+    "description": "Missing alias - fails",
+    "tag": "Alias",
+    "code": "main as",
+    "should_pass": false
+  },
+  {
+    "description": "Missing alias - fails",
+    "tag": "Alias",
+    "code": "entry_prompt as",
+    "should_pass": false
+  },
+  {
+    "description": "Reserved keyword as alias - fails",
+    "tag": "Alias",
+    "code": "prompt as return",
+    "should_pass": false
+  },
+  {
+    "description": "Number starting alias - fails",
+    "tag": "Alias",
+    "code": "prompt as 123main",
+    "should_pass": false
+  },
+  {
+    "description": "Number starting target - fails",
+    "tag": "Alias",
+    "code": "123prompt as main",
+    "should_pass": false
+  },
+  {
+    "description": "Invalid parameter syntax - fails",
+    "tag": "Alias",
+    "code": "prompt(mode=\"fast\") as main",
+    "should_pass": false
+  },
+  {
+    "description": "Missing equals in parameter - fails",
+    "tag": "Alias",
+    "code": "prompt<mode \"fast\"> as main",
+    "should_pass": false
+  },
+  {
+    "description": "Unclosed configuration - fails",
+    "tag": "Alias",
+    "code": "prompt<mode=\"fast\" as main",
+    "should_pass": false
+  },
+  {
+    "description": "Trailing comma in parameters - fails",
+    "tag": "Alias",
+    "code": "prompt<a=1, b=2,> as main",
+    "should_pass": false
+  }
+]

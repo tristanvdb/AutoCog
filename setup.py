@@ -56,12 +56,6 @@ class CMakeBuild(build_ext):
             ["cmake", "--install", "."], cwd=build_temp
         )
 
-        proto_file = build_temp / "libs/autocog/compiler/stl/ir_pb2.py"
-        assert proto_file.exists(), f"Protobuf file not generated: {proto_file}"
-        dest = Path(package_dir) / "autocog/compiler/stl/ir_pb2.py"
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(proto_file, dest)
-
 def main():
     ext_modules = [
         CMakeExtension("autocog._build_all", sourcedir="."),

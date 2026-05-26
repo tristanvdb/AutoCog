@@ -4,10 +4,11 @@
 namespace autocog::compiler::stl::ast {
 
 DATA(Define) {
-  bool argument;
-  std::string name;
+  bool is_argument;
+  NODE(Identifier) name;
   ONODE(Expression) init;
 };
+TRAVERSE_CHILDREN(Define, name, init)
 
 }
 

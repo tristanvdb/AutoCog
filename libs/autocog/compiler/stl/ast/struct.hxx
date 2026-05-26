@@ -6,6 +6,7 @@ namespace autocog::compiler::stl::ast {
 DATA(Enum) {
   NODES(String) enumerators;
 };
+TRAVERSE_CHILDREN(Enum, enumerators)
 
 enum class ChoiceKind { Repeat, Select };
 
@@ -13,27 +14,32 @@ DATA(Choice) {
   ChoiceKind mode;
   NODE(Path) source;
 };
+TRAVERSE_CHILDREN(Choice, source)
 
 DATA(Text) {
   // TODO vocab definition
 };
+TRAVERSE_CHILDREN_EMPTY(Text)
 
-DATA(Format) {
+DATA(FormatRef) {
   VARIANT(Identifier, Text, Enum, Choice) type;
   NODES(Expression) args;
-  MAPPED(Expression) kwargs;
+  NODES(Assign) kwargs;
 };
+TRAVERSE_CHILDREN(FormatRef, type, args, kwargs)
 
 DATA(Struct) {
   PNODES(Field) fields;
 };
+TRAVERSE_CHILDREN(Struct, fields)
 
 DATA(Field) {
-  std::string name;
+  NODE(Identifier) name;
   ONODE(Expression) lower;
   ONODE(Expression) upper;
-  VARIANT(Format, Struct) type;
+  VARIANT(FormatRef, Struct) type;
 };
+TRAVERSE_CHILDREN(Field, name, lower, upper, type)
 
 }
 

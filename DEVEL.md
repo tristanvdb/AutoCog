@@ -12,17 +12,37 @@ wget -O SmolLM3-Q4_K_M.gguf https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/reso
 
 ### CPU (for dev)
 
+Build the image:
 ```
 docker build -t autocog:ubi -f Dockerfile.ubi .
-podman run --rm -v $(pwd):/workspace -w /workspace -ti autocog:ubi scripts/sanity-check.sh
-docker run --rm --name autocog -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:ubi sleep infinity
+```
+
+Run one-off commands:
+```
+docker run --rm -v $(pwd):/workspace -w /workspace autocog:ubi scripts/sanity-check.sh
+```
+
+**Recommended: Use a persistent container for development:**
+```bash
+# Start persistent container
+docker run -d --name autocog --rm -v $(pwd):/workspace -w /workspace autocog:ubi sleep infinity
+
+# Execute commands in the container
+docker exec autocog bash -c "cd /tmp && cmake /workspace && make install && ctest"
+
+# Interactive shell
+docker exec -it autocog bash
+
+# Stop container when done
+docker stop autocog
 ```
 
 ### CUDA on RHEL with Podman
 
 First setup CUDA for container use (3rd command is for FIPS enable machines):
-```
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo |     sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+```bash
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
+    sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
 sudo dnf --disablerepo=\* --enablerepo=nvidia-container-toolkit-experimental install -y nvidia-container-toolkit
 sudo rpm -ivh --nodigest --nofiledigest /var/cache/dnf/nvidia-container-toolkit-experimental-*/packages/*.rpm
 sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
@@ -31,44 +51,93 @@ sudo chmod o+rx /etc/cdi
 podman run --rm --device nvidia.com/gpu=all docker.io/nvidia/cuda:12.4.0-runtime-ubuntu22.04 nvidia-smi
 ```
 
-Then building and running the container:
-```
-podman build --device nvidia.com/gpu=all -f Dockerfile.ubi-cuda -t autocog:ubi-cuda .\
-podman run --name autocog --rm -d --device nvidia.com/gpu=all -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:ubi-cuda sleep infinity
+Build and run persistent container:
+```bash
+podman build --device nvidia.com/gpu=all -f Dockerfile.ubi-cuda -t autocog:ubi-cuda .
+podman run -d --name autocog --rm --device nvidia.com/gpu=all \
+    -v $(pwd):/workspace -w /workspace autocog:ubi-cuda sleep infinity
+
+# Execute commands
+podman exec autocog bash -c "cd /tmp && cmake /workspace && make install && ctest"
 ```
 
-## xFTA
+### Ubuntu with CUDA (Docker)
 
-Testing the C++ utility
+```bash
+docker build -t autocog:ubuntu -f Dockerfile.ubuntu .
+docker run -d --name autocog --rm --gpus all \
+    -v $(pwd):/workspace -w /workspace autocog:ubuntu sleep infinity
 ```
+
+## Testing Components
+
+### xFTA (Finite Thoughts Automaton Executor)
+
+Testing the C++ utility:
+```bash
 python3 scripts/dump_sta_to_json.py tests/samples/mini.sta models/SmolLM3-Q4_K_M.gguf
 xfta -v -m models/SmolLM3-Q4_K_M.gguf tests/samples/mini.sta.json
 ```
 
 Testing the integration:
-```
-python3 scripts/execute_sta_with_llama_cpp.py /workspace/autocog/tests/samples/mini.sta '{}' /workspace/autocog/models/SmolLM3-Q4_K_M.gguf
-```
-
-## STLC
-
-```
-mkdir -p /tmp/autocog
-( cd /tmp/autocog && rm -rf * && cmake /workspace/autocog && make install )
-( cd /workspace/tests/samples ; autocog-compiler-stl -I miniapp miniapp/main.stl miniapp/more.stl defines.stl )
+```bash
+python3 scripts/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
 ```
 
-## Faster CMake build for develop
+### STLC (Structured Thoughts Language Compiler)
 
-TODO: what to add in container? (pip uses an ephemeral venv)
-
-Building both executables:
+Test compilation:
+```bash
+stlc -h
+stlc tests/samples/defines.stl
+stlc share/demos/story-writer/story-writer.stl
 ```
-mkdir -p /tmp/autocog
-cd /tmp/autocog
-cmake /workspace/autocog
+
+## Building and Testing
+
+### Build Types
+
+**Debug build** (with exception backtrace wrapper):
+```bash
+mkdir -p /tmp/autocog && cd /tmp/autocog
+cmake /workspace -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt
 make install -j$(nproc)
-xfta --help
-stlc --help
+```
+
+**Release build** (optimized, default):
+```bash
+mkdir -p /tmp/autocog && cd /tmp/autocog
+cmake /workspace -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt
+make install -j$(nproc)
+```
+
+### Running Tests
+
+Run all tests:
+```bash
+cd /tmp/autocog
+ctest --output-on-failure
+```
+
+Run specific test suites:
+```bash
+ctest -R stl_parser          # All parser tests
+ctest -R smoke               # Smoke tests only
+ctest -R stl_parser_identifiers -V  # Single test with verbose output
+```
+
+Run in persistent container:
+```bash
+docker exec autocog bash -c "cd /tmp && cmake /workspace -DCMAKE_BUILD_TYPE=Release && make install -j\$(nproc) && ctest --output-on-failure"
+```
+
+### Python Package Testing
+
+Install and test the Python package:
+```bash
+pip install /workspace
+python -c "import autocog"
+python -c "import autocog.compiler.stl"
+python -c "import autocog.llama.xfta"
 ```
 

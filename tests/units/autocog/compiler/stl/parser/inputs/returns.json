@@ -1,0 +1,200 @@
+[
+  {
+    "description": "Empty return statement",
+    "tag": "Return",
+    "code": "return",
+    "should_pass": false
+  },
+  {
+    "description": "Empty return with semicolon",
+    "tag": "Return",
+    "code": "return;",
+    "should_pass": true
+  },
+  {
+    "description": "Return with string label",
+    "tag": "Return",
+    "code": "return \"success\";",
+    "should_pass": true
+  },
+  {
+    "description": "Return with f-string label",
+    "tag": "Return",
+    "code": "return f\"result_{n}\";",
+    "should_pass": true
+  },
+  {
+    "description": "Return with label and semicolon",
+    "tag": "Return",
+    "code": "return \"done\";",
+    "should_pass": true
+  },
+  {
+    "description": "Return short form with use",
+    "tag": "Return",
+    "code": "return use result;",
+    "should_pass": true
+  },
+  {
+    "description": "Return short form with path",
+    "tag": "Return",
+    "code": "return use data.value;",
+    "should_pass": true
+  },
+  {
+    "description": "Return short form with indexed path",
+    "tag": "Return",
+    "code": "return use items[0];",
+    "should_pass": true
+  },
+  {
+    "description": "Return short form with prompt field reference",
+    "tag": "Return",
+    "code": "return use other_prompt.result;",
+    "should_pass": true
+  },
+  {
+    "description": "Return labeled short form",
+    "tag": "Return",
+    "code": "return \"success\" use result.value;",
+    "should_pass": true
+  },
+  {
+    "description": "Return empty block",
+    "tag": "Return",
+    "code": "return { }",
+    "should_pass": true
+  },
+  {
+    "description": "Return labeled empty block",
+    "tag": "Return",
+    "code": "return \"empty\" { }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with single field",
+    "tag": "Return",
+    "code": "return { status use completed; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with multiple fields",
+    "tag": "Return",
+    "code": "return { status use completed; data use results; count is 5; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with aliased field",
+    "tag": "Return",
+    "code": "return { output use result.value; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with expression source",
+    "tag": "Return",
+    "code": "return { total is (width * height); }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with clauses",
+    "tag": "Return",
+    "code": "return { data use results bind(_, output); }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with ravel clause",
+    "tag": "Return",
+    "code": "return { flat use nested.items ravel; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with wrap clause",
+    "tag": "Return",
+    "code": "return { singleton use value wrap; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with prune clause",
+    "tag": "Return",
+    "code": "return { cleaned use data prune(temp); }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with multiple clauses",
+    "tag": "Return",
+    "code": "return { result use data bind(_, output) ravel wrap; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return labeled block with fields",
+    "tag": "Return",
+    "code": "return \"complete\" { success is true; data use results; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with underscore field name",
+    "tag": "Return",
+    "code": "return { _ use result; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return block with nested paths",
+    "tag": "Return",
+    "code": "return { deep use data.items[0].value; }",
+    "should_pass": true
+  },
+  {
+    "description": "Return with invalid keyword after return - fails",
+    "tag": "Return",
+    "code": "return get result",
+    "should_pass": false
+  },
+  {
+    "description": "Return short form without source - fails",
+    "tag": "Return",
+    "code": "return use",
+    "should_pass": false
+  },
+  {
+    "description": "Return block with missing semicolon - fails",
+    "tag": "Return",
+    "code": "return { a use x b use y; }",
+    "should_pass": false
+  },
+  {
+    "description": "Return block with unclosed brace - fails",
+    "tag": "Return",
+    "code": "return { data use result;",
+    "should_pass": false
+  },
+  {
+    "description": "Return with unquoted label - fails",
+    "tag": "Return",
+    "code": "return success use result",
+    "should_pass": false
+  },
+  {
+    "description": "Return block with invalid field name - fails",
+    "tag": "Return",
+    "code": "return { 123field use data; }",
+    "should_pass": false
+  },
+  {
+    "description": "Return block with reserved keyword as field - fails",
+    "tag": "Return",
+    "code": "return { return use data; }",
+    "should_pass": false
+  },
+  {
+    "description": "Return with reference to another prompt",
+    "tag": "Return",
+    "code": "return { use prompt2<mode=\"fast\">.result; }",
+    "should_pass": false
+  },
+  {
+    "description": "Return with mapped clause (only valid in kwargs) - fails",
+    "tag": "Return",
+    "code": "return { items use data mapped; }",
+    "should_pass": false
+  }
+]

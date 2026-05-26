@@ -6,6 +6,7 @@
 
 %class{
 private:
+    int fid = -1;
     int line_number = 1;
     int column_number = 1;
     int last_column = 1;
@@ -25,8 +26,10 @@ private:
     }
     
 public:
+    void set_file_id(int fid_) { fid = fid_; }
+
     SourceLocation current_location() const {
-        return {line_number, last_column, current_offset};
+        return {fid, line_number, last_column, current_offset};
     }
 
     Token advance() {
@@ -59,19 +62,22 @@ public:
 "record"                { update_location(); return (int)TokenType::RECORD; }
 "import"                { update_location(); return (int)TokenType::IMPORT; }
 "export"                { update_location(); return (int)TokenType::EXPORT; }
+"alias"                 { update_location(); return (int)TokenType::ALIAS; }
 "prompt"                { update_location(); return (int)TokenType::PROMPT; }
 "channel"               { update_location(); return (int)TokenType::CHANNEL; }
 "flow"                  { update_location(); return (int)TokenType::FLOW; }
-"entry"                 { update_location(); return (int)TokenType::ENTRY; }
 "return"                { update_location(); return (int)TokenType::RETURN; }
 "annotate"              { update_location(); return (int)TokenType::ANNOTATE; }
 "to"                    { update_location(); return (int)TokenType::TO; }
 "from"                  { update_location(); return (int)TokenType::FROM; }
+"get"                   { update_location(); return (int)TokenType::GET; }
+"use"                   { update_location(); return (int)TokenType::USE; }
 "call"                  { update_location(); return (int)TokenType::CALL; }
-"extern"                { update_location(); return (int)TokenType::EXTERN; }
-"kwarg"                 { update_location(); return (int)TokenType::KWARG; }
-"map"                   { update_location(); return (int)TokenType::MAP; }
+"mapped"                { update_location(); return (int)TokenType::MAPPED; }
+"ravel"                 { update_location(); return (int)TokenType::RAVEL; }
 "bind"                  { update_location(); return (int)TokenType::BIND; }
+"wrap"                  { update_location(); return (int)TokenType::WRAP; }
+"prune"                 { update_location(); return (int)TokenType::PRUNE; }
 "as"                    { update_location(); return (int)TokenType::AS; }
 "is"                    { update_location(); return (int)TokenType::IS; }
 "search"                { update_location(); return (int)TokenType::SEARCH; }
@@ -84,8 +90,8 @@ public:
 
 // Identifiers and literals  
 [a-zA-Z_][a-zA-Z0-9_]*  { update_location(); return (int)TokenType::IDENTIFIER; }
+[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+  { update_location(); return (int)TokenType::FLOAT_LITERAL; }
 [0-9]+                  { update_location(); return (int)TokenType::INTEGER_LITERAL; }
-[0-9]+\.[0-9]+          { update_location(); return (int)TokenType::FLOAT_LITERAL; }
 
 [fF]\"([^"\\]|\\.)*\"   { update_location(); return (int)TokenType::STRING_LITERAL; }
 [fF]'([^'\\]|\\.)*'     { update_location(); return (int)TokenType::STRING_LITERAL; }
