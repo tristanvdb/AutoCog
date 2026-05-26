@@ -1,0 +1,105 @@
+{
+  "action": 0,
+  "children": [
+    {
+      "action": 1,
+      "children": [
+        {
+          "action": 5,
+          "children": [],
+          "length": 14,
+          "logprob": 1.8343478441238403,
+          "logprobs": [],
+          "pruned": false,
+          "tokens": []
+        }
+      ],
+      "length": 14,
+      "logprob": 1.8343478441238403,
+      "logprobs": [
+        1.8343478441238403
+      ],
+      "pruned": false,
+      "text": "6",
+      "tokens": [
+        54
+      ]
+    },
+    {
+      "action": 1,
+      "children": [],
+      "length": 14,
+      "logprob": 3.74540114402771,
+      "logprobs": [
+        3.74540114402771
+      ],
+      "pruned": true,
+      "text": "3",
+      "tokens": [
+        51
+      ]
+    },
+    {
+      "action": 1,
+      "children": [],
+      "length": 14,
+      "logprob": 7.96543025970459,
+      "logprobs": [
+        7.96543025970459
+      ],
+      "pruned": true,
+      "text": "4",
+      "tokens": [
+        52
+      ]
+    },
+    {
+      "action": 1,
+      "children": [],
+      "length": 14,
+      "logprob": 9.507143020629883,
+      "logprobs": [
+        9.507143020629883
+      ],
+      "pruned": true,
+      "text": "5",
+      "tokens": [
+        53
+      ]
+    }
+  ],
+  "length": 13,
+  "logprob": 0.0,
+  "logprobs": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "pruned": false,
+  "text": "What is 2+2? ",
+  "tokens": [
+    87,
+    104,
+    97,
+    116,
+    32,
+    105,
+    115,
+    32,
+    50,
+    43,
+    50,
+    63,
+    32
+  ]
+}

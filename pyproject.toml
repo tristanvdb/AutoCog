@@ -1,0 +1,59 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "pybind11>=2.6.0",
+    "cmake>=3.18",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autocog"
+dynamic = ["version"]
+description = "Automaton & Cognition: programming models for language models"
+readme = "README.md"
+license = {text = "Apache 2.0"}
+authors = [
+    {name = "Tristan Vanderbruggen", email = "vanderbrugge1@llnl.gov"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "pydantic>=2",
+    "typing_extensions",
+    "parsimonious",
+    "pybind11>=2.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/LLNL/autocog/"
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.setuptools.packages.find]
+where = ["modules"]
+include = ["autocog", "autocog.*"]
+
+[tool.setuptools.package-dir]
+"" = "modules"
+
+[tool.setuptools.package-data]
+autocog = ["py.typed"]
+
+[tool.setuptools.data-files]
+"share/autocog/library/mcq" = ["share/library/mcq/*"]
+"share/autocog/library/dfl" = ["share/library/dfl/*"] 
+"share/autocog/library/elementary" = ["share/library/elementary/*"]
+"share/autocog/library/tools" = ["share/library/tools/*"]
