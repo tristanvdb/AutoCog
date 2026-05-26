@@ -1,6 +1,6 @@
 # End-to-end pipeline tests: stlc → ista → xfta --rng --best → psta
 
-set(STA_GOLDEN ${PROJECT_SOURCE_DIR}/tests/integration/tools/stlc/sta)
+set(STA_GOLDEN ${CMAKE_BINARY_DIR}/tests/integration/tools/stlc/sta/golden)
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mcq_data.json
      "{\"topic\":\"Sci\",\"question\":\"2+2?\",\"choices\":[\"3\",\"4\",\"5\",\"6\"]}")

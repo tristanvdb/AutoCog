@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ccache gcovr
+
+      - name: Install Python dependencies
+        run: pip install pytest pytest-cov pybind11 scikit-build-core
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          restore-keys: ccache-${{ runner.os }}-
+
+      # ---- cmake build + ctest (standalone, no pip install needed) ----
+
+      - name: Configure cmake (coverage build)
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Run ctest
+        working-directory: build
+        run: |
+          find . -name "*.gcda" -delete
+          ctest -j$(nproc) --timeout 60 --output-on-failure 2>&1 | tee ctest.log
+
+      # ---- pip install + pytest (against installed package) ----
+
+      - name: Install autocog
+        run: |
+          pip install ".[server]" \
+            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
+
+      - name: Run pytest with coverage
+        run: |
+          python -m pytest tests/integration/modules tests/units/modules \
+            --cov=autocog \
+            --cov-report=json:coverage_py.json \
+            -q 2>&1 | tee pytest.log
+
+      # ---- Coverage reports ----
+
+      - name: Generate C++ coverage
+        working-directory: build
+        run: |
+          gcovr -r "${{ github.workspace }}" . \
+            --filter "${{ github.workspace }}/libs/" \
+            --filter "${{ github.workspace }}/tools/" \
+            --filter "${{ github.workspace }}/bindings/" \
+            --json coverage_cxx.json \
+            2>/dev/null
+
+      - name: Generate coverage report
+        run: |
+          python tests/coverage_report.py \
+            build/coverage_cxx.json coverage_py.json \
+            -o coverage.md
+
+      - name: Extract summary
+        id: coverage
+        run: |
+          python3 << 'PYEOF'
+          import json, re, os
+
+          # C++ coverage
+          with open("build/coverage_cxx.json") as f:
+            cxx = json.load(f)
+          cxx_total = sum(len(e["lines"]) for e in cxx.get("files", []))
+          cxx_covered = sum(sum(1 for l in e["lines"] if l["count"] > 0) for e in cxx.get("files", []))
+          cxx_pct = round(100 * cxx_covered / cxx_total, 1) if cxx_total else 0
+
+          # Python coverage
+          with open("coverage_py.json") as f:
+            py = json.load(f)
+          py_pct = round(py.get("totals", {}).get("percent_covered", 0), 1)
+
+          # Test counts
+          with open("build/ctest.log") as f:
+            m = re.search(r"(\d+) tests passed", f.read())
+            ctest_count = int(m.group(1)) if m else 0
+          with open("pytest.log") as f:
+            m = re.search(r"(\d+) passed", f.read())
+            pytest_count = int(m.group(1)) if m else 0
+
+          summary = {
+            "ctest": ctest_count, "pytest": pytest_count,
+            "cxx_coverage": cxx_pct, "py_coverage": py_pct,
+          }
+          with open("coverage_summary.json", "w") as f:
+            json.dump(summary, f, indent=2)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            for k, v in summary.items():
+              f.write(f"{k}={v}\n")
+
+          print(f"ctest={ctest_count} pytest={pytest_count} C++={cxx_pct}% Python={py_pct}%")
+          PYEOF
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.md
+            coverage_summary.json
+
+      - name: Job summary
+        run: |
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ctest | ${{ steps.coverage.outputs.ctest }} passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| pytest | ${{ steps.coverage.outputs.pytest }} passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| C++ coverage | ${{ steps.coverage.outputs.cxx_coverage }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python coverage | ${{ steps.coverage.outputs.py_coverage }}% |" >> $GITHUB_STEP_SUMMARY
+
+      # ---- Update badges (master only) ----
+
+      - name: Update ctest badge
+        if: github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-ctest.json
+          label: ctest
+          message: "${{ steps.coverage.outputs.ctest }} passed"
+          color: brightgreen
+
+      - name: Update pytest badge
+        if: github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-pytest.json
+          label: pytest
+          message: "${{ steps.coverage.outputs.pytest }} passed"
+          color: brightgreen
+
+      - name: Update C++ coverage badge
+        if: github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-cxx-coverage.json
+          label: C++ coverage
+          message: "${{ steps.coverage.outputs.cxx_coverage }}%"
+          valColorRange: ${{ steps.coverage.outputs.cxx_coverage }}
+          minColorRange: 40
+          maxColorRange: 80
+
+      - name: Update Python coverage badge
+        if: github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-py-coverage.json
+          label: Python coverage
+          message: "${{ steps.coverage.outputs.py_coverage }}%"
+          valColorRange: ${{ steps.coverage.outputs.py_coverage }}
+          minColorRange: 30
+          maxColorRange: 80
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}

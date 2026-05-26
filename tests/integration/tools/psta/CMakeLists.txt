@@ -1,6 +1,6 @@
 # psta integration tests
 
-set(STA_GOLDEN ${PROJECT_SOURCE_DIR}/tests/integration/tools/stlc/sta)
+set(STA_GOLDEN ${CMAKE_BINARY_DIR}/tests/integration/tools/stlc/sta/golden)
 
 add_test(NAME psta_smoke
          COMMAND $<TARGET_FILE:autocog_psta> --help)

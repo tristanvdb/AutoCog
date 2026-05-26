@@ -1,0 +1,236 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag matches VERSION
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          FILE_VERSION="$(cat VERSION | tr -d '[:space:]')"
+          if [ "$TAG" != "$FILE_VERSION" ]; then
+            echo "::error::Tag $TAG does not match VERSION file ($FILE_VERSION)"
+            exit 1
+          fi
+
+      - name: Verify tag is on master
+        run: |
+          TAG_SHA=$(git rev-list -n1 "$GITHUB_REF")
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/master; then
+            echo "::error::Tag must point to a commit on master"
+            exit 1
+          fi
+
+      - name: Check CI passed for this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(git rev-list -n1 "$GITHUB_REF")
+          # Wait up to 5 min for CI to complete
+          for i in $(seq 1 30); do
+            STATUS=$(gh api repos/${{ github.repository }}/commits/$SHA/check-runs \
+              --jq '.check_runs[] | select(.name == "test-and-coverage") | .conclusion' 2>/dev/null)
+            if [ "$STATUS" = "success" ]; then
+              echo "CI passed for $SHA"
+              exit 0
+            elif [ "$STATUS" = "failure" ]; then
+              echo "::error::CI failed for $SHA"
+              exit 1
+            fi
+            echo "Waiting for CI... ($i/30)"
+            sleep 10
+          done
+          echo "::error::CI not found or timed out for $SHA"
+          exit 1
+
+  # Pull coverage from the CI run and gate on thresholds
+  coverage-gate:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download CI coverage artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(git rev-list -n1 "$GITHUB_REF")
+          # Find the CI run for this commit
+          RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yaml/runs \
+            --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\") | .id" \
+            | head -1)
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful CI run found for $SHA"
+            exit 1
+          fi
+          # Download the coverage artifact
+          gh run download "$RUN_ID" -n coverage -D coverage-artifact
+
+      - name: Check coverage thresholds
+        run: |
+          python3 << 'PYEOF'
+          import json, sys
+
+          with open("coverage-artifact/coverage_summary.json") as f:
+            summary = json.load(f)
+
+          print(f"C++ coverage:    {summary['cxx_coverage']}%")
+          print(f"Python coverage: {summary['py_coverage']}%")
+          print(f"ctest:           {summary['ctest']} passed")
+          print(f"pytest:          {summary['pytest']} passed")
+
+          # Thresholds (adjust as project matures)
+          MIN_CXX = 50
+          MIN_PY = 40
+
+          failed = False
+          if summary["cxx_coverage"] < MIN_CXX:
+            print(f"::error::C++ coverage {summary['cxx_coverage']}% below threshold {MIN_CXX}%")
+            failed = True
+          if summary["py_coverage"] < MIN_PY:
+            print(f"::error::Python coverage {summary['py_coverage']}% below threshold {MIN_PY}%")
+            failed = True
+
+          sys.exit(1 if failed else 0)
+          PYEOF
+
+      - name: Upload coverage for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-artifact/coverage.md
+
+  wheels:
+    needs: coverage-gate
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: pypa/cibuildwheel@v2.21
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux*"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          CIBW_BEFORE_BUILD: "pip install scikit-build-core pybind11"
+          CIBW_TEST_COMMAND: >
+            python -c "import autocog; print(autocog.__version__)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    needs: coverage-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  demo:
+    needs: wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-ubuntu-latest
+          path: wheelhouse
+
+      - name: Install autocog from wheel
+        run: pip install wheelhouse/autocog-*cp312*.whl
+
+      - name: Pack writer demo
+        run: |
+          autocog pack \
+            --stl share/demos/story-writer/writer.stl \
+            -I share/demos/story-writer \
+            -o writer.stapp
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-stapp
+          path: writer.stapp
+
+  containers:
+    needs: coverage-gate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [run, serve, rpc, backend]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockerfiles/ubuntu.df
+          target: ${{ matrix.variant }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.variant }}
+            ghcr.io/${{ github.repository }}:latest-${{ matrix.variant }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    needs: [wheels, sdist, demo, containers, coverage-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/wheels-*/*.whl
+            artifacts/sdist/*.tar.gz
+            artifacts/demo-stapp/*.stapp
+            artifacts/coverage-report/coverage.md

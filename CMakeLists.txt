@@ -34,7 +34,8 @@ endif()
 
 set(COMMON_CXX_FLAGS "-Wall -Wextra -Werror")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -rdynamic -fno-omit-frame-pointer -Wl,--wrap=__cxa_throw ${COMMON_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -rdynamic -fno-omit-frame-pointer ${COMMON_CXX_FLAGS}")
+  # --wrap=__cxa_throw applied after vendor subdirectories (see below)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${COMMON_CXX_FLAGS}")
 endif()
 
@@ -98,6 +99,11 @@ if(NOT llama_FOUND)
 endif()
 
 enable_testing()
+
+# Debug exception tracing (after vendor subdirectories to avoid polluting them)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_link_options(-Wl,--wrap=__cxa_throw)
+endif()
 
 add_subdirectory(libs/autocog/utilities)
 

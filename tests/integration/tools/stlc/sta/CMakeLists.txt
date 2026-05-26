@@ -1,7 +1,24 @@
 # stlc --emit sta golden output tests
 
 set(FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
-set(GOLDEN ${CMAKE_CURRENT_SOURCE_DIR})
+set(GOLDEN_SRC ${CMAKE_CURRENT_SOURCE_DIR})
+set(GOLDEN ${CMAKE_CURRENT_BINARY_DIR}/golden)
+
+# Copy golden files to build tree, replacing ABI_VERSION with actual version
+file(READ "${PROJECT_SOURCE_DIR}/VERSION" _AUTOCOG_VERSION)
+string(STRIP "${_AUTOCOG_VERSION}" _AUTOCOG_VERSION)
+string(REGEX REPLACE "^v" "" _AUTOCOG_VERSION "${_AUTOCOG_VERSION}")
+
+file(GLOB_RECURSE GOLDEN_FILES ${GOLDEN_SRC}/*.golden.json)
+foreach(gf ${GOLDEN_FILES})
+    file(RELATIVE_PATH rel ${GOLDEN_SRC} ${gf})
+    set(dst ${GOLDEN}/${rel})
+    get_filename_component(dst_dir ${dst} DIRECTORY)
+    file(MAKE_DIRECTORY ${dst_dir})
+    file(READ ${gf} content)
+    string(REPLACE "ABI_VERSION" "${_AUTOCOG_VERSION}" content "${content}")
+    file(WRITE ${dst} "${content}")
+endforeach()
 
 function(add_sta_test fixture_path)
     # Derive test name from fixture path relative to FIXTURES

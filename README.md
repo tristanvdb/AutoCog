@@ -1,5 +1,12 @@
 # ⚙️ AutoCog - Automaton & Cognition
 
+[![CI](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml)
+[![Release](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml/badge.svg)](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml)
+![ctest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-ctest.json)
+![pytest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-pytest.json)
+![C++ coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-cxx-coverage.json)
+![Python coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-py-coverage.json)
+
 **AutoCog** explores mechanisms to build automata that control applications driven by auto-regressive language models. We define a programming model called **Structured Thoughts**, with a language (STL) that compiles to executable automata.
 
 ## Quick Start

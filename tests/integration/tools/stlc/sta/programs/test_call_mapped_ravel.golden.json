@@ -1,5 +1,5 @@
 {
-  "abi_version": "0.4.3",
+  "abi_version": "ABI_VERSION",
   "entry_points": {
     "main": {
       "inputs": {
