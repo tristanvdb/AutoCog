@@ -14,21 +14,16 @@
 ```bash
 git clone --recursive https://github.com/LLNL/AutoCog
 cd AutoCog
-```
-
-Install with pip:
-
-```bash
 pip install .
 ```
 
-Or build a container:
+For server functionality (FastAPI + uvicorn):
 
 ```bash
-podman build -f dockerfiles/ubi.df -t autocog:ubi .
+pip install ".[server]"
 ```
 
-See [DEVEL.md](./DEVEL.md) for development setup and [docs/](./docs/README.md) for documentation.
+Vendored dependencies (RE-flex, llama.cpp) are built automatically if not found on the system.
 
 ## What is Structured Thoughts?
 
@@ -38,7 +33,7 @@ Structured Thoughts is a programming model where:
 - **Branching** between prompts is controlled by the language model
 - **Dataflow** is statically defined and executed when instantiating automata
 
-Example - Multiple Choice Question with Chain of Thought:
+Example — Multiple Choice Question with Chain of Thought:
 
 ```
 record thought {
@@ -72,16 +67,79 @@ prompt main {
 }
 ```
 
+## CLI
+
+AutoCog provides a command-line interface with subcommands:
+
+```bash
+# Compile STL to STA
+autocog compile --stl program.stl -o program.sta.json
+
+# Run a program
+autocog run --stl program.stl --rng --input '{"topic":"Science","question":"2+2?","choices":["3","4","5"]}'
+autocog run --sta program.sta.json --model model.gguf --input data.json
+
+# Package as a .stapp (Structured Thought App)
+autocog pack --stl program.stl -I includes/ -o app.stapp
+
+# Run from a .stapp
+autocog run --app app.stapp --model model.gguf --input '{"key":"value"}'
+
+# Serve with web UI
+autocog serve --app app.stapp --model model.gguf --port 8080
+
+# Prompt evaluation server (RPC)
+autocog rpc --sta program.sta.json --model model.gguf --port 8080
+
+# Inference server (backend)
+autocog backend --model model.gguf --port 8080
+```
+
+Use `--rng` instead of `--model` for testing without a real model.
+
+## .stapp Packaging
+
+Programs can be packaged as `.stapp` files (zip) for distribution:
+
+```bash
+autocog pack --stl writer.stl -I src/ -o writer.stapp
+autocog pack --stl writer.stl -I src/ --no-source -o writer.stapp   # strip source
+autocog pack --stl writer.stl -I src/ --vendor-stdlib -o writer.stapp  # self-contained
+```
+
+A `.stapp` bundles the compiled STA, source (optional), Python externals, and STL imports with a manifest containing entry point schemas.
+
+## Containers
+
+Build container variants for deployment:
+
+```bash
+docker build --target serve   -f dockerfiles/ubuntu.df -t autocog:serve .
+docker build --target backend -f dockerfiles/ubuntu.df -t autocog:backend .
+docker build --target rpc     -f dockerfiles/ubuntu.df -t autocog:rpc .
+docker build --target run     -f dockerfiles/ubuntu.df -t autocog:run .
+```
+
+| Variant | Purpose | Default |
+|---------|---------|---------|
+| `serve` | Full app server with web UI | `autocog serve` |
+| `rpc` | Prompt evaluation server | `autocog rpc` |
+| `backend` | Inference server (FTA evaluation) | `autocog backend --rng` |
+| `run` | Batch execution | `autocog run` |
+
+Example with docker compose:
+
+```bash
+docker compose -f dockerfiles/compose.yaml up
+```
+
+See [dockerfiles/compose.yaml](dockerfiles/compose.yaml) for a multi-container example.
+
 ## Examples
 
-The [share/demos/mcq/](./share/demos/mcq/) directory contains 10 Multiple Choice Question examples demonstrating various thought patterns:
+The [share/demos/mcq/](./share/demos/mcq/) directory contains Multiple Choice Question examples demonstrating various thought patterns (basic select/repeat, chain of thought, hypothesis, iterative reflection). See [share/demos/mcq/README.md](./share/demos/mcq/README.md).
 
-- **Basic**: Simple select/repeat
-- **Chain of Thought**: Step-by-step reasoning
-- **Hypothesis**: Two-stage generation
-- **Iterative**: Retry loops with reflection
-
-See [share/demos/mcq/README.md](./share/demos/mcq/README.md) for details.
+The [share/demos/story-writer/](./share/demos/story-writer/) directory contains a multi-prompt story writer with loops, Python externals, and templated content. See [share/demos/story-writer/README.md](./share/demos/story-writer/README.md).
 
 ## Syntax Highlighting
 

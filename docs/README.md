@@ -1,26 +1,30 @@
 # AutoCog Documentation
 
-## User Guide
+## Structured Thoughts
 
-Documentation for users of the STL language and AutoCog runtime:
+- [Overview](./structured-thoughts/overview.md) — Programming model, key concepts, how it works
+- [Language Reference](./structured-thoughts/language.md) — STL syntax: records, prompts, channels, flows
+- [Standard Library](./structured-thoughts/stdlib.md) — Thought, reflexion, datastore
 
-- [Setup & Installation](./user-guide/setup.md)
-- [Usage Guide](./user-guide/usage.md)
-- [Language Reference](./user-guide/language.md)
-- [Tutorial](./user-guide/tutorial.md)
+## Interfaces
 
-**Note**: Some user guide content may be outdated as the project focuses on the STL compiler rewrite.
+- [autocog CLI](./interfaces/autocog-cli.md) — compile, pack, run, serve, rpc, backend
+- [C++ Tools](./interfaces/tools-cli.md) — stlc, ista, psta, xfta
+- [Python API](./interfaces/python-api.md) — autocog package (compile, Engine, RemoteEngine, etc.)
+- [REST API](./interfaces/rest-api.md) — server endpoints (backend, rpc, serve)
+- [File Formats](./interfaces/formats.md) — STA, FTA, .stapp, manifest, schema, syntax
 
 ## STL Compiler
 
-- [Compiler Architecture](./compiler/architecture.md) - Pipeline stages and data structures
-- [Runtime Semantics](./compiler/runtime-semantics.md) - Execution model: STA→FTA→LLM
+- [Compiler Architecture](./compiler/architecture.md) — Pipeline stages and data structures
+- [Runtime Semantics](./compiler/runtime-semantics.md) — Execution model: STA → FTA → LLM
 
 ## Development
 
-- [Developer Guide](../DEVEL.md) - Build setup, testing, containers
+- [Developer Guide](../DEVEL.md) — Build setup, testing, containers
+- [Test Structure](../tests/README.md) — Test framework, fixtures, coverage
 
 ## Examples
 
-- [MCQ Demos](../share/demos/mcq/README.md) - Multiple-choice question examples
-- [Integration Tests](../tests/integration/stl/) - Real STL test cases
+- [MCQ Demos](../share/demos/mcq/README.md) — Multiple-choice question examples
+- [Story Writer](../share/demos/story-writer/README.md) — Multi-prompt app with loops and externals

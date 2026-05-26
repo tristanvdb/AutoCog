@@ -106,8 +106,12 @@ jobs:
 
           # Test counts
           with open("build/ctest.log") as f:
-            m = re.search(r"(\d+) tests passed", f.read())
-            ctest_count = int(m.group(1)) if m else 0
+            ctest_text = f.read()
+            m = re.search(r"(\d+) tests failed out of (\d+)", ctest_text)
+            if m:
+              ctest_count = int(m.group(2)) - int(m.group(1))
+            else:
+              ctest_count = 0
           with open("pytest.log") as f:
             m = re.search(r"(\d+) passed", f.read())
             pytest_count = int(m.group(1)) if m else 0

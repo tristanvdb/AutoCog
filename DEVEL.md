@@ -1,141 +1,85 @@
 # Developer Guide
 
-## Container Development
+## Installation
 
-### Building the Image
-
-Build the builder stage which includes all vendored dependencies and build tools:
+### With pip
 
 ```bash
-podman build --target builder -f dockerfiles/ubi.df -t autocog:ubi-dev .
+pip install .                # core
+pip install ".[server]"      # with FastAPI/uvicorn for serve/rpc/backend
+```
+
+This builds everything via cmake internally (including vendored RE-flex and llama.cpp if not found on the system). Validate with:
+
+```bash
+python -c "import autocog; print(autocog.__version__)"
+autocog compile --stl share/demos/mcq/select.stl | head -5
+```
+
+### With cmake (for C++ development)
+
+You can either let cmake build vendored dependencies automatically:
+
+```bash
+mkdir -p builds/autocog && cd builds/autocog
+cmake ../../AutoCog -DCMAKE_BUILD_TYPE=Release
+cmake --build . --parallel $(nproc)
+```
+
+Or pre-build dependencies to a prefix for faster iteration:
+
+```bash
+PREFIX=$(cd .. && pwd)/opt
+
+# RE-flex
+cmake -B builds/reflex vendors/reflex -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+cmake --build builds/reflex --parallel $(nproc) && cmake --install builds/reflex
+
+# llama.cpp
+cmake -B builds/llama vendors/llama \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DLLAMA_BUILD_COMMON=OFF -DLLAMA_BUILD_TOOLS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_APP=OFF -DLLAMA_BUILD_SERVER=OFF \
+    -DLLAMA_CUDA=OFF
+cmake --build builds/llama --parallel $(nproc) && cmake --install builds/llama
+
+# AutoCog (finds deps in $PREFIX)
+cmake -B builds/autocog . -DCMAKE_PREFIX_PATH=$PREFIX -DCMAKE_BUILD_TYPE=Debug
+cmake --build builds/autocog --parallel $(nproc)
+```
+
+For CUDA, replace `-DLLAMA_CUDA=OFF` with `-DLLAMA_CUDA=ON`.
+
+Install ccache for faster rebuilds:
+
+```bash
+sudo apt-get install ccache   # or dnf install ccache
+cmake ... -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+```
+
+## Container Development
+
+Build the builder stage for a dev container:
+
+```bash
+docker build --target builder -f dockerfiles/ubuntu.df -t autocog:dev .
 ```
 
 For CUDA, pass a CUDA base image — `nvcc` is auto-detected:
 
 ```bash
-podman build --target builder \
-    --build-arg BUILD_IMAGE=docker.io/nvidia/cuda:13.0.0-devel-ubi9 \
-    -f dockerfiles/ubi.df -t autocog:ubi-cuda-dev .
+docker build --target builder \
+    --build-arg BUILD_IMAGE=nvidia/cuda:13.0.0-devel-ubuntu24.04 \
+    -f dockerfiles/ubuntu.df -t autocog:cuda-dev .
 ```
 
-Ubuntu variant:
+Mount the source tree for iterative development:
 
 ```bash
-podman build --target builder -f dockerfiles/ubuntu.df -t autocog:ubuntu-dev .
-```
-
-### Persistent Dev Container
-
-Mount the source tree and use the container for builds:
-
-```bash
-podman run -d --name autocog-dev --rm \
-    -v $(pwd):/workspace/autocog -w /workspace/autocog \
-    autocog:ubi-dev sleep infinity
-```
-
-Interactive shell:
-
-```bash
-podman exec -it autocog-dev bash
-```
-
-Stop when done:
-
-```bash
-podman stop autocog-dev
-```
-
-## Host-side Development
-
-Prerequisites:
-
-- C++17 compiler (GCC 9+ or Clang 10+)
-- CMake 3.18+
-- Python 3.9+ with development headers
-- pybind11 (`pip install pybind11`)
-
-Build the vendored dependencies to a local prefix. Pick a location (examples use `../opt`):
-
-```bash
-PREFIX=$(cd .. && pwd)/opt
-mkdir -p ../builds/reflex ../builds/llama
-```
-
-### Build Vendored Dependencies
-
-#### RE-flex
-
-```bash
-cd ../builds/reflex
-cmake ../../AutoCog/vendors/reflex -DCMAKE_INSTALL_PREFIX=$PREFIX
-cmake --build . --parallel $(nproc)
-cmake --install .
-cd ../../AutoCog
-```
-
-#### llama.cpp
-
-```bash
-cd ../builds/llama
-cmake ../../AutoCog/vendors/llama \
-    -DCMAKE_INSTALL_PREFIX=$PREFIX \
-    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DLLAMA_BUILD_COMMON=OFF \
-    -DLLAMA_BUILD_TOOLS=OFF \
-    -DLLAMA_BUILD_EXAMPLES=OFF \
-    -DLLAMA_BUILD_TESTS=OFF \
-    -DLLAMA_BUILD_APP=OFF \
-    -DLLAMA_BUILD_SERVER=OFF \
-    -DLLAMA_CUDA=OFF
-cmake --build . --parallel $(nproc)
-cmake --install .
-cd ../../AutoCog
-```
-
-For CUDA, replace `-DLLAMA_CUDA=OFF` with `-DLLAMA_CUDA=ON` (requires CUDA toolkit).
-
-## Building AutoCog
-
-### With CMake
-
-From a container:
-
-```bash
-mkdir -p /tmp/autocog && cd /tmp/autocog
-cmake /workspace/autocog -DCMAKE_INSTALL_PREFIX=/opt
-make -j$(nproc)
-```
-
-From the host:
-
-```bash
-mkdir -p ../builds/autocog && cd ../builds/autocog
-cmake ../../AutoCog \
-    -DCMAKE_PREFIX_PATH=$PREFIX \
-    -DCMAKE_INSTALL_PREFIX=$PREFIX
-make -j$(nproc)
-```
-
-Debug build (with exception backtrace wrapper):
-
-```bash
-cmake ... -DCMAKE_BUILD_TYPE=Debug
-```
-
-This builds `stlc`, `xfta`, the Python bindings (`.so`), and the test harness.
-
-### With pip
-
-```bash
-pip install .
-```
-
-This runs the CMake build internally and installs the Python package, bindings, and CLI tools. Validate with:
-
-```bash
-scripts/test-pip-install.sh
+docker run -it --rm -v $(pwd):/workspace -w /workspace autocog:dev bash
 ```
 
 ## Testing
@@ -146,12 +90,12 @@ fixture categories, golden output procedures, and coverage analysis.
 ### Quick Reference
 
 ```bash
-# C++ tests
-cd builds/autocog-dbg
+# C++ tests (cmake build required)
+cd builds/autocog
 ctest -j4 --timeout 30
 
-# Python tests
-BUILD_DIR=builds/autocog-dbg pytest tests/integration/modules/ -v
+# Python tests (pip install required)
+pytest tests/integration/modules tests/units/modules -v
 
 # Coverage analysis
 tests/coverage.sh [BUILD_DIR]
@@ -167,3 +111,14 @@ wget -O SmolLM3-Q4_K_M.gguf \
     https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/main/SmolLM3-Q4_K_M.gguf?download=true
 cd ..
 ```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `autocog compile` | Compile STL to STA JSON |
+| `autocog run` | Run a program (from STL, STA, or .stapp) |
+| `autocog pack` | Package STL into a .stapp |
+| `autocog serve` | Full app server with web UI |
+| `autocog rpc` | Prompt evaluation server |
+| `autocog backend` | Inference server |

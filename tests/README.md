@@ -63,7 +63,7 @@ ctest -j4 --timeout 30
 ### Python (pytest)
 
 ```bash
-BUILD_DIR=builds/autocog-dbg pytest tests/integration/modules/ -v
+pytest tests/integration/modules tests/units/modules -v
 ```
 
 ## Golden Output Procedures
