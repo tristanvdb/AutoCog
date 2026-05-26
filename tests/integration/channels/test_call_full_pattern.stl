@@ -1,0 +1,35 @@
+// Test: full writer pattern — mapped + bind + ravel
+//
+// task_runner is called once per step (mapped), each returns {response: "..."}
+// bind(_, response) renames the unnamed return to "response"
+// ravel collects all responses into a flat list
+//
+// Input: {"steps": ["plan", "write", "review"]}
+
+prompt task_runner {
+  is {
+    task is text<length=10>;
+    response is text<length=20>;
+  }
+  channel {
+    task get task;
+  }
+  return {
+    use response;
+  }
+}
+
+prompt main {
+  is {
+    responses[3] is text<length=20>;
+    conclusion is text<length=20>;
+  }
+  channel {
+    responses call task_runner {
+      task get steps mapped;
+    } bind(_, response) ravel;
+  }
+  return {
+    use conclusion;
+  }
+}

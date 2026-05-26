@@ -1,0 +1,18 @@
+// Test array fields with various range syntaxes
+
+record Item {
+  is text;
+}
+
+prompt collector {
+  is {
+    fixed[5] is Item;
+    ranged[2:8] is text;
+    variable[1:10] is enum("a", "b", "c");
+  }
+  return {
+    use fixed;
+  }
+}
+
+export collector as main;

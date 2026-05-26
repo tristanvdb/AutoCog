@@ -1,0 +1,71 @@
+#ifndef AUTOCOG_BACKEND_LLAMA_MODEL_HXX
+#define AUTOCOG_BACKEND_LLAMA_MODEL_HXX
+
+#include "autocog/backend/llama/types.hxx"
+
+#include <random>
+#include <string>
+
+namespace autocog::backend::llama {
+
+class Model {
+  public:
+    ModelID const id;
+
+    // RNG model (id=0): byte-level character model with random logprobs
+    static constexpr size_t RNG_VOCAB_SIZE = 258;  // 256 byte values + BOS + EOS
+    static constexpr TokenID RNG_BOS = 256;
+    static constexpr TokenID RNG_EOS = 257;
+
+  private:
+    llama_model * model;
+    std::vector<llama_context *> contexts;
+    std::vector<TokenSequence> tokens;
+    std::mt19937 rng;
+
+    llama_context * get_context(ContextID const id = 0) const;
+    TokenSequence & get_tokens(ContextID const id = 0);
+    void check_context_id(ContextID const id = 0) const;
+
+    const llama_vocab * get_vocab() const;
+
+  public:
+    Model();
+    Model(ModelID const id, std::string const & model_path, int n_ctx);
+    ~Model();
+
+    ContextID fork_context(ContextID const id = 0);
+
+    TokenSequence tokenize(std::string const & text, bool add_bos, bool special);
+    std::string detokenize(TokenSequence const & tokens, bool spec_rm, bool spec_unp);
+    
+    size_t vocab_size() const;
+    TokenID bos_token() const;
+    TokenID eos_token() const;
+
+    TokenSequence const & get_tokens_const(ContextID const id = 0) const;
+
+    unsigned set_tokens(
+      TokenSequence const & tokens,
+      ContextID const id = 0
+    );
+
+    unsigned eval_sequences(
+      TokenSequence const & tokens,
+      ProbaSequence & logprobs,
+      ContextID const id = 0
+    );
+
+    unsigned eval_topk_tokens(
+      std::vector<bool> const & vocab_mask,
+      size_t max_candidates,
+      std::vector<TokenID> & topk_tokens,
+      std::vector<float> & topk_logprobs,
+      ContextID const id
+    );
+};
+
+}
+
+#endif /* AUTOCOG_BACKEND_LLAMA_MODEL_HXX */
+

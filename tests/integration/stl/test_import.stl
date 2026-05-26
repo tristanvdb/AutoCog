@@ -1,0 +1,32 @@
+// Test import functionality
+
+from "test_import_lib.stl" import LibRecord, LibPrompt, AnotherType;
+
+// Use imported record directly
+record Container {
+  is {
+    item is LibRecord;
+    another is AnotherType;
+  }
+}
+
+// Use imported record with parameters
+record CustomContainer {
+  is {
+    big_item is LibRecord<size=100>;
+  }
+}
+
+// Use imported prompt
+prompt main {
+  is {
+    container is Container;
+  }
+  flow LibPrompt;
+  channel {
+    container get container;
+  }
+  return {
+    use container;
+  }
+}

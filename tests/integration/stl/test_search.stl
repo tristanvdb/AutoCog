@@ -1,0 +1,52 @@
+// Test search (xFTA sampling parameters)
+
+define default_temperature = 0.7;
+define default_top_p = 0.95;
+
+// File-level search parameters
+search {
+  temperature is 0.8;
+  top_p is 0.9;
+}
+
+record Message {
+  is text<length=50>;
+
+  search {
+    temperature is default_temperature;
+    top_p is default_top_p;
+    max_tokens is 100;
+  }
+}
+
+record SpecialText {
+  is text<length=50>;
+
+  search {
+    temperature is 1.0;
+    top_k is 100;
+  }
+}
+
+prompt main {
+  is {
+    greeting is Message;
+    creative is SpecialText;
+  }
+
+  search {
+    temperature is 0.9;
+    top_k is 50;
+    max_tokens is 200;
+  }
+
+  channel {
+    greeting get greeting;
+    creative get creative;
+  }
+
+  return {
+    use greeting;
+    use creative;
+  }
+}

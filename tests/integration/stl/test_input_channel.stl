@@ -1,0 +1,20 @@
+// Test input channels (external data sources)
+
+record Question {
+  is text;
+}
+
+prompt quiz {
+  is {
+    question is Question;
+    answer is text;
+  }
+  channel {
+    question get question;
+  }
+  return {
+    use answer;
+  }
+}
+
+export quiz as main;

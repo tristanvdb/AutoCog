@@ -1,0 +1,20 @@
+// Test nested record references
+
+record City {
+  is text;
+}
+
+record Address {
+  is {
+    street is text;
+    city is City;
+  }
+}
+
+prompt location {
+  is {
+    address is Address;
+  }
+}
+
+export location as main;

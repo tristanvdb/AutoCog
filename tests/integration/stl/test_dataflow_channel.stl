@@ -1,0 +1,23 @@
+// Test dataflow channels (data from other prompts)
+
+record Hint {
+  is text;
+}
+
+prompt thinker {
+  is {
+    problem is text;
+    hint is Hint;
+    solution is text;
+    reflection is Hint;
+  }
+  channel {
+    problem get problem;
+    hint get reflection;
+  }
+  return {
+    use solution;
+  }
+}
+
+export thinker as main;

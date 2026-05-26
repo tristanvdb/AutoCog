@@ -2,7 +2,7 @@
 # Generate lexer from .l file
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.hxx
-    COMMAND ${REFLEX} --header-file=${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.hxx
+    COMMAND ${REFLEX_EXECUTABLE} --header-file=${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.hxx
                       --outfile=${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
                       ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
@@ -22,7 +22,14 @@ add_library(autocog_compiler_stl_lib STATIC
     parser/return.cxx parser/search.cxx parser/clauses.cxx
     parser/struct.cxx parser/assign.cxx
     symbols.cxx symbol-table.cxx symbol-scanner.cxx
-    evaluate.cxx instance-scanner.cxx
+    evaluate.cxx
+    instantiation-graph.cxx
+    compile/parse.cxx
+    compile/symbols.cxx
+    compile/globals.cxx
+    compile/instantiate.cxx
+    compile/assemble.cxx
+    compile/generate.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
 )
 
@@ -30,12 +37,34 @@ target_include_directories(autocog_compiler_stl_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/libs
     ${PROJECT_SOURCE_DIR}/vendors/headers
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${REFLEX_INC}
 )
 
 target_link_libraries(autocog_compiler_stl_lib PUBLIC
-    ${REFLEX_LIB}
+    Reflex::ReflexLibStatic
+    autocog_utilities_lib
+    autocog_runtime_sta_lib
 )
 
 set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# JSON serialization library (separate target — not linked into Python bindings)
+add_library(autocog_compiler_stl_serialize STATIC
+    serialize/ast.cxx
+    serialize/symbols.cxx
+    serialize/globals.cxx
+    serialize/graph.cxx
+    serialize/ir.cxx
+    serialize/sta.cxx
+)
+
+target_include_directories(autocog_compiler_stl_serialize PUBLIC
+    ${PROJECT_SOURCE_DIR}/libs
+    ${PROJECT_SOURCE_DIR}/vendors/headers
+)
+
+target_link_libraries(autocog_compiler_stl_serialize PUBLIC
+    autocog_compiler_stl_lib
+)
+
+set_property(TARGET autocog_compiler_stl_serialize PROPERTY POSITION_INDEPENDENT_CODE ON)
 

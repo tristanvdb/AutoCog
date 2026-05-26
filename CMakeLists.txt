@@ -40,25 +40,10 @@ if(NOT pybind11_FOUND)
   endif()
 endif()
 
-find_program(REFLEX reflex REQUIRED)
-find_library(REFLEX_LIB reflex REQUIRED)
-find_path(REFLEX_INC
-  NAMES reflex/flexlexer.h
-  HINTS /opt/include /usr/local/include
-  REQUIRED
-)
+find_package(Reflex REQUIRED)
+get_target_property(REFLEX_EXECUTABLE Reflex::Reflex LOCATION)
 
-find_library(LLAMA_LIB 
-  NAMES llama
-  HINTS /opt/lib /opt/lib64 /usr/local/lib /usr/local/lib64
-  REQUIRED
-)
-
-find_path(LLAMA_INC
-  NAMES llama.h
-  HINTS /opt/include /usr/local/include
-  REQUIRED
-)
+find_package(llama REQUIRED)
 
 enable_testing()
 
@@ -68,11 +53,22 @@ add_subdirectory(libs/autocog/compiler/stl)
 add_subdirectory(tools/stlc)
 add_subdirectory(bindings/compiler-stl)
 
-add_subdirectory(libs/autocog/llama/xfta)
+add_subdirectory(libs/autocog/runtime/fta)
+add_subdirectory(libs/autocog/runtime/sta)
+add_subdirectory(libs/autocog/runtime/frame)
+add_subdirectory(libs/autocog/runtime/store)
+add_subdirectory(bindings/runtime-sta)
+
+add_subdirectory(libs/autocog/backend/llama)
 add_subdirectory(tools/xfta)
-add_subdirectory(bindings/llama-xfta)
+add_subdirectory(tools/ista)
+add_subdirectory(tools/psta)
+add_subdirectory(bindings/backend-llama)
 
 add_subdirectory(tests/units)
+add_subdirectory(tests/integration/stl)
+add_subdirectory(tests/integration/xfta)
+add_subdirectory(tests/integration/channels)
 
 add_subdirectory(share/demos)
 

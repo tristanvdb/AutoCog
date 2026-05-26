@@ -1,0 +1,36 @@
+// Test: call channel — one prompt calls another
+//
+// main calls the "worker" prompt, passing topic as kwarg
+// worker returns a result that main uses
+//
+// Input: {"topic": "science"}
+// Expected: main.answer contains worker's return value
+
+prompt worker {
+  is {
+    topic is text<length=10>;
+    result is text<length=20>;
+  }
+  channel {
+    topic get topic;
+  }
+  return {
+    use result;
+  }
+}
+
+prompt main {
+  is {
+    topic is text<length=10>;
+    answer is text<length=20>;
+  }
+  channel {
+    topic get topic;
+    answer call worker {
+      topic get topic;
+    };
+  }
+  return {
+    use answer;
+  }
+}

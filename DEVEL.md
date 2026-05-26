@@ -1,143 +1,209 @@
-# Develop Commands Cheat Sheet
+# Developer Guide
 
-## Get models
+## Container Development
 
-```
-mkdir -p  models
-cd models
-wget -O SmolLM3-Q4_K_M.gguf https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/main/SmolLM3-Q4_K_M.gguf?download=true
-```
+### Building the Image
 
-## Container
-
-### CPU (for dev)
-
-Build the image:
-```
-docker build -t autocog:ubi -f Dockerfile.ubi .
-```
-
-Run one-off commands:
-```
-docker run --rm -v $(pwd):/workspace -w /workspace autocog:ubi scripts/sanity-check.sh
-```
-
-**Recommended: Use a persistent container for development:**
-```bash
-# Start persistent container
-docker run -d --name autocog --rm -v $(pwd):/workspace -w /workspace autocog:ubi sleep infinity
-
-# Execute commands in the container
-docker exec autocog bash -c "cd /tmp && cmake /workspace && make install && ctest"
-
-# Interactive shell
-docker exec -it autocog bash
-
-# Stop container when done
-docker stop autocog
-```
-
-### CUDA on RHEL with Podman
-
-First setup CUDA for container use (3rd command is for FIPS enable machines):
-```bash
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
-    sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-sudo dnf --disablerepo=\* --enablerepo=nvidia-container-toolkit-experimental install -y nvidia-container-toolkit
-sudo rpm -ivh --nodigest --nofiledigest /var/cache/dnf/nvidia-container-toolkit-experimental-*/packages/*.rpm
-sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
-sudo chmod o+r /etc/cdi/nvidia.yaml
-sudo chmod o+rx /etc/cdi
-podman run --rm --device nvidia.com/gpu=all docker.io/nvidia/cuda:12.4.0-runtime-ubuntu22.04 nvidia-smi
-```
-
-Build and run persistent container:
-```bash
-podman build --device nvidia.com/gpu=all -f Dockerfile.ubi-cuda -t autocog:ubi-cuda .
-podman run -d --name autocog --rm --device nvidia.com/gpu=all \
-    -v $(pwd):/workspace -w /workspace autocog:ubi-cuda sleep infinity
-
-# Execute commands
-podman exec autocog bash -c "cd /tmp && cmake /workspace && make install && ctest"
-```
-
-### Ubuntu with CUDA (Docker)
+Build the builder stage which includes all vendored dependencies and build tools:
 
 ```bash
-docker build -t autocog:ubuntu -f Dockerfile.ubuntu .
-docker run -d --name autocog --rm --gpus all \
-    -v $(pwd):/workspace -w /workspace autocog:ubuntu sleep infinity
+podman build --target builder -f dockerfiles/ubi.df -t autocog:ubi-dev .
 ```
 
-## Testing Components
+For CUDA, pass a CUDA base image — `nvcc` is auto-detected:
 
-### xFTA (Finite Thoughts Automaton Executor)
-
-Testing the C++ utility:
 ```bash
-python3 scripts/dump_sta_to_json.py tests/samples/mini.sta models/SmolLM3-Q4_K_M.gguf
-xfta -v -m models/SmolLM3-Q4_K_M.gguf tests/samples/mini.sta.json
+podman build --target builder \
+    --build-arg BUILD_IMAGE=docker.io/nvidia/cuda:13.0.0-devel-ubi9 \
+    -f dockerfiles/ubi.df -t autocog:ubi-cuda-dev .
 ```
 
-Testing the integration:
+Ubuntu variant:
+
 ```bash
-python3 scripts/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
+podman build --target builder -f dockerfiles/ubuntu.df -t autocog:ubuntu-dev .
 ```
 
-### STLC (Structured Thoughts Language Compiler)
+### Persistent Dev Container
 
-Test compilation:
+Mount the source tree and use the container for builds:
+
+```bash
+podman run -d --name autocog-dev --rm \
+    -v $(pwd):/workspace/autocog -w /workspace/autocog \
+    autocog:ubi-dev sleep infinity
+```
+
+Interactive shell:
+
+```bash
+podman exec -it autocog-dev bash
+```
+
+Stop when done:
+
+```bash
+podman stop autocog-dev
+```
+
+## Host-side Development
+
+Prerequisites:
+
+- C++17 compiler (GCC 9+ or Clang 10+)
+- CMake 3.18+
+- Python 3.9+ with development headers
+- pybind11 (`pip install pybind11`)
+
+Build the vendored dependencies to a local prefix. Pick a location (examples use `../opt`):
+
+```bash
+PREFIX=$(cd .. && pwd)/opt
+mkdir -p ../builds/reflex ../builds/llama
+```
+
+### Build Vendored Dependencies
+
+#### RE-flex
+
+```bash
+cd ../builds/reflex
+cmake ../../AutoCog/vendors/reflex -DCMAKE_INSTALL_PREFIX=$PREFIX
+cmake --build . --parallel $(nproc)
+cmake --install .
+cd ../../AutoCog
+```
+
+#### llama.cpp
+
+```bash
+cd ../builds/llama
+cmake ../../AutoCog/vendors/llama \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DLLAMA_BUILD_COMMON=OFF \
+    -DLLAMA_BUILD_TOOLS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=OFF \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_APP=OFF \
+    -DLLAMA_BUILD_SERVER=OFF \
+    -DLLAMA_CUDA=OFF
+cmake --build . --parallel $(nproc)
+cmake --install .
+cd ../../AutoCog
+```
+
+For CUDA, replace `-DLLAMA_CUDA=OFF` with `-DLLAMA_CUDA=ON` (requires CUDA toolkit).
+
+## Building AutoCog
+
+### With CMake
+
+From a container:
+
+```bash
+mkdir -p /tmp/autocog && cd /tmp/autocog
+cmake /workspace/autocog -DCMAKE_INSTALL_PREFIX=/opt
+make -j$(nproc)
+```
+
+From the host:
+
+```bash
+mkdir -p ../builds/autocog && cd ../builds/autocog
+cmake ../../AutoCog \
+    -DCMAKE_PREFIX_PATH=$PREFIX \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX
+make -j$(nproc)
+```
+
+Debug build (with exception backtrace wrapper):
+
+```bash
+cmake ... -DCMAKE_BUILD_TYPE=Debug
+```
+
+This builds `stlc`, `xfta`, the Python bindings (`.so`), and the test harness.
+
+### With pip
+
+```bash
+pip install .
+```
+
+This runs the CMake build internally and installs the Python package, bindings, and CLI tools. Validate with:
+
+```bash
+scripts/test-pip-install.sh
+```
+
+## Testing
+
+### ctest Labels
+
+```bash
+ctest --output-on-failure          # All tests
+ctest -L smoke                     # CLI smoke tests
+ctest -L stlc                     # Compiler: parser units + integration stages
+ctest -L xfta                     # Executor: RNG model fixtures + binding
+ctest -L bindings                  # Python binding .so import tests
+ctest -L demo                     # Demo program compilation
+```
+
+Run a single test with verbose output:
+
+```bash
+ctest -R stl_parser_identifiers -V
+```
+
+### Testing stlc
+
 ```bash
 stlc -h
-stlc tests/samples/defines.stl
-stlc share/demos/story-writer/story-writer.stl
+stlc share/demos/mcq/select.stl
+stlc -I share/library share/demos/story-writer/writer.stl
+stlc --stage parse share/demos/mcq/select.stl
 ```
 
-## Building and Testing
+### Testing xfta
 
-### Build Types
+With the built-in RNG model (no GGUF needed):
 
-**Debug build** (with exception backtrace wrapper):
 ```bash
-mkdir -p /tmp/autocog && cd /tmp/autocog
-cmake /workspace -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt
-make install -j$(nproc)
+xfta --rng tests/integration/xfta/test_text_completion.json
+xfta --rng -v tests/integration/xfta/test_text_choice.json
 ```
 
-**Release build** (optimized, default):
+With a real model:
+
 ```bash
-mkdir -p /tmp/autocog && cd /tmp/autocog
-cmake /workspace -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt
-make install -j$(nproc)
+xfta -v -m models/SmolLM3-Q4_K_M.gguf fta_input.json
 ```
 
-### Running Tests
+### Python Package
 
-Run all tests:
+After `pip install .`:
+
 ```bash
-cd /tmp/autocog
-ctest --output-on-failure
+scripts/test-pip-install.sh
 ```
 
-Run specific test suites:
+Or manually:
+
 ```bash
-ctest -R stl_parser          # All parser tests
-ctest -R smoke               # Smoke tests only
-ctest -R stl_parser_identifiers -V  # Single test with verbose output
+python3 -c "import autocog"
+python3 -c "import autocog.compiler.stl"
+python3 -c "import autocog.llama.xfta"
 ```
 
-Run in persistent container:
+## Getting Models
+
+For testing with real models (not required — the RNG model covers CI):
+
 ```bash
-docker exec autocog bash -c "cd /tmp && cmake /workspace -DCMAKE_BUILD_TYPE=Release && make install -j\$(nproc) && ctest --output-on-failure"
+mkdir -p models && cd models
+wget -O SmolLM3-Q4_K_M.gguf \
+    https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/main/SmolLM3-Q4_K_M.gguf?download=true
+cd ..
 ```
-
-### Python Package Testing
-
-Install and test the Python package:
-```bash
-pip install /workspace
-python -c "import autocog"
-python -c "import autocog.compiler.stl"
-python -c "import autocog.llama.xfta"
-```
-

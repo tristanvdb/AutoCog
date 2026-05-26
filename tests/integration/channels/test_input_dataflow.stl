@@ -1,0 +1,33 @@
+// Test: basic input (get) and dataflow (use) channels
+//
+// Input: {"name": "Alice", "age": 25}
+// Expected flow: greeter → summarizer → return
+// Expected result: {"greeting": <generated>, "summary": <generated>}
+
+prompt greeter {
+  is {
+    name is text<length=10>;
+    greeting is text<length=20>;
+  }
+  channel {
+    name get name;
+  }
+  flow summarizer;
+}
+
+prompt summarizer {
+  is {
+    greeting is text<length=20>;
+    age is text<length=5>;
+    summary is text<length=30>;
+  }
+  channel {
+    greeting use greeter.greeting;
+    age get age;
+  }
+  return {
+    use summary;
+  }
+}
+
+export greeter as main;

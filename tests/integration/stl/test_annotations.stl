@@ -1,0 +1,28 @@
+// Test annotations for LLM prompt engineering
+
+record Topic {
+  is text;
+
+  annotate f"The subject matter being discussed";
+}
+
+prompt questioner {
+  is {
+    topic is Topic;
+    question is text;
+    answer is enum("yes", "no", "maybe");
+  }
+  channel {
+    topic get topic;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering yes/no questions.";
+    question as "the question to answer";
+    answer as "your answer to the question";
+  }
+}
+
+export questioner as main;

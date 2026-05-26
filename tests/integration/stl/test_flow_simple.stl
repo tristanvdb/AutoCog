@@ -1,0 +1,43 @@
+// Test flows between prompts (simple)
+
+record Task {
+  is text;
+}
+
+prompt step1 {
+  is {
+    input is Task;
+    output is text;
+  }
+  channel {
+    input get input;
+  }
+  return {
+    use output;
+  }
+}
+
+prompt step2 {
+  is {
+    input is text;
+    output is text;
+  }
+  return {
+    use output;
+  }
+}
+
+prompt main {
+  is {
+    task is Task;
+  }
+  channel {
+    task get task;
+  }
+  flow {
+    step1;
+    step2;
+  }
+}
+
+export main as entry;

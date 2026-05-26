@@ -1,0 +1,18 @@
+// Test prompt with multiple fields
+
+record Name {
+  is text;
+}
+
+record Age {
+  is enum("child", "teen", "adult", "senior");
+}
+
+prompt person {
+  is {
+    name is Name;
+    age is Age;
+  }
+}
+
+export person as main;

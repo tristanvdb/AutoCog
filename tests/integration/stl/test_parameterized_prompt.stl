@@ -1,0 +1,21 @@
+// Test parameterized prompts
+
+define max_items = 10;
+
+prompt worker {
+  argument count = max_items;
+  argument mode = "strict";
+
+  is {
+    items[count] is text;
+    result is text;
+  }
+  return {
+    use result;
+  }
+}
+
+export worker<count=5, mode="relaxed"> as fast_worker;
+export worker as default_worker;
+
+export worker as main;

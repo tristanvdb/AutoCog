@@ -13,7 +13,7 @@ record Title {
 
 record Page {
   is {
-    short is Though<length=30>;
+    short is Thought<length=30>;
     illustration[1:3] is Sentence<length=50>;
     content[1:10] is Sentence<length=100>;
   }
@@ -22,7 +22,7 @@ record Page {
 record Book {
   is {
     title is Title;
-    pages[5:100] is Page<ages=ages>;
+    pages[5:100] is Page;
   }
 }
 

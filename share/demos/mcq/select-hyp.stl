@@ -1,0 +1,58 @@
+// Multiple Choice Question - Select with Hypothesis
+// Two-stage: first generate hypothesis, then choose from options
+// Demonstrates: multiple prompts, flow, cross-prompt dataflow
+
+record thought {
+  is text<length=20>;
+  annotate f"a short text representing a single thought, it does not have to be a proper sentence.";
+}
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    hyphothesis is thought;
+  }
+  channel {
+    topic get topic;
+    question get question;
+  }
+  flow {
+    choose;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    hyphothesis as "your guess at what the answer should be";
+  }
+}
+
+prompt choose {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    hyphothesis is thought;
+    choices[4] is text<length=40>;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    hyphothesis use main.hyphothesis;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    hyphothesis as "your guess at what the answer should be";
+    choices as "the four possible choices to answer the question, only one is correct";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+export main as entry;

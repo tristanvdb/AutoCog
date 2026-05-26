@@ -1,0 +1,22 @@
+// Test text format with various parameters
+
+record ShortText {
+  is text<length=20>;
+}
+
+record LongText {
+  is text<length=100, threshold=0.95>;
+}
+
+prompt writer {
+  is {
+    title is ShortText;
+    content is LongText;
+    summary is text<length=50>;
+  }
+  return {
+    use summary;
+  }
+}
+
+export writer as main;

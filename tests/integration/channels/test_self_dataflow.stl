@@ -1,0 +1,24 @@
+// Test: self-referencing dataflow — prompt reads its own previous output
+//
+// Input: {"topic": "math"}
+// Flow: solver loops up to 3 times, reading its own previous "attempt"
+// Each iteration sees the prior attempt via self-dataflow
+// Expected: loops until flow chooses "done"
+
+prompt solver {
+  is {
+    topic is text<length=10>;
+    hint[0:1] is text<length=15>;
+    attempt is text<length=20>;
+  }
+  channel {
+    topic get topic;
+    hint use .attempt;
+  }
+  flow solver[3] as "retry";
+  return {
+    use attempt;
+  }
+}
+
+export solver as main;

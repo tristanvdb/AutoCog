@@ -1,0 +1,78 @@
+ARG BUILD_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
+ARG PROD_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
+
+FROM ${BUILD_IMAGE} AS builder
+
+ENV PYTHONUNBUFFERED=1
+
+RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
+        gcc gcc-c++ \
+        cmake \
+        git \
+        pkgconf-pkg-config \
+        python3 \
+        python3-pip \
+        python3-devel \
+        graphviz && \
+    dnf clean all
+
+COPY . /tmp/autocog
+
+RUN python3 -m venv /opt
+
+ENV PATH="/opt/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
+ENV PYTHONPATH=""
+
+RUN pip install --upgrade pip && \
+    pip install graphviz
+
+# RE/flex
+
+RUN cd /tmp/autocog/vendors/reflex && \
+    cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=/opt && \
+    cmake --build build --parallel $(nproc) && \
+    cmake --install build
+
+# llama.cpp (auto-detect CUDA)
+
+RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
+    echo "LLAMA_CUDA=${LLAMA_CUDA}" && \
+    cd /tmp/autocog/vendors/llama && \
+    cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=/opt \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DLLAMA_BUILD_COMMON=OFF \
+          -DLLAMA_BUILD_TOOLS=OFF \
+          -DLLAMA_BUILD_EXAMPLES=OFF \
+          -DLLAMA_BUILD_TESTS=OFF \
+          -DLLAMA_BUILD_APP=OFF \
+          -DLLAMA_BUILD_SERVER=OFF \
+          -DLLAMA_CUDA=${LLAMA_CUDA} && \
+    cmake --build build --parallel $(nproc) && \
+    cmake --install build
+
+# AutoCog
+
+RUN pip install /tmp/autocog && \
+    rm -rf /tmp/autocog
+
+# Production
+
+FROM ${PROD_IMAGE} AS production
+
+RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
+        python3 \
+        python3-pip \
+        graphviz && \
+    dnf clean all
+
+COPY --from=builder /opt /opt
+
+ENV PATH="/opt/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
+ENV PYTHONPATH=""
+
+WORKDIR /workspace

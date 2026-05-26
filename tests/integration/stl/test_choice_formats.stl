@@ -1,0 +1,19 @@
+// Test select and repeat choice formats
+
+record Option {
+  is text;
+}
+
+prompt chooser {
+  is {
+    options[4] is Option;
+    selected is select(options);
+    repeated is repeat(options);
+  }
+  return {
+    use selected;
+    use repeated;
+  }
+}
+
+export chooser as main;

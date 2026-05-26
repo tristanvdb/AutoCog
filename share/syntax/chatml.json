@@ -1,0 +1,5 @@
+{
+  "header_pre":  "<|im_start|>system\n",
+  "header_mid":  "<|im_end|>\n<|im_start|>user\n",
+  "header_post": "<|im_end|>\n<|im_start|>assistant\n"
+}

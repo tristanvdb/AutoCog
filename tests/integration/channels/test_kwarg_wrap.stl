@@ -1,0 +1,31 @@
+// Test: kwarg wrap — wrap a scalar value into a single-element list
+//
+// Input: {"title": "hello"}
+// The call wraps title into [title] before passing to list_handler
+
+prompt list_handler {
+  is {
+    titles[1] is text<length=20>;
+    result is text<length=20>;
+  }
+  channel {
+    titles get titles;
+  }
+  return {
+    use result;
+  }
+}
+
+prompt main {
+  is {
+    answer is text<length=20>;
+  }
+  channel {
+    answer call list_handler {
+      titles get title wrap;
+    };
+  }
+  return {
+    use answer;
+  }
+}

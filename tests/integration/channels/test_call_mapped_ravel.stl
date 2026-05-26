@@ -1,0 +1,35 @@
+// Test: call with mapped kwarg + ravel — flatten array of arrays
+//
+// Each "section_writer" call returns pages[2]
+// mapped iterates over sections, ravel flattens all pages into one list
+//
+// Input: {"sections": ["intro", "body", "conclusion"]}
+// Expected: main.all_pages = flat list of all pages from all sections
+
+prompt section_writer {
+  is {
+    section is text<length=10>;
+    pages[2] is text<length=15>;
+  }
+  channel {
+    section get section;
+  }
+  return {
+    use pages;
+  }
+}
+
+prompt main {
+  is {
+    all_pages[6] is text<length=15>;
+    summary is text<length=20>;
+  }
+  channel {
+    all_pages call section_writer {
+      section get sections mapped;
+    } ravel;
+  }
+  return {
+    use summary;
+  }
+}

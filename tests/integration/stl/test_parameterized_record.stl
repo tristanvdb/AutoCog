@@ -1,0 +1,22 @@
+// Test parameterized records
+
+define default_size = 50;
+
+record Container {
+  argument size = default_size;
+
+  is text<length=size>;
+}
+
+prompt storage {
+  is {
+    small is Container<size=10>;
+    medium is Container<size=25>;
+    large is Container;
+  }
+  return {
+    use small;
+  }
+}
+
+export storage as main;

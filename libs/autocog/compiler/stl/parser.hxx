@@ -150,6 +150,9 @@ template <> void Parser::parse<ast::Tag::Annotation>(ParserState & state, ast::D
 template <> void Parser::parse<ast::Tag::Param>(ParserState & state, ast::Data<ast::Tag::Param> &);
 template <> void Parser::parse<ast::Tag::Assign>(ParserState & state, ast::Data<ast::Tag::Assign> & data);
 
+template <> void Parser::parse<ast::Tag::Identifier>(ParserState & state, ast::Data<ast::Tag::Identifier> &);
+template <> void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag::Expression> &);
+
 }
 
 #endif // AUTOCOG_COMPILER_STL_PARSER_HXX

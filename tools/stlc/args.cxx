@@ -36,6 +36,9 @@ static void print_usage(const char* program) {
   std::cerr << "               -Dpi=3.14    (float)\n";
   std::cerr << "               -Dname=\"text\"  (string)\n";
   std::cerr << "               -Dval:int=42   (explicit type)\n";
+  std::cerr << "  -e, --emit <target>    Emit target (default: sta)\n";
+  std::cerr << "               Targets: ast, symbols, globals, graph,\n";
+  std::cerr << "                        ir, sta (default)\n";
   std::cerr << "  -V, --verbose      Enable verbose output\n";
   std::cerr << "  -h, --help         Show this help message\n";
   std::cerr << "  -v, --version      Show version information\n";
@@ -95,6 +98,28 @@ static std::string unquote(const std::string& s) {
     }
   }
   return s;
+}
+
+// Parse an emit target argument
+static bool parse_emit(const std::string& arg, Driver& driver) {
+  if (arg == "ast") {
+    driver.stage = CompilationStage::Parse;
+  } else if (arg == "symbols") {
+    driver.stage = CompilationStage::Symbols;
+  } else if (arg == "globals") {
+    driver.stage = CompilationStage::Globals;
+  } else if (arg == "graph") {
+    driver.stage = CompilationStage::Instantiate;
+  } else if (arg == "ir") {
+    driver.stage = CompilationStage::Assemble;
+  } else if (arg == "sta") {
+    driver.stage = CompilationStage::Generate;
+  } else {
+    std::cerr << "Error: Invalid emit target: " << arg << std::endl;
+    std::cerr << "Valid targets: ast, symbols, globals, graph, ir, sta" << std::endl;
+    return false;
+  }
+  return true;
 }
 
 // Parse a define argument
@@ -250,6 +275,19 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     }
     if (arg.length() > 2 && arg.substr(0, 2) == "-D") {
       if (!parse_define(arg.substr(2), driver)) {
+        return 1;
+      }
+      continue;
+    }
+
+    // Emit target
+    if (arg == "-e" || arg == "--emit") {
+      if (i + 1 < argc) {
+        if (!parse_emit(argv[++i], driver)) {
+          return 1;
+        }
+      } else {
+        std::cerr << "Error: " << arg << " requires an argument" << std::endl;
         return 1;
       }
       continue;

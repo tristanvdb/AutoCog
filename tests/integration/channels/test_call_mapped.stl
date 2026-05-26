@@ -1,0 +1,35 @@
+// Test: call with mapped kwarg — iterate over array
+//
+// main has items[3], calls "processor" once per item
+// mapped generates 3 calls, results collected as array
+//
+// Input: {"items": ["a", "b", "c"]}
+// Expected: main.results is [processor("a"), processor("b"), processor("c")]
+
+prompt processor {
+  is {
+    item is text<length=5>;
+    output is text<length=10>;
+  }
+  channel {
+    item get item;
+  }
+  return {
+    use output;
+  }
+}
+
+prompt main {
+  is {
+    results[3] is text<length=10>;
+    summary is text<length=20>;
+  }
+  channel {
+    results call processor {
+      item get items mapped;
+    };
+  }
+  return {
+    use summary;
+  }
+}

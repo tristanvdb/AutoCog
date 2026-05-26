@@ -1,0 +1,39 @@
+// Test: dataflow with prune — remove specific fields
+//
+// source produces a record with {name, secret, value}
+// target receives the record with "secret" pruned
+//
+// Input: {"query": "test"}
+
+prompt source {
+  is {
+    query is text<length=10>;
+    result is {
+      name is text<length=10>;
+      secret is text<length=10>;
+      value is text<length=10>;
+    }
+  }
+  channel {
+    query get query;
+  }
+  flow consumer;
+}
+
+prompt consumer {
+  is {
+    data is {
+      name is text<length=10>;
+      value is text<length=10>;
+    }
+    answer is text<length=20>;
+  }
+  channel {
+    data use source.result prune(secret);
+  }
+  return {
+    use answer;
+  }
+}
+
+export source as main;

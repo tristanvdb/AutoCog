@@ -1,0 +1,15 @@
+// Test alias (export as)
+
+record Data {
+  is text;
+}
+
+prompt processor {
+  is {
+    input is Data;
+  }
+}
+
+// Export with alias
+export processor as main;
+export processor as alt_name;

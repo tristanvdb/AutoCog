@@ -1,0 +1,26 @@
+// Multiple Choice Question - Select mode
+// The LLM picks the index of the correct answer from a list of choices
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is correct";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}

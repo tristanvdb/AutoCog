@@ -49,6 +49,11 @@ class Evaluator {
       std::string const &, std::string const &, ir::VarMap &,
       std::optional<SourceRange> const & = std::nullopt
     );
+
+    // Public interface for evaluating expressions
+    ir::Value evaluate_expression(
+      std::string const & scope, ast::Expression const & expr, ir::VarMap & varmap
+    );
 };
 
 }

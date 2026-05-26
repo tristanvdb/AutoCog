@@ -250,8 +250,18 @@ ir::Value Evaluator::retrieve_value(
   } else {
     auto sym_it = this->tables.symbols.find(scope+"::"+varname);
     if (sym_it == this->tables.symbols.end()) {
-      // TODO get from parent scope
-      throw std::runtime_error("NIY get value from parent scope.");
+      // Try parent scope (file scope if we're in a nested scope like "0::Container")
+      std::string parent_scope = scope;
+      auto last_sep = parent_scope.rfind("::");
+      if (last_sep != std::string::npos) {
+        parent_scope = parent_scope.substr(0, last_sep);
+        sym_it = this->tables.symbols.find(parent_scope+"::"+varname);
+      }
+
+      // If still not found, throw error
+      if (sym_it == this->tables.symbols.end()) {
+        throw CompileError("Undefined symbol: " + varname, loc);
+      }
     }
     auto const & sym = sym_it->second;
     if (std::holds_alternative<DefineSymbol>(sym)) {
@@ -283,6 +293,14 @@ ir::Value Evaluator::retrieve_value(
           );
   }
   return value;
+}
+
+ir::Value Evaluator::evaluate_expression(
+  std::string const & scope,
+  ast::Expression const & expr,
+  ir::VarMap & varmap
+) {
+  return evaluate(scope, expr, varmap);
 }
 
 

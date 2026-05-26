@@ -12,8 +12,7 @@
 
 namespace autocog::compiler::stl {
 
-void SymbolTable::dump(std::ostream & os) const {
-  os << "   === Symbols ===\n";
+void SymbolTable::dump_symbols(std::ostream & os) const {
   for (auto const & [name, sym] : symbols) {
     os << "    " << name << " -> ";
     std::visit([&os](auto const & s) {
@@ -34,8 +33,9 @@ void SymbolTable::dump(std::ostream & os) const {
     }, sym);
     os << "\n";
   }
-  
-  os << "  === Contexts ===\n";
+}
+
+void SymbolTable::dump_contexts(std::ostream & os) const {
   for (auto const & [name, context] : contexts) {
     os << "    " << name << ":\n";
     for (auto const & [var, val] : context) {
@@ -57,11 +57,6 @@ void SymbolTable::dump(std::ostream & os) const {
       os << "\n";
     }
   }
-  
-//  os << "  === Exports ===\n";
-//  for (auto const & [from, to] : exports) {
-//    os << "    " << from << " -> " << to << "\n";
-//  }
 }
 
 }

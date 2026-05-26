@@ -1,0 +1,39 @@
+// Test alias keyword for type aliases
+
+// Simple parameterized record
+record Message {
+  argument length = 10;
+  argument style = "formal";
+
+  is text<length=length>;
+
+  annotate f"A {style} message.";
+}
+
+// Test 1: Simple alias without parameters
+alias Message as SimpleMessage;
+
+// Test 2: Alias with bound parameters
+alias Message<length=50, style="casual"> as LongCasualMessage;
+
+// Test 3: Alias with partial parameters
+alias Message<style="technical"> as TechnicalMessage;
+
+// Use the aliases in a prompt
+prompt main {
+  is {
+    simple is SimpleMessage;                    // Should resolve to Message with defaults
+    long is LongCasualMessage;                  // Should resolve to Message<length=50, style="casual">
+    tech is TechnicalMessage<length=20>;        // Should resolve to Message<length=20, style="technical">
+  }
+  channel {
+    simple get simple;
+    long get long;
+    tech get tech;
+  }
+  return {
+    use simple;
+    use long;
+    use tech;
+  }
+}

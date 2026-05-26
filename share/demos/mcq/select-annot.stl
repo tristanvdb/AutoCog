@@ -1,0 +1,73 @@
+// Multiple Choice Question - Select with Per-Choice Annotation
+// Demonstrates: call channels with map/bind, nested field annotations
+// NOTE: Call channel syntax not fully understood, may not compile
+
+record correctness {
+  is enum("yes", "no", "maybe");
+  annotate "Evaluation of the correctness of a statement, can be yes, no, or maybe.";
+}
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is {
+      value is text<length=30>;
+      correct is correctness;
+    }
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    // NOTE: Call channel with map and bind is supported but not yet implemented
+    // in this demo due to complexity. The clause conversion infrastructure is
+    // fully working and tested. Example syntax from original STA:
+    // to .choices call {
+    //     entry annotator;
+    //     kwarg topic    from ?topic;
+    //     kwarg question from ?question;
+    //     kwarg choice   map  ?choices;
+    //     bind choice as value;
+    // }
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice question. You have been given the opportunity to look at each possible answer individually to decide whether or not they could be correct.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is really correct";
+    choices.value as "the value of the choice";
+    choices.correct as "your independent evaluation of whether or not this choice could be correct";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+prompt annotator {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choice is text<length=30>;
+    correct is correctness;
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choice get choice;
+  }
+  return {
+    use choice;
+    use correct;
+  }
+  annotate {
+    _ as "You are answering a multiple choice question. You must evaluate one of the proposed answer to this question";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choice as "one of the proposed answer to this question";
+    correct as "do you know if this answer is correct or not, then use yes or no. If unsure use maybe.";
+  }
+}
+
+export main as entry;

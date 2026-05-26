@@ -1,0 +1,20 @@
+// Test unnamed (inline) records
+
+prompt calculator {
+  is {
+    operands is {
+      left is text;
+      right is text;
+    }
+    operation is enum("add", "subtract", "multiply", "divide");
+    result is {
+      value is text;
+      confidence is enum("high", "medium", "low");
+    }
+  }
+  return {
+    use result;
+  }
+}
+
+export calculator as main;

@@ -1,0 +1,13 @@
+// Test basic record with enum format
+
+record Status {
+  is enum("pending", "active", "done");
+}
+
+prompt test {
+  is {
+    status is Status;
+  }
+}
+
+export test as main;

@@ -1,0 +1,25 @@
+// Library file for testing imports
+
+define lib_constant = 42;
+
+record LibRecord {
+  argument size = 10;
+  is text<length=size>;
+  annotate "A record from the library";
+}
+
+record AnotherType {
+  is text<length=20>;
+}
+
+prompt LibPrompt {
+  is {
+    data is LibRecord;
+  }
+  channel {
+    data get data;
+  }
+  return {
+    use data;
+  }
+}

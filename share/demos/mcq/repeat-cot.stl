@@ -1,0 +1,33 @@
+// Multiple Choice Question - Repeat with Chain of Thought
+// Shows intermediate reasoning steps before repeating answer
+
+record thought {
+  is text<length=20>;
+  annotate f"a short text representing a single thought, it does not have to be a proper sentence.";
+}
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    work[1:10] is thought;
+    answer is repeat(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is correct";
+    work as "show your work step-by-step";
+    answer as "you repeat verbatim of the choice that best answer the question";
+  }
+}

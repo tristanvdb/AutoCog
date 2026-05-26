@@ -1,0 +1,16 @@
+// Test defines with defaults
+
+define count = 10;
+define message = "hello";
+
+record Item {
+  is text;
+}
+
+prompt test {
+  is {
+    item is Item;
+  }
+}
+
+export test as main;

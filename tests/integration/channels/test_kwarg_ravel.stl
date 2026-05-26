@@ -1,0 +1,33 @@
+// Test: kwarg ravel — flatten nested array before passing as kwarg
+//
+// source has groups[2] each with items[3]
+// call passes all items as a flat list via kwarg ravel
+//
+// Input: {"groups": [{"items": ["a","b","c"]}, {"items": ["d","e","f"]}]}
+
+prompt aggregator {
+  is {
+    all_items[6] is text<length=5>;
+    result is text<length=20>;
+  }
+  channel {
+    all_items get all_items;
+  }
+  return {
+    use result;
+  }
+}
+
+prompt main {
+  is {
+    answer is text<length=20>;
+  }
+  channel {
+    answer call aggregator {
+      all_items get groups.items ravel;
+    };
+  }
+  return {
+    use answer;
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "header_pre":  "[INST] <<SYS>>\n",
+  "header_mid":  "\n<</SYS>>\n",
+  "header_post": "\n[/INST]\n"
+}

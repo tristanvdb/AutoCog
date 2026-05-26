@@ -20,7 +20,7 @@ prompt init_idea {
     ideas[1:5] is BrainstormThought;
     title is Title;
   }
-  flow init_template;
+  flow init_task;
   channel {
     query get query;
     age get age;

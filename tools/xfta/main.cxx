@@ -1,21 +1,23 @@
 
-#include "convert.hxx"
+#include "autocog/backend/llama/convert.hxx"
 
-#include "autocog/llama/xfta/fta.hxx"
-#include "autocog/llama/xfta/ftt.hxx"
-#include "autocog/llama/xfta/evaluation.hxx"
-#include "autocog/llama/xfta/model.hxx"
-#include "autocog/llama/xfta/manager.hxx"
+#include "autocog/runtime/fta/fta.hxx"
+#include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/backend/llama/evaluation.hxx"
+#include "autocog/backend/llama/model.hxx"
+#include "autocog/backend/llama/manager.hxx"
 
 #include <nlohmann/json.hpp>
 
 #include <optional>
+#include <functional>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <stdexcept>
 
-using namespace autocog::llama::xfta;
+using namespace autocog::backend::llama;
+using namespace autocog::runtime::fta;
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name << " [OPTIONS] <fta.json> ...\n"
@@ -23,6 +25,8 @@ void print_usage(const char* program_name) {
               << "Options:\n"
               << "  -c, --ctx   SIZE     Maximum context size for the model.\n"
               << "  -m, --model PATH     Path to GGUF model file\n"
+              << "  -r, --rng            Use built-in RNG model (no model file needed)\n"
+              << "  -b, --best           Print best-path text to stdout (no FTT file)\n"
               << "  -v, --verbose        Verbose output\n"
               << "  -h, --help           Show this help message\n"
               << std::endl;
@@ -33,7 +37,9 @@ std::optional<int> parse_args(
   std::vector<std::string> & input_files,
   std::string & model_path,
   unsigned & ctx_size,
-  bool & verbose
+  bool & verbose,
+  bool & use_rng,
+  bool & best_mode
 ) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -42,6 +48,10 @@ std::optional<int> parse_args(
       return 0;
     } else if (arg == "-v" || arg == "--verbose") {
       verbose = true;
+    } else if (arg == "-r" || arg == "--rng") {
+      use_rng = true;
+    } else if (arg == "-b" || arg == "--best") {
+      best_mode = true;
     } else if (arg == "-m" || arg == "--model") {
       if (++i >= argc) {
         std::cerr << "Error: --model requires an argument\n";
@@ -69,8 +79,8 @@ std::optional<int> parse_args(
     return 1;
   }
 
-  if (model_path.empty()) {
-    std::cerr << "Error: No model file specified\n";
+  if (model_path.empty() && !use_rng) {
+    std::cerr << "Error: No model file specified (use -m or --rng)\n";
     print_usage(argv[0]);
     return 1;
   }
@@ -104,18 +114,28 @@ int main(int argc, char** argv) {
   std::string model_path;
   unsigned ctx_size = 4096;
   bool verbose = false;
+  bool use_rng = false;
+  bool best_mode = false;
 
-  std::optional<int> retval = parse_args(argc, argv, input_files, model_path, ctx_size, verbose);
+  std::optional<int> retval = parse_args(argc, argv, input_files, model_path, ctx_size, verbose, use_rng, best_mode);
   if (retval) return retval.value();
 
   try {
     Manager::initialize();
-    if (verbose) {
-      std::cerr << "Loading model from " << model_path << " with " << ctx_size << " tokens of context." << std::endl;
-    }
-    ModelID model_id = Manager::add_model(model_path, ctx_size);
-    if (verbose) {
-      std::cerr << "  Model #" << model_id << std::endl;
+    ModelID model_id;
+    if (use_rng) {
+      model_id = 0;
+      if (verbose) {
+        std::cerr << "Using built-in RNG model (Model #0)." << std::endl;
+      }
+    } else {
+      if (verbose) {
+        std::cerr << "Loading model from " << model_path << " with " << ctx_size << " tokens of context." << std::endl;
+      }
+      model_id = Manager::add_model(model_path, ctx_size);
+      if (verbose) {
+        std::cerr << "  Model #" << model_id << std::endl;
+      }
     }
     EvaluationConfig eval_cfg;
     for (auto const & input_file: input_files) {
@@ -128,10 +148,29 @@ int main(int argc, char** argv) {
       if (verbose) {
         std::cerr << "Used " << used_tokens << " tokens." << std::endl;
       }
-      std::string output_file = input_file + ".ftt.json";
-      write_to_json_file(model_id, output_file, Manager::retrieve(eval_id));
-      if (verbose) {
-        std::cerr << "FTT: \"" << output_file << "\"." << std::endl;
+
+      FTT const & ftt = Manager::retrieve(eval_id);
+
+      if (best_mode) {
+        // Walk best path and print detokenized text
+        std::function<void(FTT const &)> print_best = [&](FTT const & node) {
+          if (!node.tokens.empty()) {
+            std::cout << Manager::get_model(model_id).detokenize(node.tokens, false, false);
+          }
+          for (auto const & child : node.get_children()) {
+            if (!child.pruned) {
+              print_best(child);
+              return;
+            }
+          }
+        };
+        print_best(ftt);
+      } else {
+        std::string output_file = input_file + ".ftt.json";
+        write_to_json_file(model_id, output_file, ftt);
+        if (verbose) {
+          std::cerr << "FTT: \"" << output_file << "\"." << std::endl;
+        }
       }
     }
 

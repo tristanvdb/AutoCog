@@ -1,0 +1,24 @@
+// Test flows with loop bounds
+
+record Problem {
+  is text;
+}
+
+prompt solver {
+  is {
+    problem is Problem;
+    attempt is text;
+    success is enum("yes", "no");
+  }
+  channel {
+    problem get problem;
+  }
+  flow {
+    solver[5] as "retry";
+  }
+  return {
+    use attempt;
+  }
+}
+
+export solver as main;

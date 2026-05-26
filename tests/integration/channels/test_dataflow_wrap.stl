@@ -1,0 +1,33 @@
+// Test: dataflow with wrap — wrap scalar into a list
+//
+// source produces a single "title" string
+// target needs it as a single-element array
+//
+// Input: {"topic": "science"}
+// Expected: collector.titles is ["<title>"]
+
+prompt source {
+  is {
+    topic is text<length=10>;
+    title is text<length=20>;
+  }
+  channel {
+    topic get topic;
+  }
+  flow collector;
+}
+
+prompt collector {
+  is {
+    titles[1] is text<length=20>;
+    result is text<length=20>;
+  }
+  channel {
+    titles use source.title wrap;
+  }
+  return {
+    use result;
+  }
+}
+
+export source as main;

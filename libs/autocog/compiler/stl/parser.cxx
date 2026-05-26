@@ -158,4 +158,8 @@ bool Parser::parse_fragment(
   }
 }
 
+// Explicit template instantiations for all Parser::parse specializations
+#define X(etag,stag) template void Parser::parse<ast::Tag::etag>(ParserState &, ast::Data<ast::Tag::etag> &);
+#include "autocog/compiler/stl/ast/nodes.def"
+
 }

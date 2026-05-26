@@ -1,49 +1,104 @@
-&#9881; Automaton & Cognition
-=============================
+# ⚙️ AutoCog - Automaton & Cognition
 
-|   | PIP | Frontend | CLI |
-|---|---|---|---|
-| `master` | [![PIP](https://github.com/LLNL/AutoCog/workflows/pip/badge.svg?branch=master)](https://github.com/LLNL/AutoCog/actions) | [![Frontend](https://github.com/LLNL/AutoCog/workflows/frontend/badge.svg?branch=master)](https://github.com/LLNL/AutoCog/actions) | [![CLI](https://github.com/LLNL/AutoCog/actions/workflows/cli.yml/badge.svg?branch=master)](https://github.com/LLNL/AutoCog/actions) |
-| `devel` | [![PIP](https://github.com/LLNL/AutoCog/workflows/pip/badge.svg?branch=devel)](https://github.com/LLNL/AutoCog/actions) | [![Frontend](https://github.com/LLNL/AutoCog/workflows/frontend/badge.svg?branch=devel)](https://github.com/LLNL/AutoCog/actions) | [![CLI](https://github.com/LLNL/AutoCog/actions/workflows/cli.yml/badge.svg?branch=devel)](https://github.com/LLNL/AutoCog/actions) |
+**AutoCog** explores mechanisms to build automata that control applications driven by auto-regressive language models. We define a programming model called **Structured Thoughts**, with a language (STL) that compiles to executable automata.
 
-Automaton & Cognition explores mechanisms to build automaton that control applications driven by auto-regressive language models.
-To this end, we defined a programming model, Structured Thoughts, with a language that compiles to a set of automaton.
+## Quick Start
 
-We broke down the documentation into a few files:
- - [setup](./docs/setup.md)
- - [usage](./docs/usage.md)
- - [language](./docs/language.md)
- - [tutorial](./docs/tutorial.md)
- - [roadmap](./docs/roadmap.md)
-
-The libraries have [their own documentation](./share/library/README.md).
-
-## Syntax Highlight
-
-For `gedit`, the path is based on newer version of :
+```bash
+git clone --recursive https://github.com/LLNL/AutoCog
+cd AutoCog
 ```
+
+Install with pip:
+
+```bash
+pip install .
+```
+
+Or build a container:
+
+```bash
+podman build -f dockerfiles/ubi.df -t autocog:ubi .
+```
+
+See [DEVEL.md](./DEVEL.md) for development setup and [docs/](./docs/README.md) for documentation.
+
+## What is Structured Thoughts?
+
+Structured Thoughts is a programming model where:
+- **Prompts** are building blocks (like functions in traditional programming)
+- **Automata** ensure completions can be parsed to extract structured data
+- **Branching** between prompts is controlled by the language model
+- **Dataflow** is statically defined and executed when instantiating automata
+
+Example - Multiple Choice Question with Chain of Thought:
+
+```
+record thought {
+  is text<length=20>;
+  annotate f"a short text representing a single thought";
+}
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    work[1:10] is thought;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    question as "the question that you have to answer";
+    choices as "the four possible choices, only one is correct";
+    work as "show your work step-by-step";
+    answer as "you pick the index of the choice that best answers the question";
+  }
+}
+```
+
+## Examples
+
+The [share/demos/mcq/](./share/demos/mcq/) directory contains 10 Multiple Choice Question examples demonstrating various thought patterns:
+
+- **Basic**: Simple select/repeat
+- **Chain of Thought**: Step-by-step reasoning
+- **Hypothesis**: Two-stage generation
+- **Iterative**: Retry loops with reflection
+
+See [share/demos/mcq/README.md](./share/demos/mcq/README.md) for details.
+
+## Syntax Highlighting
+
+### gedit
+```bash
 mkdir -p ~/.local/share/libgedit-gtksourceview-300/language-specs
-cp syntax-highlight/gedit/stl.lang ~/.local/share/libgedit-gtksourceview-300/language-specs
+cp share/syntax-highlight/gedit/stl.lang ~/.local/share/libgedit-gtksourceview-300/language-specs
 ```
 
-For `vscode` (it does not seem to work but I don't use VSCode):
-```
+### VSCode
+```bash
 mkdir -p ~/.vscode/extensions/stl-language
-cp -r syntax-highlight/vscode/* ~/.vscode/extensions/stl-language
+cp -r share/syntax-highlight/vscode/* ~/.vscode/extensions/stl-language
 ```
 
 ## Contributing
 
 Contributions are welcome!
 
-So far there is only one rule: **linear git history** (no merge commits).
-Only the master branch have stable commits, other branches might be rebased without notice.
-
-Version number should increase for each push to `master` and have a matching tag.
+**Key Rule**: **Linear git history** (no merge commits). Only the `master` branch has stable commits; other branches may be rebased without notice.
 
 ## License
 
-AutoCog is distributed under the terms of the Apache License (Version 2.0) with LLVM exceptions.
+AutoCog is distributed under the terms of the **Apache License (Version 2.0) with LLVM exceptions**.
 
 All new contributions must be made under Apache-2.0 license (with LLVM exceptions).
 

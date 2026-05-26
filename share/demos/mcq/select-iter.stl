@@ -1,0 +1,38 @@
+// Multiple Choice Question - Select with Iteration
+// Uses reflexive thinking with retry capability
+// The LLM can loop back to improve its answer based on reflection
+
+from "stlib/thoughts.stl" import Thought;
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    hint[0:1] is Thought<length=20, mode="concise", goal="hint for next attempt">;
+    answer is select(choices);
+    reflect[1] is Thought<length=20, mode="reflective", goal="evaluate your answer">;
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+    hint use .reflect;
+  }
+  flow {
+    main[5] as "retry";
+  }
+  return {
+    status is "answer is ready";
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is correct";
+    answer as "you pick the index the choice that best answer the question";
+    hint as "this is a hint you gave yourself on a previous attempt";
+    reflect as "if you think that your answer is wrong provide a hint for your next attempt";
+  }
+}

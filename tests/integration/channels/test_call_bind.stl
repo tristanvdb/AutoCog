@@ -1,0 +1,35 @@
+// Test: call with bind — rename return fields
+//
+// worker returns {result: "..."} 
+// main receives it with bind(result, answer) renaming result→answer
+//
+// Input: {"query": "test"}
+
+prompt worker {
+  is {
+    query is text<length=10>;
+    result is text<length=20>;
+  }
+  channel {
+    query get query;
+  }
+  return {
+    use result;
+  }
+}
+
+prompt main {
+  is {
+    query is text<length=10>;
+    answer is text<length=20>;
+  }
+  channel {
+    query get query;
+    answer call worker {
+      query get query;
+    } bind(result, answer);
+  }
+  return {
+    use answer;
+  }
+}
