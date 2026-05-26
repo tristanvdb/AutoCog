@@ -1,5 +1,26 @@
 {
-  "header_pre":  "[INST] <<SYS>>\n",
-  "header_mid":  "\n<</SYS>>\n",
-  "header_post": "\n[/INST]\n"
+  "system_msg": "You are an AI expert interacting with your environment using a set of interactive questionnaires.",
+
+  "header_pre": "[INST] <<SYS>>\n",
+  "header_mid": "\n<</SYS>>\n",
+  "header_post": "\n[/INST]\n",
+
+  "header_mechanic": "You are using the following syntax:",
+  "header_formats": "It includes the following named formats:",
+  "format_listing": "- ",
+
+  "prompt_indent": "> ",
+  "field_separator": "\n",
+  "field_suffix": ":",
+
+  "desc_pre": "# ",
+  "desc_post": "\n",
+  "desc_inline": false,
+
+  "prompt_with_format": true,
+  "prompt_with_index": true,
+  "prompt_zero_index": true,
+
+  "detailed_formats": false,
+  "completion_stop": "\n"
 }

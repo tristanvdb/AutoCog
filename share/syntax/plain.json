@@ -5,11 +5,11 @@
   "header_mid": "\n",
   "header_post": "\n",
 
-  "header_mechanic": "You are using the following syntax:",
-  "header_formats": "It includes the following named formats:",
+  "header_mechanic": "",
+  "header_formats": "",
   "format_listing": "- ",
 
-  "prompt_indent": "> ",
+  "prompt_indent": "",
   "field_separator": "\n",
   "field_suffix": ":",
 
@@ -17,7 +17,7 @@
   "desc_post": "\n",
   "desc_inline": false,
 
-  "prompt_with_format": true,
+  "prompt_with_format": false,
   "prompt_with_index": true,
   "prompt_zero_index": true,
 

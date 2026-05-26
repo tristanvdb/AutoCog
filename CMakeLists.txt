@@ -7,6 +7,10 @@ string(STRIP "${AUTOCOG_VERSION_RAW}" AUTOCOG_VERSION_RAW)
 # Strip leading 'v' if present
 string(REGEX REPLACE "^v" "" AUTOCOG_VERSION "${AUTOCOG_VERSION_RAW}")
 add_compile_definitions(AUTOCOG_VERSION="${AUTOCOG_VERSION}")
+add_compile_definitions(AUTOCOG_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+add_compile_definitions(AUTOCOG_COMPILER_ID="${CMAKE_CXX_COMPILER_ID}")
+add_compile_definitions(AUTOCOG_COMPILER_VERSION="${CMAKE_CXX_COMPILER_VERSION}")
+add_compile_definitions(AUTOCOG_SYSTEM="${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
   
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -96,6 +100,23 @@ if(NOT llama_FOUND)
   set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
   set(LLAMA_CUDA OFF CACHE BOOL "" FORCE)
   add_subdirectory("${LLAMA_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_vendor/llama" EXCLUDE_FROM_ALL)
+  set(_LLAMA_SOURCE "vendored")
+else()
+  set(_LLAMA_SOURCE "system")
+endif()
+
+# Build info: CUDA and llama source
+if(LLAMA_CUDA)
+  add_compile_definitions(AUTOCOG_CUDA=1)
+else()
+  add_compile_definitions(AUTOCOG_CUDA=0)
+endif()
+add_compile_definitions(AUTOCOG_LLAMA_SOURCE="${_LLAMA_SOURCE}")
+
+if(GGML_NATIVE OR NOT DEFINED GGML_NATIVE)
+  add_compile_definitions(AUTOCOG_NATIVE=1)
+else()
+  add_compile_definitions(AUTOCOG_NATIVE=0)
 endif()
 
 enable_testing()

@@ -1,5 +1,26 @@
 {
-  "header_pre":  "<|im_start|>system\n",
-  "header_mid":  "<|im_end|>\n<|im_start|>user\n",
-  "header_post": "<|im_end|>\n<|im_start|>assistant\n"
+  "system_msg": "You are an AI expert interacting with your environment using a set of interactive questionnaires.",
+
+  "header_pre": "<|im_start|>system\n",
+  "header_mid": "<|im_end|>\n<|im_start|>user\n",
+  "header_post": "<|im_end|>\n<|im_start|>assistant\n",
+
+  "header_mechanic": "You are using the following syntax:",
+  "header_formats": "It includes the following named formats:",
+  "format_listing": "- ",
+
+  "prompt_indent": "> ",
+  "field_separator": "\n",
+  "field_suffix": ":",
+
+  "desc_pre": "# ",
+  "desc_post": "\n",
+  "desc_inline": false,
+
+  "prompt_with_format": true,
+  "prompt_with_index": true,
+  "prompt_zero_index": true,
+
+  "detailed_formats": false,
+  "completion_stop": "\n"
 }

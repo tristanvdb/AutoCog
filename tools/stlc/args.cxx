@@ -12,7 +12,7 @@
 #include <sstream>
 #include <regex>
 
-#define STLC_VERSION "1.0.0"
+#include "autocog/build_info.hxx"
 
 using namespace autocog::compiler::stl;
 
@@ -42,11 +42,15 @@ static void print_usage(const char* program) {
   std::cerr << "  -V, --verbose      Enable verbose output\n";
   std::cerr << "  -h, --help         Show this help message\n";
   std::cerr << "  -v, --version      Show version information\n";
+  std::cerr << "  --build-info       Show build configuration\n";
 }
 
 static void print_version(const char* program) {
-  std::cout << program << " version " << STLC_VERSION << "\n";
-  std::cout << "STL Compiler\n";
+  std::cout << program << " " << autocog::version() << "\n";
+}
+
+static void print_build_info() {
+  std::cout << autocog::build_info();
 }
 
 // Helper to check if a string looks like a number
@@ -215,6 +219,12 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     // Version
     if (arg == "-v" || arg == "--version") {
       print_version(argv[0]);
+      return 0;
+    }
+
+    // Build info
+    if (arg == "--build-info") {
+      print_build_info();
       return 0;
     }
 

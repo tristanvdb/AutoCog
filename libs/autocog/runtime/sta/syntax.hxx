@@ -10,39 +10,42 @@ namespace autocog::runtime::sta {
 // Always loaded from a JSON file — no hardcoded presets.
 
 struct Syntax {
+    // All fields must be specified in the syntax JSON file.
+    // No defaults — the syntax file is the single source of truth.
+
     // System message
-    std::string system_msg = "You are an AI expert interacting with your environment using a set of interactive questionnaires. A newline ends each statement (or prompt).";
+    std::string system_msg;
 
     // Chat template wrapping (around system message + header)
-    std::string header_pre;       // before system message
-    std::string header_mid = "\n";  // between system message and field header
-    std::string header_post = "\n"; // after field header, before "start:"
+    std::string header_pre;
+    std::string header_mid;
+    std::string header_post;
 
     // Header content
-    std::string header_mechanic = "You are using the following syntax:";
-    std::string header_formats  = "It includes the following named formats:";
-    std::string format_listing  = "- ";
+    std::string header_mechanic;
+    std::string header_formats;
+    std::string format_listing;
 
     // Field formatting
-    std::string prompt_indent = "> ";
-    std::string field_separator = "\n";
-    std::string field_suffix = ":";
+    std::string prompt_indent;
+    std::string field_separator;
+    std::string field_suffix;
 
     // Field description formatting
-    std::string desc_pre = "# ";    // prefix before field description
-    std::string desc_post = "\n";   // suffix after field description
-    bool desc_inline = false;       // emit descriptions inline before fields
+    std::string desc_pre;
+    std::string desc_post;
+    bool desc_inline;
 
     // Indexing and label content
-    bool prompt_with_format = true;    // show format type in label
-    bool prompt_with_index  = true;    // show array index in label
-    bool prompt_zero_index  = true;    // 0-based indexing
+    bool prompt_with_format;
+    bool prompt_with_index;
+    bool prompt_zero_index;
 
     // Format descriptions in header
-    bool detailed_formats = false;
+    bool detailed_formats;
 
     // Stop token for completions (as text, tokenized by backend)
-    std::string completion_stop = "\n";
+    std::string completion_stop;
 };
 
 // Load a syntax description from a JSON file.

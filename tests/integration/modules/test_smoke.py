@@ -217,7 +217,7 @@ class TestStapp:
             try:
                 assert "main" in prog.entry_points
                 engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
-                result = engine.run(prog, externals={}, topic="Sci", question="2+2?", choices=["3","4","5"])
+                result = engine.run(prog, externals={}, topic="Sci", question="2+2?", choices=["3","4","5","6"])
                 assert isinstance(result, str)
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -371,7 +371,7 @@ class TestBackendServer:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         engine = autocog.Engine(syntax=syntax)
-        content = {"topic": "Science", "question": "2+2?", "choices": ["3", "4", "5"]}
+        content = {"topic": "Science", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id
         )
@@ -532,11 +532,11 @@ class TestCLI:
         import subprocess
         result = subprocess.run(
             ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
-             "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}'],
+             "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
             capture_output=True, text=True, timeout=30
         )
         assert result.returncode == 0
-        assert result.stdout.strip() in ["3", "4", "5"]
+        assert result.stdout.strip() in ["3", "4", "5", "6"]
 
     def test_run_sta_rng(self, repo_root):
         import subprocess, json, tempfile, os
@@ -551,18 +551,18 @@ class TestCLI:
         try:
             result = subprocess.run(
                 ["autocog", "run", "--sta", sta_path,
-                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}'],
+                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
                 capture_output=True, text=True, timeout=30
             )
             assert result.returncode == 0
-            assert result.stdout.strip() in ["3", "4", "5"]
+            assert result.stdout.strip() in ["3", "4", "5", "6"]
         finally:
             os.unlink(sta_path)
 
     def test_run_input_file(self, repo_root):
         import subprocess, json, tempfile, os
         with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as f:
-            json.dump({"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5"]}, f)
+            json.dump({"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}, f)
             input_path = f.name
         try:
             result = subprocess.run(
@@ -578,7 +578,7 @@ class TestCLI:
         import subprocess
         result = subprocess.run(
             ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
-             "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}'],
+             "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
             capture_output=True, text=True, timeout=30
         )
         assert result.returncode == 0
@@ -591,13 +591,13 @@ class TestCLI:
         try:
             result = subprocess.run(
                 ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
-                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}',
+                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}',
                  "-o", outpath],
                 capture_output=True, text=True, timeout=30
             )
             assert result.returncode == 0
             with open(outpath) as f:
-                assert f.read().strip() in ["3", "4", "5"]
+                assert f.read().strip() in ["3", "4", "5", "6"]
         finally:
             os.unlink(outpath)
 
@@ -617,11 +617,11 @@ class TestCLI:
             # Run from .stapp
             result = subprocess.run(
                 ["autocog", "run", "--app", stapp_path,
-                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}'],
+                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
                 capture_output=True, text=True, timeout=30
             )
             assert result.returncode == 0
-            assert result.stdout.strip() in ["3", "4", "5"]
+            assert result.stdout.strip() in ["3", "4", "5", "6"]
         finally:
             os.unlink(stapp_path)
 
@@ -664,10 +664,10 @@ class TestCLIFunctions:
         from autocog.__main__ import main
 
         args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
-                "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}']
+                "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}']
         with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
             main()
-        assert mock_out.getvalue().strip() in ["3", "4", "5"]
+        assert mock_out.getvalue().strip() in ["3", "4", "5", "6"]
 
     def test_cmd_run_verbose(self, repo_root):
         import sys, io
@@ -675,7 +675,7 @@ class TestCLIFunctions:
         from autocog.__main__ import main
 
         args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
-                "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}']
+                "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}']
         with patch("sys.argv", args), \
              patch("sys.stdout", new_callable=io.StringIO), \
              patch("sys.stderr", new_callable=io.StringIO) as mock_err:
@@ -698,10 +698,10 @@ class TestCLIFunctions:
         try:
             # Run from .stapp
             args = ["autocog", "run", "--app", stapp_path,
-                    "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}']
+                    "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}']
             with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
                 main()
-            assert mock_out.getvalue().strip() in ["3", "4", "5"]
+            assert mock_out.getvalue().strip() in ["3", "4", "5", "6"]
         finally:
             os.unlink(stapp_path)
 
@@ -729,14 +729,14 @@ class TestCLIFunctions:
         from autocog.__main__ import main
 
         with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as f:
-            json.dump({"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5"]}, f)
+            json.dump({"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}, f)
             input_path = f.name
         try:
             args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
                     "--rng", "--input", input_path]
             with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
                 main()
-            assert mock_out.getvalue().strip() in ["3", "4", "5"]
+            assert mock_out.getvalue().strip() in ["3", "4", "5", "6"]
         finally:
             os.unlink(input_path)
 
@@ -835,9 +835,9 @@ class TestCoverageEdgeCases:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
         result = asyncio.run(engine.run_async(
-            prog, topic="Sci", question="2+2?", choices=["3", "4", "5"]
+            prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
         ))
-        assert result in ["3", "4", "5"]
+        assert result in ["3", "4", "5", "6"]
 
     def test_remote_error_handling(self, repo_root):
         """Test RemoteEngine error path."""
@@ -888,3 +888,195 @@ class TestCoverageEdgeCases:
                 assert e.code == 404
         finally:
             server.should_exit = True
+
+
+class TestVersionAndBuildInfo:
+    """Test --version and --build-info CLI options."""
+
+    def test_version(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "--version"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 0
+        assert "autocog" in result.stdout
+
+    def test_build_info(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "--build-info"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 0
+        assert "build_type" in result.stdout
+        assert "compiler" in result.stdout
+
+    def test_version_direct(self):
+        import autocog
+        assert hasattr(autocog, "__version__")
+        assert len(autocog.__version__) > 0
+
+
+class TestRecorder:
+    """Test execution recording."""
+
+    def test_record_frame_text(self, repo_root):
+        import autocog, tempfile, os, json
+        from autocog.recorder import Recorder
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
+
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            recorder = Recorder(kinds="frame,text", path=tmpdir)
+            result = engine.run(
+                prog, recorder=recorder,
+                topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
+            )
+
+            # Check context metadata
+            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            assert os.path.isfile(ctx_path)
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+            assert ctx["entry"] == "main"
+            assert len(ctx["steps"]) > 0
+
+            # Check step artifacts
+            step_name = ctx["steps"][0]
+            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
+            txt_path = os.path.join(tmpdir, f"ctx0-{step_name}.txt")
+            assert os.path.isfile(json_path)
+            assert os.path.isfile(txt_path)
+            with open(json_path) as f:
+                data = json.load(f)
+            assert "frame" in data
+            with open(txt_path) as f:
+                text = f.read()
+            assert len(text) > 0
+
+    def test_record_input(self, repo_root):
+        import autocog, tempfile, os, json
+        from autocog.recorder import Recorder
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
+
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            recorder = Recorder(kinds="input", path=tmpdir)
+            result = engine.run(
+                prog, recorder=recorder,
+                topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
+            )
+
+            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+            step_name = ctx["steps"][0]
+            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
+            with open(json_path) as f:
+                data = json.load(f)
+            assert "input" in data
+            assert "topic" in data["input"]
+            assert "frame" not in data
+
+    def test_record_invalid_kind(self):
+        from autocog.recorder import Recorder
+        import pytest
+        with pytest.raises(ValueError, match="Invalid record kinds"):
+            Recorder(kinds="frame,bogus")
+
+    def test_record_cli(self, repo_root):
+        import subprocess, tempfile, os, json
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            result = subprocess.run(
+                ["autocog", "run",
+                 "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}',
+                 "--record", "frame,text",
+                 "--record-path", tmpdir],
+                capture_output=True, text=True, timeout=30
+            )
+            assert result.returncode == 0
+            assert os.path.isfile(os.path.join(tmpdir, "ctx0.json"))
+
+
+class TestSyntaxVariants:
+    """Test different syntax files."""
+
+    def test_plain_syntax(self, repo_root):
+        import autocog
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/plain.json"))
+        result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        assert result in ["3", "4", "5", "6"]
+
+    def test_chatml_syntax(self, repo_root):
+        import autocog
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/chatml.json"))
+        result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        assert result in ["3", "4", "5", "6"]
+
+    def test_llama2chat_syntax(self, repo_root):
+        import autocog
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/llama2chat.json"))
+        result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        assert result in ["3", "4", "5", "6"]
+
+    def test_missing_syntax_field(self, repo_root):
+        import autocog, tempfile, json, os
+        # Write a syntax file missing a required field
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"system_msg": "test"}, f)
+            bad_syntax = f.name
+        try:
+            with __import__("pytest").raises(RuntimeError, match="missing required field"):
+                autocog.Engine(syntax=bad_syntax)
+        finally:
+            os.unlink(bad_syntax)
+
+
+class TestRecorderFtaFtt:
+    """Test recording FTA and FTT artifacts."""
+
+    def test_record_all(self, repo_root):
+        import autocog, tempfile, os, json
+        from autocog.recorder import Recorder
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"))
+
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            recorder = Recorder(kinds="input,frame,text,fta,ftt", path=tmpdir)
+            result = engine.run(
+                prog, recorder=recorder,
+                topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
+            )
+
+            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            assert os.path.isfile(ctx_path)
+            with open(ctx_path) as f:
+                ctx = json.load(f)
+
+            step_name = ctx["steps"][0]
+            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
+            txt_path = os.path.join(tmpdir, f"ctx0-{step_name}.txt")
+
+            assert os.path.isfile(json_path)
+            assert os.path.isfile(txt_path)
+
+            with open(json_path) as f:
+                data = json.load(f)
+
+            assert "input" in data
+            assert "frame" in data
+            assert "fta" in data
+            assert "ftt" in data
+            # FTA should have actions
+            assert "actions" in data["fta"]
+            # FTT should have tree structure
+            assert "children" in data["ftt"]
+            assert "text" in data["ftt"]

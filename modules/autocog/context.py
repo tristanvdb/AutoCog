@@ -15,16 +15,18 @@ class Context:
     - Branch counts (for flow limits)
     """
 
-    def __init__(self, program, engine, prompt, inputs, externals=None):
+    def __init__(self, program, engine, prompt, inputs, externals=None, recorder=None):
         self.program = program
         self.engine = engine
         self.prompt = prompt
         self.inputs = inputs
         self.externals = externals or {}
+        self.recorder = recorder
         self.frames = {}    # prompt_name → latest frame dict
         self.branches = {}  # prompt_name → {target: count}
         self.done = False
         self.result = None
+        self._step_count = 0
 
     def step(self):
         """Execute one prompt iteration."""
@@ -39,9 +41,24 @@ class Context:
         )
 
         # 2. Evaluate prompt → frame (dispatch: local or remote)
-        frame = self.engine.evaluate_prompt(
-            self.program, self.prompt, content
-        )
+        if self.recorder:
+            frame, artifacts = self.engine.evaluate_prompt(
+                self.program, self.prompt, content,
+                record_kinds=self.recorder.kinds
+            )
+            self.recorder.record_step(
+                self.prompt, self._step_count,
+                input=content if "input" in self.recorder.kinds else None,
+                frame=artifacts.get("frame"),
+                text=artifacts.get("text"),
+                fta=artifacts.get("fta"),
+                ftt=artifacts.get("ftt"),
+            )
+        else:
+            frame = self.engine.evaluate_prompt(
+                self.program, self.prompt, content
+            )
+        self._step_count += 1
 
         # 3. Store frame
         self.frames[self.prompt] = frame

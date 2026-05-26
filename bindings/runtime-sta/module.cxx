@@ -145,6 +145,15 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
         py::arg("fta_id")
     );
 
+    module.def("get_fta_json",
+        [](int fta_id) -> std::string {
+            auto const & fta = store::ftas().get(fta_id);
+            return fta.dump();
+        },
+        "Get FTA as JSON string",
+        py::arg("fta_id")
+    );
+
     module.def("release_syntax",
         [](int syntax_id) {
             store::syntaxes().remove(syntax_id);

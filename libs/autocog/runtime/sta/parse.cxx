@@ -21,6 +21,35 @@ using json = nlohmann::json;
 // ============================================================================
 
 // Build the expected label for a field+state, same as instantiate's prompt_label
+static std::string format_label_str(FieldInfo const & fld) {
+    if (fld.format_ref) return *fld.format_ref;
+    return std::visit([](auto const & fmt) -> std::string {
+        using F = std::decay_t<decltype(fmt)>;
+        if constexpr (std::is_same_v<F, std::monostate>) {
+            return "record";
+        } else if constexpr (std::is_same_v<F, CompletionFormat>) {
+            if (fmt.length) return "text(" + std::to_string(*fmt.length) + ")";
+            return "text";
+        } else if constexpr (std::is_same_v<F, EnumFormat>) {
+            std::string s = "enum(\"";
+            for (size_t i = 0; i < fmt.values.size(); ++i) {
+                if (i > 0) s += "\",\"";
+                s += fmt.values[i];
+            }
+            s += "\")";
+            return s;
+        } else if constexpr (std::is_same_v<F, ChoiceFormat>) {
+            std::string path;
+            for (auto const & [name, _] : fmt.path) {
+                if (!path.empty()) path += ".";
+                path += name;
+            }
+            return fmt.mode + "(" + path + ")";
+        }
+        return "?";
+    }, fld.format);
+}
+
 static std::string expected_label(ConcreteState const & state,
                                    PromptSTA const & prompt,
                                    Syntax const & syntax) {
@@ -29,8 +58,13 @@ static std::string expected_label(ConcreteState const & state,
     std::string indent;
     for (int i = 1; i < fld.depth; ++i) indent += syntax.prompt_indent;
     std::string label = indent + fld.name;
+    if (syntax.prompt_with_format) {
+        label += "(" + format_label_str(fld) + ")";
+    }
     if (fld.is_list() && !state.indices.empty()) {
-        label += "[" + std::to_string(state.indices.back()) + "]";
+        int idx = state.indices.back();
+        if (!syntax.prompt_zero_index) idx += 1;
+        label += "[" + std::to_string(idx) + "]";
     }
     label += syntax.field_suffix;
     return label;
@@ -174,9 +208,10 @@ FieldRecord parse_text(PromptSTA const & prompt, Syntax const & syntax,
 
     auto parent_map = build_parent_map(prompt.fields);
 
-    // Find "start:" marker
+    // Find "start:" marker — use the LAST occurrence
+    // (the first may be inside the mechanics code block in the header)
     std::string start_marker = "start:" + syntax.field_separator;
-    auto start_pos = text.find(start_marker);
+    auto start_pos = text.rfind(start_marker);
     if (start_pos == std::string::npos) {
         start_pos = 0;
     } else {

@@ -212,12 +212,19 @@ def _cmd_run_inner(args, prog, include_paths):
     # Auto-load Python externals
     externals = load_externals(prog, include_paths)
 
+    # Setup recorder
+    recorder = None
+    if args.record:
+        from .recorder import Recorder
+        recorder = Recorder(kinds=args.record, path=args.record_path)
+        print(f"Recording to: {recorder.path}", file=sys.stderr)
+
     # Run
     if args.verbose:
         import time
         from autocog.context import Context
         prompt = prog.entry_prompt(args.entry)
-        ctx = Context(prog, engine, prompt, inputs, externals)
+        ctx = Context(prog, engine, prompt, inputs, externals, recorder=recorder)
         steps = 0
         t0 = time.time()
         while not ctx.done and steps < args.max_steps:
@@ -231,9 +238,11 @@ def _cmd_run_inner(args, prog, include_paths):
         total = time.time() - t0
         print(f"  Done in {steps} steps ({total:.1f}s)", file=sys.stderr)
         result = ctx.result if ctx.done else ctx.frames.get(ctx.prompt, {})
+        if recorder:
+            recorder.finalize(entry=args.entry, inputs=inputs, outputs=result)
     else:
         result = engine.run(prog, entry=args.entry, externals=externals,
-                            max_steps=args.max_steps, **inputs)
+                            max_steps=args.max_steps, recorder=recorder, **inputs)
 
     # Output
     if isinstance(result, str):
@@ -251,6 +260,16 @@ def _cmd_run_inner(args, prog, include_paths):
 
 
 def main():
+    # Handle --version and --build-info before argparse (no subcommand needed)
+    if "--version" in sys.argv:
+        import autocog
+        print(f"autocog {autocog.__version__}")
+        sys.exit(0)
+    if "--build-info" in sys.argv:
+        from .backend.llama import backend_llama_cxx
+        print(backend_llama_cxx.build_info())
+        sys.exit(0)
+
     parser = argparse.ArgumentParser(
         prog="autocog",
         description="AutoCog — Structured Thought Language tools",
@@ -298,6 +317,14 @@ def main():
     p_run.add_argument("-o", "--output", help="Output file (default: stdout)")
     p_run.add_argument("-v", "--verbose", action="store_true", help="Show step progress")
     p_run.add_argument("--max-steps", type=int, default=100, help="Max prompt steps")
+    p_run.add_argument(
+        "--record", default=None,
+        help="Record artifacts per step: comma-separated subset of input,frame,text,fta,ftt",
+    )
+    p_run.add_argument(
+        "--record-path", default=None,
+        help="Directory for recorded artifacts (default: temp dir)",
+    )
 
     # --- Server common args ---
     def _add_server_args(p):

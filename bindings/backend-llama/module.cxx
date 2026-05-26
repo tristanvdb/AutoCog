@@ -10,6 +10,8 @@
 
 #include "autocog/backend/llama/convert.hxx"
 
+#include "autocog/build_info.hxx"
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -26,6 +28,8 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     Manager::initialize();
 
     module.doc() = "AutoCog llama.cpp backend";
+
+    module.def("build_info", &autocog::build_info, "Build configuration info");
 
     module.def("create",
         [](std::string const & model_path, int n_ctx) {
@@ -141,6 +145,35 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
             Manager::rm_eval(eval_id);
         },
         "Release an FTT evaluation",
+        py::arg("ftt_id")
+    );
+
+    module.def("get_ftt_json",
+        [](ModelID model_id, EvalID eval_id) -> std::string {
+            FTT const & ftt = Manager::retrieve(eval_id);
+            Model & model = Manager::get_model(model_id);
+            std::function<nlohmann::json(FTT const &)> serialize =
+                [&](FTT const & node) -> nlohmann::json {
+                    nlohmann::json j;
+                    j["action"] = node.action;
+                    j["logprob"] = node.logprob;
+                    j["length"] = node.length;
+                    j["pruned"] = node.pruned;
+                    j["text"] = model.detokenize(node.tokens, false, false);
+                    nlohmann::json lps = nlohmann::json::array();
+                    for (auto lp : node.logprobs) lps.push_back(lp);
+                    j["logprobs"] = lps;
+                    nlohmann::json kids = nlohmann::json::array();
+                    for (auto const & child : node.get_children()) {
+                        kids.push_back(serialize(child));
+                    }
+                    j["children"] = kids;
+                    return j;
+                };
+            return serialize(ftt).dump();
+        },
+        "Get FTT as JSON string",
+        py::arg("model_id"),
         py::arg("ftt_id")
     );
 }
