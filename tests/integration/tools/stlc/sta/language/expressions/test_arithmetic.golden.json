@@ -166,9 +166,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "short_1_0@0",
-            "long_1_1@0",
-            "items_1_2@0"
+            "short_1_0@0"
           ]
         },
         "scaled_1_3@0": {
@@ -184,8 +182,7 @@
             0
           ],
           "successors": [
-            "long_1_1@0",
-            "items_1_2@0"
+            "long_1_1@0"
           ]
         }
       }

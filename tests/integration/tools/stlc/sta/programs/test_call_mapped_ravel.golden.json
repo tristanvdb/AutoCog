@@ -278,8 +278,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "section_1_0@0",
-            "pages_1_1@0"
+            "section_1_0@0"
           ]
         },
         "section_1_0@0": {

@@ -24,14 +24,19 @@ struct Syntax {
     std::string format_listing  = "- ";
 
     // Field formatting
-    std::string prompt_indent = "\t";
+    std::string prompt_indent = "> ";
     std::string field_separator = "\n";
     std::string field_suffix = ":";
 
-    // Indexing
-    bool prompt_with_format = false;   // show format type in label
-    bool prompt_with_index  = false;   // show array index in label
-    bool prompt_zero_index  = false;   // 0-based or 1-based for select choices
+    // Field description formatting
+    std::string desc_pre = "# ";    // prefix before field description
+    std::string desc_post = "\n";   // suffix after field description
+    bool desc_inline = false;       // emit descriptions inline before fields
+
+    // Indexing and label content
+    bool prompt_with_format = true;    // show format type in label
+    bool prompt_with_index  = true;    // show array index in label
+    bool prompt_zero_index  = true;    // 0-based indexing
 
     // Format descriptions in header
     bool detailed_formats = false;

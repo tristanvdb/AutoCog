@@ -24,6 +24,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "operands",
           "index": 0,
           "name": "operands",
           "range": null
@@ -74,6 +75,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "result",
           "index": 2,
           "name": "result",
           "range": null
@@ -152,10 +154,7 @@
             0
           ],
           "successors": [
-            "right_2_2@0_0",
-            "operands_1_0@1",
-            "operation_1_3@0",
-            "result_1_4@0"
+            "right_2_2@0_0"
           ]
         },
         "operands_1_0@0": {
@@ -164,11 +163,7 @@
             0
           ],
           "successors": [
-            "left_2_1@0_0",
-            "right_2_2@0_0",
-            "operands_1_0@1",
-            "operation_1_3@0",
-            "result_1_4@0"
+            "left_2_1@0_0"
           ]
         },
         "operands_1_0@1": {
@@ -177,8 +172,7 @@
             1
           ],
           "successors": [
-            "operation_1_3@0",
-            "result_1_4@0"
+            "operation_1_3@0"
           ]
         },
         "operation_1_3@0": {
@@ -196,9 +190,7 @@
             0
           ],
           "successors": [
-            "value_2_5@0_0",
-            "confidence_2_6@0_0",
-            "result_1_4@1"
+            "value_2_5@0_0"
           ]
         },
         "result_1_4@1": {
@@ -215,9 +207,7 @@
             0
           ],
           "successors": [
-            "operands_1_0@1",
-            "operation_1_3@0",
-            "result_1_4@0"
+            "operands_1_0@1"
           ]
         },
         "root@": {
@@ -234,8 +224,7 @@
             0
           ],
           "successors": [
-            "confidence_2_6@0_0",
-            "result_1_4@1"
+            "confidence_2_6@0_0"
           ]
         }
       }

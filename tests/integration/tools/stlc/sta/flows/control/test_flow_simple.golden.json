@@ -49,6 +49,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Task",
           "index": 0,
           "name": "task",
           "range": null
@@ -115,6 +116,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Task",
           "index": 0,
           "name": "input",
           "range": null
@@ -173,8 +175,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "input_1_0@0",
-            "output_1_1@0"
+            "input_1_0@0"
           ]
         }
       }
@@ -248,8 +249,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "input_1_0@0",
-            "output_1_1@0"
+            "input_1_0@0"
           ]
         }
       }

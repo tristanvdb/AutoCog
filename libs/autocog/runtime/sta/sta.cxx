@@ -57,6 +57,9 @@ Syntax load_syntax(std::string const & path) {
     if (j.contains("prompt_zero_index"))  s.prompt_zero_index  = j["prompt_zero_index"];
     if (j.contains("detailed_formats"))   s.detailed_formats   = j["detailed_formats"];
     if (j.contains("completion_stop"))    s.completion_stop     = j["completion_stop"];
+    if (j.contains("desc_pre"))          s.desc_pre           = j["desc_pre"];
+    if (j.contains("desc_post"))         s.desc_post          = j["desc_post"];
+    if (j.contains("desc_inline"))       s.desc_inline        = j["desc_inline"];
 
     return s;
 }

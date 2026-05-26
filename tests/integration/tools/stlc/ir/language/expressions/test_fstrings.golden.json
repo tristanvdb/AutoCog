@@ -10,7 +10,9 @@
         "goal": "answer questions",
         "num_choices": 4
       },
-      "desc": [],
+      "desc": [
+        "You are performing the task: classify. Your goal is to answer questions."
+      ],
       "fields": [
         {
           "depth": 1,

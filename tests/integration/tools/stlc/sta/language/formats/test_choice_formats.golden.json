@@ -24,6 +24,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Option",
           "index": 0,
           "name": "options",
           "range": [
@@ -135,8 +136,7 @@
             3
           ],
           "successors": [
-            "selected_1_1@0",
-            "repeated_1_2@0"
+            "selected_1_1@0"
           ]
         },
         "repeated_1_2@0": {

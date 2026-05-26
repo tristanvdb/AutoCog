@@ -28,6 +28,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "address",
           "index": 0,
           "name": "address",
           "range": null
@@ -50,6 +51,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "City",
           "index": 1,
           "name": "city",
           "range": null
@@ -71,9 +73,7 @@
             0
           ],
           "successors": [
-            "street_2_1@0_0",
-            "city_2_2@0_0",
-            "address_1_0@1"
+            "street_2_1@0_0"
           ]
         },
         "address_1_0@1": {
@@ -107,8 +107,7 @@
             0
           ],
           "successors": [
-            "city_2_2@0_0",
-            "address_1_0@1"
+            "city_2_2@0_0"
           ]
         }
       }

@@ -28,6 +28,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Item",
           "index": 0,
           "name": "fixed",
           "range": [

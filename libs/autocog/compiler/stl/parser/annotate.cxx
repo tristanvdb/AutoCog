@@ -9,8 +9,14 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Annotation>(ParserState & state, ast::Data<ast::Tag::Annotation> & annotation) {
-  annotation.path.emplace();
-  parse(state, annotation.path.value().data);
+  // Check for _ (prompt-level annotation, no path)
+  if (state.check(TokenType::IDENTIFIER) && state.current.text == "_") {
+    state.advance(); // consume _
+    annotation.path = std::nullopt;
+  } else {
+    annotation.path.emplace();
+    parse(state, annotation.path.value().data);
+  }
   state.expect(TokenType::AS, " in annotation.");
   parse(state, annotation.description.data);
   state.expect(TokenType::SEMICOLON, " to end annotation.");

@@ -34,6 +34,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Name",
           "index": 0,
           "name": "name",
           "range": null
@@ -51,6 +52,7 @@
               "\"senior\""
             ]
           },
+          "format_ref": "Age",
           "index": 1,
           "name": "age",
           "range": null
@@ -84,8 +86,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "name_1_0@0",
-            "age_1_1@0"
+            "name_1_0@0"
           ]
         }
       }

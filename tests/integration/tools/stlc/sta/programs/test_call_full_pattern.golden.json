@@ -250,8 +250,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "task_1_0@0",
-            "response_1_1@0"
+            "task_1_0@0"
           ]
         },
         "task_1_0@0": {

@@ -90,6 +90,10 @@
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A formal message."
+          ],
+          "format_ref": "Message",
           "index": 0,
           "name": "simple",
           "range": null
@@ -104,6 +108,10 @@
             "length": 50,
             "type": "completion"
           },
+          "format_desc": [
+            "A casual message."
+          ],
+          "format_ref": "Message",
           "index": 1,
           "name": "long",
           "range": null
@@ -118,6 +126,10 @@
             "length": 20,
             "type": "completion"
           },
+          "format_desc": [
+            "A technical message."
+          ],
+          "format_ref": "Message",
           "index": 2,
           "name": "tech",
           "range": null
@@ -175,9 +187,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "simple_1_0@0",
-            "long_1_1@0",
-            "tech_1_2@0"
+            "simple_1_0@0"
           ]
         },
         "simple_1_0@0": {
@@ -186,8 +196,7 @@
             0
           ],
           "successors": [
-            "long_1_1@0",
-            "tech_1_2@0"
+            "long_1_1@0"
           ]
         },
         "tech_1_2@0": {

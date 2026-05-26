@@ -41,7 +41,9 @@
           "type": "input"
         }
       ],
-      "desc": [],
+      "desc": [
+        "You are answering yes/no questions."
+      ],
       "fields": [
         {
           "depth": 1,
@@ -52,6 +54,10 @@
           "format": {
             "type": "completion"
           },
+          "format_desc": [
+            "The subject matter being discussed"
+          ],
+          "format_ref": "Topic",
           "index": 0,
           "name": "topic",
           "range": null
@@ -131,9 +137,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "topic_1_0@0",
-            "question_1_1@0",
-            "answer_1_2@0"
+            "topic_1_0@0"
           ]
         },
         "topic_1_0@0": {
@@ -142,8 +146,7 @@
             0
           ],
           "successors": [
-            "question_1_1@0",
-            "answer_1_2@0"
+            "question_1_1@0"
           ]
         }
       }

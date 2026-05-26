@@ -68,6 +68,7 @@
             "length": 50,
             "type": "completion"
           },
+          "format_ref": "Message",
           "index": 0,
           "name": "greeting",
           "range": null
@@ -80,6 +81,7 @@
             "length": 50,
             "type": "completion"
           },
+          "format_ref": "SpecialText",
           "index": 1,
           "name": "creative",
           "range": null
@@ -135,8 +137,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "greeting_1_0@0",
-            "creative_1_1@0"
+            "greeting_1_0@0"
           ]
         }
       }

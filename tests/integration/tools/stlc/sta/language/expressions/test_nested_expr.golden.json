@@ -254,8 +254,7 @@
             23
           ],
           "successors": [
-            "header_1_1@0",
-            "total_1_2@0"
+            "header_1_1@0"
           ]
         },
         "cells_1_0@3": {

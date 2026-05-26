@@ -26,6 +26,7 @@
             "length": 10,
             "type": "completion"
           },
+          "format_ref": "Container",
           "index": 0,
           "name": "small",
           "range": null
@@ -38,6 +39,7 @@
             "length": 25,
             "type": "completion"
           },
+          "format_ref": "Container",
           "index": 1,
           "name": "medium",
           "range": null
@@ -50,6 +52,7 @@
             "length": 50,
             "type": "completion"
           },
+          "format_ref": "Container",
           "index": 2,
           "name": "large",
           "range": null
@@ -98,9 +101,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "small_1_0@0",
-            "medium_1_1@0",
-            "large_1_2@0"
+            "small_1_0@0"
           ]
         },
         "small_1_0@0": {
@@ -109,8 +110,7 @@
             0
           ],
           "successors": [
-            "medium_1_1@0",
-            "large_1_2@0"
+            "medium_1_1@0"
           ]
         }
       }

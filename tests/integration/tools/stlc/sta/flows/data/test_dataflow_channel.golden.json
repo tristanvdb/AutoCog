@@ -75,6 +75,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Hint",
           "index": 1,
           "name": "hint",
           "range": null
@@ -97,6 +98,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Hint",
           "index": 3,
           "name": "reflection",
           "range": null
@@ -132,8 +134,7 @@
             0
           ],
           "successors": [
-            "solution_1_2@0",
-            "reflection_1_3@0"
+            "solution_1_2@0"
           ]
         },
         "problem_1_0@0": {
@@ -142,9 +143,7 @@
             0
           ],
           "successors": [
-            "hint_1_1@0",
-            "solution_1_2@0",
-            "reflection_1_3@0"
+            "hint_1_1@0"
           ]
         },
         "reflection_1_3@0": {
@@ -158,10 +157,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "problem_1_0@0",
-            "hint_1_1@0",
-            "solution_1_2@0",
-            "reflection_1_3@0"
+            "problem_1_0@0"
           ]
         },
         "solution_1_2@0": {

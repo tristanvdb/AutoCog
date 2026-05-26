@@ -52,7 +52,9 @@ struct FieldInfo {
     int flat_index;   // position in flattened field list (globally unique)
     std::optional<std::pair<int,int>> range;  // null = scalar
     FieldFormat format;
-    std::vector<std::string> desc;
+    std::optional<std::string> format_ref;  // named format/record (e.g. "thought")
+    std::vector<std::string> desc;           // field annotations (from prompt)
+    std::vector<std::string> format_desc;    // format annotations (from record definition)
 
     bool is_list() const { return range.has_value(); }
     bool is_record() const { return std::holds_alternative<std::monostate>(format); }

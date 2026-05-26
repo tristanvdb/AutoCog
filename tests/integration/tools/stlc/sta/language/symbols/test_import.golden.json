@@ -53,6 +53,10 @@
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A record from the library"
+          ],
+          "format_ref": "LibRecord",
           "index": 0,
           "name": "data",
           "range": null
@@ -122,6 +126,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "container",
           "index": 0,
           "name": "container",
           "range": null
@@ -136,6 +141,10 @@
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A record from the library"
+          ],
+          "format_ref": "LibRecord",
           "index": 0,
           "name": "item",
           "range": null
@@ -148,6 +157,7 @@
             "length": 20,
             "type": "completion"
           },
+          "format_ref": "AnotherType",
           "index": 1,
           "name": "another",
           "range": null
@@ -198,9 +208,7 @@
             0
           ],
           "successors": [
-            "item_2_1@0_0",
-            "another_2_2@0_0",
-            "container_1_0@1"
+            "item_2_1@0_0"
           ]
         },
         "container_1_0@1": {
@@ -217,8 +225,7 @@
             0
           ],
           "successors": [
-            "another_2_2@0_0",
-            "container_1_0@1"
+            "another_2_2@0_0"
           ]
         },
         "root@": {

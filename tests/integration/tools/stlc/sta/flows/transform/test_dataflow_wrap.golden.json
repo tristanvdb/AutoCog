@@ -205,8 +205,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "topic_1_0@0",
-            "title_1_1@0"
+            "topic_1_0@0"
           ]
         },
         "title_1_1@0": {

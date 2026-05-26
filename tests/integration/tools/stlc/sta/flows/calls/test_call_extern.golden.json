@@ -133,8 +133,7 @@
             0
           ],
           "successors": [
-            "processed_1_1@0",
-            "result_1_2@0"
+            "processed_1_1@0"
           ]
         },
         "processed_1_1@0": {
@@ -157,9 +156,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "input_1_0@0",
-            "processed_1_1@0",
-            "result_1_2@0"
+            "input_1_0@0"
           ]
         }
       }

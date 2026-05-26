@@ -45,6 +45,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Question",
           "index": 0,
           "name": "question",
           "range": null
@@ -103,8 +104,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "question_1_0@0",
-            "answer_1_1@0"
+            "question_1_0@0"
           ]
         }
       }

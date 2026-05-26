@@ -53,7 +53,16 @@ static ir::RecordFormat const * resolve_transparent(
 ) {
     while (rf && rf->fields.size() == 1) {
         auto const & child = *rf->fields[0];
-        // Inherit desc from the wrapper record if parent has none
+        // Capture record name from the inner field (the record's own name)
+        // rf->name is the enclosing field name, child.name is the record type name
+        if (!info.format_ref) {
+            info.format_ref = child.name;
+        }
+        // Capture format description from the record definition
+        if (info.format_desc.empty() && !rf->desc.empty()) {
+            info.format_desc = rf->desc;
+        }
+        // Inherit field desc from the record only if field has none
         if (info.desc.empty() && !rf->desc.empty()) {
             info.desc = rf->desc;
         }
@@ -61,15 +70,18 @@ static ir::RecordFormat const * resolve_transparent(
         auto const & child_fmt = child.format.value();
         auto * inner_rf = dynamic_cast<ir::RecordFormat const *>(child_fmt.get());
         if (inner_rf) {
-            // Another single-field record: keep resolving
             rf = inner_rf;
         } else {
-            // Leaf format: inline it
             info.format = extract_format(child_fmt.get());
             return nullptr;
         }
     }
-    // Multi-field record: stop, return it for normal expansion
+    // Multi-field record: capture name from first field
+    if (rf && rf->fields.size() > 1 && !info.format_ref) {
+        // Use rf's first field name as the record type name
+        // (multi-field records keep their structure, format_ref is informational)
+        info.format_ref = rf->name;
+    }
     return rf;
 }
 
@@ -99,6 +111,8 @@ static void collect_fields(
         if (f.format.has_value()) {
             auto const & fmt = f.format.value();
             info.format = extract_format(fmt.get());
+            // Capture format reference name
+            if (fmt->refname) info.format_ref = *fmt->refname;
 
             if (auto * rf = dynamic_cast<ir::RecordFormat const *>(fmt.get())) {
                 // Check if this is a transparent single-field record
@@ -301,10 +315,13 @@ static void post_process(
     for (auto & [tag, state] : states) {
         if (!state.flows.empty()) {
             state.successors.push_back(state.flows[0]);
+            state.flows.clear();  // exits intentionally kept for reversed_exits
         } else if (!state.exits.empty()) {
             if (state.exits[0] != "root@") {
                 state.successors.push_back(state.exits[0]);
+                state.exits.clear();
             }
+            // exits to root@ intentionally kept for list tail pruning
         }
     }
 
@@ -345,13 +362,17 @@ static void post_process(
                     states[sequence[s - 1]].successors.clear();
                 }
             } else if (reversed_exits.count(stag)) {
-                if (!state.successors.empty()) {
-                    auto succ = state.successors[0];
-                    for (auto const & e : reversed_exits[stag]) {
-                        auto & vec = reversed_exits[succ];
-                        if (std::find(vec.begin(), vec.end(), e) == vec.end()) {
-                            vec.push_back(e);
-                        }
+                if (state.successors.size() != 1) {
+                    throw std::runtime_error(
+                        "List tail '" + stag + "' is the target of exit edges but has "
+                        + std::to_string(state.successors.size()) + " successors. "
+                        "A variable-length list cannot be the last field in its enclosing scope.");
+                }
+                auto succ = state.successors[0];
+                for (auto const & e : reversed_exits[stag]) {
+                    auto & vec = reversed_exits[succ];
+                    if (std::find(vec.begin(), vec.end(), e) == vec.end()) {
+                        vec.push_back(e);
                     }
                 }
                 reversed_exits.erase(stag);

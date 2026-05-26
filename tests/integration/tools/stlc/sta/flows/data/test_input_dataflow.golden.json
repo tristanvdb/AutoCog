@@ -104,8 +104,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "name_1_0@0",
-            "greeting_1_1@0"
+            "name_1_0@0"
           ]
         }
       }
@@ -222,17 +221,14 @@
             0
           ],
           "successors": [
-            "age_1_1@0",
-            "summary_1_2@0"
+            "age_1_1@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "greeting_1_0@0",
-            "age_1_1@0",
-            "summary_1_2@0"
+            "greeting_1_0@0"
           ]
         },
         "summary_1_2@0": {

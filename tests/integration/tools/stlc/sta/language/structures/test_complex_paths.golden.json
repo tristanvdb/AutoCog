@@ -59,6 +59,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "items",
           "index": 2,
           "name": "items",
           "range": [
@@ -191,8 +192,7 @@
             0
           ],
           "successors": [
-            "label_2_3@0_0",
-            "tags_2_4@0_0"
+            "label_2_3@0_0"
           ]
         },
         "items_1_2@1": {
@@ -201,8 +201,7 @@
             1
           ],
           "successors": [
-            "label_2_3@1_0",
-            "tags_2_4@1_0"
+            "label_2_3@1_0"
           ]
         },
         "items_1_2@2": {
@@ -211,8 +210,7 @@
             2
           ],
           "successors": [
-            "label_2_3@2_0",
-            "tags_2_4@2_0"
+            "label_2_3@2_0"
           ]
         },
         "label_2_3@0_0": {

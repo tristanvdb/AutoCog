@@ -26,6 +26,7 @@
             "length": 20,
             "type": "completion"
           },
+          "format_ref": "ShortText",
           "index": 0,
           "name": "title",
           "range": null
@@ -39,6 +40,7 @@
             "threshold": 0.949999988079071,
             "type": "completion"
           },
+          "format_ref": "LongText",
           "index": 1,
           "name": "content",
           "range": null
@@ -92,9 +94,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "title_1_0@0",
-            "content_1_1@0",
-            "summary_1_2@0"
+            "title_1_0@0"
           ]
         },
         "summary_1_2@0": {
@@ -110,8 +110,7 @@
             0
           ],
           "successors": [
-            "content_1_1@0",
-            "summary_1_2@0"
+            "content_1_1@0"
           ]
         }
       }

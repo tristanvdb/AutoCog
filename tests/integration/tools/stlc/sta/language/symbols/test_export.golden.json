@@ -24,6 +24,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Data",
           "index": 0,
           "name": "input",
           "range": null

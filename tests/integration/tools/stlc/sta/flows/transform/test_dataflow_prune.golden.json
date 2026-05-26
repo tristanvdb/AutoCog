@@ -59,6 +59,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "data",
           "index": 0,
           "name": "data",
           "range": null
@@ -138,10 +139,7 @@
             0
           ],
           "successors": [
-            "name_2_1@0_0",
-            "value_2_2@0_0",
-            "data_1_0@1",
-            "answer_1_3@0"
+            "name_2_1@0_0"
           ]
         },
         "data_1_0@1": {
@@ -160,9 +158,7 @@
             0
           ],
           "successors": [
-            "value_2_2@0_0",
-            "data_1_0@1",
-            "answer_1_3@0"
+            "value_2_2@0_0"
           ]
         },
         "root@": {
@@ -179,8 +175,7 @@
             0
           ],
           "successors": [
-            "data_1_0@1",
-            "answer_1_3@0"
+            "data_1_0@1"
           ]
         }
       }
@@ -224,6 +219,7 @@
           "format": {
             "type": "record"
           },
+          "format_ref": "result",
           "index": 1,
           "name": "result",
           "range": null
@@ -290,9 +286,7 @@
             0
           ],
           "successors": [
-            "secret_2_3@0_0",
-            "value_2_4@0_0",
-            "result_1_1@1"
+            "secret_2_3@0_0"
           ]
         },
         "query_1_0@0": {
@@ -310,10 +304,7 @@
             0
           ],
           "successors": [
-            "name_2_2@0_0",
-            "secret_2_3@0_0",
-            "value_2_4@0_0",
-            "result_1_1@1"
+            "name_2_2@0_0"
           ]
         },
         "result_1_1@1": {
@@ -327,8 +318,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "query_1_0@0",
-            "result_1_1@0"
+            "query_1_0@0"
           ]
         },
         "secret_2_3@0_0": {
@@ -338,8 +328,7 @@
             0
           ],
           "successors": [
-            "value_2_4@0_0",
-            "result_1_1@1"
+            "value_2_4@0_0"
           ]
         },
         "value_2_4@0_0": {

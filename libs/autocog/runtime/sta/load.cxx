@@ -57,6 +57,10 @@ PromptSTA load_prompt(json const & j) {
             fi.range = std::make_pair(fj["range"][0].get<int>(), fj["range"][1].get<int>());
         }
         fi.format = load_format(fj["format"]);
+        if (fj.contains("format_ref")) fi.format_ref = fj["format_ref"].get<std::string>();
+        if (fj.contains("format_desc")) {
+            for (auto const & d : fj["format_desc"]) fi.format_desc.push_back(d);
+        }
         p.fields.push_back(std::move(fi));
     }
 
@@ -345,6 +349,8 @@ json serialize_prompt(PromptSTA const & p) {
         fj["flat_index"] = f.flat_index; fj["desc"] = f.desc;
         fj["range"] = f.range ? json::array({f.range->first, f.range->second}) : json(nullptr);
         fj["format"] = format_to_json(f.format);
+        if (f.format_ref) fj["format_ref"] = *f.format_ref;
+        if (!f.format_desc.empty()) fj["format_desc"] = f.format_desc;
         j["fields"].push_back(fj);
     }
     j["states"] = json::object();

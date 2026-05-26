@@ -16,7 +16,9 @@
   "prompts": {
     "test__12909789474868431288_4": {
       "channels": [],
-      "desc": [],
+      "desc": [
+        "You are performing the task: classify. Your goal is to answer questions."
+      ],
       "fields": [
         {
           "depth": 1,
@@ -89,8 +91,7 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "question_1_0@0",
-            "answer_1_1@0"
+            "question_1_0@0"
           ]
         }
       }

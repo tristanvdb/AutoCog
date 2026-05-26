@@ -45,6 +45,7 @@
           "format": {
             "type": "completion"
           },
+          "format_ref": "Problem",
           "index": 0,
           "name": "problem",
           "range": null
@@ -119,17 +120,14 @@
             0
           ],
           "successors": [
-            "attempt_1_1@0",
-            "success_1_2@0"
+            "attempt_1_1@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "problem_1_0@0",
-            "attempt_1_1@0",
-            "success_1_2@0"
+            "problem_1_0@0"
           ]
         },
         "success_1_2@0": {
