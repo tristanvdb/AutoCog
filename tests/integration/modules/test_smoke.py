@@ -1080,3 +1080,191 @@ class TestRecorderFtaFtt:
             # FTT should have tree structure
             assert "children" in data["ftt"]
             assert "text" in data["ftt"]
+
+
+class TestCLIErrors:
+    """Test CLI error handling for missing files and bad arguments."""
+
+    def test_missing_stl_file(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "compile", "--stl", "/nonexistent/program.stl"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_missing_sta_file(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run", "--sta", "/nonexistent/program.sta.json",
+             "--rng", "--input", "{}"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_missing_app_file(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run", "--app", "/nonexistent/app.stapp",
+             "--rng", "--input", "{}"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_missing_model_file(self, repo_root):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run",
+             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--model", "/nonexistent/model.gguf",
+             "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_missing_syntax_file(self, repo_root):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run",
+             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--rng", "--syntax", "/nonexistent/syntax.json",
+             "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_invalid_input_json(self, repo_root):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run",
+             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--rng", "--input", "not valid json"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "json" in result.stderr.lower() or "error" in result.stderr.lower()
+
+    def test_missing_pack_stl(self):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "pack", "--stl", "/nonexistent/program.stl", "-o", "/tmp/test.stapp"],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "not found" in result.stderr.lower()
+
+    def test_no_model_or_rng(self, repo_root):
+        import subprocess
+        result = subprocess.run(
+            ["autocog", "run",
+             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "model" in result.stderr.lower() or "rng" in result.stderr.lower()
+
+
+class TestCLIErrorsDirect:
+    """Test error handling via direct main() calls for coverage."""
+
+    def test_missing_stl_direct(self):
+        from unittest.mock import patch
+        from autocog.__main__ import main
+        args = ["autocog", "compile", "--stl", "/nonexistent/program.stl"]
+        with patch("sys.argv", args):
+            with __import__("pytest").raises(SystemExit) as exc:
+                main()
+            assert exc.value.code == 1
+
+    def test_missing_model_direct(self, repo_root):
+        from unittest.mock import patch
+        from autocog.__main__ import main
+        args = ["autocog", "run",
+                "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                "--model", "/nonexistent/model.gguf",
+                "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}']
+        with patch("sys.argv", args):
+            with __import__("pytest").raises(SystemExit) as exc:
+                main()
+            assert exc.value.code == 1
+
+    def test_run_sta_direct(self, repo_root):
+        """Test --sta path (line 79)."""
+        import io, json, tempfile, os
+        from unittest.mock import patch
+        from autocog.__main__ import main
+        import autocog
+
+        # Compile to STA first
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(prog.sta, f)
+            sta_path = f.name
+        try:
+            args = ["autocog", "run", "--sta", sta_path, "--rng",
+                    "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}']
+            with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as out:
+                main()
+            assert out.getvalue().strip() in ["a", "b", "c", "d"]
+        finally:
+            os.unlink(sta_path)
+
+    def test_run_with_record_direct(self, repo_root):
+        """Test --record path (lines 218-220, 242)."""
+        import io, tempfile
+        from unittest.mock import patch
+        from autocog.__main__ import main
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = ["autocog", "run",
+                    "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                    "--rng",
+                    "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}',
+                    "--record", "frame,text",
+                    "--record-path", tmpdir]
+            with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO):
+                main()
+            import os
+            assert os.path.isfile(os.path.join(tmpdir, "ctx0.json"))
+
+    def test_run_output_file_direct(self, repo_root):
+        """Test -o output path (lines 256-257)."""
+        import tempfile, os
+        from unittest.mock import patch
+        from autocog.__main__ import main
+
+        with tempfile.NamedTemporaryFile(suffix='.txt', delete=False) as f:
+            outpath = f.name
+        try:
+            args = ["autocog", "run",
+                    "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                    "--rng",
+                    "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}',
+                    "-o", outpath]
+            with patch("sys.argv", args):
+                main()
+            with open(outpath) as f:
+                assert f.read().strip() in ["a", "b", "c", "d"]
+        finally:
+            os.unlink(outpath)
+
+    def test_run_with_model_direct(self, repo_root):
+        """Test --model path (line 205) — uses RNG model path."""
+        # This tests the model loading path with a non-existent file
+        # to verify the error message
+        from unittest.mock import patch
+        from autocog.__main__ import main
+        args = ["autocog", "run",
+                "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                "--model", "/nonexistent/m.gguf",
+                "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}']
+        with patch("sys.argv", args):
+            with __import__("pytest").raises(SystemExit) as exc:
+                main()
+            assert exc.value.code == 1

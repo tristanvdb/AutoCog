@@ -74,10 +74,16 @@ def _load_program(args):
     """
     import autocog
     if hasattr(args, 'stl') and args.stl:
+        if not os.path.isfile(args.stl):
+            raise FileNotFoundError(f"STL file not found: {args.stl}")
         return autocog.compile(args.stl, includes=args.include), args.include, None
     elif hasattr(args, 'sta') and args.sta:
+        if not os.path.isfile(args.sta):
+            raise FileNotFoundError(f"STA file not found: {args.sta}")
         return autocog.load(args.sta), args.include, None
     elif hasattr(args, 'app') and args.app:
+        if not os.path.isfile(args.app):
+            raise FileNotFoundError(f"App file not found: {args.app}")
         from .stapp import load_stapp
         recompile = getattr(args, 'recompile', False)
         prog, manifest, temp_dir, inc_paths = load_stapp(args.app, recompile=recompile)
@@ -90,6 +96,8 @@ def _load_program(args):
 
 def cmd_pack(args):
     """Pack an STL program into a .stapp."""
+    if not os.path.isfile(args.stl):
+        raise FileNotFoundError(f"STL file not found: {args.stl}")
     from .stapp import pack
     pack(
         stl_path=args.stl,
@@ -165,6 +173,8 @@ def _add_program_args(parser):
 
 def cmd_compile(args):
     """Compile STL to STA."""
+    if not os.path.isfile(args.stl):
+        raise FileNotFoundError(f"STL file not found: {args.stl}")
     import autocog
     prog = autocog.compile(args.stl, includes=args.include)
     output = json.dumps(prog.sta, indent=2)
@@ -202,8 +212,14 @@ def _cmd_run_inner(args, prog, include_paths):
 
     # Create engine
     if args.model:
+        if not os.path.isfile(args.model):
+            raise FileNotFoundError(f"Model file not found: {args.model}")
+        if not os.path.isfile(args.syntax):
+            raise FileNotFoundError(f"Syntax file not found: {args.syntax}")
         engine = autocog.Engine(model=args.model, syntax=args.syntax, n_ctx=args.ctx)
     elif args.rng:
+        if not os.path.isfile(args.syntax):
+            raise FileNotFoundError(f"Syntax file not found: {args.syntax}")
         engine = autocog.Engine(syntax=args.syntax)
     else:
         print("Error: --model or --rng required", file=sys.stderr)
@@ -362,18 +378,28 @@ def main():
             print("Error: --syntax required (could not find default)", file=sys.stderr)
             sys.exit(1)
 
-    if args.command == "compile":
-        cmd_compile(args)
-    elif args.command == "pack":
-        cmd_pack(args)
-    elif args.command == "run":
-        cmd_run(args)
-    elif args.command == "backend":
-        cmd_backend(args)
-    elif args.command == "rpc":
-        cmd_rpc(args)
-    elif args.command == "serve":
-        cmd_serve(args)
+    try:
+        if args.command == "compile":
+            cmd_compile(args)
+        elif args.command == "pack":
+            cmd_pack(args)
+        elif args.command == "run":
+            cmd_run(args)
+        elif args.command == "backend":
+            cmd_backend(args)
+        elif args.command == "rpc":
+            cmd_rpc(args)
+        elif args.command == "serve":
+            cmd_serve(args)
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error: invalid JSON — {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
