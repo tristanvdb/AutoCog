@@ -42,6 +42,36 @@ static sta::FieldFormat extract_format(ir::Format const * fmt) {
     return std::monostate{};
 }
 
+// Resolve through single-field record wrappers (type aliases).
+// Records like `Age { is enum(...); }` or `Title { is Sentence<50>; }`
+// are transparent — their single child's format replaces the parent.
+// Returns the leaf RecordFormat (multi-field) or nullptr (fully inlined).
+static ir::RecordFormat const * resolve_transparent(
+    ir::RecordFormat const * rf,
+    sta::FieldInfo & info
+) {
+    while (rf && rf->fields.size() == 1) {
+        auto const & child = *rf->fields[0];
+        // Inherit desc from the wrapper record if parent has none
+        if (info.desc.empty() && !rf->desc.empty()) {
+            info.desc = rf->desc;
+        }
+        if (!child.format.has_value()) return nullptr;
+        auto const & child_fmt = child.format.value();
+        auto * inner_rf = dynamic_cast<ir::RecordFormat const *>(child_fmt.get());
+        if (inner_rf) {
+            // Another single-field record: keep resolving
+            rf = inner_rf;
+        } else {
+            // Leaf format: inline it
+            info.format = extract_format(child_fmt.get());
+            return nullptr;
+        }
+    }
+    // Multi-field record: stop, return it for normal expansion
+    return rf;
+}
+
 static void collect_fields(
     std::vector<ir::Field const *> & flat,
     std::vector<sta::FieldInfo> & infos,
@@ -70,10 +100,18 @@ static void collect_fields(
             info.format = extract_format(fmt.get());
 
             if (auto * rf = dynamic_cast<ir::RecordFormat const *>(fmt.get())) {
-                flat.push_back(&f);
-                infos.push_back(std::move(info));
-                // Children should start at parent_depth + 1
-                collect_fields(flat, infos, rf->fields, infos.back().depth + 1);
+                // Check if this is a transparent single-field record
+                auto * real_rf = resolve_transparent(rf, info);
+                if (real_rf) {
+                    // Multi-field record: add as record node, recurse
+                    flat.push_back(&f);
+                    infos.push_back(std::move(info));
+                    collect_fields(flat, infos, real_rf->fields, infos.back().depth + 1);
+                } else {
+                    // Fully inlined: add as leaf field
+                    flat.push_back(&f);
+                    infos.push_back(std::move(info));
+                }
                 continue;
             }
         }
@@ -496,6 +534,7 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
                     ck.is_input = kwarg.is_input;
                     ck.prompt = kwarg.prompt;
                     ck.path = convert_steps(kwarg.path);
+                    ck.value = kwarg.value;
                     ck.clauses = convert_clauses(kwarg.clauses);
                     cc.kwargs.push_back(std::move(ck));
                 }
@@ -525,6 +564,16 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
 
 std::optional<int> Driver::run_generate() {
     sta.entry_points.insert(entry_point_map.begin(), entry_point_map.end());
+
+    // Populate Python imports from symbol table
+    for (auto const & [key, sym] : tables.symbols) {
+        if (auto * ps = std::get_if<PythonSymbol>(&sym)) {
+            auto pos = key.rfind("::");
+            auto name = (pos != std::string::npos) ? key.substr(pos + 2) : key;
+            auto & target = ps->target.data.name.data.name;
+            sta.python_imports[name] = runtime::sta::PythonImport{ps->filename, target};
+        }
+    }
 
     for (auto const & [mangled, pmt_ptr] : prompts) {
         auto const & pmt = *pmt_ptr;

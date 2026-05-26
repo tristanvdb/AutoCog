@@ -54,10 +54,10 @@ class Context:
         paths = backend_llama_cxx.get_best(self.engine.model_id, ftt_id, 1)
         text = paths[0] if paths else ""
 
-        # 5. Parse text → frame (C++)
+        # 5. Parse text → frame (C++), pass content for select resolution
         frame = runtime_sta_cxx.parse_text(
             self.program.id, self.prompt,
-            self.engine.syntax_id, text
+            self.engine.syntax_id, text, content
         )
 
         # 6. Cleanup
@@ -68,8 +68,15 @@ class Context:
         self.frames[self.prompt] = frame
 
         # 8. Flow control
-        flow_choice = frame.get("next", "")
         flows = self.program.prompt_flows(self.prompt)
+
+        if not flows:
+            # Terminal prompt: no flows → done
+            self.done = True
+            self.result = frame
+            return
+
+        flow_choice = frame.get("next", "")
 
         if flow_choice not in flows:
             # Default: if only one flow, use it

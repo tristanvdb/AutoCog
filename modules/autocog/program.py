@@ -27,6 +27,11 @@ class Program:
     def prompts(self):
         return self.sta["prompts"]
 
+    @property
+    def python_imports(self):
+        """Map of extern_name → {file, target} for Python callables."""
+        return self.sta.get("python_imports", {})
+
     def prompt_channels(self, prompt_name):
         return self.prompts[prompt_name].get("channels", [])
 

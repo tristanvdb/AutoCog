@@ -15,7 +15,7 @@ templates = {
         "description" : "present the main character of the story",
         "pages" : [1,3]
       }, {
-        "name": "perturbation"
+        "name": "perturbation",
         "description" : "the event that trigger the story",
         "pages" : [1,2]
       },{
@@ -49,7 +49,7 @@ templates = {
         "pages" : [1,2]
         
       }, {
-        "name": "words"
+        "name": "words",
         "description" : "one word or concept per page",
         "pages" : [5,10]
       }
@@ -58,6 +58,10 @@ templates = {
 }
 
 def list_templates(age):
+    try:
+        age = int(age)
+    except (ValueError, TypeError):
+        age = 0
     return [
       { "template" : key, "description" : tpl['description'], "ages" : tpl['ages'] }
       for (key,tpl) in templates.items()
@@ -65,7 +69,7 @@ def list_templates(age):
     ]
 
 def open_template(key):
-    return template[key]
+    return templates[key]
 
 def collate_task(query, age, key):
     res = [f"User ask for a book for children age {age}",f"User specified: \"{query}\""]
@@ -77,3 +81,16 @@ def collate_task(query, age, key):
     res += [ f"- {s['description']}" for s in templates[key]['steps'] ]
     return res
 
+
+def collate_comment(topic, comments):
+    """Collate topic context with comments into a list of strings."""
+    result = []
+    if isinstance(topic, list):
+        for t in topic:
+            result.append(str(t))
+    if isinstance(comments, list):
+        for c in comments:
+            result.append(str(c))
+    elif isinstance(comments, str):
+        result.append(comments)
+    return result

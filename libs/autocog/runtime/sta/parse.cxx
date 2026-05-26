@@ -1,8 +1,16 @@
 
 #include "autocog/runtime/sta/parse.hxx"
 
+// GCC 13 false positive: std::variant operations in set_value trigger
+// maybe-uninitialized warnings with -O2. This is a known GCC issue.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 
 namespace autocog::runtime::sta {
 
@@ -28,32 +36,143 @@ static std::string expected_label(ConcreteState const & state,
     return label;
 }
 
-// Set a value at a path in a record, creating intermediate records/arrays
-static void set_value(FieldRecord & root, FieldInfo const & fld,
-                       ConcreteState const & state, std::string const & value) {
-    // For depth-1 scalar fields: root[name] = value
-    // For depth-1 array fields: root[name][index] = value
-    // For deeper fields: need parent tracking (simplified: use flat name for now)
+// Precompute parent field indices: for each field at depth d,
+// find the nearest preceding field at depth d-1.
+static std::vector<int> build_parent_map(std::vector<FieldInfo> const & fields) {
+    std::vector<int> parent(fields.size(), -1);
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (fields[i].depth <= 1) continue;
+        for (int j = static_cast<int>(i) - 1; j >= 0; --j) {
+            if (fields[j].depth == fields[i].depth - 1) {
+                parent[i] = j;
+                break;
+            }
+        }
+    }
+    return parent;
+}
 
-    if (fld.is_list() && !state.indices.empty()) {
-        int idx = state.indices.back();
-        auto it = root.find(fld.name);
-        if (it == root.end() || !it->second.is_array()) {
-            root[fld.name] = FieldValue(FieldArray{});
+// Navigate to the correct position in the nested record structure,
+// creating intermediate arrays and records as needed.
+// Then set the value at the final position.
+static void set_value(FieldRecord & root,
+                       std::vector<FieldInfo> const & fields,
+                       std::vector<int> const & parent_map,
+                       int field_idx,
+                       ConcreteState const & state,
+                       std::string const & value) {
+
+    // Build ancestor chain from root to this field
+    // Each entry: (field_index, which index in state.indices to use)
+    std::vector<int> ancestors;
+    int cur = field_idx;
+    while (cur >= 0) {
+        ancestors.push_back(cur);
+        cur = parent_map[cur];
+    }
+    std::reverse(ancestors.begin(), ancestors.end());
+
+    // Navigate from root, creating structure as we go
+    // state.indices maps 1:1 with the ancestor chain depth
+    FieldRecord * current = &root;
+
+    for (size_t a = 0; a < ancestors.size(); ++a) {
+        int fidx = ancestors[a];
+        auto const & f = fields[fidx];
+        bool is_last = (a + 1 == ancestors.size());
+
+        if (is_last) {
+            // Set the actual value
+            if (f.is_list() && !state.indices.empty()) {
+                int idx = state.indices.back();
+                auto it = current->find(f.name);
+                if (it == current->end() || !it->second.is_array()) {
+                    (*current)[f.name] = FieldValue(FieldArray{});
+                }
+                auto & arr = (*current)[f.name].as_array();
+                while (static_cast<int>(arr.size()) <= idx) {
+                    arr.push_back(FieldValue(std::string("")));
+                }
+                arr[idx] = FieldValue(value);
+            } else {
+                (*current)[f.name] = FieldValue(value);
+            }
+        } else {
+            // Navigate into intermediate record/array
+            int idx = (a < state.indices.size()) ? state.indices[a] : 0;
+
+            if (f.is_list()) {
+                // Ensure array exists
+                auto it = current->find(f.name);
+                if (it == current->end() || !it->second.is_array()) {
+                    (*current)[f.name] = FieldValue(FieldArray{});
+                }
+                auto & arr = (*current)[f.name].as_array();
+                // Ensure element exists as a record
+                while (static_cast<int>(arr.size()) <= idx) {
+                    arr.push_back(FieldValue(FieldRecord{}));
+                }
+                // If element is not a record, replace it
+                if (!arr[idx].is_record()) {
+                    arr[idx] = FieldValue(FieldRecord{});
+                }
+                current = &arr[idx].as_record();
+            } else {
+                // Non-list intermediate: ensure record exists
+                auto it = current->find(f.name);
+                if (it == current->end() || !it->second.is_record()) {
+                    (*current)[f.name] = FieldValue(FieldRecord{});
+                }
+                current = &(*current)[f.name].as_record();
+            }
         }
-        auto & arr = root[fld.name].as_array();
-        while (static_cast<int>(arr.size()) <= idx) {
-            arr.push_back(FieldValue(std::string("")));
-        }
-        arr[idx] = FieldValue(value);
-    } else {
-        root[fld.name] = FieldValue(value);
     }
 }
 
+// Resolve a select index back to the actual value using the ChoiceFormat path
+static std::string resolve_select(std::string const & index_str,
+                                   ChoiceFormat const & cf,
+                                   json const & content,
+                                   Syntax const & syntax) {
+    // Collect values by navigating the path (same as ravel_choices in instantiate)
+    std::vector<json const *> current = {&content};
+    for (auto const & [name, range] : cf.path) {
+        std::vector<json const *> next;
+        for (auto const * ptr : current) {
+            if (ptr->is_object() && ptr->contains(name)) {
+                auto const & child = (*ptr)[name];
+                if (child.is_array()) {
+                    for (auto const & elem : child) next.push_back(&elem);
+                } else {
+                    next.push_back(&child);
+                }
+            } else if (ptr->is_array()) {
+                for (auto const & elem : *ptr) {
+                    if (elem.is_object() && elem.contains(name))
+                        next.push_back(&elem[name]);
+                }
+            }
+        }
+        current = std::move(next);
+    }
+
+    // Convert index string to integer
+    int offset = syntax.prompt_zero_index ? 0 : 1;
+    try {
+        int idx = std::stoi(index_str) - offset;
+        if (idx >= 0 && idx < static_cast<int>(current.size())) {
+            auto const * val = current[idx];
+            return val->is_string() ? val->get<std::string>() : val->dump();
+        }
+    } catch (...) {}
+    return index_str; // fallback: return as-is
+}
+
 FieldRecord parse_text(PromptSTA const & prompt, Syntax const & syntax,
-                        std::string const & text) {
+                        std::string const & text, json const * content) {
     FieldRecord result;
+
+    auto parent_map = build_parent_map(prompt.fields);
 
     // Find "start:" marker
     std::string start_marker = "start:" + syntax.field_separator;
@@ -98,7 +217,17 @@ FieldRecord parse_text(PromptSTA const & prompt, Syntax const & syntax,
             pos = body.size();
         }
 
-        set_value(result, fld, state, value);
+        // Resolve select choices: convert index back to actual value
+        if (content) {
+            auto const & fmt = fld.format;
+            if (auto * cf = std::get_if<ChoiceFormat>(&fmt)) {
+                if (cf->mode == "select") {
+                    value = resolve_select(value, *cf, *content, syntax);
+                }
+            }
+        }
+
+        set_value(result, prompt.fields, parent_map, state.field, state, value);
     }
 
     // Parse flow control: "next: <choice>"
@@ -154,3 +283,7 @@ json field_record_to_json(FieldRecord const & rec) {
 }
 
 }
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif

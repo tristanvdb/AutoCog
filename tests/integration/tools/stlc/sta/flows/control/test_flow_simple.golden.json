@@ -28,21 +28,10 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "record"
-          },
-          "index": 0,
-          "name": "task",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 1,
-          "format": {
             "type": "completion"
           },
           "index": 0,
-          "name": "Task",
+          "name": "task",
           "range": null
         }
       ],
@@ -61,21 +50,9 @@
       "name": "main",
       "sequence": [
         "root@",
-        "task_1_0@0",
-        "Task_2_1@0_0",
-        "task_1_0@1"
+        "task_1_0@0"
       ],
       "states": {
-        "Task_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "task_1_0@1"
-          ]
-        },
         "root@": {
           "field": -1,
           "indices": [],
@@ -87,16 +64,6 @@
           "field": 0,
           "indices": [
             0
-          ],
-          "successors": [
-            "Task_2_1@0_0",
-            "task_1_0@1"
-          ]
-        },
-        "task_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
           ],
           "successors": []
         }
@@ -127,27 +94,16 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "input",
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 1,
-          "format": {
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Task",
-          "range": null
-        },
-        {
           "depth": 1,
           "desc": [],
-          "flat_index": 2,
+          "flat_index": 1,
           "format": {
             "type": "completion"
           },
@@ -175,44 +131,20 @@
       "sequence": [
         "root@",
         "input_1_0@0",
-        "Task_2_1@0_0",
-        "input_1_0@1",
-        "output_1_2@0"
+        "output_1_1@0"
       ],
       "states": {
-        "Task_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "input_1_0@1",
-            "output_1_2@0"
-          ]
-        },
         "input_1_0@0": {
           "field": 0,
           "indices": [
             0
           ],
           "successors": [
-            "Task_2_1@0_0",
-            "input_1_0@1",
-            "output_1_2@0"
+            "output_1_1@0"
           ]
         },
-        "input_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "output_1_2@0"
-          ]
-        },
-        "output_1_2@0": {
-          "field": 2,
+        "output_1_1@0": {
+          "field": 1,
           "indices": [
             0
           ],
@@ -222,7 +154,8 @@
           "field": -1,
           "indices": [],
           "successors": [
-            "input_1_0@0"
+            "input_1_0@0",
+            "output_1_1@0"
           ]
         }
       }
@@ -302,5 +235,6 @@
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }

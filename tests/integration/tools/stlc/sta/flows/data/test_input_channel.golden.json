@@ -28,27 +28,16 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "question",
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 1,
-          "format": {
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Question",
-          "range": null
-        },
-        {
           "depth": 1,
           "desc": [],
-          "flat_index": 2,
+          "flat_index": 1,
           "format": {
             "type": "completion"
           },
@@ -76,24 +65,11 @@
       "sequence": [
         "root@",
         "question_1_0@0",
-        "Question_2_1@0_0",
-        "question_1_0@1",
-        "answer_1_2@0"
+        "answer_1_1@0"
       ],
       "states": {
-        "Question_2_1@0_0": {
+        "answer_1_1@0": {
           "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "question_1_0@1",
-            "answer_1_2@0"
-          ]
-        },
-        "answer_1_2@0": {
-          "field": 2,
           "indices": [
             0
           ],
@@ -105,28 +81,19 @@
             0
           ],
           "successors": [
-            "Question_2_1@0_0",
-            "question_1_0@1",
-            "answer_1_2@0"
-          ]
-        },
-        "question_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "answer_1_2@0"
+            "answer_1_1@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "question_1_0@0"
+            "question_1_0@0",
+            "answer_1_1@0"
           ]
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }

@@ -323,6 +323,14 @@ static void assemble_prompts(
     Evaluator & evaluator,
     Driver & driver
 ) {
+    // Helper: resolve an unmangled prompt name to its mangled instance name
+    auto resolve_prompt_ref = [&](std::string const & name) -> std::string {
+        for (auto const & [m, n] : graph.nodes) {
+            if (n.base_name == name) return m;
+        }
+        return name; // fallback: return as-is
+    };
+
     for (auto & [mangled, node] : graph.nodes) {
         auto const * pmt_ref = std::get_if<std::reference_wrapper<const ast::Prompt>>(&node.ast);
         if (!pmt_ref) continue;
@@ -390,7 +398,7 @@ static void assemble_prompts(
                             } else if constexpr (std::is_same_v<S, ast::FieldRef>) {
                                 std::optional<std::string> prompt_name;
                                 if (src.data.prompt) {
-                                    prompt_name = src.data.prompt->data.name.data.name;
+                                    prompt_name = resolve_prompt_ref(src.data.prompt->data.name.data.name);
                                 }
                                 auto source_steps = convert_path(src.data.field, evaluator, scope, node.context);
                                 auto dc = ir::DataflowChannel(
@@ -429,9 +437,18 @@ static void assemble_prompts(
                                             irk.path = convert_path(ks, evaluator, scope, node.context);
                                         } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
                                             if (ks.data.prompt) {
-                                                irk.prompt = ks.data.prompt->data.name.data.name;
+                                                irk.prompt = resolve_prompt_ref(ks.data.prompt->data.name.data.name);
                                             }
                                             irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
+                                        } else if constexpr (std::is_same_v<KS, ast::Expression>) {
+                                            auto val = evaluator.evaluate_expression(scope, ks, node.context);
+                                            if (auto * sv = std::get_if<std::string>(&val)) {
+                                                irk.value = *sv;
+                                            } else if (auto * iv = std::get_if<int>(&val)) {
+                                                irk.value = std::to_string(*iv);
+                                            } else if (auto * fv = std::get_if<float>(&val)) {
+                                                irk.value = std::to_string(*fv);
+                                            }
                                         }
                                     }, kwarg.data.source);
                                     irk.clauses = convert_clauses_from_link(kwarg.data.clauses, evaluator, scope, node.context);

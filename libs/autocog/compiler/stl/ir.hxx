@@ -247,12 +247,14 @@ struct Kwarg {
   bool is_input;                          // True if source is external input
   std::optional<std::string> prompt;      // For cross-prompt dataflow
   std::vector<PathStep> path;             // Source path
+  std::optional<std::string> value;       // Literal value (from "is" keyword)
   std::vector<Clause> clauses;            // Transformation clauses
 
   Kwarg() :
     is_input(false),
     prompt(std::nullopt),
     path(),
+    value(std::nullopt),
     clauses()
   {}
 };

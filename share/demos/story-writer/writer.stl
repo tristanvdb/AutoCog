@@ -3,7 +3,7 @@ from "stlib/thoughts.stl" import Thought, reflexion;
 from "stlib/datastore.py" import store as stlib_store, retrieve as stlib_retrieve;
 
 from "template.stl" import Age, TplDesc, Template;
-from "template.py" import list_templates, open_template, collate_task;
+from "template.py" import list_templates, open_template, collate_task, collate_comment;
 
 from "book.stl" import Title, Book;
 from "book.stl" import edit_title, create_pages, edit_page;
@@ -42,7 +42,7 @@ prompt init_task {
       key use init_idea.pick;
     };
     template call open_template {
-      key get init_idea.pick;
+      key use init_idea.pick;
     };
   }
   flow init_topic;
@@ -119,7 +119,7 @@ prompt loop_cond {
     };
   }
   flow {
-    loop_analyse[max_loops] as "edit";
+    loop_collate[max_loops] as "edit";
     done as "done";
   }
 }

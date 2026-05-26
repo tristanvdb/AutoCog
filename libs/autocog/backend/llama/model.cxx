@@ -317,7 +317,7 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   std::cerr << " > new_tokens.size() = " << new_tokens.size() << std::endl;
 #endif
   if (this->id == 0) {
-    std::uniform_real_distribution<float> dist(0.0f, 10.0f);
+    std::exponential_distribution<float> dist(0.5f);
     logprobs.clear();
     for (size_t i = 0; i < new_tokens.size(); ++i) {
       logprobs.push_back(dist(this->rng));
@@ -370,10 +370,15 @@ unsigned Model::eval_topk_tokens(
       throw std::runtime_error("vocab_mask size (" + std::to_string(vocab_mask.size()) + ") does not match vocabulary size (" + std::to_string(vs) + ")");
     }
 
-    std::uniform_real_distribution<float> dist(0.0f, 10.0f);
+    // RNG model: exponential logprobs (λ=0.5, mean=2)
+    // Produces realistic peaked distribution: clear winner, long tail.
+    // Pruning thresholds work naturally (top 2-3 candidates survive).
+    std::exponential_distribution<float> dist(0.5f);
     std::vector<std::pair<TokenID, float>> candidates;
     for (size_t tok = 0; tok < vs; ++tok) {
       if (vocab_mask[tok]) {
+        // Restrict to printable ASCII (32-126), newline, tab
+        if (tok < 256 && !(tok >= 32 && tok <= 126) && tok != '\n' && tok != '\t') continue;
         candidates.emplace_back(static_cast<TokenID>(tok), dist(this->rng));
       }
     }

@@ -12,22 +12,23 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "index": 0,
           "name": "small",
           "range": null
         },
         {
-          "depth": 2,
+          "depth": 1,
           "desc": [],
           "flat_index": 1,
           "format": {
-            "length": 10,
+            "length": 25,
             "type": "completion"
           },
-          "index": 0,
-          "name": "Container",
+          "index": 1,
+          "name": "medium",
           "range": null
         },
         {
@@ -35,45 +36,11 @@
           "desc": [],
           "flat_index": 2,
           "format": {
-            "type": "record"
-          },
-          "index": 1,
-          "name": "medium",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 3,
-          "format": {
-            "length": 25,
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Container",
-          "range": null
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 4,
-          "format": {
-            "type": "record"
-          },
-          "index": 2,
-          "name": "large",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 5,
-          "format": {
             "length": 50,
             "type": "completion"
           },
-          "index": 0,
-          "name": "Container",
+          "index": 2,
+          "name": "large",
           "range": null
         }
       ],
@@ -96,90 +63,33 @@
       "sequence": [
         "root@",
         "small_1_0@0",
-        "Container_2_1@0_0",
-        "small_1_0@1",
-        "medium_1_2@0",
-        "Container_2_3@0_0",
-        "medium_1_2@1",
-        "large_1_4@0",
-        "Container_2_5@0_0",
-        "large_1_4@1"
+        "medium_1_1@0",
+        "large_1_2@0"
       ],
       "states": {
-        "Container_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "small_1_0@1",
-            "medium_1_2@0"
-          ]
-        },
-        "Container_2_3@0_0": {
-          "field": 3,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "medium_1_2@1",
-            "large_1_4@0"
-          ]
-        },
-        "Container_2_5@0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "large_1_4@1"
-          ]
-        },
-        "large_1_4@0": {
-          "field": 4,
+        "large_1_2@0": {
+          "field": 2,
           "indices": [
             0
-          ],
-          "successors": [
-            "Container_2_5@0_0",
-            "large_1_4@1"
-          ]
-        },
-        "large_1_4@1": {
-          "field": 4,
-          "indices": [
-            1
           ],
           "successors": []
         },
-        "medium_1_2@0": {
-          "field": 2,
+        "medium_1_1@0": {
+          "field": 1,
           "indices": [
             0
           ],
           "successors": [
-            "Container_2_3@0_0",
-            "medium_1_2@1",
-            "large_1_4@0"
-          ]
-        },
-        "medium_1_2@1": {
-          "field": 2,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "large_1_4@0"
+            "large_1_2@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "small_1_0@0"
+            "small_1_0@0",
+            "medium_1_1@0",
+            "large_1_2@0"
           ]
         },
         "small_1_0@0": {
@@ -188,21 +98,12 @@
             0
           ],
           "successors": [
-            "Container_2_1@0_0",
-            "small_1_0@1",
-            "medium_1_2@0"
-          ]
-        },
-        "small_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "medium_1_2@0"
+            "medium_1_1@0",
+            "large_1_2@0"
           ]
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }

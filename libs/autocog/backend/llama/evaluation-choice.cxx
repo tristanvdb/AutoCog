@@ -93,7 +93,7 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   for (const auto & result : results) {
     auto & choice_tokens = action.choices[result.index];
     FTT & child = state.parent.add(action.id, choice_tokens, result.logprobs);
-    child.pruned = ( count > action.width ) || (count > 0 && result.proba < action.threshold);
+    child.pruned = ( count >= action.width ) || (count > 0 && result.proba < action.threshold);
     if (!child.pruned) {
       this->enqueue(action.successors[result.index], child, state);
     }

@@ -1,19 +1,18 @@
 
-data = {}
+_store = {}
 
 def store(data, pkey="", skey=""):
-    global data
-    if not pkey in data:
-    	data.update({ pkey : { skey : data } })
+    global _store
+    if pkey not in _store:
+        _store[pkey] = { skey : data }
     else:
-    	data[pkey].update({ skey : data })
-    return { "pkey" : pkey,  "skey" : skey  }
+        _store[pkey][skey] = data
+    return { "pkey" : pkey, "skey" : skey }
 
 def retrieve(pkey="", skey=""):
-    global data
-    if not pkey in data:
-    	return None
-    elif not skey in data[pkey]:
-    	return None
-    return data[pkey][skey]
-
+    global _store
+    if pkey not in _store:
+        return None
+    elif skey not in _store[pkey]:
+        return None
+    return _store[pkey][skey]

@@ -11,24 +11,108 @@ using json = nlohmann::json;
 // Helpers
 // ============================================================================
 
+// Precompute parent field indices for nested navigation
+static std::vector<int> build_parent_map(std::vector<FieldInfo> const & fields) {
+    std::vector<int> parent(fields.size(), -1);
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (fields[i].depth <= 1) continue;
+        for (int j = static_cast<int>(i) - 1; j >= 0; --j) {
+            if (fields[j].depth == fields[i].depth - 1) {
+                parent[i] = j;
+                break;
+            }
+        }
+    }
+    return parent;
+}
+
+// Build ancestor chain (from root to this field)
+static std::vector<int> build_ancestors(int field_idx, std::vector<int> const & parent_map) {
+    std::vector<int> chain;
+    int cur = field_idx;
+    while (cur >= 0) {
+        chain.push_back(cur);
+        cur = parent_map[cur];
+    }
+    std::reverse(chain.begin(), chain.end());
+    return chain;
+}
+
+// Navigate content dict following the nested path to find the value
+// for a specific field at specific indices.
+// Handles auto-flattening: when content provides a scalar but the STA
+// expects a single-field record, treat the scalar as the inner field's value.
 static json const * read_content(json const & content, ConcreteState const & state,
-                                  PromptSTA const & prompt) {
+                                  PromptSTA const & prompt,
+                                  std::vector<int> const & parent_map) {
     if (state.field < 0) return nullptr;
-    auto const & fld = prompt.fields[state.field];
+
+    auto ancestors = build_ancestors(state.field, parent_map);
     json const * ptr = &content;
-    if (ptr->contains(fld.name)) {
-        ptr = &(*ptr)[fld.name];
-        if (fld.is_list() && !state.indices.empty()) {
-            int idx = state.indices.back();
-            if (ptr->is_array() && idx < static_cast<int>(ptr->size())) {
+
+    for (size_t a = 0; a < ancestors.size(); ++a) {
+        auto const & f = prompt.fields[ancestors[a]];
+
+        // Try to navigate into the field by name
+        if (ptr->is_object() && ptr->contains(f.name)) {
+            ptr = &(*ptr)[f.name];
+        } else if (ptr->is_object() || ptr->is_null()) {
+            return nullptr;
+        }
+        // else: ptr is a scalar or array — auto-flatten
+        // (content provides a scalar where STA expects a record wrapper)
+
+        int idx = (a < state.indices.size()) ? state.indices[a] : 0;
+
+        if (f.is_list() && ptr->is_array()) {
+            if (idx < static_cast<int>(ptr->size())) {
                 ptr = &(*ptr)[idx];
             } else {
                 return nullptr;
             }
+        } else if (f.is_list() && !ptr->is_array()) {
+            return nullptr;
         }
-        return ptr;
+
+        // If not the last step and ptr is a scalar, we're auto-flattening:
+        // the content skipped the record wrapper, so we just keep ptr as-is
+        // and let the next iteration try to navigate further (or use it)
     }
-    return nullptr;
+    return ptr;
+}
+
+// Check if a state should be skipped because its parent array index
+// exceeds the content array size.
+static bool should_skip(ConcreteState const & state,
+                         PromptSTA const & prompt,
+                         json const & content,
+                         std::vector<int> const & parent_map) {
+    if (state.field < 0) return false;
+
+    auto ancestors = build_ancestors(state.field, parent_map);
+    json const * ptr = &content;
+
+    for (size_t a = 0; a < ancestors.size(); ++a) {
+        auto const & f = prompt.fields[ancestors[a]];
+
+        if (ptr->is_object() && ptr->contains(f.name)) {
+            ptr = &(*ptr)[f.name];
+        } else if (ptr->is_object()) {
+            return false; // no content for this path → don't skip, generate
+        }
+        // else: scalar → auto-flattening, continue
+
+        int idx = (a < state.indices.size()) ? state.indices[a] : 0;
+
+        if (f.is_list() && ptr->is_array()) {
+            int content_size = static_cast<int>(ptr->size());
+            if (idx >= content_size) {
+                return true; // index beyond content → skip
+            }
+            ptr = &(*ptr)[idx];
+        }
+    }
+    return false;
 }
 
 static std::string prompt_label(ConcreteState const & state,
@@ -51,22 +135,42 @@ static std::vector<std::string> ravel_choices(
     ChoiceFormat const & cf,
     Syntax const & syntax
 ) {
-    json const * ptr = &content;
+    // Collect values by navigating the path, raveling through arrays
+    std::vector<json const *> current = {&content};
+
     for (auto const & [name, range] : cf.path) {
-        if (!ptr->contains(name)) return {};
-        ptr = &(*ptr)[name];
+        std::vector<json const *> next;
+        for (auto const * ptr : current) {
+            if (ptr->is_object() && ptr->contains(name)) {
+                auto const & child = (*ptr)[name];
+                if (child.is_array()) {
+                    for (auto const & elem : child) {
+                        next.push_back(&elem);
+                    }
+                } else {
+                    next.push_back(&child);
+                }
+            } else if (ptr->is_array()) {
+                // Map over array elements
+                for (auto const & elem : *ptr) {
+                    if (elem.is_object() && elem.contains(name)) {
+                        next.push_back(&elem[name]);
+                    }
+                }
+            }
+        }
+        current = std::move(next);
     }
+
     std::vector<std::string> choices;
-    if (ptr->is_array()) {
-        if (cf.mode == "select") {
-            int offset = syntax.prompt_zero_index ? 0 : 1;
-            for (int i = 0; i < static_cast<int>(ptr->size()); ++i) {
-                choices.push_back(std::to_string(i + offset));
-            }
-        } else {
-            for (auto const & v : *ptr) {
-                choices.push_back(v.is_string() ? v.get<std::string>() : v.dump());
-            }
+    if (cf.mode == "select") {
+        int offset = syntax.prompt_zero_index ? 0 : 1;
+        for (int i = 0; i < static_cast<int>(current.size()); ++i) {
+            choices.push_back(std::to_string(i + offset));
+        }
+    } else {
+        for (auto const * ptr : current) {
+            choices.push_back(ptr->is_string() ? ptr->get<std::string>() : ptr->dump());
         }
     }
     return choices;
@@ -79,6 +183,8 @@ static std::vector<std::string> ravel_choices(
 json instantiate(PromptSTA const & prompt, json const & content, Syntax const & syntax) {
     json actions = json::array();
     int action_id = 0;
+
+    auto parent_map = build_parent_map(prompt.fields);
 
     auto add_text = [&](std::string const & uid, std::string const & text) -> int {
         int id = action_id++;
@@ -139,6 +245,11 @@ json instantiate(PromptSTA const & prompt, json const & content, Syntax const & 
         std::string safe_tag = tag;
         for (auto & c : safe_tag) if (c == '@') c = '_';
 
+        // Skip states beyond content array bounds
+        if (should_skip(state, prompt, content, parent_map)) {
+            continue;
+        }
+
         std::string label = prompt_label(state, prompt, syntax);
         int branch_id = add_text("branch." + safe_tag, label);
         connect(prev_end, branch_id);
@@ -147,7 +258,7 @@ json instantiate(PromptSTA const & prompt, json const & content, Syntax const & 
         int choose_count = 0;
 
         if (!fld.is_record()) {
-            auto const * val = read_content(content, state, prompt);
+            auto const * val = read_content(content, state, prompt, parent_map);
 
             std::visit([&](auto const & fmt) {
                 using F = std::decay_t<decltype(fmt)>;

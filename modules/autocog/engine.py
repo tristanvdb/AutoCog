@@ -30,7 +30,7 @@ class Engine:
         else:
             raise ValueError("syntax is required — pass a path to a syntax JSON file")
 
-    def run(self, program, entry="main", externals=None, **inputs):
+    def run(self, program, entry="main", externals=None, max_steps=100, **inputs):
         """
         Run a program to completion.
 
@@ -38,6 +38,7 @@ class Engine:
             program: compiled Program
             entry: entry point name (default: "main")
             externals: dict of name → callable for extern call channels
+            max_steps: maximum number of prompt steps (default: 100)
             **inputs: input channel values
 
         Returns:
@@ -48,8 +49,15 @@ class Engine:
             raise ValueError(f"Entry point '{entry}' not found in program")
 
         ctx = Context(program, self, prompt, inputs, externals or {})
-        while not ctx.done:
+        steps = 0
+        while not ctx.done and steps < max_steps:
             ctx.step()
+            steps += 1
+        if not ctx.done:
+            raise RuntimeError(
+                f"Program did not complete after {max_steps} steps "
+                f"(at prompt '{ctx.prompt}'). Increase --max-steps if needed."
+            )
         return ctx.result
 
     async def run_async(self, program, entry="main", externals=None, **inputs):

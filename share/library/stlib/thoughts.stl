@@ -36,9 +36,9 @@ prompt reflexion {
     initial get initial;
   }
   return {
-    subject is f"Though about {subject}";
+    subject is f"Thought about {subject}";
     intermediate use work;
-    use response;
+    response use response;
   }
 }
 

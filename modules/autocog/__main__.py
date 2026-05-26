@@ -67,6 +67,16 @@ def parse_args():
         help="Model context size (default: 4096)",
     )
 
+    # Execution
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Show step-by-step execution progress",
+    )
+    parser.add_argument(
+        "--max-steps", type=int, default=100,
+        help="Maximum number of prompt steps (default: 100)",
+    )
+
     return parser.parse_args()
 
 
@@ -107,13 +117,59 @@ def load_input(input_arg):
         sys.exit(1)
 
 
+def load_externals(program, include_paths):
+    """Auto-load Python externals referenced by the program.
+
+    Scans python_imports in the STA, finds the .py files in include paths,
+    and loads the functions.
+    """
+    import importlib.util
+
+    externals = {}
+    loaded_modules = {}
+
+    for extern_name, info in program.python_imports.items():
+        py_file = info["file"]
+        target_func = info["target"]
+
+        # Find the .py file in include paths
+        module_path = None
+        for inc in include_paths:
+            candidate = os.path.join(inc, py_file)
+            if os.path.isfile(candidate):
+                module_path = candidate
+                break
+
+        if module_path is None:
+            print(f"Warning: Python file '{py_file}' not found in include paths", file=sys.stderr)
+            continue
+
+        # Load the module (cache by path)
+        if module_path not in loaded_modules:
+            mod_name = os.path.splitext(os.path.basename(py_file))[0]
+            spec = importlib.util.spec_from_file_location(mod_name, module_path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            loaded_modules[module_path] = mod
+
+        mod = loaded_modules[module_path]
+        func = getattr(mod, target_func, None)
+        if func is None:
+            print(f"Warning: function '{target_func}' not found in '{py_file}'", file=sys.stderr)
+            continue
+
+        externals[extern_name] = func
+
+    return externals
+
+
 def main():
     args = parse_args()
 
     import autocog
 
     # Compile
-    prog = autocog.compile(args.stl)
+    prog = autocog.compile(args.stl, includes=args.include)
 
     # Create engine
     syntax = find_syntax(args)
@@ -125,8 +181,34 @@ def main():
     # Load input
     inputs = load_input(args.input)
 
+    # Auto-load Python externals
+    externals = load_externals(prog, args.include)
+
     # Run
-    result = engine.run(prog, entry=args.entry, **inputs)
+    if args.verbose:
+        import time
+        from autocog.context import Context
+        prompt = prog.entry_points.get(args.entry)
+        if prompt is None:
+            print(f"Error: entry point '{args.entry}' not found", file=sys.stderr)
+            sys.exit(1)
+        ctx = Context(prog, engine, prompt, inputs, externals)
+        steps = 0
+        t0 = time.time()
+        while not ctx.done and steps < args.max_steps:
+            t1 = time.time()
+            ctx.step()
+            steps += 1
+            elapsed = time.time() - t1
+            print(f"  [{steps}] {ctx.prompt} ({elapsed:.2f}s)", file=sys.stderr)
+        if not ctx.done:
+            print(f"Warning: did not complete after {steps} steps", file=sys.stderr)
+        total = time.time() - t0
+        print(f"  Done in {steps} steps ({total:.1f}s)", file=sys.stderr)
+        result = ctx.result if ctx.done else ctx.frames.get(ctx.prompt, {})
+    else:
+        result = engine.run(prog, entry=args.entry, externals=externals,
+                            max_steps=args.max_steps, **inputs)
 
     # Output
     if isinstance(result, dict):

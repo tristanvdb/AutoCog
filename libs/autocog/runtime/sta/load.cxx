@@ -160,6 +160,7 @@ PromptSTA load_prompt(json const & j) {
                     ck.name = kj["name"];
                     ck.is_input = kj["is_input"];
                     if (kj.contains("prompt") && !kj["prompt"].is_null()) ck.prompt = kj["prompt"];
+                    if (kj.contains("value") && !kj["value"].is_null()) ck.value = kj["value"];
                     ck.path = load_pathsteps(kj["path"]);
                     ck.clauses = load_clauses(kj["clauses"]);
                     cc.kwargs.push_back(std::move(ck));
@@ -177,6 +178,14 @@ Program load_program(json const & j) {
     Program prog;
     for (auto const & [name, mangled] : j["entry_points"].items()) {
         prog.entry_points[name] = mangled;
+    }
+    if (j.contains("python_imports")) {
+        for (auto const & [name, imp] : j["python_imports"].items()) {
+            prog.python_imports[name] = PythonImport{
+                imp.value("file", ""),
+                imp.value("target", name)
+            };
+        }
     }
     for (auto const & [name, pj] : j["prompts"].items()) {
         prog.prompts[name] = load_prompt(pj);
@@ -277,6 +286,7 @@ static json channel_to_json(Channel const & ch) {
                 json k = {{"name", kw.name}, {"is_input", kw.is_input},
                           {"path", pathsteps_to_json(kw.path)}, {"clauses", clauses_to_json(kw.clauses)}};
                 k["prompt"] = kw.prompt ? json(*kw.prompt) : json(nullptr);
+                k["value"] = kw.value ? json(*kw.value) : json(nullptr);
                 kwargs.push_back(k);
             }
             json j = {{"type","call"}, {"target", pathsteps_to_json(c.target)},
@@ -336,6 +346,10 @@ json serialize_program(Program const & prog) {
     json output;
     output["entry_points"] = json::object();
     for (auto const & [name, mangled] : prog.entry_points) output["entry_points"][name] = mangled;
+    output["python_imports"] = json::object();
+    for (auto const & [name, imp] : prog.python_imports) {
+        output["python_imports"][name] = {{"file", imp.file}, {"target", imp.target}};
+    }
     output["prompts"] = json::object();
     for (auto const & [name, p] : prog.prompts) output["prompts"][name] = serialize_prompt(p);
     return output;

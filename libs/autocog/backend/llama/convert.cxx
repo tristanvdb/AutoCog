@@ -79,7 +79,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
                 length    = action_json.value("length", 50u);
                 beams     = action_json.value("beams", 4u);
                 ahead     = action_json.value("ahead", 2u);
-                width     = action_json.value("width", 4u);
+                width     = action_json.value("width", 1u);
             } else {
                 threshold = action_json["threshold"];
                 length    = action_json["length"];
@@ -126,7 +126,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
 
             if (text_level) {
                 threshold = action_json.value("threshold", 0.1f);
-                width     = action_json.value("width", 4u);
+                width     = action_json.value("width", 1u);
             } else {
                 threshold = action_json["threshold"];
                 width     = action_json["width"];

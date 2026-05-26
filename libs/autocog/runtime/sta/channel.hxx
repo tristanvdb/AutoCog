@@ -52,6 +52,7 @@ struct ChannelKwarg {
     bool is_input;                          // true = from external inputs, false = dataflow
     std::optional<std::string> prompt;      // source prompt (nullopt = self)
     std::vector<PathStep> path;             // source path
+    std::optional<std::string> value;       // literal value (from "is" keyword)
     std::vector<Clause> clauses;            // transformation pipeline
 };
 

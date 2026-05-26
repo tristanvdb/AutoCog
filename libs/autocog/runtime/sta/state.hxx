@@ -113,9 +113,15 @@ struct PromptSTA {
 // Full STA program
 // ============================================================================
 
+struct PythonImport {
+    std::string file;
+    std::string target;
+};
+
 struct Program {
     std::map<std::string, std::string> entry_points;
     std::map<std::string, PromptSTA> prompts;
+    std::map<std::string, PythonImport> python_imports;
 };
 
 }

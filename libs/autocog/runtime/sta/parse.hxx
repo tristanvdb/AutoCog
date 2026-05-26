@@ -12,10 +12,12 @@ namespace autocog::runtime::sta {
 // Parse generated text back into a FieldRecord.
 // The text follows the syntax format: labels, separators, indentation.
 // Returns a flat record mapping field names to values (including "next" for flow).
+// If content is provided, select-mode choices are resolved back to values.
 FieldRecord parse_text(
     PromptSTA const & prompt,
     Syntax const & syntax,
-    std::string const & text
+    std::string const & text,
+    nlohmann::json const * content = nullptr
 );
 
 // Convert FieldValue to nlohmann::json for serialization

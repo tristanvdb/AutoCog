@@ -55,71 +55,44 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "A formal message."
+          ],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "index": 0,
           "name": "simple",
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
+          "depth": 1,
+          "desc": [
+            "A casual message."
+          ],
           "flat_index": 1,
           "format": {
-            "length": 10,
+            "length": 50,
             "type": "completion"
-          },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 2,
-          "format": {
-            "type": "record"
           },
           "index": 1,
           "name": "long",
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 3,
-          "format": {
-            "length": 50,
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
           "depth": 1,
-          "desc": [],
-          "flat_index": 4,
-          "format": {
-            "type": "record"
-          },
-          "index": 2,
-          "name": "tech",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 5,
+          "desc": [
+            "A technical message."
+          ],
+          "flat_index": 2,
           "format": {
             "length": 20,
             "type": "completion"
           },
-          "index": 0,
-          "name": "Message",
+          "index": 2,
+          "name": "tech",
           "range": null
         }
       ],
@@ -158,73 +131,26 @@
       "sequence": [
         "root@",
         "simple_1_0@0",
-        "Message_2_1@0_0",
-        "simple_1_0@1",
-        "long_1_2@0",
-        "Message_2_3@0_0",
-        "long_1_2@1",
-        "tech_1_4@0",
-        "Message_2_5@0_0",
-        "tech_1_4@1"
+        "long_1_1@0",
+        "tech_1_2@0"
       ],
       "states": {
-        "Message_2_1@0_0": {
+        "long_1_1@0": {
           "field": 1,
           "indices": [
-            0,
             0
           ],
           "successors": [
-            "simple_1_0@1",
-            "long_1_2@0"
-          ]
-        },
-        "Message_2_3@0_0": {
-          "field": 3,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "long_1_2@1",
-            "tech_1_4@0"
-          ]
-        },
-        "Message_2_5@0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "tech_1_4@1"
-          ]
-        },
-        "long_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "Message_2_3@0_0",
-            "long_1_2@1",
-            "tech_1_4@0"
-          ]
-        },
-        "long_1_2@1": {
-          "field": 2,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "tech_1_4@0"
+            "tech_1_2@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "simple_1_0@0"
+            "simple_1_0@0",
+            "long_1_1@0",
+            "tech_1_2@0"
           ]
         },
         "simple_1_0@0": {
@@ -233,38 +159,19 @@
             0
           ],
           "successors": [
-            "Message_2_1@0_0",
-            "simple_1_0@1",
-            "long_1_2@0"
+            "long_1_1@0",
+            "tech_1_2@0"
           ]
         },
-        "simple_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "long_1_2@0"
-          ]
-        },
-        "tech_1_4@0": {
-          "field": 4,
+        "tech_1_2@0": {
+          "field": 2,
           "indices": [
             0
-          ],
-          "successors": [
-            "Message_2_5@0_0",
-            "tech_1_4@1"
-          ]
-        },
-        "tech_1_4@1": {
-          "field": 4,
-          "indices": [
-            1
           ],
           "successors": []
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }

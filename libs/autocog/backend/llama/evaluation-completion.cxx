@@ -298,7 +298,7 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
     std::cerr << "   proba: " << beam.proba() << std::endl;
 #endif
     FTT & child = state.parent.add(action.id, beam.tokens, beam.logprobs);
-    child.pruned = ( count > action.width ) || (count > 0 && beam.proba() < action.threshold);
+    child.pruned = ( count >= action.width ) || (count > 0 && beam.proba() < action.threshold);
     if (!child.pruned) {
       this->enqueue(action.successors[0], child, state);
     }

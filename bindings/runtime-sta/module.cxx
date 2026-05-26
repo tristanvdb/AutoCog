@@ -89,7 +89,8 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
 
     module.def("parse_text",
         [](int program_id, std::string const & prompt_name,
-           int syntax_id, std::string const & text) -> py::dict {
+           int syntax_id, std::string const & text,
+           py::object content_obj) -> py::dict {
 
             auto const & program = store::programs().get(program_id);
             auto const & syntax = store::syntaxes().get(syntax_id);
@@ -99,7 +100,13 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
                 throw std::runtime_error("Prompt '" + prompt_name + "' not found in program");
             }
 
-            auto result = sta::parse_text(it->second, syntax, text);
+            sta::FieldRecord result;
+            if (!content_obj.is_none()) {
+                nlohmann::json content = py_to_json(content_obj);
+                result = sta::parse_text(it->second, syntax, text, &content);
+            } else {
+                result = sta::parse_text(it->second, syntax, text);
+            }
             py::dict d;
             for (auto const & [key, val] : result) {
                 d[py::str(key)] = field_value_to_py(val);
@@ -110,7 +117,8 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
         py::arg("program_id"),
         py::arg("prompt"),
         py::arg("syntax_id"),
-        py::arg("text")
+        py::arg("text"),
+        py::arg("content") = py::none()
     );
 
     module.def("release_fta",

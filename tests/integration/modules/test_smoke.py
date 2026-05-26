@@ -56,7 +56,7 @@ class TestPipeline:
         )
         # RNG model picks a choice — result should be a string (single _ return)
         assert isinstance(result, str)
-        assert result in ["1", "2", "3", "4"]
+        assert result in ["Water", "Fire", "Air", "Earth"]
 
     def test_multi_prompt_flow(self, engine, repo_root):
         import autocog
@@ -107,7 +107,7 @@ class TestRealModel:
             choices=["Water", "Fire", "Air", "Earth"]
         )
         assert isinstance(result, str)
-        assert result in ["1", "2", "3", "4"]
+        assert result in ["Water", "Fire", "Air", "Earth"]
 
     def test_llama3_call_basic(self, real_engine, repo_root):
         """Run call_basic with the real model — sub-prompt execution."""
@@ -118,3 +118,31 @@ class TestRealModel:
         result = real_engine.run(prog, topic="science")
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+class TestWriterDemo:
+    """End-to-end test of the writer demo with RNG model."""
+
+    def test_writer_completes(self, engine, repo_root):
+        import autocog
+        prog = autocog.compile(
+            str(repo_root / "share/demos/story-writer/writer.stl"),
+            includes=[
+                str(repo_root / "share/library"),
+                str(repo_root / "share/demos/story-writer"),
+            ]
+        )
+        from autocog.__main__ import load_externals
+        externals = load_externals(prog, [
+            str(repo_root / "share/library"),
+            str(repo_root / "share/demos/story-writer"),
+        ])
+        from autocog.context import Context
+        ctx = Context(prog, engine, "init_idea",
+                      {"query": "bedtime story", "age": "3"}, externals)
+        steps = 0
+        while not ctx.done and steps < 50:
+            ctx.step()
+            steps += 1
+        assert ctx.done, f"Writer did not complete after {steps} steps, at prompt={ctx.prompt}"
+        assert steps <= 30, f"Writer took too many steps: {steps}"

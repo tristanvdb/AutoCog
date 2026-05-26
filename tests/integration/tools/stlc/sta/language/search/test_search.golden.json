@@ -43,45 +43,23 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "length": 50,
+            "type": "completion"
           },
           "index": 0,
           "name": "greeting",
           "range": null
         },
         {
-          "depth": 2,
+          "depth": 1,
           "desc": [],
           "flat_index": 1,
           "format": {
             "length": 50,
             "type": "completion"
           },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 2,
-          "format": {
-            "type": "record"
-          },
           "index": 1,
           "name": "creative",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 3,
-          "format": {
-            "length": 50,
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "SpecialText",
           "range": null
         }
       ],
@@ -112,48 +90,13 @@
       "sequence": [
         "root@",
         "greeting_1_0@0",
-        "Message_2_1@0_0",
-        "greeting_1_0@1",
-        "creative_1_2@0",
-        "SpecialText_2_3@0_0",
-        "creative_1_2@1"
+        "creative_1_1@0"
       ],
       "states": {
-        "Message_2_1@0_0": {
+        "creative_1_1@0": {
           "field": 1,
           "indices": [
-            0,
             0
-          ],
-          "successors": [
-            "greeting_1_0@1",
-            "creative_1_2@0"
-          ]
-        },
-        "SpecialText_2_3@0_0": {
-          "field": 3,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "creative_1_2@1"
-          ]
-        },
-        "creative_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "SpecialText_2_3@0_0",
-            "creative_1_2@1"
-          ]
-        },
-        "creative_1_2@1": {
-          "field": 2,
-          "indices": [
-            1
           ],
           "successors": []
         },
@@ -163,28 +106,19 @@
             0
           ],
           "successors": [
-            "Message_2_1@0_0",
-            "greeting_1_0@1",
-            "creative_1_2@0"
-          ]
-        },
-        "greeting_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "creative_1_2@0"
+            "creative_1_1@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "greeting_1_0@0"
+            "greeting_1_0@0",
+            "creative_1_1@0"
           ]
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }

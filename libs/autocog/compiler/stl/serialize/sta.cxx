@@ -153,6 +153,21 @@ void serialize_sta(Driver const & driver, std::ostream & out) {
         output["entry_points"][name] = mangled;
     }
 
+    // Python external imports: extern_name → source file
+    output["python_imports"] = json::object();
+    for (auto const & [key, sym] : driver.tables.symbols) {
+        if (auto * ps = std::get_if<PythonSymbol>(&sym)) {
+            // Strip scope prefix (e.g. "0::func" → "func")
+            auto pos = key.rfind("::");
+            auto name = (pos != std::string::npos) ? key.substr(pos + 2) : key;
+            auto & target = ps->target.data.name.data.name;
+            output["python_imports"][name] = {
+                {"file", ps->filename},
+                {"target", target}
+            };
+        }
+    }
+
     output["prompts"] = json::object();
     for (auto const & [mangled, pstas] : driver.sta.prompts) {
         json p;

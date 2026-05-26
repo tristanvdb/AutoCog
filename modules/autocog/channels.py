@@ -69,18 +69,30 @@ def resolve_dataflow(channel, frames, current_prompt):
     return data
 
 
-def resolve_call_kwargs(kwargs, inputs, frames, current_prompt):
-    """Resolve call kwargs, handling mapped expansion."""
+def resolve_call_kwargs(kwargs, inputs, frames, current_prompt, content=None):
+    """Resolve call kwargs, handling mapped expansion.
+    
+    content: the partially-built content dict for the current prompt,
+    used for self-referencing kwargs (use .field).
+    """
     resolved = {}
     mapped_axes = {}  # kwarg_name → list of values to iterate
 
     for kw in kwargs:
         name = kw["name"]
-        if kw["is_input"]:
+        if kw.get("value") is not None:
+            # Literal value (from "is" keyword)
+            data = kw["value"]
+        elif kw["is_input"]:
             data = resolve_path(inputs, kw["path"])
         else:
-            prompt = kw.get("prompt") or current_prompt
-            frame = frames.get(prompt, {})
+            prompt = kw.get("prompt")
+            if prompt:
+                # Read from another prompt's frame
+                frame = frames.get(prompt, {})
+            else:
+                # Self-reference: read from content being built
+                frame = content if content is not None else frames.get(current_prompt, {})
             data = resolve_path(frame, kw["path"])
 
         # Check for mapped clauses
@@ -123,7 +135,7 @@ def expand_mapped(base_kwargs, mapped_axes):
     return jobs
 
 
-def resolve_call(channel, inputs, frames, current_prompt, engine, program, externals):
+def resolve_call(channel, inputs, frames, current_prompt, engine, program, externals, content=None):
     """
     Resolve a call channel.
 
@@ -132,7 +144,7 @@ def resolve_call(channel, inputs, frames, current_prompt, engine, program, exter
     3. Apply link-level clauses to results
     """
     base_kwargs, mapped_axes = resolve_call_kwargs(
-        channel["kwargs"], inputs, frames, current_prompt
+        channel["kwargs"], inputs, frames, current_prompt, content
     )
     jobs = expand_mapped(base_kwargs, mapped_axes)
 
@@ -184,7 +196,7 @@ def resolve_channels(program, prompt_name, inputs, frames, engine, externals):
         elif ch_type == "dataflow":
             value = resolve_dataflow(ch, frames, prompt_name)
         elif ch_type == "call":
-            value = resolve_call(ch, inputs, frames, prompt_name, engine, program, externals)
+            value = resolve_call(ch, inputs, frames, prompt_name, engine, program, externals, content)
         else:
             continue
 

@@ -25,24 +25,15 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "The subject matter being discussed"
+          ],
           "flat_index": 0,
-          "format": {
-            "type": "record"
-          },
-          "index": 0,
-          "name": "topic",
-          "range": null
-        },
-        {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 1,
           "format": {
             "type": "completion"
           },
           "index": 0,
-          "name": "Topic",
+          "name": "topic",
           "range": null
         },
         {
@@ -50,7 +41,7 @@
           "desc": [
             "the question to answer"
           ],
-          "flat_index": 2,
+          "flat_index": 1,
           "format": {
             "type": "completion"
           },
@@ -63,7 +54,7 @@
           "desc": [
             "your answer to the question"
           ],
-          "flat_index": 3,
+          "flat_index": 2,
           "format": {
             "type": "enum",
             "values": [
@@ -96,45 +87,33 @@
       "sequence": [
         "root@",
         "topic_1_0@0",
-        "Topic_2_1@0_0",
-        "topic_1_0@1",
-        "question_1_2@0",
-        "answer_1_3@0"
+        "question_1_1@0",
+        "answer_1_2@0"
       ],
       "states": {
-        "Topic_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "topic_1_0@1",
-            "question_1_2@0",
-            "answer_1_3@0"
-          ]
-        },
-        "answer_1_3@0": {
-          "field": 3,
+        "answer_1_2@0": {
+          "field": 2,
           "indices": [
             0
           ],
           "successors": []
         },
-        "question_1_2@0": {
-          "field": 2,
+        "question_1_1@0": {
+          "field": 1,
           "indices": [
             0
           ],
           "successors": [
-            "answer_1_3@0"
+            "answer_1_2@0"
           ]
         },
         "root@": {
           "field": -1,
           "indices": [],
           "successors": [
-            "topic_1_0@0"
+            "topic_1_0@0",
+            "question_1_1@0",
+            "answer_1_2@0"
           ]
         },
         "topic_1_0@0": {
@@ -143,23 +122,12 @@
             0
           ],
           "successors": [
-            "Topic_2_1@0_0",
-            "topic_1_0@1",
-            "question_1_2@0",
-            "answer_1_3@0"
-          ]
-        },
-        "topic_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "question_1_2@0",
-            "answer_1_3@0"
+            "question_1_1@0",
+            "answer_1_2@0"
           ]
         }
       }
     }
-  }
+  },
+  "python_imports": {}
 }
