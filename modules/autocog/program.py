@@ -79,6 +79,21 @@ def _stdlib_path():
     return None
 
 
+def _default_syntax_path():
+    """Return the path to the default syntax JSON file."""
+    pkg_dir = os.path.dirname(os.path.abspath(__file__))
+    # Installed layout: autocog/syntax/default.json
+    candidate = os.path.join(pkg_dir, "syntax", "default.json")
+    if os.path.isfile(candidate):
+        return candidate
+    # Dev layout: share/syntax/default.json
+    repo = os.path.dirname(os.path.dirname(pkg_dir))
+    candidate = os.path.join(repo, "share", "syntax", "default.json")
+    if os.path.isfile(candidate):
+        return candidate
+    return None
+
+
 def compile(filepath, includes=None, entry_points=None):
     """Compile an STL file into a Program."""
     inc = list(includes or [])

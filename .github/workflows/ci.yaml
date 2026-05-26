@@ -50,6 +50,7 @@ jobs:
       - name: Run ctest
         working-directory: build
         run: |
+          set -o pipefail
           find . -name "*.gcda" -delete
           ctest -j$(nproc) --timeout 60 --output-on-failure 2>&1 | tee ctest.log
 
@@ -61,8 +62,16 @@ jobs:
             --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
             --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
 
+      - name: Download test model
+        run: |
+          mkdir -p models
+          curl -sL -o models/tiny-llama3-test-Q2_K.gguf \
+            "https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf" \
+            || echo "Model not available yet, real model tests will be skipped"
+
       - name: Run pytest with coverage
         run: |
+          set -o pipefail
           python -m pytest tests/integration/modules tests/units/modules \
             --cov=autocog \
             --cov-report=json:coverage_py.json \

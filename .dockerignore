@@ -54,3 +54,4 @@ models/
 Dockerfile*
 
 *.md
+!README.md

@@ -126,11 +126,13 @@ jobs:
 
       - uses: pypa/cibuildwheel@v2.21
         env:
-          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
-          CIBW_SKIP: "*-musllinux*"
+          CIBW_BUILD: "cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux* *-manylinux_i686"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_BUILD: "pip install scikit-build-core pybind11"
+          CIBW_CONFIG_SETTINGS: "cmake.define.GGML_NATIVE=OFF"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
           CIBW_TEST_COMMAND: >
             python -c "import autocog; print(autocog.__version__)"
 
@@ -178,10 +180,20 @@ jobs:
             -I share/demos/story-writer \
             -o writer.stapp
 
+      - name: Download test model
+        run: |
+          curl -sL -o tiny-llama3-test-Q2_K.gguf \
+            "https://github.com/tristanvdb/AutoCog/releases/download/test-fixtures-v1/tiny-llama3-test-Q2_K.gguf"
+
       - uses: actions/upload-artifact@v4
         with:
           name: demo-stapp
           path: writer.stapp
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-model
+          path: tiny-llama3-test-Q2_K.gguf
 
   containers:
     needs: coverage-gate
@@ -204,6 +216,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -212,8 +227,8 @@ jobs:
           target: ${{ matrix.variant }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.variant }}
-            ghcr.io/${{ github.repository }}:latest-${{ matrix.variant }}
+            ${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.variant }}
+            ${{ env.IMAGE_NAME }}:latest-${{ matrix.variant }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -223,7 +238,24 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: wheels-ubuntu-latest
+          path: artifacts/wheels-ubuntu-latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: artifacts/sdist
+      - uses: actions/download-artifact@v4
+        with:
+          name: demo-stapp
+          path: artifacts/demo-stapp
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: artifacts/coverage-report
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-model
+          path: artifacts/test-model
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -234,3 +266,4 @@ jobs:
             artifacts/sdist/*.tar.gz
             artifacts/demo-stapp/*.stapp
             artifacts/coverage-report/coverage.md
+            artifacts/test-model/tiny-llama3-test-Q2_K.gguf

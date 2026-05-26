@@ -327,13 +327,11 @@ def main():
 
     # Default syntax (for run, rpc, serve)
     if args.command in ("run", "rpc", "serve") and getattr(args, 'syntax', None) is None:
-        from .program import _stdlib_path
-        stdlib = _stdlib_path()
-        if stdlib:
-            default = os.path.join(os.path.dirname(stdlib), "..", "syntax", "default.json")
-            if os.path.isfile(default):
-                args.syntax = os.path.abspath(default)
-        if getattr(args, 'syntax', None) is None:
+        from .program import _default_syntax_path
+        default = _default_syntax_path()
+        if default:
+            args.syntax = default
+        else:
             print("Error: --syntax required (could not find default)", file=sys.stderr)
             sys.exit(1)
 

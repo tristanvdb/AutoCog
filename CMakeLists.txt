@@ -32,14 +32,14 @@ if(COVERAGE)
   add_link_options(--coverage)
 endif()
 
-set(COMMON_CXX_FLAGS "-Wall -Wextra -Werror")
+set(COMMON_CXX_FLAGS "-Wall -Wextra")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -rdynamic -fno-omit-frame-pointer ${COMMON_CXX_FLAGS}")
   # --wrap=__cxa_throw applied after vendor subdirectories (see below)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${COMMON_CXX_FLAGS}")
 endif()
 
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 QUIET)
 if(NOT pybind11_FOUND)
   execute_process(
@@ -100,7 +100,13 @@ endif()
 
 enable_testing()
 
-# Debug exception tracing (after vendor subdirectories to avoid polluting them)
+# Strict flags (after vendor subdirectories to avoid polluting them)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_options(-Werror)
+  # GCC 12 false positive: -Wmaybe-uninitialized on std::variant with
+  # std::optional<std::string> members at -O3. Fixed in GCC 13+.
+  add_compile_options(-Wno-error=maybe-uninitialized)
+endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_link_options(-Wl,--wrap=__cxa_throw)
 endif()
@@ -141,4 +147,8 @@ install(DIRECTORY share/library/stlib
         DESTINATION autocog
         FILES_MATCHING PATTERN "*.stl" PATTERN "*.py"
         PATTERN "__pycache__" EXCLUDE)
+
+# Install default syntax
+install(FILES share/syntax/default.json
+        DESTINATION autocog/syntax)
 
