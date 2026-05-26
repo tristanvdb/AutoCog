@@ -18,24 +18,6 @@ We broke down the documentation into a few files:
 
 The libraries have [their own documentation](./share/library/README.md).
 
-## Develop Command Cheat Sheet
-
-### C++ module: autocog.llama
-
-Build image and "test":
-```
-docker build -t autocog:latest .
-docker run --rm -v $(pwd):/workspace/autocog -it autocog:latest python3 /workspace/autocog/tests/autocog/llama/execute_sta_with_llama_cpp.py /workspace/autocog/tests/samples/mini.sta '{}' /workspace/autocog/models/SmolLM3-Q4_K_M.gguf
-```
-
-In container:
-```
-docker run --rm -v $(pwd):/workspace/autocog -w /workspace/autocog -it autocog:latest bash
-apt update && apt install -y gdb vim
-pip install -e .
-python3 tests/autocog/llama/execute_sta_with_llama_cpp.py tests/samples/mini.sta '{}' models/SmolLM3-Q4_K_M.gguf
-```
-
 ## Contributing
 
 Contributions are welcome!

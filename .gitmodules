@@ -1,3 +1,9 @@
 [submodule "vendors/llama"]
 	path = vendors/llama
 	url = https://github.com/ggerganov/llama.cpp.git
+[submodule "vendors/reflex"]
+	path = vendors/reflex
+	url = https://github.com/Genivia/RE-flex.git
+[submodule "vendors/protobuf"]
+	path = vendors/protobuf
+	url = https://github.com/protocolbuffers/protobuf.git

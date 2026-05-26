@@ -1,0 +1,51 @@
+FROM docker.io/nvidia/cuda:13.0.0-devel-ubi9
+
+ENV PYTHONUNBUFFERED=1
+
+RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
+        gcc gcc-c++ \
+        cmake \
+        pkgconf-pkg-config \
+        python3 \
+        python3-pip \
+        python3-devel \
+        graphviz && \
+    dnf clean all
+
+# LLama.cpp
+
+COPY vendors/llama /tmp/llama_cpp
+
+RUN cd /tmp/llama_cpp && \
+    cmake -DLLAMA_BUILD_COMMON=OFF -DLLAMA_CUDA=ON -B build && \
+    make -C build -j$(nproc) install && \
+    rm -rf /tmp/llama_cpp
+
+ENV LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH"
+
+# RE/Flex
+
+RUN git clone https://github.com/Genivia/RE-flex.git /tmp/reflex && \
+    cd /tmp/reflex && \
+    ./build.sh && \
+    ./allinstall.sh && \
+    cp lib/*.so /usr/local/lib && \
+    rm -rf /tmp/reflex
+
+# Venv
+
+RUN python3 -m venv /opt
+ENV PATH="/opt/bin:$PATH"
+ENV PYTHONPATH="/opt/bin:$PATH"
+RUN pip install --upgrade pip && \
+    pip install graphviz
+
+# Autocog
+
+COPY . /workspace/autocog
+
+RUN rm -rf /workspace/autocog/vendors && \
+    pip install /workspace/autocog && \
+    rm -rf /workspace/autocog
+
+WORKDIR /workspace

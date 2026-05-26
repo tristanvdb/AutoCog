@@ -1,0 +1,61 @@
+syntax = "proto3";
+package autocog.compiler.stl.ir;
+
+message Value {
+  oneof value {
+    string str_value = 1;
+    int64 int_value = 2;
+    double float_value = 3;
+    bool bool_value = 4;
+  }
+}
+
+message Field {
+  string name = 1;
+  string type_name = 2;
+  Value value = 3;
+  repeated string annotations = 4;
+  uint32 depth = 5;
+}
+
+message Channel {
+  repeated string source_path = 1;
+  repeated string target_path = 2;
+  string channel_type = 3;  // "input", "dataflow", "call"
+  map<string, Value> kwargs = 4;  // For calls
+}
+
+message Flow {
+  string target_prompt = 1;
+  uint32 limit = 2;
+  map<string, string> bindings = 3;
+}
+
+message Return {
+  map<string, Path> fields = 1;  // field_name → path
+}
+
+message Path {
+  repeated PathStep steps = 1;
+}
+
+message PathStep {
+  string field = 1;
+  optional int32 index = 2;  // For array access
+}
+
+message Prompt {
+  string name = 1;
+  string original_name = 2;  // Before instantiation
+  map<string, Value> instantiation_params = 3;
+  repeated Field fields = 4;
+  repeated Channel channels = 5;
+  map<string, Flow> flows = 6;
+  map<string, Return> returns = 7;  // Including "return" key
+  repeated string annotations = 8;
+}
+
+message Program {
+  repeated Prompt prompts = 1;
+  map<string, string> metadata = 100;  // Reserved for future use
+}

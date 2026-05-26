@@ -1,0 +1,15 @@
+prompt main {
+    is {
+        statement is text<10, beams=3, width=3>;
+        correct is enum("True","False");
+    }
+    channel {
+        to .statement from ?statement;
+    }
+    return {
+        from .correct;
+    }
+    annotate {
+        _ as "You are verifying whether statements are true or false.";
+    }
+}

@@ -54,3 +54,7 @@ htmlcov/
 *.temp
 
 models/
+
+Dockerfile*
+
+*.md

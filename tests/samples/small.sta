@@ -20,8 +20,8 @@ prompt main {
         from .correct;
     }
     annotate {
-        _ as "You are verifying whether statements are true or false.";
-        .statement as "the statement that you must verify";
-        .correct   as "your decision whether it is true or false";
+        _ as "You are verifying whether statements are True or False.";
+        .statement as "The statement that you must verify. It is a single sentence.";
+        .correct   as "Your decision whether the statement is True or False.";
     }
 }
