@@ -1,20 +1,26 @@
 ARG BUILD_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
 ARG PROD_IMAGE=registry.access.redhat.com/ubi9/ubi:latest
 
+# =============================================================================
+# Builder
+# =============================================================================
+
 FROM ${BUILD_IMAGE} AS builder
 
 ENV PYTHONUNBUFFERED=1
 
 RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
         gcc gcc-c++ \
+        ccache \
         cmake \
         git \
         pkgconf-pkg-config \
         python3 \
         python3-pip \
-        python3-devel \
-        graphviz && \
+        python3-devel && \
     dnf clean all
+
+ENV PATH="/usr/lib64/ccache:$PATH"
 
 COPY . /tmp/autocog
 
@@ -24,14 +30,14 @@ ENV PATH="/opt/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
 ENV PYTHONPATH=""
 
-RUN pip install --upgrade pip && \
-    pip install graphviz
+RUN pip install --upgrade pip
 
 # RE/flex
 
 RUN cd /tmp/autocog/vendors/reflex && \
     cmake -B build \
-          -DCMAKE_INSTALL_PREFIX=/opt && \
+          -DCMAKE_INSTALL_PREFIX=/opt \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
@@ -56,17 +62,22 @@ RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
 
 # AutoCog
 
-RUN pip install /tmp/autocog && \
+RUN pip install "/tmp/autocog[server]" \
+        --config-settings="cmake.define.CMAKE_PREFIX_PATH=/opt" \
+        --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+        --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache" && \
     rm -rf /tmp/autocog
 
-# Production
+# =============================================================================
+# Production base
+# =============================================================================
 
 FROM ${PROD_IMAGE} AS production
 
 RUN dnf --disablerepo=\* --enablerepo=ubi-\* install -y \
         python3 \
         python3-pip \
-        graphviz && \
+        libgomp && \
     dnf clean all
 
 COPY --from=builder /opt /opt
@@ -76,3 +87,23 @@ ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
 ENV PYTHONPATH=""
 
 WORKDIR /workspace
+
+# --- Variants ---
+
+FROM production AS run
+ENTRYPOINT ["autocog", "run"]
+
+FROM production AS serve
+EXPOSE 8080
+ENTRYPOINT ["autocog", "serve"]
+CMD ["--help"]
+
+FROM production AS rpc
+EXPOSE 8080
+ENTRYPOINT ["autocog", "rpc"]
+CMD ["--help"]
+
+FROM production AS backend
+EXPOSE 8080
+ENTRYPOINT ["autocog", "backend"]
+CMD ["--rng"]

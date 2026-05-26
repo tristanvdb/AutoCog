@@ -27,6 +27,9 @@ dependencies = [
     "numpy",
 ]
 
+[project.optional-dependencies]
+server = ["fastapi>=0.100", "uvicorn>=0.20"]
+
 [project.urls]
 Homepage = "https://github.com/LLNL/autocog/"
 

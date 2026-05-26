@@ -289,3 +289,60 @@ class TestStapp:
                 shutil.rmtree(temp_dir, ignore_errors=True)
         finally:
             os.unlink(stapp_path)
+
+
+class TestRemoteEngine:
+    """Test RemoteEngine against in-process servers."""
+
+    @staticmethod
+    def _start_server(app, port):
+        """Start a uvicorn server in a background thread."""
+        import uvicorn
+        import threading
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+        server = uvicorn.Server(config)
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        import time
+        time.sleep(1)  # wait for startup
+        return server
+
+    def test_remote_run_level1(self, repo_root):
+        """Test remote_run against a serve endpoint."""
+        import autocog
+        from autocog.server.serve import create_app
+        from autocog.__main__ import load_externals
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        syntax = str(repo_root / "share/syntax/default.json")
+        app = create_app(program=prog, model_path=None, syntax_path=syntax)
+        server = self._start_server(app, 18091)
+        try:
+            result = autocog.remote_run(
+                "http://127.0.0.1:18091",
+                topic="Science", question="What is H2O?",
+                choices=["Water", "Fire", "Air", "Earth"]
+            )
+            assert result in ["Water", "Fire", "Air", "Earth"]
+        finally:
+            server.should_exit = True
+
+    def test_remote_engine_level2(self, repo_root):
+        """Test RemoteEngine against an RPC endpoint."""
+        import autocog
+        from autocog.server.rpc import create_app
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        syntax = str(repo_root / "share/syntax/default.json")
+        app = create_app(program=prog, model_path=None, syntax_path=syntax)
+        server = self._start_server(app, 18092)
+        try:
+            engine = autocog.RemoteEngine("http://127.0.0.1:18092")
+            result = engine.run(
+                prog,
+                topic="Science", question="What is H2O?",
+                choices=["Water", "Fire", "Air", "Earth"]
+            )
+            assert result in ["Water", "Fire", "Air", "Earth"]
+        finally:
+            server.should_exit = True

@@ -80,6 +80,19 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         py::arg("fta_id")
     );
 
+    module.def("evaluate_json",
+        [](ModelID model, std::string const & fta_json_str) -> EvalID {
+            auto fta_json = nlohmann::json::parse(fta_json_str);
+            FTA fta = convert_json_to_fta(model, fta_json);
+            EvalID eval_id = Manager::add_eval(model, fta);
+            Manager::advance(eval_id, std::nullopt);
+            return eval_id;
+        },
+        "Evaluate an FTA from JSON string, return FTTID (EvalID)",
+        py::arg("model"),
+        py::arg("fta_json")
+    );
+
     module.def("get_best",
         [](ModelID model, EvalID eval_id, int n) -> py::list {
             FTT const & ftt = Manager::retrieve(eval_id);

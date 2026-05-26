@@ -102,6 +102,53 @@ def cmd_pack(args):
     )
 
 
+def cmd_backend(args):
+    """Start level-3 backend server."""
+    import uvicorn
+    from .server.backend import create_app
+
+    model_path = args.model if not args.rng else None
+    app = create_app(model_path=model_path, n_ctx=args.ctx)
+    uvicorn.run(app, host=args.host, port=args.port)
+
+
+def cmd_rpc(args):
+    """Start level-2 RPC server."""
+    import uvicorn
+    from .server.rpc import create_app
+
+    prog, include_paths, cleanup = _load_program(args)
+    model_path = args.model if not args.rng else None
+    app = create_app(
+        program=prog, model_path=model_path,
+        syntax_path=args.syntax, n_ctx=args.ctx
+    )
+    try:
+        uvicorn.run(app, host=args.host, port=args.port)
+    finally:
+        if cleanup:
+            cleanup()
+
+
+def cmd_serve(args):
+    """Start level-1 full app server."""
+    import uvicorn
+    from .server.serve import create_app
+
+    prog, include_paths, cleanup = _load_program(args)
+    externals = load_externals(prog, include_paths)
+    model_path = args.model if not args.rng else None
+    app = create_app(
+        program=prog, externals=externals,
+        model_path=model_path, syntax_path=args.syntax, n_ctx=args.ctx
+    )
+    try:
+        uvicorn.run(app, host=args.host, port=args.port)
+    finally:
+        if cleanup:
+            cleanup()
+
+
 def _add_program_args(parser):
     """Add --stl, --sta, --app, -I to a subparser."""
     group = parser.add_mutually_exclusive_group(required=True)
@@ -252,17 +299,41 @@ def main():
     p_run.add_argument("-v", "--verbose", action="store_true", help="Show step progress")
     p_run.add_argument("--max-steps", type=int, default=100, help="Max prompt steps")
 
+    # --- Server common args ---
+    def _add_server_args(p):
+        p.add_argument("--model", help="GGUF model file")
+        p.add_argument("--rng", action="store_true", help="Use built-in RNG model")
+        p.add_argument("--ctx", type=int, default=4096, help="Model context size")
+        p.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
+        p.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080)")
+
+    # --- backend (level 3) ---
+    p_backend = subparsers.add_parser("backend", help="Serve FTA evaluation (level 3)")
+    _add_server_args(p_backend)
+
+    # --- rpc (level 2) ---
+    p_rpc = subparsers.add_parser("rpc", help="Serve prompt evaluation (level 2)")
+    _add_program_args(p_rpc)
+    _add_server_args(p_rpc)
+    p_rpc.add_argument("--syntax", default=None, help="Syntax description JSON")
+
+    # --- serve (level 1) ---
+    p_serve = subparsers.add_parser("serve", help="Serve full app with web UI (level 1)")
+    _add_program_args(p_serve)
+    _add_server_args(p_serve)
+    p_serve.add_argument("--syntax", default=None, help="Syntax description JSON")
+
     args = parser.parse_args()
 
-    # Default syntax (only for run command)
-    if args.command == "run" and args.syntax is None:
+    # Default syntax (for run, rpc, serve)
+    if args.command in ("run", "rpc", "serve") and getattr(args, 'syntax', None) is None:
         from .program import _stdlib_path
         stdlib = _stdlib_path()
         if stdlib:
             default = os.path.join(os.path.dirname(stdlib), "..", "syntax", "default.json")
             if os.path.isfile(default):
                 args.syntax = os.path.abspath(default)
-        if args.syntax is None:
+        if getattr(args, 'syntax', None) is None:
             print("Error: --syntax required (could not find default)", file=sys.stderr)
             sys.exit(1)
 
@@ -272,6 +343,12 @@ def main():
         cmd_pack(args)
     elif args.command == "run":
         cmd_run(args)
+    elif args.command == "backend":
+        cmd_backend(args)
+    elif args.command == "rpc":
+        cmd_rpc(args)
+    elif args.command == "serve":
+        cmd_serve(args)
 
 
 if __name__ == "__main__":

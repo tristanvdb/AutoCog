@@ -1,0 +1,39 @@
+# Example: Writer demo with separate inference backend
+#
+# Build:
+#   docker build --target backend -f dockerfiles/ubuntu.df -t autocog:backend .
+#   docker build --target serve -f dockerfiles/ubuntu.df -t autocog:serve .
+#
+# Pack the writer demo:
+#   autocog pack --stl share/demos/story-writer/writer.stl \
+#       -I share/demos/story-writer -o writer.stapp
+#
+# Run:
+#   docker compose -f dockerfiles/compose.yaml up
+
+services:
+  # Inference backend — holds the model, evaluates FTAs
+  backend:
+    image: autocog:backend
+    command: ["--model", "/models/model.gguf", "--port", "8080"]
+    volumes:
+      - ./models:/models:ro
+    ports:
+      - "8080:8080"
+
+  # App server — serves the writer demo with web UI
+  # Delegates evaluation to the backend
+  serve:
+    image: autocog:serve
+    command:
+      - "--app"
+      - "/app.stapp"
+      - "--rng"          # TODO: replace with RemoteEngine pointing to backend
+      - "--port"
+      - "8081"
+    volumes:
+      - ./writer.stapp:/app.stapp:ro
+    ports:
+      - "8081:8081"
+    depends_on:
+      - backend

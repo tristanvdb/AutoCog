@@ -1,6 +1,10 @@
 ARG BUILD_IMAGE=ubuntu:24.04
 ARG PROD_IMAGE=ubuntu:24.04
 
+# =============================================================================
+# Builder — compiles everything, produces /opt with venv + installed autocog
+# =============================================================================
+
 FROM ${BUILD_IMAGE} AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,15 +13,17 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
+        ccache \
         cmake \
         git \
         pkg-config \
         python3 \
         python3-pip \
         python3-dev \
-        python3-venv \
-        graphviz && \
+        python3-venv && \
     rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/lib/ccache:$PATH"
 
 COPY . /tmp/autocog
 
@@ -27,14 +33,14 @@ ENV PATH="/opt/bin:$PATH"
 ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
 ENV PYTHONPATH=""
 
-RUN pip install --upgrade pip && \
-    pip install graphviz
+RUN pip install --upgrade pip
 
 # RE/flex
 
 RUN cd /tmp/autocog/vendors/reflex && \
     cmake -B build \
-          -DCMAKE_INSTALL_PREFIX=/opt && \
+          -DCMAKE_INSTALL_PREFIX=/opt \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
@@ -57,12 +63,17 @@ RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 
-# AutoCog
+# AutoCog (finds pre-built deps in /opt via CMAKE_PREFIX_PATH)
 
-RUN pip install /tmp/autocog && \
+RUN pip install "/tmp/autocog[server]" \
+        --config-settings="cmake.define.CMAKE_PREFIX_PATH=/opt" \
+        --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+        --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache" && \
     rm -rf /tmp/autocog
 
-# Production
+# =============================================================================
+# Production base — runtime only, no build tools
+# =============================================================================
 
 FROM ${PROD_IMAGE} AS production
 
@@ -71,9 +82,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 \
-        python3-pip \
         python3-venv \
-        graphviz && \
+        libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt /opt
@@ -83,3 +93,65 @@ ENV LD_LIBRARY_PATH="/opt/lib:/opt/lib64:$LD_LIBRARY_PATH"
 ENV PYTHONPATH=""
 
 WORKDIR /workspace
+
+# =============================================================================
+# Variant: run — batch execution
+# =============================================================================
+# Usage:
+#   docker run -v ./writer.stapp:/app.stapp -v ./models:/models autocog:run \
+#       --app /app.stapp --model /models/model.gguf --input '{"query":"test"}'
+#
+#   docker run -v ./program.stl:/program.stl autocog:run \
+#       --stl /program.stl --rng --input '{"key":"value"}'
+
+FROM production AS run
+
+ENTRYPOINT ["autocog", "run"]
+
+# =============================================================================
+# Variant: serve — full app server with web UI
+# =============================================================================
+# Usage:
+#   docker run -p 8080:8080 \
+#       -v ./writer.stapp:/app.stapp -v ./models:/models autocog:serve \
+#       --app /app.stapp --model /models/model.gguf
+#
+# Pre-configured (Dockerfile FROM autocog:serve):
+#   COPY writer.stapp /app.stapp
+#   COPY model.gguf /model.gguf
+#   CMD ["--app", "/app.stapp", "--model", "/model.gguf"]
+
+FROM production AS serve
+
+EXPOSE 8080
+ENTRYPOINT ["autocog", "serve"]
+CMD ["--help"]
+
+# =============================================================================
+# Variant: rpc — prompt evaluation server
+# =============================================================================
+# Usage:
+#   docker run -p 8080:8080 \
+#       -v ./program.sta.json:/program.sta.json -v ./models:/models autocog:rpc \
+#       --sta /program.sta.json --model /models/model.gguf
+
+FROM production AS rpc
+
+EXPOSE 8080
+ENTRYPOINT ["autocog", "rpc"]
+CMD ["--help"]
+
+# =============================================================================
+# Variant: backend — inference server (FTA evaluation)
+# =============================================================================
+# Usage:
+#   docker run -p 8080:8080 -v ./models:/models autocog:backend \
+#       --model /models/model.gguf
+#
+#   docker run -p 8080:8080 autocog:backend --rng
+
+FROM production AS backend
+
+EXPOSE 8080
+ENTRYPOINT ["autocog", "backend"]
+CMD ["--rng"]
