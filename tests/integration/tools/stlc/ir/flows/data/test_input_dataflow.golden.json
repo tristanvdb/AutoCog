@@ -1,0 +1,186 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "greeter"
+  },
+  "prompts": {
+    "greeter": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "name",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "name",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "name",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "name",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "greeting",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "greeting",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "summarizer"
+        }
+      ],
+      "mangled_name": "greeter",
+      "name": "greeter",
+      "return": null
+    },
+    "summarizer": {
+      "channels": [
+        {
+          "clauses": [],
+          "prompt": "greeter",
+          "source": [
+            {
+              "name": "greeting",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "greeting",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        },
+        {
+          "source": [
+            {
+              "name": "age",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "age",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "greeting",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "greeting",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 5,
+            "name": "age",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "age",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 30,
+            "name": "summary",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "summarizer",
+      "name": "summarizer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "summary",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

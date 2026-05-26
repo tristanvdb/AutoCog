@@ -14,3 +14,6 @@ modules/autocog.egg-info/
 **/DEBUG.log
 
 /NOTES.md
+.coverage
+.pytest_cache/
+tests/coverage.md

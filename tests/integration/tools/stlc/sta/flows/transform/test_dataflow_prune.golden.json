@@ -1,0 +1,341 @@
+{
+  "entry_points": {
+    "main": "source"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "target": [
+                {
+                  "index": null,
+                  "name": "secret"
+                }
+              ],
+              "type": "prune"
+            }
+          ],
+          "prompt": "source",
+          "source": [
+            {
+              "index": null,
+              "name": "result"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "data"
+            }
+          ],
+          "type": "dataflow"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "data",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "name",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "value",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "consumer",
+      "sequence": [
+        "root@",
+        "data_1_0@0",
+        "name_2_1@0_0",
+        "value_2_2@0_0",
+        "data_1_0@1",
+        "answer_1_3@0"
+      ],
+      "states": {
+        "answer_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "data_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "name_2_1@0_0",
+            "value_2_2@0_0",
+            "data_1_0@1",
+            "answer_1_3@0"
+          ]
+        },
+        "data_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "answer_1_3@0"
+          ]
+        },
+        "name_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "value_2_2@0_0",
+            "data_1_0@1",
+            "answer_1_3@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "data_1_0@0"
+          ]
+        },
+        "value_2_2@0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "data_1_0@1",
+            "answer_1_3@0"
+          ]
+        }
+      }
+    },
+    "source": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "record"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "name",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "secret",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "value",
+          "range": null
+        }
+      ],
+      "flows": {
+        "consumer": {
+          "limit": 1,
+          "prompt": "consumer",
+          "type": "control"
+        }
+      },
+      "name": "source",
+      "sequence": [
+        "root@",
+        "query_1_0@0",
+        "result_1_1@0",
+        "name_2_2@0_0",
+        "secret_2_3@0_0",
+        "value_2_4@0_0",
+        "result_1_1@1"
+      ],
+      "states": {
+        "name_2_2@0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "secret_2_3@0_0",
+            "value_2_4@0_0",
+            "result_1_1@1"
+          ]
+        },
+        "query_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "result_1_1@0"
+          ]
+        },
+        "result_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "name_2_2@0_0",
+            "secret_2_3@0_0",
+            "value_2_4@0_0",
+            "result_1_1@1"
+          ]
+        },
+        "result_1_1@1": {
+          "field": 1,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "query_1_0@0",
+            "result_1_1@0"
+          ]
+        },
+        "secret_2_3@0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "value_2_4@0_0",
+            "result_1_1@1"
+          ]
+        },
+        "value_2_4@0_0": {
+          "field": 4,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "result_1_1@1"
+          ]
+        }
+      }
+    }
+  }
+}

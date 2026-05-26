@@ -1,0 +1,78 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Status",
+                  "refname": null,
+                  "type": "enum",
+                  "values": [
+                    "\"pending\"",
+                    "\"active\"",
+                    "\"done\""
+                  ]
+                },
+                "index": 0,
+                "name": "Status",
+                "range": null
+              }
+            ],
+            "name": "status",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "status",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test",
+      "name": "test",
+      "return": null
+    }
+  },
+  "records": {
+    "Status": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Status",
+            "refname": null,
+            "type": "enum",
+            "values": [
+              "\"pending\"",
+              "\"active\"",
+              "\"done\""
+            ]
+          },
+          "index": 0,
+          "name": "Status",
+          "range": null
+        }
+      ],
+      "name": "Status"
+    }
+  }
+}

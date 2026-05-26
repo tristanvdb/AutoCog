@@ -1,0 +1,252 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "source": [
+                {
+                  "index": null,
+                  "name": "_"
+                }
+              ],
+              "target": [
+                {
+                  "index": null,
+                  "name": "response"
+                }
+              ],
+              "type": "bind"
+            },
+            {
+              "depth": 1,
+              "target": [],
+              "type": "ravel"
+            }
+          ],
+          "entry": "task_runner",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "name": "task",
+              "path": [
+                {
+                  "index": null,
+                  "name": "steps"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "responses"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "responses",
+          "range": [
+            3,
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "conclusion",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "conclusion"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "responses_1_0@0",
+        "responses_1_0@1",
+        "responses_1_0@2",
+        "conclusion_1_1@0"
+      ],
+      "states": {
+        "conclusion_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "responses_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "responses_1_0@1"
+          ]
+        },
+        "responses_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "responses_1_0@2"
+          ]
+        },
+        "responses_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "conclusion_1_1@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "responses_1_0@0"
+          ]
+        }
+      }
+    },
+    "task_runner": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "task"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "task"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "task",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "response",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "response"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "task_runner",
+      "sequence": [
+        "root@",
+        "task_1_0@0",
+        "response_1_1@0"
+      ],
+      "states": {
+        "response_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "task_1_0@0",
+            "response_1_1@0"
+          ]
+        },
+        "task_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "response_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

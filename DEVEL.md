@@ -140,61 +140,21 @@ scripts/test-pip-install.sh
 
 ## Testing
 
-### ctest Labels
+See [tests/README.md](tests/README.md) for the full test structure,
+fixture categories, golden output procedures, and coverage analysis.
+
+### Quick Reference
 
 ```bash
-ctest --output-on-failure          # All tests
-ctest -L smoke                     # CLI smoke tests
-ctest -L stlc                     # Compiler: parser units + integration stages
-ctest -L xfta                     # Executor: RNG model fixtures + binding
-ctest -L bindings                  # Python binding .so import tests
-ctest -L demo                     # Demo program compilation
-```
+# C++ tests
+cd builds/autocog-dbg
+ctest -j4 --timeout 30
 
-Run a single test with verbose output:
+# Python tests
+BUILD_DIR=builds/autocog-dbg pytest tests/integration/modules/ -v
 
-```bash
-ctest -R stl_parser_identifiers -V
-```
-
-### Testing stlc
-
-```bash
-stlc -h
-stlc share/demos/mcq/select.stl
-stlc -I share/library share/demos/story-writer/writer.stl
-stlc --stage parse share/demos/mcq/select.stl
-```
-
-### Testing xfta
-
-With the built-in RNG model (no GGUF needed):
-
-```bash
-xfta --rng tests/integration/xfta/test_text_completion.json
-xfta --rng -v tests/integration/xfta/test_text_choice.json
-```
-
-With a real model:
-
-```bash
-xfta -v -m models/SmolLM3-Q4_K_M.gguf fta_input.json
-```
-
-### Python Package
-
-After `pip install .`:
-
-```bash
-scripts/test-pip-install.sh
-```
-
-Or manually:
-
-```bash
-python3 -c "import autocog"
-python3 -c "import autocog.compiler.stl"
-python3 -c "import autocog.llama.xfta"
+# Coverage analysis
+tests/coverage.sh [BUILD_DIR]
 ```
 
 ## Getting Models

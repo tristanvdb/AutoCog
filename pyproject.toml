@@ -18,22 +18,15 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9", 
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: C++",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "numpy",
-    "pydantic>=2",
-    "typing_extensions",
-    "parsimonious",
-    "pybind11>=2.6.0"
 ]
 
 [project.urls]
@@ -49,16 +42,6 @@ include = ["autocog", "autocog.*"]
 [tool.setuptools.package-dir]
 "" = "modules"
 
-[tool.setuptools.package-data]
-autocog = [
-    "py.typed",
-    "compiler/stl/*.so",
-    "llama/xfta/*.so"
-]
-
-[tool.setuptools.data-files]
-"share/autocog/library/mcq" = ["share/library/mcq/*"]
-"share/autocog/library/dfl" = ["share/library/dfl/*"] 
-"share/autocog/library/elementary" = ["share/library/elementary/*"]
-"share/autocog/library/tools" = ["share/library/tools/*"]
+[tool.pytest.ini_options]
+testpaths = ["tests/integration/modules", "tests/units/modules"]
 

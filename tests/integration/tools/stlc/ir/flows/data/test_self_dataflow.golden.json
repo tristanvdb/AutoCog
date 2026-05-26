@@ -1,0 +1,130 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "solver"
+  },
+  "prompts": {
+    "solver": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "topic",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "topic",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "clauses": [],
+          "prompt": null,
+          "source": [
+            {
+              "name": "attempt",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "hint",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "topic",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "hint",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "hint",
+          "range": [
+            0,
+            1
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "attempt",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "attempt",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": "retry",
+          "limit": 3,
+          "target": "solver"
+        }
+      ],
+      "mangled_name": "solver",
+      "name": "solver",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "attempt",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

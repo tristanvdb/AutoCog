@@ -1,0 +1,38 @@
+// Test: complex dataflow path with nested arrays and ravel
+//
+// producer has items[5], each with tags[3]
+// consumer reads items.tags (nested array) and ravels to flat list
+//
+// The path producer.items.tags navigates:
+//   items → array of 5 records
+//   .tags → from each, array of 3 texts
+// Result before ravel: [[t,t,t], [t,t,t], [t,t,t], [t,t,t], [t,t,t]]
+// Result after ravel:  [t,t,t, t,t,t, t,t,t, t,t,t, t,t,t]
+
+prompt producer {
+  is {
+    items[5] is {
+      label is text<length=10>;
+      tags[3] is text<length=5>;
+    }
+  }
+  channel {
+    items get items;
+  }
+  flow consumer;
+}
+
+prompt consumer {
+  is {
+    all_tags[15] is text<length=5>;
+    summary is text<length=20>;
+  }
+  channel {
+    all_tags use producer.items.tags ravel;
+  }
+  return {
+    use summary;
+  }
+}
+
+export producer as main;

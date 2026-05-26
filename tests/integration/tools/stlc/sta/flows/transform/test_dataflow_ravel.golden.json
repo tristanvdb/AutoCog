@@ -1,0 +1,140 @@
+{
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "items_a"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "items_a"
+            }
+          ],
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "items_b"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "items_b"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 5,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items_a",
+          "range": [
+            2,
+            2
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 5,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "items_b",
+          "range": [
+            2,
+            2
+          ]
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "items_a"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "producer",
+      "sequence": [
+        "root@",
+        "items_a_1_0@0",
+        "items_a_1_0@1",
+        "items_b_1_1@0",
+        "items_b_1_1@1"
+      ],
+      "states": {
+        "items_a_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "items_a_1_0@1"
+          ]
+        },
+        "items_a_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "items_b_1_1@0"
+          ]
+        },
+        "items_b_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "items_b_1_1@1"
+          ]
+        },
+        "items_b_1_1@1": {
+          "field": 1,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "items_a_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

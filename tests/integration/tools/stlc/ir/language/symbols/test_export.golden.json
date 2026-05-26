@@ -1,0 +1,68 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "processor"
+  },
+  "prompts": {
+    "processor": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Data",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Data",
+                "range": null
+              }
+            ],
+            "name": "input",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "processor",
+      "name": "processor",
+      "return": null
+    }
+  },
+  "records": {
+    "Data": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Data",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Data",
+          "range": null
+        }
+      ],
+      "name": "Data"
+    }
+  }
+}

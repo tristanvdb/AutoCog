@@ -1,0 +1,84 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "grid__2"
+  },
+  "prompts": {
+    "grid__2": {
+      "channels": [],
+      "context": {
+        "scale": 2
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "cells",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "cells",
+          "range": [
+            24
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 40,
+            "name": "header",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "header",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 14,
+            "name": "total",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "total",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "grid__2",
+      "name": "grid",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "total",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

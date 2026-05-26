@@ -1,0 +1,88 @@
+{
+  "entry_points": {
+    "main": "test__12909789474868431288_4"
+  },
+  "prompts": {
+    "test__12909789474868431288_4": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [
+            "Read this question and pick from 4 options."
+          ],
+          "flat_index": 0,
+          "format": {
+            "length": 50,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "question",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "Your selected answer"
+          ],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "test__12909789474868431288_4",
+      "sequence": [
+        "root@",
+        "question_1_0@0",
+        "answer_1_1@0"
+      ],
+      "states": {
+        "answer_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "question_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "answer_1_1@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "question_1_0@0",
+            "answer_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

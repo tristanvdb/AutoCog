@@ -1,0 +1,167 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "list_handler": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "titles",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "titles",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "titles",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "titles",
+          "range": [
+            1
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "list_handler",
+      "name": "list_handler",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "main": {
+      "channels": [
+        {
+          "binds": null,
+          "entry": "list_handler",
+          "extern": null,
+          "kwargs": {
+            "titles": {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "wrap"
+                }
+              ],
+              "is_input": true,
+              "path": [
+                {
+                  "name": "title",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "answer",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "answer",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

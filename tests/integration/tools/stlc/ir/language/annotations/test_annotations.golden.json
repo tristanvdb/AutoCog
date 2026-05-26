@@ -1,0 +1,145 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "questioner"
+  },
+  "prompts": {
+    "questioner": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "topic",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "topic",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "The subject matter being discussed"
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Topic",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Topic",
+                "range": null
+              }
+            ],
+            "name": "topic",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the question to answer"
+          ],
+          "format": {
+            "desc": [],
+            "name": "question",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "question",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "your answer to the question"
+          ],
+          "format": {
+            "desc": [],
+            "name": "answer",
+            "refname": null,
+            "type": "enum",
+            "values": [
+              "\"yes\"",
+              "\"no\"",
+              "\"maybe\""
+            ]
+          },
+          "index": 2,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "questioner",
+      "name": "questioner",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Topic": {
+      "desc": [
+        "The subject matter being discussed"
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Topic",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Topic",
+          "range": null
+        }
+      ],
+      "name": "Topic"
+    }
+  }
+}

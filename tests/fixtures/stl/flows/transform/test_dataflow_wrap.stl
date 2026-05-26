@@ -1,0 +1,34 @@
+// Test: dataflow with wrap — wrap scalar into list
+//
+// producer has a scalar title field filled via input
+// consumer reads it with wrap, getting a single-element list
+//
+// Input: {"topic": "science", "title": "atoms"}
+// Expected: consumer receives titles = ["atoms"]
+
+prompt producer {
+  is {
+    topic is text<length=10>;
+    title is text<length=20>;
+  }
+  channel {
+    topic get topic;
+    title get title;
+  }
+  flow consumer;
+}
+
+prompt consumer {
+  is {
+    titles[1] is text<length=20>;
+    result is text<length=20>;
+  }
+  channel {
+    titles use producer.title wrap;
+  }
+  return {
+    use result;
+  }
+}
+
+export producer as main;

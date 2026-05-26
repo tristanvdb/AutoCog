@@ -1,0 +1,179 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "target": [],
+              "type": "wrap"
+            }
+          ],
+          "prompt": "producer",
+          "source": [
+            {
+              "name": "title",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "titles",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "titles",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "titles",
+          "range": [
+            1
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "consumer",
+      "name": "consumer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "topic",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "topic",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "title",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "title",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "topic",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "title",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "title",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "consumer"
+        }
+      ],
+      "mangled_name": "producer",
+      "name": "producer",
+      "return": null
+    }
+  },
+  "records": {}
+}

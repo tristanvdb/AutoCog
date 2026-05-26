@@ -1,0 +1,314 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "LibPrompt": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "data"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "data"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "data",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "LibRecord",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "data"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "LibPrompt",
+      "sequence": [
+        "root@",
+        "data_1_0@0",
+        "LibRecord_2_1@0_0",
+        "data_1_0@1"
+      ],
+      "states": {
+        "LibRecord_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "data_1_0@1"
+          ]
+        },
+        "data_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "LibRecord_2_1@0_0",
+            "data_1_0@1"
+          ]
+        },
+        "data_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "data_1_0@0"
+          ]
+        }
+      }
+    },
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "container"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "container"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "container",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        },
+        {
+          "depth": 3,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "LibRecord",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "record"
+          },
+          "index": 1,
+          "name": "another",
+          "range": null
+        },
+        {
+          "depth": 3,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "AnotherType",
+          "range": null
+        }
+      ],
+      "flows": {
+        "LibPrompt": {
+          "limit": 1,
+          "prompt": "LibPrompt",
+          "type": "control"
+        },
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "container"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "container_1_0@0",
+        "item_2_1@0_0",
+        "LibRecord_3_2@0_0_0",
+        "item_2_1@0_1",
+        "another_2_3@0_0",
+        "AnotherType_3_4@0_0_0",
+        "another_2_3@0_1",
+        "container_1_0@1"
+      ],
+      "states": {
+        "AnotherType_3_4@0_0_0": {
+          "field": 4,
+          "indices": [
+            0,
+            0,
+            0
+          ],
+          "successors": [
+            "another_2_3@0_1",
+            "container_1_0@1"
+          ]
+        },
+        "LibRecord_3_2@0_0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0,
+            0
+          ],
+          "successors": [
+            "item_2_1@0_1",
+            "another_2_3@0_0"
+          ]
+        },
+        "another_2_3@0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "AnotherType_3_4@0_0_0",
+            "another_2_3@0_1",
+            "container_1_0@1"
+          ]
+        },
+        "another_2_3@0_1": {
+          "field": 3,
+          "indices": [
+            0,
+            1
+          ],
+          "successors": [
+            "container_1_0@1"
+          ]
+        },
+        "container_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "item_2_1@0_0"
+          ]
+        },
+        "container_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "item_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "LibRecord_3_2@0_0_0",
+            "item_2_1@0_1",
+            "another_2_3@0_0"
+          ]
+        },
+        "item_2_1@0_1": {
+          "field": 1,
+          "indices": [
+            0,
+            1
+          ],
+          "successors": [
+            "another_2_3@0_0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "container_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

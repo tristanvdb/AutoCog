@@ -1,0 +1,235 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "source"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "target": [
+                {
+                  "name": "secret",
+                  "range": null
+                }
+              ],
+              "type": "prune"
+            }
+          ],
+          "prompt": "source",
+          "source": [
+            {
+              "name": "result",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "data",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "name",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "name",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "value",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "value",
+                "range": null
+              }
+            ],
+            "name": "data",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "data",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "answer",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "consumer",
+      "name": "consumer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "source": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "query",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "query",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "query",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "name",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "name",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "secret",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "secret",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "value",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 2,
+                "name": "value",
+                "range": null
+              }
+            ],
+            "name": "result",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "consumer"
+        }
+      ],
+      "mangled_name": "source",
+      "name": "source",
+      "return": null
+    }
+  },
+  "records": {}
+}

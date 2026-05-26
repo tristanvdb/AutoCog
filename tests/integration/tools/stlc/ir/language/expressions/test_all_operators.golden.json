@@ -1,0 +1,208 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test__7"
+  },
+  "prompts": {
+    "test__7": {
+      "channels": [],
+      "context": {
+        "n": 7
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 75,
+            "name": "diff",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "diff",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 25,
+            "name": "div_check",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "div_check",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 1,
+            "name": "remainder",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "remainder",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "both",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 3,
+          "name": "both",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 30,
+            "name": "either",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 4,
+          "name": "either",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "negated",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 5,
+          "name": "negated",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "lt_result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 6,
+          "name": "lt_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "lte_result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 7,
+          "name": "lte_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "gte_result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 8,
+          "name": "gte_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "neq_result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 9,
+          "name": "neq_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 75,
+            "name": "neg_add",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 10,
+          "name": "neg_add",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 153,
+            "name": "complex",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 11,
+          "name": "complex",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test__7",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "diff",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

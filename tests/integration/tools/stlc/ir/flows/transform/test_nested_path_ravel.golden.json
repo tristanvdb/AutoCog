@@ -1,0 +1,184 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "depth": null,
+              "target": [],
+              "type": "ravel"
+            }
+          ],
+          "prompt": "producer",
+          "source": [
+            {
+              "name": "items",
+              "range": null
+            },
+            {
+              "name": "tags",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "all_tags",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 5,
+            "name": "all_tags",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "all_tags",
+          "range": [
+            15
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "summary",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "consumer",
+      "name": "consumer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "summary",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "items",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "items",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "label",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "label",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 5,
+                  "name": "tags",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "tags",
+                "range": [
+                  3
+                ]
+              }
+            ],
+            "name": "items",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            5
+          ]
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "consumer"
+        }
+      ],
+      "mangled_name": "producer",
+      "name": "producer",
+      "return": null
+    }
+  },
+  "records": {}
+}

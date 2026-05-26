@@ -1,0 +1,209 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "query",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "query",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "binds": null,
+          "entry": "worker",
+          "extern": null,
+          "kwargs": {
+            "query": {
+              "clauses": [],
+              "is_input": true,
+              "path": [
+                {
+                  "name": "query",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [
+            {
+              "source": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ],
+              "target": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ],
+              "type": "bind"
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "answer",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "query",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "answer",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "worker": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "query",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "query",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "query",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "worker",
+      "name": "worker",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

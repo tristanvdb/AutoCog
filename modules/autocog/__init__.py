@@ -1,5 +1,14 @@
+"""
+AutoCog — Structured Thought Language runtime.
 
-from .arch.architecture import CognitiveArchitecture as CogArch
+Usage:
+    import autocog
 
-from .arch.cogs import Automaton
-Automaton.model_rebuild(force=True)
+    program = autocog.compile("program.stl", includes=["share/library"])
+    engine = autocog.Engine(model="model.gguf", syntax="share/syntax/default.json")
+    result = engine.run(program, topic="Science", question="2+2?")
+"""
+
+from .program import compile, Program
+from .engine import Engine
+from .context import Context

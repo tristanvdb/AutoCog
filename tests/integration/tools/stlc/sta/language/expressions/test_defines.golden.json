@@ -1,0 +1,79 @@
+{
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Item",
+          "range": null
+        }
+      ],
+      "flows": {},
+      "name": "test",
+      "sequence": [
+        "root@",
+        "item_1_0@0",
+        "Item_2_1@0_0",
+        "item_1_0@1"
+      ],
+      "states": {
+        "Item_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "item_1_0@1"
+          ]
+        },
+        "item_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Item_2_1@0_0",
+            "item_1_0@1"
+          ]
+        },
+        "item_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "item_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

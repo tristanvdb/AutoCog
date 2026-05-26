@@ -1,0 +1,181 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "binds": null,
+          "entry": "processor",
+          "extern": null,
+          "kwargs": {
+            "item": {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "path": [
+                {
+                  "name": "items",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "results",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "results",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "results",
+          "range": [
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "summary",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "summary",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "processor": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "item",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "item",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 5,
+            "name": "item",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "output",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "processor",
+      "name": "processor",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "output",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

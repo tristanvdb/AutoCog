@@ -1,0 +1,243 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "aggregator": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "all_items"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "all_items"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 5,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "all_items",
+          "range": [
+            6,
+            6
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "aggregator",
+      "sequence": [
+        "root@",
+        "all_items_1_0@0",
+        "all_items_1_0@1",
+        "all_items_1_0@2",
+        "all_items_1_0@3",
+        "all_items_1_0@4",
+        "all_items_1_0@5",
+        "result_1_1@0"
+      ],
+      "states": {
+        "all_items_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "all_items_1_0@1"
+          ]
+        },
+        "all_items_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "all_items_1_0@2"
+          ]
+        },
+        "all_items_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "all_items_1_0@3"
+          ]
+        },
+        "all_items_1_0@3": {
+          "field": 0,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "all_items_1_0@4"
+          ]
+        },
+        "all_items_1_0@4": {
+          "field": 0,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "all_items_1_0@5"
+          ]
+        },
+        "all_items_1_0@5": {
+          "field": 0,
+          "indices": [
+            5
+          ],
+          "successors": [
+            "result_1_1@0"
+          ]
+        },
+        "result_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "all_items_1_0@0"
+          ]
+        }
+      }
+    },
+    "main": {
+      "channels": [
+        {
+          "clauses": [],
+          "entry": "aggregator",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [
+                {
+                  "depth": 1,
+                  "target": [],
+                  "type": "ravel"
+                }
+              ],
+              "is_input": true,
+              "name": "all_items",
+              "path": [
+                {
+                  "index": null,
+                  "name": "groups"
+                },
+                {
+                  "index": null,
+                  "name": "items"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "answer"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "answer_1_0@0"
+      ],
+      "states": {
+        "answer_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "answer_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

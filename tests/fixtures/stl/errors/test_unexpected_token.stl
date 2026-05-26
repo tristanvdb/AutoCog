@@ -1,0 +1,7 @@
+// Error: unexpected token in field definition
+prompt broken {
+  is {
+    name is ??? ;
+  }
+}
+export broken as main;

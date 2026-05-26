@@ -1,0 +1,179 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "thinker"
+  },
+  "prompts": {
+    "thinker": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "problem",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "problem",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "reflection",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "hint",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "problem",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "problem",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Hint",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Hint",
+                "range": null
+              }
+            ],
+            "name": "hint",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "hint",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "solution",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "solution",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Hint",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Hint",
+                "range": null
+              }
+            ],
+            "name": "reflection",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 3,
+          "name": "reflection",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "thinker",
+      "name": "thinker",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "solution",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Hint": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Hint",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Hint",
+          "range": null
+        }
+      ],
+      "name": "Hint"
+    }
+  }
+}

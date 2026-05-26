@@ -1,0 +1,130 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main_prompt"
+  },
+  "prompts": {
+    "main_prompt": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "input",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "input",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "binds": null,
+          "entry": "transform",
+          "extern": "transform",
+          "kwargs": {
+            "data": {
+              "clauses": [],
+              "is_input": false,
+              "path": [
+                {
+                  "name": "input",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "processed",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "input",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "processed",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "processed",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main_prompt",
+      "name": "main_prompt",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

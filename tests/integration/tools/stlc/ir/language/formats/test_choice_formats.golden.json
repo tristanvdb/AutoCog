@@ -1,0 +1,150 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "chooser"
+  },
+  "prompts": {
+    "chooser": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Option",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Option",
+                "range": null
+              }
+            ],
+            "name": "options",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "options",
+          "range": [
+            4
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "mode": "select",
+            "name": "selected",
+            "path": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "options",
+                  "range": null
+                }
+              ]
+            },
+            "refname": null,
+            "type": "choice"
+          },
+          "index": 1,
+          "name": "selected",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "mode": "select",
+            "name": "repeated",
+            "path": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "options",
+                  "range": null
+                }
+              ]
+            },
+            "refname": null,
+            "type": "choice"
+          },
+          "index": 2,
+          "name": "repeated",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "chooser",
+      "name": "chooser",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "selected",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "repeated",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Option": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Option",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Option",
+          "range": null
+        }
+      ],
+      "name": "Option"
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "entry_points": {
+    "main": "quiz"
+  },
+  "prompts": {
+    "quiz": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "question"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "question"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "question",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Question",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "quiz",
+      "sequence": [
+        "root@",
+        "question_1_0@0",
+        "Question_2_1@0_0",
+        "question_1_0@1",
+        "answer_1_2@0"
+      ],
+      "states": {
+        "Question_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "question_1_0@1",
+            "answer_1_2@0"
+          ]
+        },
+        "answer_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "question_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Question_2_1@0_0",
+            "question_1_0@1",
+            "answer_1_2@0"
+          ]
+        },
+        "question_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "answer_1_2@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "question_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

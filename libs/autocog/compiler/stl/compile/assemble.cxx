@@ -417,6 +417,7 @@ static void assemble_prompts(
                                     cc.entry = driver.mangle(resolved->name, arguments);
                                 } else if (builder.is_python_symbol(entry_name, node.fileid)) {
                                     cc.entry = entry_name;
+                                    cc.extern_func = entry_name;
                                 }
                                 for (auto const & kwarg : src.data.arguments) {
                                     auto kw_name = kwarg.data.name.data.name;

@@ -11,7 +11,7 @@ add_custom_command(
 
 add_library(autocog_compiler_stl_lib STATIC
     driver.cxx diagnostic.cxx
-    token.cxx ast.cxx ast/expr.cxx ast/tostring.cxx
+    token.cxx ast.cxx ast/expr.cxx
     parser.cxx parser-state.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
     parser/define.cxx parser/alias.cxx parser/expression.cxx

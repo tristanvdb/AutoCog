@@ -1,0 +1,109 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "items_a",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "items_a",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "items_b",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "items_b",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 5,
+            "name": "items_a",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items_a",
+          "range": [
+            2
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 5,
+            "name": "items_b",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "items_b",
+          "range": [
+            2
+          ]
+        }
+      ],
+      "flows": [],
+      "mangled_name": "producer",
+      "name": "producer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "items_a",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

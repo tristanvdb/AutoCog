@@ -1,0 +1,23 @@
+// Test: arithmetic expressions in field definitions
+//
+// Exercises: define, argument, +, *, binary ops in length and count
+
+define base_len = 10;
+define extra = 5;
+define item_count = 3;
+
+prompt test {
+  argument multiplier = 2;
+
+  is {
+    short is text<length=base_len>;
+    long is text<length=(base_len + extra)>;
+    items[(item_count * multiplier)] is text<length=base_len>;
+    scaled is text<length=(base_len * multiplier)>;
+  }
+  return {
+    use short;
+  }
+}
+
+export test as main;

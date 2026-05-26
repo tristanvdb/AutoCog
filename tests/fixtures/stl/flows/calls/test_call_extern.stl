@@ -1,0 +1,25 @@
+// Test: call channel to Python external function
+//
+// The 'transform' function is imported from a .py file.
+// It receives kwargs and returns a result that fills the channel.
+
+from "test_extern_lib.py" import transform;
+
+prompt main_prompt {
+  is {
+    input is text<length=20>;
+    processed is text<length=50>;
+    result is text<length=20>;
+  }
+  channel {
+    input get input;
+    processed call transform {
+      data use .input;
+    };
+  }
+  return {
+    use result;
+  }
+}
+
+export main_prompt as main;

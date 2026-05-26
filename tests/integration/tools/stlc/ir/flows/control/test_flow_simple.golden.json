@@ -1,0 +1,244 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "task",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "task",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Task",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Task",
+                "range": null
+              }
+            ],
+            "name": "task",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "task",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "step1"
+        },
+        {
+          "label": null,
+          "limit": null,
+          "target": "step2"
+        }
+      ],
+      "mangled_name": "main",
+      "name": "main",
+      "return": null
+    },
+    "step1": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "input",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "input",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Task",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Task",
+                "range": null
+              }
+            ],
+            "name": "input",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "output",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "step1",
+      "name": "step1",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "output",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "step2": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "input",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "output",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "step2",
+      "name": "step2",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "output",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Task": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Task",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Task",
+          "range": null
+        }
+      ],
+      "name": "Task"
+    }
+  }
+}

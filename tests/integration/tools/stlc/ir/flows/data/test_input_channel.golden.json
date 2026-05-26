@@ -1,0 +1,119 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "quiz"
+  },
+  "prompts": {
+    "quiz": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "question",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "question",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Question",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Question",
+                "range": null
+              }
+            ],
+            "name": "question",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "question",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "answer",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "quiz",
+      "name": "quiz",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Question": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Question",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Question",
+          "range": null
+        }
+      ],
+      "name": "Question"
+    }
+  }
+}

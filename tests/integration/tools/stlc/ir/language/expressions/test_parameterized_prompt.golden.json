@@ -1,0 +1,69 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "worker__10_6390854715352638587"
+  },
+  "prompts": {
+    "worker__10_6390854715352638587": {
+      "channels": [],
+      "context": {
+        "count": 10,
+        "mode": "strict"
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "items",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            10
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "worker__10_6390854715352638587",
+      "name": "worker",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

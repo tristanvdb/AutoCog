@@ -1,0 +1,369 @@
+{
+  "entry_points": {
+    "main": "test__7"
+  },
+  "prompts": {
+    "test__7": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 75,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "diff",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 25,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "div_check",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 1,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "remainder",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 3,
+          "name": "both",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 30,
+            "type": "completion"
+          },
+          "index": 4,
+          "name": "either",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 5,
+          "format": {
+            "length": 15,
+            "type": "completion"
+          },
+          "index": 5,
+          "name": "negated",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 6,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 6,
+          "name": "lt_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 7,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 7,
+          "name": "lte_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 8,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 8,
+          "name": "gte_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 9,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 9,
+          "name": "neq_result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 10,
+          "format": {
+            "length": 75,
+            "type": "completion"
+          },
+          "index": 10,
+          "name": "neg_add",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 11,
+          "format": {
+            "length": 153,
+            "type": "completion"
+          },
+          "index": 11,
+          "name": "complex",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "diff"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "test__7",
+      "sequence": [
+        "root@",
+        "diff_1_0@0",
+        "div_check_1_1@0",
+        "remainder_1_2@0",
+        "both_1_3@0",
+        "either_1_4@0",
+        "negated_1_5@0",
+        "lt_result_1_6@0",
+        "lte_result_1_7@0",
+        "gte_result_1_8@0",
+        "neq_result_1_9@0",
+        "neg_add_1_10@0",
+        "complex_1_11@0"
+      ],
+      "states": {
+        "both_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "either_1_4@0",
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "complex_1_11@0": {
+          "field": 11,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "diff_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "div_check_1_1@0",
+            "remainder_1_2@0",
+            "both_1_3@0",
+            "either_1_4@0",
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "div_check_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "remainder_1_2@0",
+            "both_1_3@0",
+            "either_1_4@0",
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "either_1_4@0": {
+          "field": 4,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "gte_result_1_8@0": {
+          "field": 8,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "lt_result_1_6@0": {
+          "field": 6,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "lte_result_1_7@0": {
+          "field": 7,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "neg_add_1_10@0": {
+          "field": 10,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "complex_1_11@0"
+          ]
+        },
+        "negated_1_5@0": {
+          "field": 5,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "neq_result_1_9@0": {
+          "field": 9,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "remainder_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "both_1_3@0",
+            "either_1_4@0",
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "diff_1_0@0",
+            "div_check_1_1@0",
+            "remainder_1_2@0",
+            "both_1_3@0",
+            "either_1_4@0",
+            "negated_1_5@0",
+            "lt_result_1_6@0",
+            "lte_result_1_7@0",
+            "gte_result_1_8@0",
+            "neq_result_1_9@0",
+            "neg_add_1_10@0",
+            "complex_1_11@0"
+          ]
+        }
+      }
+    }
+  }
+}

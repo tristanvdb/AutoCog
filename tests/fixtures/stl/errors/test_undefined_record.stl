@@ -1,0 +1,7 @@
+// Error: reference to undefined record
+prompt broken {
+  is {
+    item is NonExistentRecord;
+  }
+}
+export broken as main;

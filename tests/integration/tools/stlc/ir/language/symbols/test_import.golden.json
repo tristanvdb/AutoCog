@@ -1,0 +1,328 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "LibPrompt": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "data",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "data",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "A record from the library"
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "LibRecord",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "LibRecord",
+                "range": null
+              }
+            ],
+            "name": "data",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "data",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "LibPrompt",
+      "name": "LibPrompt",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "data",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "container",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "container",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [
+                    "A record from the library"
+                  ],
+                  "fields": [
+                    {
+                      "depth": 1,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 10,
+                        "name": "LibRecord",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "LibRecord",
+                      "range": null
+                    }
+                  ],
+                  "name": "item",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 0,
+                "name": "item",
+                "range": null
+              },
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 1,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 20,
+                        "name": "AnotherType",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "AnotherType",
+                      "range": null
+                    }
+                  ],
+                  "name": "another",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "another",
+                "range": null
+              }
+            ],
+            "name": "container",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "container",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "LibPrompt"
+        }
+      ],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "container",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "AnotherType": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "AnotherType",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "AnotherType",
+          "range": null
+        }
+      ],
+      "name": "AnotherType"
+    },
+    "Container": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "A record from the library"
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "LibRecord",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "LibRecord",
+                "range": null
+              }
+            ],
+            "name": "item",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 20,
+                  "name": "AnotherType",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "AnotherType",
+                "range": null
+              }
+            ],
+            "name": "another",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "another",
+          "range": null
+        }
+      ],
+      "name": "Container"
+    },
+    "LibRecord__10": {
+      "desc": [
+        "A record from the library"
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "LibRecord",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "LibRecord",
+          "range": null
+        }
+      ],
+      "name": "LibRecord"
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [],
+          "prompt": "producer",
+          "source": [
+            {
+              "index": 2,
+              "name": "items"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "subset"
+            }
+          ],
+          "type": "dataflow"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "subset",
+          "range": [
+            3,
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "consumer",
+      "sequence": [
+        "root@",
+        "subset_1_0@0",
+        "subset_1_0@1",
+        "subset_1_0@2",
+        "result_1_1@0"
+      ],
+      "states": {
+        "result_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "subset_1_0@0"
+          ]
+        },
+        "subset_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "subset_1_0@1"
+          ]
+        },
+        "subset_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "subset_1_0@2"
+          ]
+        },
+        "subset_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "result_1_1@0"
+          ]
+        }
+      }
+    },
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "items"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "items"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            10,
+            10
+          ]
+        }
+      ],
+      "flows": {
+        "consumer": {
+          "limit": 1,
+          "prompt": "consumer",
+          "type": "control"
+        }
+      },
+      "name": "producer",
+      "sequence": [
+        "root@",
+        "items_1_0@0",
+        "items_1_0@1",
+        "items_1_0@2",
+        "items_1_0@3",
+        "items_1_0@4",
+        "items_1_0@5",
+        "items_1_0@6",
+        "items_1_0@7",
+        "items_1_0@8",
+        "items_1_0@9"
+      ],
+      "states": {
+        "items_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "items_1_0@1"
+          ]
+        },
+        "items_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "items_1_0@2"
+          ]
+        },
+        "items_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "items_1_0@3"
+          ]
+        },
+        "items_1_0@3": {
+          "field": 0,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "items_1_0@4"
+          ]
+        },
+        "items_1_0@4": {
+          "field": 0,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "items_1_0@5"
+          ]
+        },
+        "items_1_0@5": {
+          "field": 0,
+          "indices": [
+            5
+          ],
+          "successors": [
+            "items_1_0@6"
+          ]
+        },
+        "items_1_0@6": {
+          "field": 0,
+          "indices": [
+            6
+          ],
+          "successors": [
+            "items_1_0@7"
+          ]
+        },
+        "items_1_0@7": {
+          "field": 0,
+          "indices": [
+            7
+          ],
+          "successors": [
+            "items_1_0@8"
+          ]
+        },
+        "items_1_0@8": {
+          "field": 0,
+          "indices": [
+            8
+          ],
+          "successors": [
+            "items_1_0@9"
+          ]
+        },
+        "items_1_0@9": {
+          "field": 0,
+          "indices": [
+            9
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "items_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

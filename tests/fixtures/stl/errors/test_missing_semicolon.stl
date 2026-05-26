@@ -1,0 +1,8 @@
+// Error: missing semicolon after field
+prompt broken {
+  is {
+    name is text<length=10>
+    age is text<length=5>;
+  }
+}
+export broken as main;

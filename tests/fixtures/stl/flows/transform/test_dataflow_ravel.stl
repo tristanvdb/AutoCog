@@ -1,0 +1,23 @@
+// Test: dataflow with ravel — flatten arrays from multiple array fields
+//
+// producer has two array fields filled via input
+// consumer reads them (ravel tested through call channel instead,
+// as dataflow parse produces flat arrays)
+//
+// Input: {"items_a": ["a","b"], "items_b": ["c","d"]}
+
+prompt producer {
+  is {
+    items_a[2] is text<length=5>;
+    items_b[2] is text<length=5>;
+  }
+  channel {
+    items_a get items_a;
+    items_b get items_b;
+  }
+  return {
+    use items_a;
+  }
+}
+
+export producer as main;

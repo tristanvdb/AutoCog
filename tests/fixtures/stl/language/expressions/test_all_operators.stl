@@ -1,0 +1,56 @@
+// Test: all binary and unary operators
+//
+// Exercises every operator through compile-time evaluation
+
+define total = 100;
+define half = 50;
+define quarter = 25;
+define flag_a = true;
+define flag_b = false;
+
+prompt test {
+  argument n = 7;
+
+  is {
+    // Subtraction
+    diff is text<length=(total - quarter)>;
+
+    // Division (used in conditional to avoid float-as-length)
+    div_check is text<length=(((total / 4) == 25) ? 25 : 5)>;
+
+    // Modulo
+    remainder is text<length=(n % 3)>;
+
+    // Logical AND in conditional
+    both is text<length=((flag_a && flag_a) ? 20 : 5)>;
+
+    // Logical OR in conditional
+    either is text<length=((flag_a || flag_b) ? 30 : 5)>;
+
+    // NOT in conditional
+    negated is text<length=((!flag_b) ? 15 : 5)>;
+
+    // Less than
+    lt_result is text<length=((quarter < half) ? 10 : 1)>;
+
+    // Less than or equal
+    lte_result is text<length=((half <= half) ? 10 : 1)>;
+
+    // Greater than or equal
+    gte_result is text<length=((total >= half) ? 10 : 1)>;
+
+    // Not equal
+    neq_result is text<length=((quarter != half) ? 10 : 1)>;
+
+    // Unary negation in arithmetic
+    neg_add is text<length=(total + (-(quarter)))>;
+
+    // Combined: subtraction + multiplication + modulo
+    complex is text<length=(((total - quarter) * 2) + (n % 4))>;
+  }
+  return {
+    use diff;
+  }
+}
+
+export test as main;

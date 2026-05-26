@@ -1,0 +1,190 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "greeting",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "greeting",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "creative",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "creative",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 50,
+                  "name": "Message",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Message",
+                "range": null
+              }
+            ],
+            "name": "greeting",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "greeting",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 50,
+                  "name": "SpecialText",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "SpecialText",
+                "range": null
+              }
+            ],
+            "name": "creative",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "creative",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "greeting",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "creative",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Message": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "Message",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Message",
+          "range": null
+        }
+      ],
+      "name": "Message"
+    },
+    "SpecialText": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "SpecialText",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "SpecialText",
+          "range": null
+        }
+      ],
+      "name": "SpecialText"
+    }
+  }
+}

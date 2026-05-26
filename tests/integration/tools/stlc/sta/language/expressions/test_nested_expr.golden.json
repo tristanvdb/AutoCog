@@ -1,0 +1,339 @@
+{
+  "entry_points": {
+    "main": "grid__2"
+  },
+  "prompts": {
+    "grid__2": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "cells",
+          "range": [
+            24,
+            24
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 40,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "header",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 14,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "total",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "total"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "grid__2",
+      "sequence": [
+        "root@",
+        "cells_1_0@0",
+        "cells_1_0@1",
+        "cells_1_0@2",
+        "cells_1_0@3",
+        "cells_1_0@4",
+        "cells_1_0@5",
+        "cells_1_0@6",
+        "cells_1_0@7",
+        "cells_1_0@8",
+        "cells_1_0@9",
+        "cells_1_0@10",
+        "cells_1_0@11",
+        "cells_1_0@12",
+        "cells_1_0@13",
+        "cells_1_0@14",
+        "cells_1_0@15",
+        "cells_1_0@16",
+        "cells_1_0@17",
+        "cells_1_0@18",
+        "cells_1_0@19",
+        "cells_1_0@20",
+        "cells_1_0@21",
+        "cells_1_0@22",
+        "cells_1_0@23",
+        "header_1_1@0",
+        "total_1_2@0"
+      ],
+      "states": {
+        "cells_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "cells_1_0@1"
+          ]
+        },
+        "cells_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "cells_1_0@2"
+          ]
+        },
+        "cells_1_0@10": {
+          "field": 0,
+          "indices": [
+            10
+          ],
+          "successors": [
+            "cells_1_0@11"
+          ]
+        },
+        "cells_1_0@11": {
+          "field": 0,
+          "indices": [
+            11
+          ],
+          "successors": [
+            "cells_1_0@12"
+          ]
+        },
+        "cells_1_0@12": {
+          "field": 0,
+          "indices": [
+            12
+          ],
+          "successors": [
+            "cells_1_0@13"
+          ]
+        },
+        "cells_1_0@13": {
+          "field": 0,
+          "indices": [
+            13
+          ],
+          "successors": [
+            "cells_1_0@14"
+          ]
+        },
+        "cells_1_0@14": {
+          "field": 0,
+          "indices": [
+            14
+          ],
+          "successors": [
+            "cells_1_0@15"
+          ]
+        },
+        "cells_1_0@15": {
+          "field": 0,
+          "indices": [
+            15
+          ],
+          "successors": [
+            "cells_1_0@16"
+          ]
+        },
+        "cells_1_0@16": {
+          "field": 0,
+          "indices": [
+            16
+          ],
+          "successors": [
+            "cells_1_0@17"
+          ]
+        },
+        "cells_1_0@17": {
+          "field": 0,
+          "indices": [
+            17
+          ],
+          "successors": [
+            "cells_1_0@18"
+          ]
+        },
+        "cells_1_0@18": {
+          "field": 0,
+          "indices": [
+            18
+          ],
+          "successors": [
+            "cells_1_0@19"
+          ]
+        },
+        "cells_1_0@19": {
+          "field": 0,
+          "indices": [
+            19
+          ],
+          "successors": [
+            "cells_1_0@20"
+          ]
+        },
+        "cells_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "cells_1_0@3"
+          ]
+        },
+        "cells_1_0@20": {
+          "field": 0,
+          "indices": [
+            20
+          ],
+          "successors": [
+            "cells_1_0@21"
+          ]
+        },
+        "cells_1_0@21": {
+          "field": 0,
+          "indices": [
+            21
+          ],
+          "successors": [
+            "cells_1_0@22"
+          ]
+        },
+        "cells_1_0@22": {
+          "field": 0,
+          "indices": [
+            22
+          ],
+          "successors": [
+            "cells_1_0@23"
+          ]
+        },
+        "cells_1_0@23": {
+          "field": 0,
+          "indices": [
+            23
+          ],
+          "successors": [
+            "header_1_1@0",
+            "total_1_2@0"
+          ]
+        },
+        "cells_1_0@3": {
+          "field": 0,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "cells_1_0@4"
+          ]
+        },
+        "cells_1_0@4": {
+          "field": 0,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "cells_1_0@5"
+          ]
+        },
+        "cells_1_0@5": {
+          "field": 0,
+          "indices": [
+            5
+          ],
+          "successors": [
+            "cells_1_0@6"
+          ]
+        },
+        "cells_1_0@6": {
+          "field": 0,
+          "indices": [
+            6
+          ],
+          "successors": [
+            "cells_1_0@7"
+          ]
+        },
+        "cells_1_0@7": {
+          "field": 0,
+          "indices": [
+            7
+          ],
+          "successors": [
+            "cells_1_0@8"
+          ]
+        },
+        "cells_1_0@8": {
+          "field": 0,
+          "indices": [
+            8
+          ],
+          "successors": [
+            "cells_1_0@9"
+          ]
+        },
+        "cells_1_0@9": {
+          "field": 0,
+          "indices": [
+            9
+          ],
+          "successors": [
+            "cells_1_0@10"
+          ]
+        },
+        "header_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "total_1_2@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "cells_1_0@0"
+          ]
+        },
+        "total_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        }
+      }
+    }
+  }
+}

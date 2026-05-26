@@ -1,0 +1,138 @@
+{
+  "entry_points": {
+    "main": "location"
+  },
+  "prompts": {
+    "location": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "address",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "street",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "record"
+          },
+          "index": 1,
+          "name": "city",
+          "range": null
+        },
+        {
+          "depth": 3,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "City",
+          "range": null
+        }
+      ],
+      "flows": {},
+      "name": "location",
+      "sequence": [
+        "root@",
+        "address_1_0@0",
+        "street_2_1@0_0",
+        "city_2_2@0_0",
+        "City_3_3@0_0_0",
+        "city_2_2@0_1",
+        "address_1_0@1"
+      ],
+      "states": {
+        "City_3_3@0_0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0,
+            0
+          ],
+          "successors": [
+            "city_2_2@0_1",
+            "address_1_0@1"
+          ]
+        },
+        "address_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "street_2_1@0_0",
+            "city_2_2@0_0"
+          ]
+        },
+        "address_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "city_2_2@0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "City_3_3@0_0_0",
+            "city_2_2@0_1",
+            "address_1_0@1"
+          ]
+        },
+        "city_2_2@0_1": {
+          "field": 2,
+          "indices": [
+            0,
+            1
+          ],
+          "successors": [
+            "address_1_0@1"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "address_1_0@0"
+          ]
+        },
+        "street_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "city_2_2@0_0"
+          ]
+        }
+      }
+    }
+  }
+}

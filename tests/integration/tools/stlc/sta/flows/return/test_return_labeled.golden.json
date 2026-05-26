@@ -1,0 +1,164 @@
+{
+  "entry_points": {
+    "main": "processor"
+  },
+  "prompts": {
+    "processor": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "input"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "input"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Data",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "intermediate",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "output",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            },
+            {
+              "alias": "intermediate",
+              "path": [
+                {
+                  "name": "intermediate"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "processor",
+      "sequence": [
+        "root@",
+        "input_1_0@0",
+        "Data_2_1@0_0",
+        "input_1_0@1",
+        "intermediate_1_2@0",
+        "result_1_3@0"
+      ],
+      "states": {
+        "Data_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "input_1_0@1",
+            "intermediate_1_2@0",
+            "result_1_3@0"
+          ]
+        },
+        "input_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Data_2_1@0_0",
+            "input_1_0@1",
+            "intermediate_1_2@0",
+            "result_1_3@0"
+          ]
+        },
+        "input_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "intermediate_1_2@0",
+            "result_1_3@0"
+          ]
+        },
+        "intermediate_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "result_1_3@0"
+          ]
+        },
+        "result_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "input_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

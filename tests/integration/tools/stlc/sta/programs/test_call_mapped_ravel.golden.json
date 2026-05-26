@@ -1,0 +1,280 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "clauses": [
+            {
+              "depth": 1,
+              "target": [],
+              "type": "ravel"
+            }
+          ],
+          "entry": "section_writer",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "name": "section",
+              "path": [
+                {
+                  "index": null,
+                  "name": "sections"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "all_pages"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 15,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "all_pages",
+          "range": [
+            6,
+            6
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "summary"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "all_pages_1_0@0",
+        "all_pages_1_0@1",
+        "all_pages_1_0@2",
+        "all_pages_1_0@3",
+        "all_pages_1_0@4",
+        "all_pages_1_0@5",
+        "summary_1_1@0"
+      ],
+      "states": {
+        "all_pages_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "all_pages_1_0@1"
+          ]
+        },
+        "all_pages_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "all_pages_1_0@2"
+          ]
+        },
+        "all_pages_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "all_pages_1_0@3"
+          ]
+        },
+        "all_pages_1_0@3": {
+          "field": 0,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "all_pages_1_0@4"
+          ]
+        },
+        "all_pages_1_0@4": {
+          "field": 0,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "all_pages_1_0@5"
+          ]
+        },
+        "all_pages_1_0@5": {
+          "field": 0,
+          "indices": [
+            5
+          ],
+          "successors": [
+            "summary_1_1@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "all_pages_1_0@0"
+          ]
+        },
+        "summary_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        }
+      }
+    },
+    "section_writer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "section"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "section"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "section",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 15,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "pages",
+          "range": [
+            2,
+            2
+          ]
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "pages"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "section_writer",
+      "sequence": [
+        "root@",
+        "section_1_0@0",
+        "pages_1_1@0",
+        "pages_1_1@1"
+      ],
+      "states": {
+        "pages_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "pages_1_1@1"
+          ]
+        },
+        "pages_1_1@1": {
+          "field": 1,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "section_1_0@0",
+            "pages_1_1@0"
+          ]
+        },
+        "section_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "pages_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

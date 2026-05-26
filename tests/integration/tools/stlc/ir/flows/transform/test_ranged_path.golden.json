@@ -1,0 +1,146 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "producer"
+  },
+  "prompts": {
+    "consumer": {
+      "channels": [
+        {
+          "clauses": [],
+          "prompt": "producer",
+          "source": [
+            {
+              "name": "items",
+              "range": [
+                2,
+                5
+              ]
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "subset",
+                "range": null
+              }
+            ]
+          },
+          "type": "dataflow"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "subset",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "subset",
+          "range": [
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "consumer",
+      "name": "consumer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "producer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "items",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "items",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "items",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            10
+          ]
+        }
+      ],
+      "flows": [
+        {
+          "label": null,
+          "limit": null,
+          "target": "consumer"
+        }
+      ],
+      "mangled_name": "producer",
+      "name": "producer",
+      "return": null
+    }
+  },
+  "records": {}
+}

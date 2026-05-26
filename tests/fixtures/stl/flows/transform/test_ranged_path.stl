@@ -1,0 +1,29 @@
+// Test: ranged path selection in dataflow
+//
+// producer has items[10], consumer reads a slice via items[2:5]
+// This selects elements at indices 2,3,4 from the array
+
+prompt producer {
+  is {
+    items[10] is text<length=10>;
+  }
+  channel {
+    items get items;
+  }
+  flow consumer;
+}
+
+prompt consumer {
+  is {
+    subset[3] is text<length=10>;
+    result is text<length=20>;
+  }
+  channel {
+    subset use producer.items[2:5];
+  }
+  return {
+    use result;
+  }
+}
+
+export producer as main;

@@ -1,0 +1,141 @@
+{
+  "entry_points": {
+    "main": "person"
+  },
+  "prompts": {
+    "person": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "name",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Name",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "record"
+          },
+          "index": 1,
+          "name": "age",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "enum",
+            "values": [
+              "\"child\"",
+              "\"teen\"",
+              "\"adult\"",
+              "\"senior\""
+            ]
+          },
+          "index": 0,
+          "name": "Age",
+          "range": null
+        }
+      ],
+      "flows": {},
+      "name": "person",
+      "sequence": [
+        "root@",
+        "name_1_0@0",
+        "Name_2_1@0_0",
+        "name_1_0@1",
+        "age_1_2@0",
+        "Age_2_3@0_0",
+        "age_1_2@1"
+      ],
+      "states": {
+        "Age_2_3@0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "age_1_2@1"
+          ]
+        },
+        "Name_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "name_1_0@1",
+            "age_1_2@0"
+          ]
+        },
+        "age_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Age_2_3@0_0",
+            "age_1_2@1"
+          ]
+        },
+        "age_1_2@1": {
+          "field": 2,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "name_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Name_2_1@0_0",
+            "name_1_0@1",
+            "age_1_2@0"
+          ]
+        },
+        "name_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "age_1_2@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "name_1_0@0"
+          ]
+        }
+      }
+    }
+  }
+}

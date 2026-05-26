@@ -1,0 +1,231 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "clauses": [],
+          "entry": "processor",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "name": "item",
+              "path": [
+                {
+                  "index": null,
+                  "name": "items"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "results"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "results",
+          "range": [
+            3,
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "summary"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "results_1_0@0",
+        "results_1_0@1",
+        "results_1_0@2",
+        "summary_1_1@0"
+      ],
+      "states": {
+        "results_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "results_1_0@1"
+          ]
+        },
+        "results_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "results_1_0@2"
+          ]
+        },
+        "results_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "summary_1_1@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "results_1_0@0"
+          ]
+        },
+        "summary_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        }
+      }
+    },
+    "processor": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "item"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "item"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 5,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "output"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "processor",
+      "sequence": [
+        "root@",
+        "item_1_0@0",
+        "output_1_1@0"
+      ],
+      "states": {
+        "item_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "output_1_1@0"
+          ]
+        },
+        "output_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "item_1_0@0",
+            "output_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "entry_points": {
+    "main": "thinker"
+  },
+  "prompts": {
+    "thinker": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "problem"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "problem"
+            }
+          ],
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "reflection"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "hint"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "problem",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "record"
+          },
+          "index": 1,
+          "name": "hint",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Hint",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "solution",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "type": "record"
+          },
+          "index": 3,
+          "name": "reflection",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 5,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Hint",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "solution"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "thinker",
+      "sequence": [
+        "root@",
+        "problem_1_0@0",
+        "hint_1_1@0",
+        "Hint_2_2@0_0",
+        "hint_1_1@1",
+        "solution_1_3@0",
+        "reflection_1_4@0",
+        "Hint_2_5@0_0",
+        "reflection_1_4@1"
+      ],
+      "states": {
+        "Hint_2_2@0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "hint_1_1@1",
+            "solution_1_3@0",
+            "reflection_1_4@0"
+          ]
+        },
+        "Hint_2_5@0_0": {
+          "field": 5,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "reflection_1_4@1"
+          ]
+        },
+        "hint_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Hint_2_2@0_0",
+            "hint_1_1@1",
+            "solution_1_3@0",
+            "reflection_1_4@0"
+          ]
+        },
+        "hint_1_1@1": {
+          "field": 1,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "solution_1_3@0",
+            "reflection_1_4@0"
+          ]
+        },
+        "problem_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "hint_1_1@0"
+          ]
+        },
+        "reflection_1_4@0": {
+          "field": 4,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Hint_2_5@0_0",
+            "reflection_1_4@1"
+          ]
+        },
+        "reflection_1_4@1": {
+          "field": 4,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "problem_1_0@0",
+            "hint_1_1@0"
+          ]
+        },
+        "solution_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "reflection_1_4@0"
+          ]
+        }
+      }
+    }
+  }
+}

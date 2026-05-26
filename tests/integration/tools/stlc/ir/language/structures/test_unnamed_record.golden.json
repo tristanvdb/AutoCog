@@ -1,0 +1,144 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "calculator"
+  },
+  "prompts": {
+    "calculator": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "left",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "left",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "right",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "right",
+                "range": null
+              }
+            ],
+            "name": "operands",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "operands",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "operation",
+            "refname": null,
+            "type": "enum",
+            "values": [
+              "\"add\"",
+              "\"subtract\"",
+              "\"multiply\"",
+              "\"divide\""
+            ]
+          },
+          "index": 1,
+          "name": "operation",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "value",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "value",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "confidence",
+                  "refname": null,
+                  "type": "enum",
+                  "values": [
+                    "\"high\"",
+                    "\"medium\"",
+                    "\"low\""
+                  ]
+                },
+                "index": 1,
+                "name": "confidence",
+                "range": null
+              }
+            ],
+            "name": "result",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 2,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "calculator",
+      "name": "calculator",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

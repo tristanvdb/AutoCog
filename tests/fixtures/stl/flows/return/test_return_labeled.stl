@@ -1,0 +1,22 @@
+// Test return statements with labels
+
+record Data {
+  is text;
+}
+
+prompt processor {
+  is {
+    input is Data;
+    intermediate is text;
+    result is text;
+  }
+  channel {
+    input get input;
+  }
+  return {
+    output use result;
+    intermediate use intermediate;
+  }
+}
+
+export processor as main;

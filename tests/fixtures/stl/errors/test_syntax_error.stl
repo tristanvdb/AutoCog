@@ -1,0 +1,6 @@
+// Error: missing closing brace
+prompt broken {
+  is {
+    name is text<length=10>;
+
+export broken as main;

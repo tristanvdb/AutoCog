@@ -1,0 +1,306 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "task"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "task"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "task",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Task",
+          "range": null
+        }
+      ],
+      "flows": {
+        "step1": {
+          "limit": 1,
+          "prompt": "step1",
+          "type": "control"
+        },
+        "step2": {
+          "limit": 1,
+          "prompt": "step2",
+          "type": "control"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "task_1_0@0",
+        "Task_2_1@0_0",
+        "task_1_0@1"
+      ],
+      "states": {
+        "Task_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "task_1_0@1"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "task_1_0@0"
+          ]
+        },
+        "task_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Task_2_1@0_0",
+            "task_1_0@1"
+          ]
+        },
+        "task_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        }
+      }
+    },
+    "step1": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "input"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "input"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Task",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "output"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "step1",
+      "sequence": [
+        "root@",
+        "input_1_0@0",
+        "Task_2_1@0_0",
+        "input_1_0@1",
+        "output_1_2@0"
+      ],
+      "states": {
+        "Task_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "input_1_0@1",
+            "output_1_2@0"
+          ]
+        },
+        "input_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Task_2_1@0_0",
+            "input_1_0@1",
+            "output_1_2@0"
+          ]
+        },
+        "input_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "output_1_2@0"
+          ]
+        },
+        "output_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "input_1_0@0"
+          ]
+        }
+      }
+    },
+    "step2": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "output",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "output"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "step2",
+      "sequence": [
+        "root@",
+        "input_1_0@0",
+        "output_1_1@0"
+      ],
+      "states": {
+        "input_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "output_1_1@0"
+          ]
+        },
+        "output_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "input_1_0@0",
+            "output_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

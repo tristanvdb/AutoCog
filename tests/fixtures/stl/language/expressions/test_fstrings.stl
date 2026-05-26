@@ -1,0 +1,25 @@
+// Test: f-string interpolation in annotations
+//
+// Exercises: f"..." with embedded expressions
+
+define task_name = "classify";
+
+prompt test {
+  argument goal = "answer questions";
+  argument num_choices = 4;
+
+  is {
+    question is text<length=50>;
+    answer is text<length=20>;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as f"You are performing the task: {task_name}. Your goal is to {goal}.";
+    question as f"Read this question and pick from {num_choices} options.";
+    answer as "Your selected answer";
+  }
+}
+
+export test as main;

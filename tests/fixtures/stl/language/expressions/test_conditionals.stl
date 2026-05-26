@@ -1,0 +1,21 @@
+// Test: conditional and comparison expressions
+//
+// Exercises: ternary (?:), comparisons (>, ==), logical ops
+
+define threshold = 5;
+
+prompt test {
+  argument level = 1;
+  argument verbose = true;
+
+  is {
+    output is text<length=((level > 0) ? 20 : 5)>;
+    items[((level == 1) ? 3 : 10)] is text<length=10>;
+    detail is text<length=((verbose == true) ? 50 : 10)>;
+  }
+  return {
+    use output;
+  }
+}
+
+export test as main;

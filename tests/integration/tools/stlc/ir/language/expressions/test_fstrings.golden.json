@@ -1,0 +1,73 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test__12909789474868431288_4"
+  },
+  "prompts": {
+    "test__12909789474868431288_4": {
+      "channels": [],
+      "context": {
+        "goal": "answer questions",
+        "num_choices": 4
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [
+            "Read this question and pick from 4 options."
+          ],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "question",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "question",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "Your selected answer"
+          ],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "answer",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test__12909789474868431288_4",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "answer",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

@@ -1,0 +1,98 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test__2"
+  },
+  "prompts": {
+    "test__2": {
+      "channels": [],
+      "context": {
+        "multiplier": 2
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "short",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "short",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "long",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "long",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "items",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "items",
+          "range": [
+            6
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "scaled",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 3,
+          "name": "scaled",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test__2",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "short",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

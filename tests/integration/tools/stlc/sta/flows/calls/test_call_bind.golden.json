@@ -1,0 +1,235 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "type": "input"
+        },
+        {
+          "clauses": [
+            {
+              "source": [
+                {
+                  "index": null,
+                  "name": "result"
+                }
+              ],
+              "target": [
+                {
+                  "index": null,
+                  "name": "answer"
+                }
+              ],
+              "type": "bind"
+            }
+          ],
+          "entry": "worker",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [],
+              "is_input": true,
+              "name": "query",
+              "path": [
+                {
+                  "index": null,
+                  "name": "query"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "answer"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "query_1_0@0",
+        "answer_1_1@0"
+      ],
+      "states": {
+        "answer_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "query_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "answer_1_1@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "query_1_0@0",
+            "answer_1_1@0"
+          ]
+        }
+      }
+    },
+    "worker": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "query"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "query",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "worker",
+      "sequence": [
+        "root@",
+        "query_1_0@0",
+        "result_1_1@0"
+      ],
+      "states": {
+        "query_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "result_1_1@0"
+          ]
+        },
+        "result_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "query_1_0@0",
+            "result_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

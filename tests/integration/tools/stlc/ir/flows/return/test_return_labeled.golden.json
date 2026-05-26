@@ -1,0 +1,146 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "processor"
+  },
+  "prompts": {
+    "processor": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "input",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "input",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Data",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Data",
+                "range": null
+              }
+            ],
+            "name": "input",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "intermediate",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "intermediate",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "result",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "processor",
+      "name": "processor",
+      "return": {
+        "fields": [
+          {
+            "alias": "output",
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": "intermediate",
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "intermediate",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Data": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Data",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Data",
+          "range": null
+        }
+      ],
+      "name": "Data"
+    }
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "binds": null,
+          "entry": "section_writer",
+          "extern": null,
+          "kwargs": {
+            "section": {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "path": [
+                {
+                  "name": "sections",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [
+            {
+              "depth": null,
+              "target": [],
+              "type": "ravel"
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "all_pages",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "all_pages",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "all_pages",
+          "range": [
+            6
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "summary",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "summary",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "summary",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "section_writer": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "section",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "section",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "section",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "section",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "pages",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "pages",
+          "range": [
+            2
+          ]
+        }
+      ],
+      "flows": [],
+      "mangled_name": "section_writer",
+      "name": "section_writer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "pages",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

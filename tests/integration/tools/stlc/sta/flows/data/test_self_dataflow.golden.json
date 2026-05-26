@@ -1,0 +1,149 @@
+{
+  "entry_points": {
+    "main": "solver"
+  },
+  "prompts": {
+    "solver": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "type": "input"
+        },
+        {
+          "clauses": [],
+          "prompt": null,
+          "source": [
+            {
+              "index": null,
+              "name": "attempt"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "hint"
+            }
+          ],
+          "type": "dataflow"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 15,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "hint",
+          "range": [
+            0,
+            1
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "attempt",
+          "range": null
+        }
+      ],
+      "flows": {
+        "retry": {
+          "limit": 3,
+          "prompt": "solver",
+          "type": "control"
+        },
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "attempt"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "solver",
+      "sequence": [
+        "root@",
+        "topic_1_0@0",
+        "hint_1_1@0",
+        "attempt_1_2@0"
+      ],
+      "states": {
+        "attempt_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "hint_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "attempt_1_2@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "topic_1_0@0",
+            "hint_1_1@0",
+            "attempt_1_2@0"
+          ]
+        },
+        "topic_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "hint_1_1@0",
+            "attempt_1_2@0"
+          ]
+        }
+      }
+    }
+  }
+}

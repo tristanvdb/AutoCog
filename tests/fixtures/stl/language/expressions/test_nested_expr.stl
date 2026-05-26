@@ -1,0 +1,21 @@
+// Test: nested and composed expressions
+//
+// Exercises: nested arithmetic, expression in expression
+
+define rows = 4;
+define cols = 3;
+
+prompt grid {
+  argument scale = 2;
+
+  is {
+    cells[((rows * cols) * scale)] is text<length=10>;
+    header is text<length=(rows * 10)>;
+    total is text<length=((rows + cols) * scale)>;
+  }
+  return {
+    use total;
+  }
+}
+
+export grid as main;

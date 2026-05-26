@@ -1,0 +1,19 @@
+// Test: complex field paths with ranges and nesting
+//
+// Exercises: fixed count, ranges, nested record arrays
+
+prompt test {
+  is {
+    fixed[5] is text<length=10>;
+    ranged[2:8] is text<length=10>;
+    items[3] is {
+      label is text<length=10>;
+      tags[2] is text<length=5>;
+    }
+  }
+  return {
+    use fixed;
+  }
+}
+
+export test as main;

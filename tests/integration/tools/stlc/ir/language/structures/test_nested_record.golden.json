@@ -1,0 +1,143 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "location"
+  },
+  "prompts": {
+    "location": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "street",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "street",
+                "range": null
+              },
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 1,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "name": "City",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "City",
+                      "range": null
+                    }
+                  ],
+                  "name": "city",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "city",
+                "range": null
+              }
+            ],
+            "name": "address",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "address",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "location",
+      "name": "location",
+      "return": null
+    }
+  },
+  "records": {
+    "Address": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "street",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "street",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "City",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "City",
+                "range": null
+              }
+            ],
+            "name": "city",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "city",
+          "range": null
+        }
+      ],
+      "name": "Address"
+    },
+    "City": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "City",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "City",
+          "range": null
+        }
+      ],
+      "name": "City"
+    }
+  }
+}

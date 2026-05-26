@@ -1,0 +1,84 @@
+{
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "status",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "\"pending\"",
+              "\"active\"",
+              "\"done\""
+            ]
+          },
+          "index": 0,
+          "name": "Status",
+          "range": null
+        }
+      ],
+      "flows": {},
+      "name": "test",
+      "sequence": [
+        "root@",
+        "status_1_0@0",
+        "Status_2_1@0_0",
+        "status_1_0@1"
+      ],
+      "states": {
+        "Status_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "status_1_0@1"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "status_1_0@0"
+          ]
+        },
+        "status_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Status_2_1@0_0",
+            "status_1_0@1"
+          ]
+        },
+        "status_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": []
+        }
+      }
+    }
+  }
+}

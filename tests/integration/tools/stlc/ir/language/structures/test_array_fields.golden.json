@@ -1,0 +1,125 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "collector"
+  },
+  "prompts": {
+    "collector": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Item",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Item",
+                "range": null
+              }
+            ],
+            "name": "fixed",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "fixed",
+          "range": [
+            5
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "ranged",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "ranged",
+          "range": [
+            2,
+            8
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "variable",
+            "refname": null,
+            "type": "enum",
+            "values": [
+              "\"a\"",
+              "\"b\"",
+              "\"c\""
+            ]
+          },
+          "index": 2,
+          "name": "variable",
+          "range": [
+            1,
+            10
+          ]
+        }
+      ],
+      "flows": [],
+      "mangled_name": "collector",
+      "name": "collector",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "fixed",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Item": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Item",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Item",
+          "range": null
+        }
+      ],
+      "name": "Item"
+    }
+  }
+}

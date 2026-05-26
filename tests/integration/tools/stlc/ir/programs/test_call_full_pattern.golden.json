@@ -1,0 +1,202 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "binds": null,
+          "entry": "task_runner",
+          "extern": null,
+          "kwargs": {
+            "task": {
+              "clauses": [
+                {
+                  "target": [],
+                  "type": "mapped"
+                }
+              ],
+              "is_input": true,
+              "path": [
+                {
+                  "name": "steps",
+                  "range": null
+                }
+              ],
+              "prompt": null
+            }
+          },
+          "link_clauses": [
+            {
+              "source": [
+                {
+                  "name": "_",
+                  "range": null
+                }
+              ],
+              "target": [
+                {
+                  "name": "response",
+                  "range": null
+                }
+              ],
+              "type": "bind"
+            },
+            {
+              "depth": null,
+              "target": [],
+              "type": "ravel"
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "responses",
+                "range": null
+              }
+            ]
+          },
+          "type": "call"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "responses",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "responses",
+          "range": [
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "conclusion",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "conclusion",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "conclusion",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "task_runner": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "task",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "task",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "task",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "task",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "response",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "response",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "task_runner",
+      "name": "task_runner",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "response",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

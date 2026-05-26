@@ -1,0 +1,284 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "simple",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "simple",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "long",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "long",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        },
+        {
+          "source": [
+            {
+              "name": "tech",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "tech",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "A formal message."
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "Message",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Message",
+                "range": null
+              }
+            ],
+            "name": "simple",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "simple",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "A casual message."
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 50,
+                  "name": "Message",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Message",
+                "range": null
+              }
+            ],
+            "name": "long",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "long",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [
+              "A technical message."
+            ],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 20,
+                  "name": "Message",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Message",
+                "range": null
+              }
+            ],
+            "name": "tech",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 2,
+          "name": "tech",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "simple",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "long",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "tech",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Message__10_3362459460170534380": {
+      "desc": [
+        "A formal message."
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "Message",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Message",
+          "range": null
+        }
+      ],
+      "name": "Message"
+    },
+    "Message__20_8117829562458841584": {
+      "desc": [
+        "A technical message."
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "Message",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Message",
+          "range": null
+        }
+      ],
+      "name": "Message"
+    },
+    "Message__50_877253011754596158": {
+      "desc": [
+        "A casual message."
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "Message",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Message",
+          "range": null
+        }
+      ],
+      "name": "Message"
+    }
+  }
+}

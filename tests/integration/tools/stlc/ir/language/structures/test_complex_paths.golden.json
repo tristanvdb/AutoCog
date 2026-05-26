@@ -1,0 +1,118 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "fixed",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "fixed",
+          "range": [
+            5
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "ranged",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "ranged",
+          "range": [
+            2,
+            8
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "label",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "label",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 5,
+                  "name": "tags",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "tags",
+                "range": [
+                  2
+                ]
+              }
+            ],
+            "name": "items",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 2,
+          "name": "items",
+          "range": [
+            3
+          ]
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "fixed",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

@@ -1,0 +1,186 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "storage"
+  },
+  "prompts": {
+    "storage": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "Container",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Container",
+                "range": null
+              }
+            ],
+            "name": "small",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "small",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 25,
+                  "name": "Container",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Container",
+                "range": null
+              }
+            ],
+            "name": "medium",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "medium",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 50,
+                  "name": "Container",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Container",
+                "range": null
+              }
+            ],
+            "name": "large",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 2,
+          "name": "large",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "storage",
+      "name": "storage",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "small",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Container__10": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "Container",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Container",
+          "range": null
+        }
+      ],
+      "name": "Container"
+    },
+    "Container__25": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 25,
+            "name": "Container",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Container",
+          "range": null
+        }
+      ],
+      "name": "Container"
+    },
+    "Container__50": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "Container",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Container",
+          "range": null
+        }
+      ],
+      "name": "Container"
+    }
+  }
+}

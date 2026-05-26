@@ -1,0 +1,165 @@
+{
+  "entry_points": {
+    "main": "solver"
+  },
+  "prompts": {
+    "solver": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "problem"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "problem"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "problem",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Problem",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "attempt",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "enum",
+            "values": [
+              "\"yes\"",
+              "\"no\""
+            ]
+          },
+          "index": 2,
+          "name": "success",
+          "range": null
+        }
+      ],
+      "flows": {
+        "retry": {
+          "limit": 5,
+          "prompt": "solver",
+          "type": "control"
+        },
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "attempt"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "solver",
+      "sequence": [
+        "root@",
+        "problem_1_0@0",
+        "Problem_2_1@0_0",
+        "problem_1_0@1",
+        "attempt_1_2@0",
+        "success_1_3@0"
+      ],
+      "states": {
+        "Problem_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "problem_1_0@1",
+            "attempt_1_2@0",
+            "success_1_3@0"
+          ]
+        },
+        "attempt_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "success_1_3@0"
+          ]
+        },
+        "problem_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "Problem_2_1@0_0",
+            "problem_1_0@1",
+            "attempt_1_2@0",
+            "success_1_3@0"
+          ]
+        },
+        "problem_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "attempt_1_2@0",
+            "success_1_3@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "problem_1_0@0"
+          ]
+        },
+        "success_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": []
+        }
+      }
+    }
+  }
+}

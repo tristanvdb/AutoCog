@@ -1,0 +1,9 @@
+// Error: import from non-existent file
+from "this_file_does_not_exist.stl" import Something;
+
+prompt broken {
+  is {
+    name is text;
+  }
+}
+export broken as main;

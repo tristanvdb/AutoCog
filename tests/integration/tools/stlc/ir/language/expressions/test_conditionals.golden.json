@@ -1,0 +1,85 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test__1_true"
+  },
+  "prompts": {
+    "test__1_true": {
+      "channels": [],
+      "context": {
+        "level": 1,
+        "verbose": true
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 20,
+            "name": "output",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "output",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "items",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "items",
+          "range": [
+            3
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 50,
+            "name": "detail",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "detail",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test__1_true",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "output",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

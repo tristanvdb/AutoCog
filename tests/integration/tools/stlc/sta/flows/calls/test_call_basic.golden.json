@@ -1,0 +1,219 @@
+{
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "type": "input"
+        },
+        {
+          "clauses": [],
+          "entry": "worker",
+          "extern": null,
+          "kwargs": [
+            {
+              "clauses": [],
+              "is_input": true,
+              "name": "topic",
+              "path": [
+                {
+                  "index": null,
+                  "name": "topic"
+                }
+              ],
+              "prompt": null
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "answer"
+            }
+          ],
+          "type": "call"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "answer",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "answer"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "sequence": [
+        "root@",
+        "topic_1_0@0",
+        "answer_1_1@0"
+      ],
+      "states": {
+        "answer_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "topic_1_0@0",
+            "answer_1_1@0"
+          ]
+        },
+        "topic_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "answer_1_1@0"
+          ]
+        }
+      }
+    },
+    "worker": {
+      "channels": [
+        {
+          "source": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "target": [
+            {
+              "index": null,
+              "name": "topic"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "topic",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 20,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "worker",
+      "sequence": [
+        "root@",
+        "topic_1_0@0",
+        "result_1_1@0"
+      ],
+      "states": {
+        "result_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "topic_1_0@0",
+            "result_1_1@0"
+          ]
+        },
+        "topic_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "result_1_1@0"
+          ]
+        }
+      }
+    }
+  }
+}

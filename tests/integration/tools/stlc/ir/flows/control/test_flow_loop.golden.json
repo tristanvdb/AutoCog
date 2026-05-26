@@ -1,0 +1,142 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "solver"
+  },
+  "prompts": {
+    "solver": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "problem",
+              "range": null
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "problem",
+                "range": null
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Problem",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Problem",
+                "range": null
+              }
+            ],
+            "name": "problem",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "problem",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "attempt",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "attempt",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "success",
+            "refname": null,
+            "type": "enum",
+            "values": [
+              "\"yes\"",
+              "\"no\""
+            ]
+          },
+          "index": 2,
+          "name": "success",
+          "range": null
+        }
+      ],
+      "flows": [
+        {
+          "label": "retry",
+          "limit": 5,
+          "target": "solver"
+        }
+      ],
+      "mangled_name": "solver",
+      "name": "solver",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "attempt",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Problem": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Problem",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Problem",
+          "range": null
+        }
+      ],
+      "name": "Problem"
+    }
+  }
+}

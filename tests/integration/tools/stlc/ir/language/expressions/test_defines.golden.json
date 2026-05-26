@@ -1,0 +1,68 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 1,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "name": "Item",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "Item",
+                "range": null
+              }
+            ],
+            "name": "item",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "item",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test",
+      "name": "test",
+      "return": null
+    }
+  },
+  "records": {
+    "Item": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "name": "Item",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Item",
+          "range": null
+        }
+      ],
+      "name": "Item"
+    }
+  }
+}

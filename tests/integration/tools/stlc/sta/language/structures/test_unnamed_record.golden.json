@@ -1,0 +1,234 @@
+{
+  "entry_points": {
+    "main": "calculator"
+  },
+  "prompts": {
+    "calculator": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "record"
+          },
+          "index": 0,
+          "name": "operands",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "left",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "right",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "type": "enum",
+            "values": [
+              "\"add\"",
+              "\"subtract\"",
+              "\"multiply\"",
+              "\"divide\""
+            ]
+          },
+          "index": 1,
+          "name": "operation",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "type": "record"
+          },
+          "index": 2,
+          "name": "result",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 5,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "value",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 6,
+          "format": {
+            "type": "enum",
+            "values": [
+              "\"high\"",
+              "\"medium\"",
+              "\"low\""
+            ]
+          },
+          "index": 1,
+          "name": "confidence",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "calculator",
+      "sequence": [
+        "root@",
+        "operands_1_0@0",
+        "left_2_1@0_0",
+        "right_2_2@0_0",
+        "operands_1_0@1",
+        "operation_1_3@0",
+        "result_1_4@0",
+        "value_2_5@0_0",
+        "confidence_2_6@0_0",
+        "result_1_4@1"
+      ],
+      "states": {
+        "confidence_2_6@0_0": {
+          "field": 6,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "result_1_4@1"
+          ]
+        },
+        "left_2_1@0_0": {
+          "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "right_2_2@0_0",
+            "operands_1_0@1",
+            "operation_1_3@0",
+            "result_1_4@0"
+          ]
+        },
+        "operands_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "left_2_1@0_0",
+            "right_2_2@0_0",
+            "operands_1_0@1",
+            "operation_1_3@0",
+            "result_1_4@0"
+          ]
+        },
+        "operands_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "operation_1_3@0",
+            "result_1_4@0"
+          ]
+        },
+        "operation_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "result_1_4@0"
+          ]
+        },
+        "result_1_4@0": {
+          "field": 4,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "value_2_5@0_0",
+            "confidence_2_6@0_0",
+            "result_1_4@1"
+          ]
+        },
+        "result_1_4@1": {
+          "field": 4,
+          "indices": [
+            1
+          ],
+          "successors": []
+        },
+        "right_2_2@0_0": {
+          "field": 2,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "operands_1_0@1",
+            "operation_1_3@0",
+            "result_1_4@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "operands_1_0@0"
+          ]
+        },
+        "value_2_5@0_0": {
+          "field": 5,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "confidence_2_6@0_0",
+            "result_1_4@1"
+          ]
+        }
+      }
+    }
+  }
+}

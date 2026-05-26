@@ -1,0 +1,386 @@
+{
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "fixed",
+          "range": [
+            5,
+            5
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "ranged",
+          "range": [
+            2,
+            8
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "record"
+          },
+          "index": 2,
+          "name": "items",
+          "range": [
+            3,
+            3
+          ]
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "label",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 5,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "tags",
+          "range": [
+            2,
+            2
+          ]
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "fixed"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "test",
+      "sequence": [
+        "root@",
+        "fixed_1_0@0",
+        "fixed_1_0@1",
+        "fixed_1_0@2",
+        "fixed_1_0@3",
+        "fixed_1_0@4",
+        "ranged_1_1@0",
+        "ranged_1_1@1",
+        "ranged_1_1@2",
+        "ranged_1_1@3",
+        "ranged_1_1@4",
+        "ranged_1_1@5",
+        "ranged_1_1@6",
+        "ranged_1_1@7",
+        "items_1_2@0",
+        "label_2_3@0_0",
+        "tags_2_4@0_0",
+        "tags_2_4@0_1",
+        "items_1_2@1",
+        "label_2_3@1_0",
+        "tags_2_4@1_0",
+        "tags_2_4@1_1",
+        "items_1_2@2",
+        "label_2_3@2_0",
+        "tags_2_4@2_0",
+        "tags_2_4@2_1",
+        "tags_2_4@2_2"
+      ],
+      "states": {
+        "fixed_1_0@0": {
+          "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "fixed_1_0@1"
+          ]
+        },
+        "fixed_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "fixed_1_0@2"
+          ]
+        },
+        "fixed_1_0@2": {
+          "field": 0,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "fixed_1_0@3"
+          ]
+        },
+        "fixed_1_0@3": {
+          "field": 0,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "fixed_1_0@4"
+          ]
+        },
+        "fixed_1_0@4": {
+          "field": 0,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "ranged_1_1@0"
+          ]
+        },
+        "items_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "label_2_3@0_0",
+            "tags_2_4@0_0"
+          ]
+        },
+        "items_1_2@1": {
+          "field": 2,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "label_2_3@1_0",
+            "tags_2_4@1_0"
+          ]
+        },
+        "items_1_2@2": {
+          "field": 2,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "label_2_3@2_0",
+            "tags_2_4@2_0"
+          ]
+        },
+        "label_2_3@0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "tags_2_4@0_0"
+          ]
+        },
+        "label_2_3@1_0": {
+          "field": 3,
+          "indices": [
+            1,
+            0
+          ],
+          "successors": [
+            "tags_2_4@1_0"
+          ]
+        },
+        "label_2_3@2_0": {
+          "field": 3,
+          "indices": [
+            2,
+            0
+          ],
+          "successors": [
+            "tags_2_4@2_0"
+          ]
+        },
+        "ranged_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "ranged_1_1@1"
+          ]
+        },
+        "ranged_1_1@1": {
+          "field": 1,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "ranged_1_1@2",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@2": {
+          "field": 1,
+          "indices": [
+            2
+          ],
+          "successors": [
+            "ranged_1_1@3",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@3": {
+          "field": 1,
+          "indices": [
+            3
+          ],
+          "successors": [
+            "ranged_1_1@4",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@4": {
+          "field": 1,
+          "indices": [
+            4
+          ],
+          "successors": [
+            "ranged_1_1@5",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@5": {
+          "field": 1,
+          "indices": [
+            5
+          ],
+          "successors": [
+            "ranged_1_1@6",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@6": {
+          "field": 1,
+          "indices": [
+            6
+          ],
+          "successors": [
+            "ranged_1_1@7",
+            "items_1_2@0"
+          ]
+        },
+        "ranged_1_1@7": {
+          "field": 1,
+          "indices": [
+            7
+          ],
+          "successors": [
+            "items_1_2@0"
+          ]
+        },
+        "root@": {
+          "field": -1,
+          "indices": [],
+          "successors": [
+            "fixed_1_0@0"
+          ]
+        },
+        "tags_2_4@0_0": {
+          "field": 4,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "tags_2_4@0_1"
+          ]
+        },
+        "tags_2_4@0_1": {
+          "field": 4,
+          "indices": [
+            0,
+            1
+          ],
+          "successors": [
+            "items_1_2@1"
+          ]
+        },
+        "tags_2_4@1_0": {
+          "field": 4,
+          "indices": [
+            1,
+            0
+          ],
+          "successors": [
+            "tags_2_4@1_1"
+          ]
+        },
+        "tags_2_4@1_1": {
+          "field": 4,
+          "indices": [
+            1,
+            1
+          ],
+          "successors": [
+            "items_1_2@2"
+          ]
+        },
+        "tags_2_4@2_0": {
+          "field": 4,
+          "indices": [
+            2,
+            0
+          ],
+          "successors": [
+            "tags_2_4@2_1"
+          ]
+        },
+        "tags_2_4@2_1": {
+          "field": 4,
+          "indices": [
+            2,
+            1
+          ],
+          "successors": [
+            "tags_2_4@2_2"
+          ]
+        },
+        "tags_2_4@2_2": {
+          "field": 0,
+          "indices": [],
+          "successors": []
+        }
+      }
+    }
+  }
+}
