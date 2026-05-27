@@ -1,7 +1,6 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/runtime/sta/load.hxx"
-#include "autocog/runtime/sta/parse.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
 #include "autocog/runtime/store/store.hxx"
 
@@ -35,26 +34,6 @@ static nlohmann::json py_to_json(py::handle obj) {
     return nullptr;
 }
 
-// Convert FieldValue to py::object
-static py::object field_value_to_py(sta::FieldValue const & val) {
-    if (val.is_string()) return py::str(val.as_string());
-    if (val.is_record()) {
-        py::dict d;
-        for (auto const & [key, v] : val.as_record()) {
-            d[py::str(key)] = field_value_to_py(v);
-        }
-        return d;
-    }
-    if (val.is_array()) {
-        py::list l;
-        for (auto const & v : val.as_array()) {
-            l.append(field_value_to_py(v));
-        }
-        return l;
-    }
-    return py::none();
-}
-
 PYBIND11_MODULE(runtime_sta_cxx, module) {
     module.doc() = "AutoCog STA runtime — instantiation and parsing";
 
@@ -63,6 +42,14 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
             return store::syntaxes().add(sta::load_syntax(path));
         },
         "Load a syntax description from a JSON file and return a SyntaxID",
+        py::arg("path")
+    );
+
+    module.def("load_search_config",
+        [](std::string const & path) -> int {
+            return store::search_configs().add(sta::load_search_config(path));
+        },
+        "Load a search config from a JSON file and return a SearchConfigID",
         py::arg("path")
     );
 
@@ -82,10 +69,11 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
 
     module.def("instantiate",
         [](int program_id, std::string const & prompt_name,
-           py::dict content, int syntax_id) -> int {
+           py::dict content, int syntax_id, int search_id) -> int {
 
             auto const & program = store::programs().get(program_id);
             auto const & syntax = store::syntaxes().get(syntax_id);
+            auto const & search = store::search_configs().get(search_id);
 
             auto it = program.prompts.find(prompt_name);
             if (it == program.prompts.end()) {
@@ -93,48 +81,15 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
             }
 
             auto content_json = py_to_json(content);
-            auto fta_json = sta::instantiate(it->second, content_json, syntax);
+            auto fta_json = sta::instantiate(it->second, content_json, syntax, search);
             return store::ftas().add(std::move(fta_json));
         },
         "Instantiate an STA prompt into a text-level FTA, return FTAID",
         py::arg("program_id"),
         py::arg("prompt"),
-        py::arg("content") = py::dict(),
-        py::arg("syntax_id") = 0
-    );
-
-    module.def("parse_text",
-        [](int program_id, std::string const & prompt_name,
-           int syntax_id, std::string const & text,
-           py::object content_obj) -> py::dict {
-
-            auto const & program = store::programs().get(program_id);
-            auto const & syntax = store::syntaxes().get(syntax_id);
-
-            auto it = program.prompts.find(prompt_name);
-            if (it == program.prompts.end()) {
-                throw std::runtime_error("Prompt '" + prompt_name + "' not found in program");
-            }
-
-            sta::FieldRecord result;
-            if (!content_obj.is_none()) {
-                nlohmann::json content = py_to_json(content_obj);
-                result = sta::parse_text(it->second, syntax, text, &content);
-            } else {
-                result = sta::parse_text(it->second, syntax, text);
-            }
-            py::dict d;
-            for (auto const & [key, val] : result) {
-                d[py::str(key)] = field_value_to_py(val);
-            }
-            return d;
-        },
-        "Parse STA-formatted text back to a field dict",
-        py::arg("program_id"),
-        py::arg("prompt"),
+        py::arg("content"),
         py::arg("syntax_id"),
-        py::arg("text"),
-        py::arg("content") = py::none()
+        py::arg("search_id")
     );
 
     module.def("release_fta",
@@ -152,6 +107,15 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
         },
         "Get FTA as JSON string",
         py::arg("fta_id")
+    );
+
+    module.def("store_fta_json",
+        [](std::string const & fta_json_str) -> int {
+            auto fta = nlohmann::json::parse(fta_json_str);
+            return store::ftas().add(std::move(fta));
+        },
+        "Store an FTA JSON string and return an FTAID",
+        py::arg("fta_json")
     );
 
     module.def("release_syntax",

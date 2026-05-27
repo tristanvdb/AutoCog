@@ -72,6 +72,22 @@
           "index": 1,
           "name": "result",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -95,15 +111,25 @@
         "subset_1_0@0",
         "subset_1_0@1",
         "subset_1_0@2",
-        "result_1_1@0"
+        "result_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "result_1_1@0": {
           "field": 1,
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "root@": {
           "field": -1,
@@ -175,6 +201,22 @@
             10,
             10
           ]
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "consumer"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -196,7 +238,8 @@
         "items_1_0@6",
         "items_1_0@7",
         "items_1_0@8",
-        "items_1_0@9"
+        "items_1_0@9",
+        "next_1_1@0"
       ],
       "states": {
         "items_1_0@0": {
@@ -284,6 +327,15 @@
           "field": 0,
           "indices": [
             9
+          ],
+          "successors": [
+            "next_1_1@0"
+          ]
+        },
+        "next_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
           ],
           "successors": []
         },

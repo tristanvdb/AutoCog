@@ -24,6 +24,11 @@ def syntax_path(share_dir):
     return str(share_dir / "syntax" / "default.json")
 
 
+@pytest.fixture(scope="session")
+def search_path(share_dir):
+    return str(share_dir / "search" / "default.json")
+
+
 LLAMA3_TEST_MODEL_URL = "https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf"
 LLAMA3_TEST_MODEL_MIN_SIZE = 1_000_000  # ~21MB expected
 
@@ -48,10 +53,10 @@ def _download_model(url, path, min_size):
 
 
 @pytest.fixture(scope="session")
-def engine(syntax_path):
+def engine(syntax_path, search_path):
     """Create a shared Engine with RNG model for all tests."""
     import autocog
-    return autocog.Engine(syntax=syntax_path)
+    return autocog.Engine(syntax=syntax_path, search=search_path)
 
 
 @pytest.fixture(scope="session")
@@ -72,7 +77,7 @@ def llama3_model_path(repo_root):
 
 
 @pytest.fixture(scope="session")
-def real_engine(syntax_path, llama3_model_path):
+def real_engine(syntax_path, search_path, llama3_model_path):
     """Engine with llama3-test model. Skips if model unavailable."""
     import autocog
-    return autocog.Engine(model=llama3_model_path, syntax=syntax_path, n_ctx=2048)
+    return autocog.Engine(model=llama3_model_path, syntax=syntax_path, search=search_path, n_ctx=2048)

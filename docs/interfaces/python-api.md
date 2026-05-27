@@ -59,13 +59,14 @@ Wraps a compiled or loaded STA program.
 Local execution engine. Holds a model and syntax configuration.
 
 ```python
-engine = autocog.Engine(model=None, syntax=None, n_ctx=4096)
+engine = autocog.Engine(model=None, syntax=None, search=None, n_ctx=4096)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `model` | str or None | Path to GGUF model file. `None` for RNG model. |
 | `syntax` | str | Path to syntax JSON file (required) |
+| `search` | str | Path to search config JSON file (required) |
 | `n_ctx` | int | Model context size (default: 4096) |
 
 #### engine.run
@@ -120,7 +121,7 @@ Provides the same `run()` and `evaluate_prompt()` methods as `Engine`. Channel r
 
 ```python
 # Local development
-engine = autocog.Engine(syntax="syntax.json")
+engine = autocog.Engine(syntax="syntax.json", search="search.json")
 result = engine.run(prog, query="test")
 
 # Deploy to remote GPU — same code, different engine

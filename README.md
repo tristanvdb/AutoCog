@@ -76,7 +76,7 @@ AutoCog provides a command-line interface with subcommands:
 autocog compile --stl program.stl -o program.sta.json
 
 # Run a program
-autocog run --stl program.stl --rng --input '{"topic":"Science","question":"2+2?","choices":["3","4","5"]}'
+autocog run --stl program.stl --rng --input '{"topic":"Science","question":"2+2?","choices":["3","4","5","6"]}'
 autocog run --sta program.sta.json --model model.gguf --input data.json
 
 # Package as a .stapp (Structured Thought App)

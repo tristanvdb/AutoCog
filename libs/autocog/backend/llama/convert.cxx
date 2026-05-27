@@ -12,6 +12,12 @@ namespace autocog::backend::llama {
 
 using namespace autocog::runtime::fta;
 
+static void require_field(nlohmann::json const & j, std::string const & uid, char const * field) {
+    if (!j.contains(field))
+        throw std::runtime_error(
+            "FTA action '" + uid + "' missing required field '" + std::string(field) + "'");
+}
+
 FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     Model & model = Manager::get_model(id);
     FTA fta;
@@ -74,12 +80,17 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             std::optional<float> diversity = std::nullopt;
 
             if (text_level) {
-                // Text-level: use provided values or defaults
-                threshold = action_json.value("threshold", 0.1f);
-                length    = action_json.value("length", 50u);
-                beams     = action_json.value("beams", 4u);
-                ahead     = action_json.value("ahead", 2u);
-                width     = action_json.value("width", 1u);
+                require_field(action_json, uid, "threshold");
+                require_field(action_json, uid, "length");
+                require_field(action_json, uid, "beams");
+                require_field(action_json, uid, "ahead");
+                require_field(action_json, uid, "width");
+                require_field(action_json, uid, "stop_text");
+                threshold = action_json["threshold"];
+                length    = action_json["length"];
+                beams     = action_json["beams"];
+                ahead     = action_json["ahead"];
+                width     = action_json["width"];
             } else {
                 threshold = action_json["threshold"];
                 length    = action_json["length"];
@@ -100,8 +111,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             Completion* completion_action = static_cast<Completion*>(action.get());
 
             if (text_level) {
-                // Tokenize stop string (default: newline)
-                std::string stop_str = action_json.value("stop_text", "\n");
+                std::string stop_str = action_json["stop_text"];
                 completion_action->stop = model.tokenize(stop_str, false, true);
                 
                 // Full vocab mask (all tokens allowed)
@@ -125,8 +135,10 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             unsigned width;
 
             if (text_level) {
-                threshold = action_json.value("threshold", 0.1f);
-                width     = action_json.value("width", 1u);
+                require_field(action_json, uid, "threshold");
+                require_field(action_json, uid, "width");
+                threshold = action_json["threshold"];
+                width     = action_json["width"];
             } else {
                 threshold = action_json["threshold"];
                 width     = action_json["width"];
@@ -183,44 +195,53 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     return fta;
 }
 
-nlohmann::json convert_ftt_to_json(ModelID const id, FTT const & ftt) {
+nlohmann::json convert_ftt_to_json(ModelID const id, nlohmann::json const & fta_json,
+                                   FTA const & fta, FTT const & ftt) {
     Model & model = Manager::get_model(id);
+    auto const & fta_actions = fta_json["actions"];
     
     nlohmann::json result;
     
-    // Basic fields
+    // Action ID and UID
     result["action"] = ftt.action;
+    if (ftt.action < fta.actions.size()) {
+        result["uid"] = fta.actions[ftt.action]->name;
+        // Copy field metadata from FTA JSON if present
+        auto const & aj = fta_actions[ftt.action];
+        if (aj.contains("field")) result["field"] = aj["field"];
+        if (aj.contains("indices")) result["indices"] = aj["indices"];
+    }
     
-    // Convert tokens
+    // Detokenized text
+    if (!ftt.tokens.empty()) {
+        result["text"] = model.detokenize(ftt.tokens, false, false);
+    } else {
+        result["text"] = "";
+    }
+    
+    // Logprobs
+    result["logprob"] = ftt.logprob;
+    nlohmann::json logprobs_array = nlohmann::json::array();
+    for (float lpb : ftt.logprobs) {
+        logprobs_array.push_back(lpb);
+    }
+    result["logprobs"] = logprobs_array;
+    result["length"] = ftt.length;
+    result["pruned"] = ftt.pruned;
+    
+    // Token IDs
     nlohmann::json token_array = nlohmann::json::array();
     for (TokenID token : ftt.tokens) {
         token_array.push_back(token);
     }
     result["tokens"] = token_array;
     
-    // Convert probabilities
-    nlohmann::json logprobs_array = nlohmann::json::array();
-    for (float lpb : ftt.logprobs) {
-        logprobs_array.push_back(lpb);
-    }
-    result["logprobs"] = logprobs_array;
-    result["logprob"] = ftt.logprob;
-    result["length"] = ftt.length;
-    
-    // Convert children recursively
+    // Children
     nlohmann::json children_array = nlohmann::json::array();
     for (const FTT& child : ftt.get_children()) {
-        children_array.push_back(convert_ftt_to_json(id, child));
+        children_array.push_back(convert_ftt_to_json(id, fta_json, fta, child));
     }
     result["children"] = children_array;
-    
-    // Add metadata
-    result["pruned"] = ftt.pruned;
-    
-    // Optional: Add text representation of tokens for debugging
-    if (!ftt.tokens.empty()) {
-        result["text"] = model.detokenize(ftt.tokens, false, false);
-    }
     
     return result;
 }

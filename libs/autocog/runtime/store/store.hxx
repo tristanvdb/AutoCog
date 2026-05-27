@@ -3,6 +3,7 @@
 
 #include "autocog/runtime/sta/state.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
+#include "autocog/runtime/sta/search.hxx"
 
 #include <nlohmann/json.hpp>
 
@@ -52,6 +53,7 @@ class Registry {
 // Global registries — shared across all binding modules via the shared library
 Registry<sta::Program> & programs();
 Registry<sta::Syntax>  & syntaxes();
+Registry<sta::SearchConfig> & search_configs();
 Registry<nlohmann::json> & ftas();
 
 }

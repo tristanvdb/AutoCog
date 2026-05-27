@@ -90,6 +90,22 @@
           "index": 1,
           "name": "answer",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -111,11 +127,21 @@
       "sequence": [
         "root@",
         "topic_1_0@0",
-        "answer_1_1@0"
+        "answer_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
         "answer_1_1@0": {
           "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "next_1_2@0"
+          ]
+        },
+        "next_1_2@0": {
+          "field": 2,
           "indices": [
             0
           ],
@@ -182,6 +208,22 @@
           "index": 1,
           "name": "result",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -203,15 +245,25 @@
       "sequence": [
         "root@",
         "topic_1_0@0",
-        "result_1_1@0"
+        "result_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "result_1_1@0": {
           "field": 1,
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "root@": {
           "field": -1,

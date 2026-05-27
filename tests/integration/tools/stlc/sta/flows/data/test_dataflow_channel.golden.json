@@ -102,6 +102,22 @@
           "index": 3,
           "name": "reflection",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 4,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 4,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -125,7 +141,8 @@
         "problem_1_0@0",
         "hint_1_1@0",
         "solution_1_2@0",
-        "reflection_1_3@0"
+        "reflection_1_3@0",
+        "next_1_4@0"
       ],
       "states": {
         "hint_1_1@0": {
@@ -136,6 +153,13 @@
           "successors": [
             "solution_1_2@0"
           ]
+        },
+        "next_1_4@0": {
+          "field": 4,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "problem_1_0@0": {
           "field": 0,
@@ -151,7 +175,9 @@
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_4@0"
+          ]
         },
         "root@": {
           "field": -1,

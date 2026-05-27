@@ -1,0 +1,18 @@
+{
+  "completion": {
+    "beams": 4,
+    "ahead": 2,
+    "width": 1,
+    "threshold": 0.1,
+    "repetition": null,
+    "diversity": null,
+    "stop": "\n"
+  },
+  "choice": {
+    "threshold": 0.1,
+    "width": 1
+  },
+  "text": {
+    "evaluate": false
+  }
+}

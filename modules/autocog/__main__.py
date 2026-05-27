@@ -129,7 +129,7 @@ def cmd_rpc(args):
     model_path = args.model if not args.rng else None
     app = create_app(
         program=prog, model_path=model_path,
-        syntax_path=args.syntax, n_ctx=args.ctx
+        syntax_path=args.syntax, search_path=args.search, n_ctx=args.ctx
     )
     try:
         uvicorn.run(app, host=args.host, port=args.port)
@@ -148,7 +148,8 @@ def cmd_serve(args):
     model_path = args.model if not args.rng else None
     app = create_app(
         program=prog, externals=externals,
-        model_path=model_path, syntax_path=args.syntax, n_ctx=args.ctx
+        model_path=model_path, syntax_path=args.syntax,
+        search_path=args.search, n_ctx=args.ctx
     )
     try:
         uvicorn.run(app, host=args.host, port=args.port)
@@ -216,11 +217,13 @@ def _cmd_run_inner(args, prog, include_paths):
             raise FileNotFoundError(f"Model file not found: {args.model}")
         if not os.path.isfile(args.syntax):
             raise FileNotFoundError(f"Syntax file not found: {args.syntax}")
-        engine = autocog.Engine(model=args.model, syntax=args.syntax, n_ctx=args.ctx)
+        engine = autocog.Engine(model=args.model, syntax=args.syntax,
+                                search=args.search, n_ctx=args.ctx)
     elif args.rng:
         if not os.path.isfile(args.syntax):
             raise FileNotFoundError(f"Syntax file not found: {args.syntax}")
-        engine = autocog.Engine(syntax=args.syntax)
+        engine = autocog.Engine(syntax=args.syntax,
+                                search=args.search)
     else:
         print("Error: --model or --rng required", file=sys.stderr)
         sys.exit(1)
@@ -326,7 +329,11 @@ def main():
     p_run.add_argument("--rng", action="store_true", help="Use built-in RNG model")
     p_run.add_argument(
         "--syntax", default=None,
-        help="Syntax description JSON (default: built-in)",
+        help="Syntax description JSON (default: share/syntax/default.json)",
+    )
+    p_run.add_argument(
+        "--search", default=None,
+        help="Search config JSON (default: share/search/default.json)",
     )
     p_run.add_argument("--entry", default="main", help="Entry point (default: main)")
     p_run.add_argument("--ctx", type=int, default=4096, help="Model context size")
@@ -358,13 +365,15 @@ def main():
     p_rpc = subparsers.add_parser("rpc", help="Serve prompt evaluation (level 2)")
     _add_program_args(p_rpc)
     _add_server_args(p_rpc)
-    p_rpc.add_argument("--syntax", default=None, help="Syntax description JSON")
+    p_rpc.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/default.json)")
+    p_rpc.add_argument("--search", default=None, help="Search config JSON (default: share/search/default.json)")
 
     # --- serve (level 1) ---
     p_serve = subparsers.add_parser("serve", help="Serve full app with web UI (level 1)")
     _add_program_args(p_serve)
     _add_server_args(p_serve)
-    p_serve.add_argument("--syntax", default=None, help="Syntax description JSON")
+    p_serve.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/default.json)")
+    p_serve.add_argument("--search", default=None, help="Search config JSON (default: share/search/default.json)")
 
     args = parser.parse_args()
 
@@ -376,6 +385,16 @@ def main():
             args.syntax = default
         else:
             print("Error: --syntax required (could not find default)", file=sys.stderr)
+            sys.exit(1)
+
+    # Default search config (for run, rpc, serve — NOT backend, which gets it from FTA)
+    if args.command in ("run", "rpc", "serve") and getattr(args, 'search', None) is None:
+        from .program import _default_search_path
+        default = _default_search_path()
+        if default:
+            args.search = default
+        else:
+            print("Error: --search required (could not find default)", file=sys.stderr)
             sys.exit(1)
 
     try:

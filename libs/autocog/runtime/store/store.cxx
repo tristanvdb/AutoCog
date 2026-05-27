@@ -13,6 +13,11 @@ Registry<sta::Syntax> & syntaxes() {
     return instance;
 }
 
+Registry<sta::SearchConfig> & search_configs() {
+    static Registry<sta::SearchConfig> instance;
+    return instance;
+}
+
 Registry<nlohmann::json> & ftas() {
     static Registry<nlohmann::json> instance;
     return instance;

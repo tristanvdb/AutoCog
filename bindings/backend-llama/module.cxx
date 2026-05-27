@@ -97,49 +97,6 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         py::arg("fta_json")
     );
 
-    module.def("get_best",
-        [](ModelID model, EvalID eval_id, int n) -> py::list {
-            FTT const & ftt = Manager::retrieve(eval_id);
-            Model & mdl = Manager::get_model(model);
-
-            // Extract best paths
-            std::function<void(FTT const &, std::vector<TokenID>, std::vector<std::vector<TokenID>> &)> collect =
-                [&](FTT const & node, std::vector<TokenID> path, std::vector<std::vector<TokenID>> & paths) {
-                    path.insert(path.end(), node.tokens.begin(), node.tokens.end());
-                    bool has_children = false;
-                    for (auto const & child : node.get_children()) {
-                        if (!child.pruned) {
-                            has_children = true;
-                            collect(child, path, paths);
-                        }
-                    }
-                    if (!has_children) {
-                        paths.push_back(path);
-                    }
-                };
-
-            std::vector<std::vector<TokenID>> token_paths;
-            collect(ftt, {}, token_paths);
-
-            py::list result;
-            for (int i = 0; i < std::min(n, static_cast<int>(token_paths.size())); ++i) {
-                auto text = mdl.detokenize(token_paths[i], false, false);
-                // Replace invalid UTF-8 bytes with ? for safety
-                std::string safe;
-                safe.reserve(text.size());
-                for (unsigned char c : text) {
-                    safe.push_back(c < 0x80 ? c : '?');
-                }
-                result.append(safe);
-            }
-            return result;
-        },
-        "Get the n best path texts from an FTT",
-        py::arg("model"),
-        py::arg("ftt_id"),
-        py::arg("n") = 1
-    );
-
     module.def("release_ftt",
         [](EvalID eval_id) {
             Manager::rm_eval(eval_id);
@@ -149,9 +106,12 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     );
 
     module.def("get_ftt_json",
-        [](ModelID model_id, EvalID eval_id) -> std::string {
+        [](ModelID model_id, int fta_id, EvalID eval_id) -> std::string {
             FTT const & ftt = Manager::retrieve(eval_id);
             Model & model = Manager::get_model(model_id);
+            auto const & fta_json = store::ftas().get(fta_id);
+            auto const & fta_actions = fta_json["actions"];
+
             std::function<nlohmann::json(FTT const &)> serialize =
                 [&](FTT const & node) -> nlohmann::json {
                     nlohmann::json j;
@@ -160,6 +120,13 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
                     j["length"] = node.length;
                     j["pruned"] = node.pruned;
                     j["text"] = model.detokenize(node.tokens, false, false);
+                    // Copy uid and field metadata from FTA
+                    if (node.action < fta_actions.size()) {
+                        auto const & aj = fta_actions[node.action];
+                        j["uid"] = aj["uid"];
+                        if (aj.contains("field")) j["field"] = aj["field"];
+                        if (aj.contains("indices")) j["indices"] = aj["indices"];
+                    }
                     nlohmann::json lps = nlohmann::json::array();
                     for (auto lp : node.logprobs) lps.push_back(lp);
                     j["logprobs"] = lps;
@@ -172,8 +139,9 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
                 };
             return serialize(ftt).dump();
         },
-        "Get FTT as JSON string",
+        "Get FTT as JSON string with uid and field metadata",
         py::arg("model_id"),
+        py::arg("fta_id"),
         py::arg("ftt_id")
     );
 }

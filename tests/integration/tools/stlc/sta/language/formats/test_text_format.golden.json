@@ -56,6 +56,22 @@
           "index": 2,
           "name": "summary",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 3,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 3,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -78,7 +94,8 @@
         "root@",
         "title_1_0@0",
         "content_1_1@0",
-        "summary_1_2@0"
+        "summary_1_2@0",
+        "next_1_3@0"
       ],
       "states": {
         "content_1_1@0": {
@@ -89,6 +106,13 @@
           "successors": [
             "summary_1_2@0"
           ]
+        },
+        "next_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "root@": {
           "field": -1,
@@ -102,7 +126,9 @@
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_3@0"
+          ]
         },
         "title_1_0@0": {
           "field": 0,

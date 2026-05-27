@@ -1,4 +1,4 @@
-# End-to-end pipeline tests: stlc → ista → xfta --rng --best → psta
+# End-to-end pipeline tests: stlc → ista → xfta --rng → psta
 
 set(STA_GOLDEN ${CMAKE_BINARY_DIR}/tests/integration/tools/stlc/sta/golden)
 
@@ -10,9 +10,9 @@ add_test(
     COMMAND ${CMAKE_COMMAND} -E env
         bash -c "
             set -e
-            FTA=\$(mktemp) RESULT=\$(mktemp)
-            $<TARGET_FILE:autocog_ista> -d ${CMAKE_CURRENT_BINARY_DIR}/mcq_data.json -o \$FTA ${STA_GOLDEN}/language/structures/test_basic_record.golden.json 2>/dev/null
-            $<TARGET_FILE:autocog_xfta> --rng --best \$FTA 2>/dev/null | $<TARGET_FILE:autocog_psta> ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > \$RESULT
+            FTA=$(mktemp) RESULT=$(mktemp)
+            $<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json -d ${CMAKE_CURRENT_BINARY_DIR}/mcq_data.json -o \$FTA ${STA_GOLDEN}/language/structures/test_basic_record.golden.json 2>/dev/null
+            $<TARGET_FILE:autocog_xfta> --rng \$FTA | $<TARGET_FILE:autocog_psta> ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > \$RESULT
             ${Python_EXECUTABLE} -c \"
 import json
 r = json.load(open('\$RESULT'))

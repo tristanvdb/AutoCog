@@ -7,7 +7,7 @@ function(add_ista_test test_name sta_golden)
     add_test(
         NAME ista_${test_name}
         COMMAND ${CMAKE_COMMAND} -E env
-            bash -c "$<TARGET_FILE:autocog_ista> --text ${sta_golden} > /dev/null"
+            bash -c "$<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json --text ${sta_golden} > /dev/null"
     )
     set_tests_properties(ista_${test_name} PROPERTIES LABELS "ista")
 endfunction()
@@ -30,24 +30,24 @@ add_ista_test(call_basic          ${STA_GOLDEN}/flows/calls/test_call_basic.gold
 # -p prompt name
 add_test(NAME ista_args_prompt
          COMMAND ${CMAKE_COMMAND} -E env
-             bash -c "$<TARGET_FILE:autocog_ista> -p test --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
+             bash -c "$<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json -p test --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
 set_tests_properties(ista_args_prompt PROPERTIES LABELS "ista;args")
 
 # -s syntax file
 add_test(NAME ista_args_syntax
          COMMAND ${CMAKE_COMMAND} -E env
-             bash -c "$<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
+             bash -c "$<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
 set_tests_properties(ista_args_syntax PROPERTIES LABELS "ista;args")
 
 # -o output file
 add_test(NAME ista_args_output
          COMMAND ${CMAKE_COMMAND} -E env
-             bash -c "TMPF=\$(mktemp) && $<TARGET_FILE:autocog_ista> -o \$TMPF ${STA_GOLDEN}/language/structures/test_basic_record.golden.json && test -s \$TMPF && rm -f \$TMPF")
+             bash -c "TMPF=\$(mktemp) && $<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json -o \$TMPF ${STA_GOLDEN}/language/structures/test_basic_record.golden.json && test -s \$TMPF && rm -f \$TMPF")
 set_tests_properties(ista_args_output PROPERTIES LABELS "ista;args")
 
 # -d data file
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/test_data.json "{\"topic\":\"test\"}")
 add_test(NAME ista_args_data
          COMMAND ${CMAKE_COMMAND} -E env
-             bash -c "$<TARGET_FILE:autocog_ista> -d ${CMAKE_CURRENT_BINARY_DIR}/test_data.json --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
+             bash -c "$<TARGET_FILE:autocog_ista> -s ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${PROJECT_SOURCE_DIR}/share/search/default.json -d ${CMAKE_CURRENT_BINARY_DIR}/test_data.json --text ${STA_GOLDEN}/language/structures/test_basic_record.golden.json > /dev/null")
 set_tests_properties(ista_args_data PROPERTIES LABELS "ista;args")

@@ -825,6 +825,27 @@ std::optional<int> Driver::run_generate() {
         std::vector<ir::Field const *> flat_fields;
         collect_fields(flat_fields, pstas.fields, pmt.fields);
 
+        // Add implicit "next" field for flow control
+        // This encodes flow labels as an enum so the state graph
+        // handles flow selection like any other field.
+        {
+            auto flow_map = extract_flows(pmt);
+            if (!flow_map.empty()) {
+                sta::FieldInfo next_field;
+                next_field.name = "next";
+                next_field.depth = 1;
+                next_field.index = static_cast<int>(pstas.fields.size());
+                next_field.flat_index = static_cast<int>(pstas.fields.size());
+                sta::EnumFormat ef;
+                for (auto const & [label, _] : flow_map) {
+                    ef.values.push_back(label);
+                }
+                next_field.format = ef;
+                next_field.desc.push_back("the next step");
+                pstas.fields.push_back(std::move(next_field));
+            }
+        }
+
 #if !defined(NDEBUG)
         std::cerr << "  flat: " << pstas.fields.size() << " fields" << std::endl;
         for (size_t i = 0; i < pstas.fields.size(); ++i) {

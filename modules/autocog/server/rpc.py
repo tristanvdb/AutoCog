@@ -25,7 +25,7 @@ class SubmitResponse(BaseModel):
 
 
 def create_app(program=None, model_path: str = None, syntax_path: str = None,
-               n_ctx: int = 4096) -> FastAPI:
+               search_path: str = None, n_ctx: int = 4096) -> FastAPI:
     """Create the level-2 RPC server."""
     import autocog
 
@@ -35,6 +35,7 @@ def create_app(program=None, model_path: str = None, syntax_path: str = None,
     engine = autocog.Engine(
         model=model_path if model_path else None,
         syntax=syntax_path,
+        search=search_path,
         n_ctx=n_ctx
     )
 

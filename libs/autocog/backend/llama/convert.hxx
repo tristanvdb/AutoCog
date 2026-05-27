@@ -9,8 +9,11 @@ namespace autocog::runtime::fta { class FTA; class FTT; }
 
 namespace autocog::backend::llama {
 
-runtime::fta::FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata);
-nlohmann::json convert_ftt_to_json(ModelID const id, runtime::fta::FTT const & ftt);
+runtime::fta::FTA convert_json_to_fta(
+    ModelID const id, nlohmann::json const & jsondata);
+nlohmann::json convert_ftt_to_json(
+    ModelID const id, nlohmann::json const & fta_json,
+    runtime::fta::FTA const & fta, runtime::fta::FTT const & ftt);
 
 }
 

@@ -2,6 +2,13 @@
 
 The `autocog` command is installed via `pip install autocog`. It provides subcommands for compilation, packaging, execution, and serving.
 
+## Global Options
+
+```
+autocog --version       Show version
+autocog --build-info    Show build configuration (compiler, CUDA, etc.)
+```
+
 ## autocog compile
 
 Compile an STL program to STA JSON.
@@ -76,12 +83,15 @@ autocog run (--stl <file> | --sta <file> | --app <file>)
 | `--recompile` | Force recompilation from source (.stapp only) |
 | `--model FILE` | GGUF model file |
 | `--rng` | Use built-in RNG model (for testing) |
-| `--syntax FILE` | Syntax description JSON (default: auto-detected) |
+| `--syntax FILE` | Syntax description JSON (default: `share/syntax/default.json`) |
+| `--search FILE` | Search config JSON (default: `share/search/default.json`) |
 | `--ctx N` | Model context size (default: 4096) |
 | `--input JSON` | Input data — inline JSON string or path to a JSON file |
 | `--entry NAME` | Entry point name (default: `main`) |
 | `--max-steps N` | Maximum prompt steps (default: 100) |
 | `-o, --output FILE` | Output file (default: stdout) |
+| `--record KINDS` | Record artifacts: comma-separated subset of `input,frame,text,fta,ftt` |
+| `--record-path DIR` | Directory for recorded artifacts (default: temp dir) |
 | `-v, --verbose` | Show step-by-step progress |
 
 One of `--stl`, `--sta`, or `--app` is required. One of `--model` or `--rng` is required.
@@ -90,7 +100,7 @@ One of `--stl`, `--sta`, or `--app` is required. One of `--model` or `--rng` is 
 
 ```bash
 # From STL source
-autocog run --stl select.stl --rng --input '{"topic":"Sci","question":"2+2?","choices":["3","4","5"]}'
+autocog run --stl select.stl --rng --input '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'
 
 # From pre-compiled STA
 autocog run --sta program.sta.json --model model.gguf --input data.json
@@ -117,7 +127,8 @@ autocog serve (--stl <file> | --sta <file> | --app <file>)
 |------|-------------|
 | `--stl/--sta/--app` | Program source (same as `run`) |
 | `--model/--rng` | Model selection (same as `run`) |
-| `--syntax FILE` | Syntax description JSON |
+| `--syntax FILE` | Syntax description JSON (default: `share/syntax/default.json`) |
+| `--search FILE` | Search config JSON (default: `share/search/default.json`) |
 | `--host HOST` | Bind address (default: `0.0.0.0`) |
 | `--port PORT` | Bind port (default: `8080`) |
 
@@ -162,7 +173,7 @@ autocog rpc --sta program.sta.json --model model.gguf --port 8080
 Start an inference server (FTA evaluation).
 
 ```
-autocog backend [--model <file>] [--rng] [--ctx N] [--host HOST] [--port PORT]
+autocog backend [--model <file>] [--rng] [--search <file>] [--ctx N] [--host HOST] [--port PORT]
 ```
 
 | Flag | Description |

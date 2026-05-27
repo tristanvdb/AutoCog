@@ -172,3 +172,32 @@ Formatting rules for how prompts are rendered as text. Controls field labels, in
 **Used by:** `ista`, `psta`, `autocog run`, `autocog serve`, `autocog rpc`
 
 The syntax file format is documented in `share/syntax/default.json`.
+
+## Search Config (`.json`)
+
+Controls beam search parameters for FTA evaluation. All fields are required.
+
+```json
+{
+  "completion": {
+    "beams": 4,          // parallel beams during completion
+    "ahead": 2,          // look-ahead tokens for beam search
+    "width": 1,          // keep top-N beams after completion
+    "threshold": 0.1,    // prune beams below this probability
+    "repetition": null,  // repetition penalty weight (null = disabled)
+    "diversity": null,   // diversity bonus weight (null = disabled)
+    "stop": "\n"         // stop token string for completions
+  },
+  "choice": {
+    "threshold": 0.1,    // prune choices below this probability
+    "width": 1           // keep top-N choices
+  },
+  "text": {
+    "evaluate": false    // compute logprobs for text (fixed) nodes
+  }
+}
+```
+
+Bundled configurations:
+- `share/search/default.json` — standard settings (beams=4, ahead=2)
+- `share/search/fast.json` — minimal search (beams=1, ahead=0)

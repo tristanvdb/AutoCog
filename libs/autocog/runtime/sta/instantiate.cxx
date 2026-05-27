@@ -226,6 +226,7 @@ struct FTABuilder {
     PromptSTA const & prompt;
     json const & content;
     Syntax const & syntax;
+    SearchConfig const & search;
     std::vector<int> parent_map;
     std::set<int> described_fields;
     std::map<std::string, int> memo;  // state_tag → entry action ID
@@ -259,8 +260,8 @@ struct FTABuilder {
         return {prev == field_id ? field_id : prev, endl_id};
     }
 
-    FTABuilder(PromptSTA const & p, json const & c, Syntax const & s)
-        : prompt(p), content(c), syntax(s), parent_map(build_parent_map(p.fields)) {}
+    FTABuilder(PromptSTA const & p, json const & c, Syntax const & s, SearchConfig const & sc)
+        : prompt(p), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
 
     int add_text(std::string const & uid, std::string const & text) {
         int id = action_id++;
@@ -273,7 +274,10 @@ struct FTABuilder {
     int add_choose(std::string const & uid, std::vector<std::string> const & choices) {
         int id = action_id++;
         actions.push_back({
-            {"uid", uid}, {"type", "choose"}, {"choices", choices}, {"successors", json::array()}
+            {"uid", uid}, {"type", "choose"}, {"choices", choices},
+            {"threshold", search.choice.threshold},
+            {"width", search.choice.width},
+            {"successors", json::array()}
         });
         return id;
     }
@@ -281,10 +285,17 @@ struct FTABuilder {
     int add_complete(std::string const & uid, CompletionFormat const & cf) {
         int id = action_id++;
         json j = {
-            {"uid", uid}, {"type", "complete"}, {"successors", json::array()}
+            {"uid", uid}, {"type", "complete"},
+            {"length", cf.length.has_value() ? cf.length.value() : 50},
+            {"threshold", cf.threshold.has_value() ? cf.threshold.value() : search.completion.threshold},
+            {"beams", search.completion.beams},
+            {"ahead", search.completion.ahead},
+            {"width", search.completion.width},
+            {"stop_text", search.completion.stop},
+            {"successors", json::array()}
         };
-        if (cf.length.has_value()) j["length"] = cf.length.value();
-        if (cf.threshold.has_value()) j["threshold"] = cf.threshold.value();
+        if (search.completion.repetition) j["repetition"] = *search.completion.repetition;
+        if (search.completion.diversity) j["diversity"] = *search.completion.diversity;
         actions.push_back(j);
         return id;
     }
@@ -313,6 +324,14 @@ struct FTABuilder {
         int field_id = -1;
         int choose_count = 0;
 
+        // Metadata for psta: field index and indices enable direct field lookup
+        auto add_field_meta = [&](int id) {
+            actions[id]["field"] = succ.field;
+            json idx = json::array();
+            for (auto i : succ.indices) idx.push_back(i);
+            actions[id]["indices"] = idx;
+        };
+
         std::visit([&](auto const & fmt) {
             using F = std::decay_t<decltype(fmt)>;
             if constexpr (std::is_same_v<F, std::monostate>) {
@@ -324,6 +343,7 @@ struct FTABuilder {
                 } else {
                     field_id = add_complete("field." + succ_safe, fmt);
                 }
+                add_field_meta(field_id);
             } else if constexpr (std::is_same_v<F, EnumFormat>) {
                 if (val && !val->is_null()) {
                     std::string text = val->is_string() ? val->get<std::string>() : val->dump();
@@ -332,6 +352,7 @@ struct FTABuilder {
                     field_id = add_choose("field." + succ_safe, fmt.values);
                     choose_count = static_cast<int>(fmt.values.size());
                 }
+                add_field_meta(field_id);
             } else if constexpr (std::is_same_v<F, ChoiceFormat>) {
                 if (val && !val->is_null()) {
                     std::string text = val->is_string() ? val->get<std::string>() : val->dump();
@@ -341,6 +362,7 @@ struct FTABuilder {
                     field_id = add_choose("field." + succ_safe, choices);
                     choose_count = static_cast<int>(choices.size());
                 }
+                add_field_meta(field_id);
             }
         }, fld.format);
 
@@ -435,8 +457,9 @@ struct FTABuilder {
 // Instantiate
 // ============================================================================
 
-json instantiate(PromptSTA const & prompt, json const & content, Syntax const & syntax) {
-    FTABuilder b(prompt, content, syntax);
+json instantiate(PromptSTA const & prompt, json const & content,
+                 Syntax const & syntax, SearchConfig const & search) {
+    FTABuilder b(prompt, content, syntax, search);
 
     // Build header
     std::ostringstream hdr;
@@ -460,16 +483,6 @@ json instantiate(PromptSTA const & prompt, json const & content, Syntax const & 
             for (auto const & d : fld.desc) hdr << " " << d;
         }
         hdr << "\n";
-    }
-    if (!prompt.flows.empty()) {
-        hdr << "next: select which of ";
-        bool first = true;
-        for (auto const & [name, _] : prompt.flows) {
-            if (!first) hdr << ",";
-            hdr << name;
-            first = false;
-        }
-        hdr << " will be the next step.\n";
     }
     hdr << "```";
 
@@ -496,40 +509,11 @@ json instantiate(PromptSTA const & prompt, json const & content, Syntax const & 
     int header_id = b.add_text("header", hdr.str());
 
     // Recursive instantiation from root
+    // The "next" field (flow control) is now a regular field in the state graph,
+    // so it's instantiated by the recursive walk like any other field.
     int first_branch = b.instantiate_rec("root@");
     if (first_branch >= 0) {
         b.connect(header_id, first_branch);
-    }
-
-    // Find terminal states (no successors) and connect to flow control
-    // Terminal states are those where instantiate_rec returned -1,
-    // i.e., the last endl nodes with no further branch connected.
-    // We find them by looking for endl nodes with empty successors.
-    int next_field = b.add_text("next.field", "next: ");
-
-    for (size_t i = 0; i < b.actions.size(); ++i) {
-        auto const & a = b.actions[i];
-        std::string uid = a["uid"].get<std::string>();
-        if (uid.substr(0, 5) == "endl." && a["successors"].empty()) {
-            b.connect(static_cast<int>(i), next_field);
-        }
-    }
-
-    // Flow control
-    std::vector<std::string> flow_choices;
-    for (auto const & [name, _] : prompt.flows) {
-        flow_choices.push_back(name);
-    }
-    if (flow_choices.size() == 1) {
-        int next_id = b.add_text("next.choice", flow_choices[0]);
-        b.connect(next_field, next_id);
-    } else if (!flow_choices.empty()) {
-        int choose_id = b.add_choose("next.choose", flow_choices);
-        b.connect(next_field, choose_id);
-        for (size_t i = 0; i < flow_choices.size(); ++i) {
-            int end_id = b.add_text("next.end." + std::to_string(i), "");
-            b.connect(choose_id, end_id);
-        }
     }
 
     return json{{"actions", b.actions}};

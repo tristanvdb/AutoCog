@@ -98,7 +98,12 @@ if(NOT llama_FOUND)
   set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   set(LLAMA_BUILD_APP OFF CACHE BOOL "" FORCE)
   set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
-  set(LLAMA_CUDA OFF CACHE BOOL "" FORCE)
+  # Propagate LLAMA_CUDA to GGML_CUDA (modern llama.cpp uses GGML_CUDA)
+  if(LLAMA_CUDA)
+    set(GGML_CUDA ON CACHE BOOL "Enable CUDA" FORCE)
+  elseif(GGML_CUDA)
+    set(LLAMA_CUDA ON)  # for our build info
+  endif()
   add_subdirectory("${LLAMA_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_vendor/llama" EXCLUDE_FROM_ALL)
   set(_LLAMA_SOURCE "vendored")
 else()
@@ -106,7 +111,7 @@ else()
 endif()
 
 # Build info: CUDA and llama source
-if(LLAMA_CUDA)
+if(LLAMA_CUDA OR GGML_CUDA)
   add_compile_definitions(AUTOCOG_CUDA=1)
 else()
   add_compile_definitions(AUTOCOG_CUDA=0)
@@ -170,6 +175,12 @@ install(DIRECTORY share/library/stlib
         PATTERN "__pycache__" EXCLUDE)
 
 # Install default syntax
-install(FILES share/syntax/default.json
-        DESTINATION autocog/syntax)
+install(DIRECTORY share/syntax/
+        DESTINATION autocog/syntax
+        FILES_MATCHING PATTERN "*.json")
+
+# Install search configs
+install(DIRECTORY share/search/
+        DESTINATION autocog/search
+        FILES_MATCHING PATTERN "*.json")
 

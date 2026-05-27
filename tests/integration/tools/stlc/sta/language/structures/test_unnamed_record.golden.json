@@ -106,6 +106,22 @@
           "index": 1,
           "name": "confidence",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 7,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 7,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -134,7 +150,8 @@
         "result_1_4@0",
         "value_2_5@0_0",
         "confidence_2_6@0_0",
-        "result_1_4@1"
+        "result_1_4@1",
+        "next_1_7@0"
       ],
       "states": {
         "confidence_2_6@0_0": {
@@ -156,6 +173,13 @@
           "successors": [
             "right_2_2@0_0"
           ]
+        },
+        "next_1_7@0": {
+          "field": 7,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "operands_1_0@0": {
           "field": 0,
@@ -198,7 +222,9 @@
           "indices": [
             1
           ],
-          "successors": []
+          "successors": [
+            "next_1_7@0"
+          ]
         },
         "right_2_2@0_0": {
           "field": 2,

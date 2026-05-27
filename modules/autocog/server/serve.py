@@ -26,7 +26,8 @@ class SubmitResponse(BaseModel):
 
 
 def create_app(program=None, externals=None, model_path: str = None,
-               syntax_path: str = None, n_ctx: int = 4096) -> FastAPI:
+               syntax_path: str = None, search_path: str = None,
+               n_ctx: int = 4096) -> FastAPI:
     """Create the level-1 serve app."""
     import autocog
 
@@ -36,6 +37,7 @@ def create_app(program=None, externals=None, model_path: str = None,
     engine = autocog.Engine(
         model=model_path if model_path else None,
         syntax=syntax_path,
+        search=search_path,
         n_ctx=n_ctx
     )
     _externals = externals or {}

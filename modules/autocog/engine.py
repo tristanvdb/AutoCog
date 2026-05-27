@@ -11,13 +11,14 @@ from .context import Context
 class Engine:
     """Execution engine: model + syntax."""
 
-    def __init__(self, model=None, syntax=None, n_ctx=4096):
+    def __init__(self, model=None, syntax=None, search=None, n_ctx=4096):
         """
         Create an engine.
 
         Args:
             model: path to GGUF model file, or None for RNG model (id=0)
-            syntax: path to syntax JSON file
+            syntax: path to syntax JSON file (required)
+            search: path to search config JSON file (required)
             n_ctx: context size for the model
         """
         if model is not None:
@@ -25,14 +26,17 @@ class Engine:
         else:
             self.model_id = 0  # RNG model
 
-        if syntax is not None:
-            self.syntax_id = runtime_sta_cxx.load_syntax(syntax)
-        else:
+        if syntax is None:
             raise ValueError("syntax is required — pass a path to a syntax JSON file")
+        self.syntax_id = runtime_sta_cxx.load_syntax(syntax)
+
+        if search is None:
+            raise ValueError("search is required — pass a path to a search config JSON file")
+        self.search_id = runtime_sta_cxx.load_search_config(search)
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         """
-        Evaluate a single prompt: instantiate → evaluate → parse.
+        Evaluate a single prompt: instantiate → evaluate → walk FTT.
 
         Args:
             program: Program object
@@ -43,33 +47,33 @@ class Engine:
         Returns:
             frame dict, or (frame, artifacts) if record_kinds is set
         """
+        import json as json_mod
+
         fta_id = runtime_sta_cxx.instantiate(
-            program.id, prompt_name, content, self.syntax_id
+            program.id, prompt_name, content, self.syntax_id, self.search_id
         )
         artifacts = {}
         try:
             if record_kinds and "fta" in record_kinds:
-                import json as json_mod
                 artifacts["fta"] = json_mod.loads(runtime_sta_cxx.get_fta_json(fta_id))
 
             ftt_id = backend_llama_cxx.evaluate(self.model_id, fta_id)
             try:
-                paths = backend_llama_cxx.get_best(self.model_id, ftt_id, 1)
-                text = paths[0] if paths else ""
-                frame = runtime_sta_cxx.parse_text(
-                    program.id, prompt_name,
-                    self.syntax_id, text, content
+                # Get FTT with uid/field/indices metadata
+                ftt = json_mod.loads(
+                    backend_llama_cxx.get_ftt_json(self.model_id, fta_id, ftt_id)
                 )
+
+                # Walk best path and extract field values
+                frame, text = _walk_ftt(ftt, program, prompt_name, content)
+
                 if record_kinds:
                     if "text" in record_kinds:
                         artifacts["text"] = text
                     if "frame" in record_kinds:
                         artifacts["frame"] = frame
                     if "ftt" in record_kinds:
-                        import json as json_mod
-                        artifacts["ftt"] = json_mod.loads(
-                            backend_llama_cxx.get_ftt_json(self.model_id, ftt_id)
-                        )
+                        artifacts["ftt"] = ftt
             finally:
                 backend_llama_cxx.release_ftt(ftt_id)
         finally:
@@ -121,3 +125,149 @@ class Engine:
         while not ctx.done:
             await ctx.step_async()
         return ctx.result
+
+
+def _walk_ftt(ftt_node, program, prompt_name, content):
+    """Walk the FTT tree following best (first non-pruned) path.
+
+    Returns (frame, text):
+        frame: dict of field name → value (nested for records/arrays)
+        text: concatenated text from the path
+    """
+    # Collect path: list of FTT nodes from root to leaf
+    path = []
+    node = ftt_node
+    while True:
+        path.append(node)
+        children = [c for c in node.get("children", []) if not c.get("pruned", False)]
+        if not children:
+            break
+        node = children[0]  # best = first non-pruned
+
+    # Get STA field info
+    sta = program.sta
+    prompt_sta = sta["prompts"][prompt_name]
+    fields = prompt_sta["fields"]
+
+    # Build frame from path
+    frame = {}
+    text_parts = []
+
+    for node in path:
+        text_parts.append(node.get("text", ""))
+
+        if "field" not in node:
+            continue  # header, branch, endl, skip — no value
+
+        field_idx = node["field"]
+        indices = node.get("indices", [])
+        fld = fields[field_idx]
+        name = fld["name"]
+        value = node.get("text", "")
+
+        # Strip trailing whitespace from values
+        value = value.rstrip("\n\r")
+
+        # Resolve select: convert index to actual value
+        fmt = fld.get("format", {})
+        if fmt and fmt.get("type") == "choice" and fmt.get("mode") == "select":
+            value = _resolve_select(value, fmt, content)
+
+        # Store in frame using field hierarchy
+        _set_field_value(frame, fields, field_idx, indices, value)
+
+    text = "".join(text_parts)
+    return frame, text
+
+
+def _resolve_select(index_str, fmt, content):
+    """Resolve a select index to the actual value from content."""
+    try:
+        idx = int(index_str)
+        # Walk the choice path to find the source array
+        path = fmt.get("path", [])
+        current = content
+        for step in path:
+            name = step["name"]
+            if isinstance(current, dict):
+                current = current.get(name)
+            elif isinstance(current, list):
+                # For array fields, collect all values of this sub-field
+                current = [item.get(name) if isinstance(item, dict) else item
+                           for item in current]
+            if current is None:
+                return index_str
+        if isinstance(current, list) and 0 <= idx < len(current):
+            return current[idx]
+    except (ValueError, TypeError, KeyError, IndexError):
+        pass
+    return index_str
+
+
+def _set_field_value(frame, fields, field_idx, indices, value):
+    """Set a value in the nested frame dict using field hierarchy."""
+    fld = fields[field_idx]
+    name = fld["name"]
+    is_list = fld.get("range") is not None
+
+    if fld["depth"] == 1:
+        # Top-level field
+        if is_list and indices:
+            arr_idx = indices[-1]
+            if name not in frame:
+                frame[name] = []
+            while len(frame[name]) <= arr_idx:
+                frame[name].append(None)
+            frame[name][arr_idx] = value
+        else:
+            frame[name] = value
+    else:
+        # Nested field (depth > 1): walk ancestor chain
+        # Build chain from root to this field
+        chain = []
+        idx = field_idx
+        idx_cursor = len(indices)
+
+        while idx >= 0:
+            f = fields[idx]
+            f_is_list = f.get("range") is not None
+            if f_is_list and idx_cursor > 0:
+                idx_cursor -= 1
+                arr_idx = indices[idx_cursor]
+                chain.append((f["name"], arr_idx))
+            else:
+                chain.append((f["name"], None))
+            if f["depth"] == 1:
+                break
+            # Find parent: previous field with lower depth
+            parent_idx = idx - 1
+            while parent_idx >= 0 and fields[parent_idx]["depth"] >= f["depth"]:
+                parent_idx -= 1
+            idx = parent_idx
+
+        chain.reverse()
+
+        # Navigate/create the nested structure
+        current = frame
+        for i, (n, arr_idx) in enumerate(chain):
+            is_last = (i == len(chain) - 1)
+            if is_last:
+                if arr_idx is not None:
+                    if n not in current:
+                        current[n] = []
+                    while len(current[n]) <= arr_idx:
+                        current[n].append(None)
+                    current[n][arr_idx] = value
+                else:
+                    current[n] = value
+            else:
+                if arr_idx is not None:
+                    if n not in current:
+                        current[n] = []
+                    while len(current[n]) <= arr_idx:
+                        current[n].append({})
+                    current = current[n][arr_idx]
+                else:
+                    if n not in current:
+                        current[n] = {}
+                    current = current[n]

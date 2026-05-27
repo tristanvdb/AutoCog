@@ -21,6 +21,7 @@ stlc [options] [files...]
 | `-e, --emit TARGET` | Output format (default: `sta`) |
 | `-V, --verbose` | Verbose output |
 | `-v, --version` | Show version |
+| `--build-info` | Show build configuration |
 
 ### Emit targets
 
@@ -63,7 +64,9 @@ ista [options] <sta.json>
 | Flag | Description |
 |------|-------------|
 | `-p, --prompt NAME` | Prompt name (default: first entry point) |
-| `-s, --syntax FILE` | Syntax description JSON |
+| `-s, --syntax FILE` | Syntax description JSON (required) |
+| `-v, --version` | Show version |
+| `--build-info` | Show build configuration |
 | `-d, --data FILE` | Initial content JSON (default: `{}`) |
 | `-o, --output FILE` | Output FTA JSON (default: stdout) |
 | `-t, --text` | Print FTA as formatted text instead of JSON |
@@ -71,8 +74,8 @@ ista [options] <sta.json>
 ### Examples
 
 ```bash
-ista program.sta.json                         # default entry point, JSON output
-ista --text program.sta.json                  # human-readable text
+ista -s syntax.json program.sta.json          # JSON output
+ista -s syntax.json --text program.sta.json   # human-readable text
 ista -p init_idea -d input.json program.sta.json   # specific prompt with data
 ista -s syntax.json -o output.fta.json program.sta.json
 ```
@@ -89,6 +92,9 @@ xfta [options] <fta.json> ...
 |------|-------------|
 | `-m, --model PATH` | GGUF model file |
 | `-r, --rng` | Use built-in RNG model |
+| `-s, --search FILE` | Search config JSON (required) |
+| `--version` | Show version |
+| `--build-info` | Show build configuration |
 | `-c, --ctx SIZE` | Model context size |
 | `-b, --best` | Print best-path text to stdout (no FTT output) |
 | `-v, --verbose` | Verbose output |
@@ -96,9 +102,9 @@ xfta [options] <fta.json> ...
 ### Examples
 
 ```bash
-xfta --rng --best input.fta.json              # evaluate with RNG, print text
-xfta --model model.gguf --best input.fta.json  # evaluate with real model
-xfta --rng input.fta.json > output.ftt.json    # full FTT output
+xfta --rng -s search.json --best input.fta.json              # evaluate with RNG, print text
+xfta --model model.gguf -s search.json --best input.fta.json  # evaluate with real model
+xfta --rng -s search.json input.fta.json > output.ftt.json    # full FTT output
 ```
 
 ## psta — STA Text Parser
@@ -112,7 +118,9 @@ psta [options] <sta.json>
 | Flag | Description |
 |------|-------------|
 | `-p, --prompt NAME` | Prompt name (default: first entry point) |
-| `-s, --syntax FILE` | Syntax description JSON |
+| `-s, --syntax FILE` | Syntax description JSON (required) |
+| `-v, --version` | Show version |
+| `--build-info` | Show build configuration |
 | `-i, --input FILE` | Text to parse (default: stdin) |
 | `-o, --output FILE` | Output JSON (default: stdout) |
 
@@ -133,10 +141,10 @@ Chain the tools to execute the full pipeline manually:
 stlc program.stl -o program.sta.json
 
 # Instantiate
-ista -d input.json -o prompt.fta.json program.sta.json
+ista -s syntax.json -d input.json -o prompt.fta.json program.sta.json
 
 # Evaluate
-xfta --model model.gguf --best prompt.fta.json > output.txt
+xfta --model model.gguf -s search.json --best prompt.fta.json > output.txt
 
 # Parse
 psta program.sta.json < output.txt > result.json
@@ -145,5 +153,5 @@ psta program.sta.json < output.txt > result.json
 Or in a single pipeline:
 
 ```bash
-ista -d input.json program.sta.json | xfta --rng --best /dev/stdin | psta program.sta.json
+ista -s syntax.json -d input.json program.sta.json | xfta --rng -s search.json --best /dev/stdin | psta -s syntax.json program.sta.json
 ```

@@ -60,6 +60,22 @@
           "index": 0,
           "name": "data",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -80,11 +96,21 @@
       "name": "LibPrompt",
       "sequence": [
         "root@",
-        "data_1_0@0"
+        "data_1_0@0",
+        "next_1_1@0"
       ],
       "states": {
         "data_1_0@0": {
           "field": 0,
+          "indices": [
+            0
+          ],
+          "successors": [
+            "next_1_1@0"
+          ]
+        },
+        "next_1_1@0": {
+          "field": 1,
           "indices": [
             0
           ],
@@ -161,6 +187,23 @@
           "index": 1,
           "name": "another",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 3,
+          "format": {
+            "type": "enum",
+            "values": [
+              "LibPrompt",
+              "return"
+            ]
+          },
+          "index": 3,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -189,7 +232,8 @@
         "container_1_0@0",
         "item_2_1@0_0",
         "another_2_2@0_0",
-        "container_1_0@1"
+        "container_1_0@1",
+        "next_1_3@0"
       ],
       "states": {
         "another_2_2@0_0": {
@@ -216,7 +260,9 @@
           "indices": [
             1
           ],
-          "successors": []
+          "successors": [
+            "next_1_3@0"
+          ]
         },
         "item_2_1@0_0": {
           "field": 1,
@@ -227,6 +273,13 @@
           "successors": [
             "another_2_2@0_0"
           ]
+        },
+        "next_1_3@0": {
+          "field": 3,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "root@": {
           "field": -1,

@@ -15,6 +15,7 @@ import backend_llama_cxx
 
 FIXTURES = sys.argv[1]  # path to tests/fixtures/stl/
 SYNTAX   = sys.argv[2]  # path to share/syntax/default.json
+SEARCH   = sys.argv[3]  # path to share/search/default.json
 
 errors = []
 
@@ -87,9 +88,14 @@ sid = runtime_sta_cxx.load_syntax(SYNTAX)
 check("load_syntax returns int", isinstance(sid, int))
 check("load_syntax returns positive id", sid > 0)
 
+# load_search_config
+scid = runtime_sta_cxx.load_search_config(SEARCH)
+check("load_search_config returns int", isinstance(scid, int))
+check("load_search_config returns positive id", scid > 0)
+
 # instantiate
 pid4 = compiler_stl_cxx.compile(f"{FIXTURES}/language/structures/test_basic_record.stl")
-fta_id = runtime_sta_cxx.instantiate(pid4, "test", {}, sid)
+fta_id = runtime_sta_cxx.instantiate(pid4, "test", {}, sid, scid)
 check("instantiate returns int", isinstance(fta_id, int))
 check("instantiate returns positive id", fta_id > 0)
 
@@ -98,23 +104,16 @@ pid5 = compiler_stl_cxx.compile(f"{FIXTURES}/flows/data/test_input_dataflow.stl"
 fta_id2 = runtime_sta_cxx.instantiate(
     pid5, "greeter",
     {"name": "Alice"},
-    sid
+    sid, scid
 )
 check("instantiate with content", fta_id2 > 0)
 
 # instantiate nonexistent prompt
 try:
-    runtime_sta_cxx.instantiate(pid4, "nonexistent", {}, sid)
+    runtime_sta_cxx.instantiate(pid4, "nonexistent", {}, sid, scid)
     check("instantiate bad prompt raises", False, "expected exception")
 except RuntimeError:
     check("instantiate bad prompt raises", True)
-
-# parse_text
-text = "start:\nstatus:\n\tStatus:good\nnext: return\n"
-result = runtime_sta_cxx.parse_text(pid4, "test", sid, text)
-check("parse_text returns dict", isinstance(result, dict))
-check("parse_text has next", "next" in result)
-check("parse_text next value", result.get("next") == "return")
 
 # release
 runtime_sta_cxx.release_fta(fta_id)
@@ -144,17 +143,19 @@ sid2 = runtime_sta_cxx.load_syntax(SYNTAX)
 SHARE = os.path.dirname(os.path.dirname(SYNTAX))  # share/syntax/default.json → share/
 pid6 = compiler_stl_cxx.compile(f"{SHARE}/demos/mcq/select.stl")
 content = {"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
-fta_id3 = runtime_sta_cxx.instantiate(pid6, "main", content, sid2)
+fta_id3 = runtime_sta_cxx.instantiate(pid6, "main", content, sid2, scid)
 
 ftt_id = backend_llama_cxx.evaluate(0, fta_id3)
 check("evaluate returns int", isinstance(ftt_id, int))
 
-# get_best
-paths = backend_llama_cxx.get_best(0, ftt_id, 1)
-check("get_best returns list", isinstance(paths, list))
-check("get_best has path", len(paths) == 1)
-check("get_best path is string", isinstance(paths[0], str))
-check("get_best path nonempty", len(paths[0]) > 0)
+# get_ftt_json
+import json
+ftt_str = backend_llama_cxx.get_ftt_json(0, fta_id3, ftt_id)
+check("get_ftt_json returns string", isinstance(ftt_str, str))
+ftt = json.loads(ftt_str)
+check("ftt has uid", "uid" in ftt)
+check("ftt has text", "text" in ftt)
+check("ftt has children", "children" in ftt)
 
 # release
 backend_llama_cxx.release_ftt(ftt_id)

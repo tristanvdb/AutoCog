@@ -88,6 +88,22 @@
           "index": 1,
           "name": "summary",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -114,7 +130,8 @@
         "all_pages_1_0@3",
         "all_pages_1_0@4",
         "all_pages_1_0@5",
-        "summary_1_1@0"
+        "summary_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
         "all_pages_1_0@0": {
@@ -171,6 +188,13 @@
             "summary_1_1@0"
           ]
         },
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "root@": {
           "field": -1,
           "indices": [],
@@ -183,7 +207,9 @@
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         }
       }
     },
@@ -233,6 +259,22 @@
             2,
             2
           ]
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -255,9 +297,17 @@
         "root@",
         "section_1_0@0",
         "pages_1_1@0",
-        "pages_1_1@1"
+        "pages_1_1@1",
+        "next_1_2@0"
       ],
       "states": {
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "pages_1_1@0": {
           "field": 1,
           "indices": [
@@ -272,7 +322,9 @@
           "indices": [
             1
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "root@": {
           "field": -1,

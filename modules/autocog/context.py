@@ -75,14 +75,11 @@ class Context:
         flow_choice = frame.get("next", "")
 
         if flow_choice not in flows:
-            # Default: if only one flow, use it
-            if len(flows) == 1:
-                flow_choice = next(iter(flows))
-            else:
-                raise RuntimeError(
-                    f"Flow choice '{flow_choice}' not found in prompt '{self.prompt}'. "
-                    f"Available: {list(flows.keys())}"
-                )
+            raise RuntimeError(
+                f"Flow choice '{flow_choice}' not found in prompt '{self.prompt}'. "
+                f"Available: {list(flows.keys())}. "
+                f"This usually means the parser failed to extract the 'next' field."
+            )
 
         flow_def = flows[flow_choice]
 

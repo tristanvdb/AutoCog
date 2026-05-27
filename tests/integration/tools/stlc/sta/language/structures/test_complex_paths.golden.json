@@ -93,6 +93,22 @@
             2,
             2
           ]
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 5,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 5,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -138,7 +154,7 @@
         "label_2_3@2_0",
         "tags_2_4@2_0",
         "tags_2_4@2_1",
-        "tags_2_4@2_2"
+        "next_1_5@0"
       ],
       "states": {
         "fixed_1_0@0": {
@@ -242,6 +258,13 @@
           "successors": [
             "tags_2_4@2_0"
           ]
+        },
+        "next_1_5@0": {
+          "field": 5,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "ranged_1_1@0": {
           "field": 1,
@@ -385,13 +408,8 @@
             1
           ],
           "successors": [
-            "tags_2_4@2_2"
+            "next_1_5@0"
           ]
-        },
-        "tags_2_4@2_2": {
-          "field": 0,
-          "indices": [],
-          "successors": []
         }
       }
     }

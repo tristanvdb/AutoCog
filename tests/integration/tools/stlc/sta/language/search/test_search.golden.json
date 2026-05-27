@@ -85,6 +85,22 @@
           "index": 1,
           "name": "creative",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -114,7 +130,8 @@
       "sequence": [
         "root@",
         "greeting_1_0@0",
-        "creative_1_1@0"
+        "creative_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
         "creative_1_1@0": {
@@ -122,7 +139,9 @@
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "greeting_1_0@0": {
           "field": 0,
@@ -132,6 +151,13 @@
           "successors": [
             "creative_1_1@0"
           ]
+        },
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
         },
         "root@": {
           "field": -1,

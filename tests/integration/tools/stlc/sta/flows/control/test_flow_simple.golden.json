@@ -53,6 +53,23 @@
           "index": 0,
           "name": "task",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "step1",
+              "step2"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -70,9 +87,17 @@
       "name": "main",
       "sequence": [
         "root@",
-        "task_1_0@0"
+        "task_1_0@0",
+        "next_1_1@0"
       ],
       "states": {
+        "next_1_1@0": {
+          "field": 1,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "root@": {
           "field": -1,
           "indices": [],
@@ -85,7 +110,9 @@
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_1@0"
+          ]
         }
       }
     },
@@ -131,6 +158,22 @@
           "index": 1,
           "name": "output",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -152,7 +195,8 @@
       "sequence": [
         "root@",
         "input_1_0@0",
-        "output_1_1@0"
+        "output_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
         "input_1_0@0": {
@@ -164,12 +208,21 @@
             "output_1_1@0"
           ]
         },
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "output_1_1@0": {
           "field": 1,
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "root@": {
           "field": -1,
@@ -205,6 +258,22 @@
           "index": 1,
           "name": "output",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
         }
       ],
       "flows": {
@@ -226,7 +295,8 @@
       "sequence": [
         "root@",
         "input_1_0@0",
-        "output_1_1@0"
+        "output_1_1@0",
+        "next_1_2@0"
       ],
       "states": {
         "input_1_0@0": {
@@ -238,12 +308,21 @@
             "output_1_1@0"
           ]
         },
+        "next_1_2@0": {
+          "field": 2,
+          "indices": [
+            0
+          ],
+          "successors": []
+        },
         "output_1_1@0": {
           "field": 1,
           "indices": [
             0
           ],
-          "successors": []
+          "successors": [
+            "next_1_2@0"
+          ]
         },
         "root@": {
           "field": -1,
