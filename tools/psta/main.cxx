@@ -1,6 +1,5 @@
 
 #include "autocog/runtime/sta/load.hxx"
-#include "autocog/runtime/sta/parse.hxx"
 #include "autocog/build_info.hxx"
 
 #include <nlohmann/json.hpp>
@@ -56,14 +55,13 @@ static json build_result(
 
         int field_idx = (*node)["field"].get<int>();
         auto const & fld = prompt.fields[field_idx];
-        std::string name = fld.name;
         std::string value = node->value("text", "");
 
         // Trim trailing whitespace
         while (!value.empty() && (value.back() == '\n' || value.back() == '\r'))
             value.pop_back();
 
-        // Build path through field hierarchy using indices
+        // Get indices
         std::vector<int> indices;
         if (node->contains("indices")) {
             for (auto const & idx : (*node)["indices"]) {
@@ -71,25 +69,73 @@ static json build_result(
             }
         }
 
-        // Navigate to correct position in result
-        // Simple case: depth=1 fields go directly into result
+        bool is_list = fld.is_list();
+
         if (fld.depth == 1) {
-            if (fld.is_list() && !indices.empty()) {
-                if (!result.contains(name)) result[name] = json::array();
-                auto & arr = result[name];
-                int idx = indices.back();
-                while (static_cast<int>(arr.size()) <= idx) arr.push_back(nullptr);
-                arr[idx] = value;
+            // Top-level field
+            if (is_list && !indices.empty()) {
+                int arr_idx = indices.back();
+                if (!result.contains(fld.name)) result[fld.name] = json::array();
+                auto & arr = result[fld.name];
+                while (static_cast<int>(arr.size()) <= arr_idx) arr.push_back(nullptr);
+                arr[arr_idx] = value;
             } else {
-                result[name] = value;
+                result[fld.name] = value;
             }
         } else {
-            // Nested fields: walk ancestor chain
-            // For now, flatten to dot notation for depth > 1
-            // TODO: proper nested record support
-            std::string flat_name = name;
-            for (int idx : indices) flat_name += "[" + std::to_string(idx) + "]";
-            result[flat_name] = value;
+            // Nested field: walk ancestor chain to build path
+            struct Step { std::string name; int arr_idx; }; // arr_idx = -1 if not array
+            std::vector<Step> chain;
+            int idx = field_idx;
+            int idx_cursor = static_cast<int>(indices.size());
+
+            while (idx >= 0) {
+                auto const & f = prompt.fields[idx];
+                bool f_is_list = f.is_list();
+                // Every field consumes one index from the end
+                idx_cursor--;
+                int arr_idx = (idx_cursor >= 0) ? indices[idx_cursor] : 0;
+                if (f_is_list) {
+                    chain.push_back({f.name, arr_idx});
+                } else {
+                    chain.push_back({f.name, -1});
+                }
+                if (f.depth == 1) break;
+                // Find parent: previous field with lower depth
+                int parent_idx = idx - 1;
+                while (parent_idx >= 0 && prompt.fields[parent_idx].depth >= f.depth)
+                    parent_idx--;
+                idx = parent_idx;
+            }
+            std::reverse(chain.begin(), chain.end());
+
+            // Navigate/create nested structure
+            json * current = &result;
+            for (size_t i = 0; i < chain.size(); ++i) {
+                auto const & step = chain[i];
+                bool is_last = (i == chain.size() - 1);
+
+                if (is_last) {
+                    if (step.arr_idx >= 0) {
+                        if (!current->contains(step.name)) (*current)[step.name] = json::array();
+                        auto & arr = (*current)[step.name];
+                        while (static_cast<int>(arr.size()) <= step.arr_idx) arr.push_back(nullptr);
+                        arr[step.arr_idx] = value;
+                    } else {
+                        (*current)[step.name] = value;
+                    }
+                } else {
+                    if (step.arr_idx >= 0) {
+                        if (!current->contains(step.name)) (*current)[step.name] = json::array();
+                        auto & arr = (*current)[step.name];
+                        while (static_cast<int>(arr.size()) <= step.arr_idx) arr.push_back(json::object());
+                        current = &arr[step.arr_idx];
+                    } else {
+                        if (!current->contains(step.name)) (*current)[step.name] = json::object();
+                        current = &(*current)[step.name];
+                    }
+                }
+            }
         }
     }
 

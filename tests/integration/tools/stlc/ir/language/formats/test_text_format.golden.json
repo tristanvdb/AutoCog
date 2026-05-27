@@ -31,7 +31,7 @@
               }
             ],
             "name": "title",
-            "refname": null,
+            "refname": "ShortText",
             "type": "record"
           },
           "index": 0,
@@ -61,7 +61,7 @@
               }
             ],
             "name": "content",
-            "refname": null,
+            "refname": "LongText",
             "type": "record"
           },
           "index": 1,

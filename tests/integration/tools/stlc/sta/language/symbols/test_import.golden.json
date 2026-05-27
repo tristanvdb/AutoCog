@@ -152,7 +152,7 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "container",
+          "format_ref": "Container",
           "index": 0,
           "name": "container",
           "range": null

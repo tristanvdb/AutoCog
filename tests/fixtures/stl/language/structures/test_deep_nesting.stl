@@ -1,0 +1,57 @@
+// Test deep nesting patterns:
+//   record[].record[].record[]   (groups[].entries[].tags[])
+//   record[].record.record[]     (items[].meta.keywords[])
+//   record.record[].record[]     (config.modules[].params[])
+//   record[].record[].record     (teams[].members[].contact)
+
+record Tag {
+  is {
+    key is text<length=10>;
+    value is text<length=10>;
+  }
+}
+
+record Address {
+  is {
+    street is text<length=15>;
+    city is text<length=10>;
+  }
+}
+
+prompt test {
+  is {
+    groups[2] is {
+      label is text<length=10>;
+      entries[2] is {
+        name is text<length=10>;
+        tags[2] is Tag;
+      }
+    }
+    items[2] is {
+      title is text<length=10>;
+      meta is {
+        author is text<length=10>;
+        keywords[2] is text<length=8>;
+      }
+    }
+    config is {
+      version is text<length=5>;
+      modules[2] is {
+        mod_name is text<length=10>;
+        params[2] is text<length=8>;
+      }
+    }
+    teams[2] is {
+      team_name is text<length=10>;
+      members[2] is {
+        member_name is text<length=10>;
+        contact is Address;
+      }
+    }
+  }
+  return {
+    use config;
+  }
+}
+
+export test as main;

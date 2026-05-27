@@ -50,7 +50,7 @@
               }
             ],
             "name": "problem",
-            "refname": null,
+            "refname": "Problem",
             "type": "record"
           },
           "index": 0,

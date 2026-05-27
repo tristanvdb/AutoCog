@@ -70,7 +70,7 @@
               }
             ],
             "name": "greeting",
-            "refname": null,
+            "refname": "Message",
             "type": "record"
           },
           "index": 0,
@@ -99,7 +99,7 @@
               }
             ],
             "name": "creative",
-            "refname": null,
+            "refname": "SpecialText",
             "type": "record"
           },
           "index": 1,

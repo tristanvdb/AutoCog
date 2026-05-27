@@ -35,7 +35,7 @@
               }
             ],
             "name": "status",
-            "refname": null,
+            "refname": "Status",
             "type": "record"
           },
           "index": 0,

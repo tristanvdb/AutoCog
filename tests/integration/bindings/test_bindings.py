@@ -161,6 +161,44 @@ check("ftt has children", "children" in ftt)
 backend_llama_cxx.release_ftt(ftt_id)
 runtime_sta_cxx.release_fta(fta_id3)
 runtime_sta_cxx.release_syntax(sid2)
+
+# ============================================================================
+# Search variants: exercise repetition + diversity code paths
+# ============================================================================
+
+SEARCH_FULL = os.path.join(SHARE, "search", "full.json")
+scid_full = runtime_sta_cxx.load_search_config(SEARCH_FULL)
+check("full search config loaded", scid_full > 0)
+
+sid3 = runtime_sta_cxx.load_syntax(SYNTAX)
+fta_id4 = runtime_sta_cxx.instantiate(pid6, "main", content, sid3, scid_full)
+ftt_id2 = backend_llama_cxx.evaluate(0, fta_id4)
+check("evaluate with full search", isinstance(ftt_id2, int))
+
+ftt_str2 = backend_llama_cxx.get_ftt_json(0, fta_id4, ftt_id2)
+check("ftt_json with full search", len(ftt_str2) > 0)
+
+backend_llama_cxx.release_ftt(ftt_id2)
+runtime_sta_cxx.release_fta(fta_id4)
+runtime_sta_cxx.release_syntax(sid3)
+
+# ============================================================================
+# store_fta_json + load_program
+# ============================================================================
+
+# store_fta_json: round-trip FTA through store
+sid4 = runtime_sta_cxx.load_syntax(SYNTAX)
+fta_id5 = runtime_sta_cxx.instantiate(pid6, "main", content, sid4, scid)
+fta_json_str = runtime_sta_cxx.get_fta_json(fta_id5)
+stored_id = runtime_sta_cxx.store_fta_json(fta_json_str)
+check("store_fta_json returns id", stored_id > 0)
+roundtrip = runtime_sta_cxx.get_fta_json(stored_id)
+check("store_fta_json roundtrip", roundtrip == fta_json_str)
+runtime_sta_cxx.release_fta(stored_id)
+runtime_sta_cxx.release_fta(fta_id5)
+runtime_sta_cxx.release_syntax(sid4)
+
+# cleanup
 compiler_stl_cxx.release(pid3)
 compiler_stl_cxx.release(pid4)
 compiler_stl_cxx.release(pid5)

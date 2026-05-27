@@ -91,7 +91,7 @@
               }
             ],
             "name": "simple",
-            "refname": null,
+            "refname": "SimpleMessage",
             "type": "record"
           },
           "index": 0,
@@ -122,7 +122,7 @@
               }
             ],
             "name": "long",
-            "refname": null,
+            "refname": "LongCasualMessage",
             "type": "record"
           },
           "index": 1,
@@ -153,7 +153,7 @@
               }
             ],
             "name": "tech",
-            "refname": null,
+            "refname": "TechnicalMessage",
             "type": "record"
           },
           "index": 2,

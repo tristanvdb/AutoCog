@@ -30,7 +30,7 @@
               }
             ],
             "name": "fixed",
-            "refname": null,
+            "refname": "Item",
             "type": "record"
           },
           "index": 0,

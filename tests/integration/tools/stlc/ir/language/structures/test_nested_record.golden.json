@@ -49,7 +49,7 @@
                     }
                   ],
                   "name": "city",
-                  "refname": null,
+                  "refname": "City",
                   "type": "record"
                 },
                 "index": 1,
@@ -58,7 +58,7 @@
               }
             ],
             "name": "address",
-            "refname": null,
+            "refname": "Address",
             "type": "record"
           },
           "index": 0,
@@ -110,7 +110,7 @@
               }
             ],
             "name": "city",
-            "refname": null,
+            "refname": "City",
             "type": "record"
           },
           "index": 1,

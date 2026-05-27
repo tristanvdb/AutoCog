@@ -3,7 +3,6 @@ add_library(autocog_runtime_sta_lib STATIC
     sta.cxx
     load.cxx
     instantiate.cxx
-    parse.cxx
 )
 
 target_include_directories(autocog_runtime_sta_lib PUBLIC

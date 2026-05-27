@@ -30,7 +30,7 @@
               }
             ],
             "name": "name",
-            "refname": null,
+            "refname": "Name",
             "type": "record"
           },
           "index": 0,
@@ -64,7 +64,7 @@
               }
             ],
             "name": "age",
-            "refname": null,
+            "refname": "Age",
             "type": "record"
           },
           "index": 1,

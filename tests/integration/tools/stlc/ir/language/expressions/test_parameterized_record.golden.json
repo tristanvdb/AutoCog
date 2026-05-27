@@ -31,7 +31,7 @@
               }
             ],
             "name": "small",
-            "refname": null,
+            "refname": "Container",
             "type": "record"
           },
           "index": 0,
@@ -60,7 +60,7 @@
               }
             ],
             "name": "medium",
-            "refname": null,
+            "refname": "Container",
             "type": "record"
           },
           "index": 1,
@@ -89,7 +89,7 @@
               }
             ],
             "name": "large",
-            "refname": null,
+            "refname": "Container",
             "type": "record"
           },
           "index": 2,

@@ -207,23 +207,20 @@ def _resolve_select(index_str, fmt, content):
 def _set_field_value(frame, fields, field_idx, indices, value):
     """Set a value in the nested frame dict using field hierarchy."""
     fld = fields[field_idx]
-    name = fld["name"]
     is_list = fld.get("range") is not None
 
     if fld["depth"] == 1:
-        # Top-level field
         if is_list and indices:
             arr_idx = indices[-1]
-            if name not in frame:
-                frame[name] = []
-            while len(frame[name]) <= arr_idx:
-                frame[name].append(None)
-            frame[name][arr_idx] = value
+            if fld["name"] not in frame:
+                frame[fld["name"]] = []
+            while len(frame[fld["name"]]) <= arr_idx:
+                frame[fld["name"]].append(None)
+            frame[fld["name"]][arr_idx] = value
         else:
-            frame[name] = value
+            frame[fld["name"]] = value
     else:
-        # Nested field (depth > 1): walk ancestor chain
-        # Build chain from root to this field
+        # Nested: build ancestor chain child→root
         chain = []
         idx = field_idx
         idx_cursor = len(indices)
@@ -231,15 +228,15 @@ def _set_field_value(frame, fields, field_idx, indices, value):
         while idx >= 0:
             f = fields[idx]
             f_is_list = f.get("range") is not None
-            if f_is_list and idx_cursor > 0:
-                idx_cursor -= 1
-                arr_idx = indices[idx_cursor]
+            # Every field consumes one index from the end
+            idx_cursor -= 1
+            arr_idx = indices[idx_cursor] if idx_cursor >= 0 else 0
+            if f_is_list:
                 chain.append((f["name"], arr_idx))
             else:
                 chain.append((f["name"], None))
             if f["depth"] == 1:
                 break
-            # Find parent: previous field with lower depth
             parent_idx = idx - 1
             while parent_idx >= 0 and fields[parent_idx]["depth"] >= f["depth"]:
                 parent_idx -= 1
@@ -247,7 +244,6 @@ def _set_field_value(frame, fields, field_idx, indices, value):
 
         chain.reverse()
 
-        # Navigate/create the nested structure
         current = frame
         for i, (n, arr_idx) in enumerate(chain):
             is_last = (i == len(chain) - 1)

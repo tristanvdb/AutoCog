@@ -54,7 +54,7 @@
               }
             ],
             "name": "topic",
-            "refname": null,
+            "refname": "Topic",
             "type": "record"
           },
           "index": 0,

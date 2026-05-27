@@ -1,0 +1,471 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "label",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "label",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 10,
+                        "name": "name",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "name",
+                      "range": null
+                    },
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "fields": [
+                          {
+                            "depth": 1,
+                            "desc": [],
+                            "format": {
+                              "desc": [],
+                              "length": 10,
+                              "name": "key",
+                              "refname": null,
+                              "type": "completion"
+                            },
+                            "index": 0,
+                            "name": "key",
+                            "range": null
+                          },
+                          {
+                            "depth": 1,
+                            "desc": [],
+                            "format": {
+                              "desc": [],
+                              "length": 10,
+                              "name": "value",
+                              "refname": null,
+                              "type": "completion"
+                            },
+                            "index": 1,
+                            "name": "value",
+                            "range": null
+                          }
+                        ],
+                        "name": "tags",
+                        "refname": "Tag",
+                        "type": "record"
+                      },
+                      "index": 1,
+                      "name": "tags",
+                      "range": [
+                        2
+                      ]
+                    }
+                  ],
+                  "name": "entries",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "entries",
+                "range": [
+                  2
+                ]
+              }
+            ],
+            "name": "groups",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 0,
+          "name": "groups",
+          "range": [
+            2
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "title",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "title",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 10,
+                        "name": "author",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "author",
+                      "range": null
+                    },
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 8,
+                        "name": "keywords",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 1,
+                      "name": "keywords",
+                      "range": [
+                        2
+                      ]
+                    }
+                  ],
+                  "name": "meta",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "meta",
+                "range": null
+              }
+            ],
+            "name": "items",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 1,
+          "name": "items",
+          "range": [
+            2
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 5,
+                  "name": "version",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "version",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 10,
+                        "name": "mod_name",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "mod_name",
+                      "range": null
+                    },
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 8,
+                        "name": "params",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 1,
+                      "name": "params",
+                      "range": [
+                        2
+                      ]
+                    }
+                  ],
+                  "name": "modules",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "modules",
+                "range": [
+                  2
+                ]
+              }
+            ],
+            "name": "config",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 2,
+          "name": "config",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "length": 10,
+                  "name": "team_name",
+                  "refname": null,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "team_name",
+                "range": null
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "desc": [],
+                  "fields": [
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "length": 10,
+                        "name": "member_name",
+                        "refname": null,
+                        "type": "completion"
+                      },
+                      "index": 0,
+                      "name": "member_name",
+                      "range": null
+                    },
+                    {
+                      "depth": 3,
+                      "desc": [],
+                      "format": {
+                        "desc": [],
+                        "fields": [
+                          {
+                            "depth": 1,
+                            "desc": [],
+                            "format": {
+                              "desc": [],
+                              "length": 15,
+                              "name": "street",
+                              "refname": null,
+                              "type": "completion"
+                            },
+                            "index": 0,
+                            "name": "street",
+                            "range": null
+                          },
+                          {
+                            "depth": 1,
+                            "desc": [],
+                            "format": {
+                              "desc": [],
+                              "length": 10,
+                              "name": "city",
+                              "refname": null,
+                              "type": "completion"
+                            },
+                            "index": 1,
+                            "name": "city",
+                            "range": null
+                          }
+                        ],
+                        "name": "contact",
+                        "refname": "Address",
+                        "type": "record"
+                      },
+                      "index": 1,
+                      "name": "contact",
+                      "range": null
+                    }
+                  ],
+                  "name": "members",
+                  "refname": null,
+                  "type": "record"
+                },
+                "index": 1,
+                "name": "members",
+                "range": [
+                  2
+                ]
+              }
+            ],
+            "name": "teams",
+            "refname": null,
+            "type": "record"
+          },
+          "index": 3,
+          "name": "teams",
+          "range": [
+            2
+          ]
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "config",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {
+    "Address": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 15,
+            "name": "street",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "street",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "city",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "city",
+          "range": null
+        }
+      ],
+      "name": "Address"
+    },
+    "Tag": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "key",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "key",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "desc": [],
+            "length": 10,
+            "name": "value",
+            "refname": null,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "value",
+          "range": null
+        }
+      ],
+      "name": "Tag"
+    }
+  }
+}

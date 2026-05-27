@@ -1,0 +1,35 @@
+// Test variable-length arrays with different content sizes
+//
+// Patterns tested:
+//   depth-1 variable scalar array:   names[1:4]
+//   depth-1 variable record array:   items[2:5]
+//   variable inside fixed:           buckets[3].values[1:4]
+//   variable inside variable:        sections[1:3].paragraphs[1:3]
+//
+// Note: variable arrays are NOT the last field in any record,
+// because that creates ambiguous continuation branching.
+
+prompt test {
+  is {
+    names[1:4] is text<length=10>;
+    items[2:5] is {
+      label is text<length=10>;
+      score is enum("low", "medium", "high");
+    }
+    buckets[3] is {
+      tag is text<length=5>;
+      values[1:4] is text<length=8>;
+      summary is text<length=10>;
+    }
+    sections[1:3] is {
+      heading is text<length=10>;
+      paragraphs[1:3] is text<length=15>;
+      footer is text<length=10>;
+    }
+  }
+  return {
+    use names;
+  }
+}
+
+export test as main;

@@ -46,6 +46,8 @@ static sta::FieldFormat extract_format(ir::Format const * fmt) {
 // Resolve through single-field record wrappers (type aliases).
 // Records like `Age { is enum(...); }` or `Title { is Sentence<50>; }`
 // are transparent — their single child's format replaces the parent.
+// A type alias has child.name == record type name (stored in rf->refname).
+// Records with a distinct sub-field name (e.g. `{ y is text; }`) are NOT aliases.
 // Returns the leaf RecordFormat (multi-field) or nullptr (fully inlined).
 static ir::RecordFormat const * resolve_transparent(
     ir::RecordFormat const * rf,
@@ -53,8 +55,13 @@ static ir::RecordFormat const * resolve_transparent(
 ) {
     while (rf && rf->fields.size() == 1) {
         auto const & child = *rf->fields[0];
+        // Only unwrap type aliases: child.name matches the original record type name
+        std::string type_name = rf->refname.value_or(rf->name);
+        if (child.name != type_name) {
+            // Real sub-field with its own name — preserve the record structure
+            break;
+        }
         // Capture record name from the inner field (the record's own name)
-        // rf->name is the enclosing field name, child.name is the record type name
         if (!info.format_ref) {
             info.format_ref = child.name;
         }
@@ -76,10 +83,8 @@ static ir::RecordFormat const * resolve_transparent(
             return nullptr;
         }
     }
-    // Multi-field record: capture name from first field
-    if (rf && rf->fields.size() > 1 && !info.format_ref) {
-        // Use rf's first field name as the record type name
-        // (multi-field records keep their structure, format_ref is informational)
+    // Multi-field or preserved single-field record: capture name
+    if (rf && !info.format_ref) {
         info.format_ref = rf->name;
     }
     return rf;
@@ -180,9 +185,15 @@ static std::vector<AbstractState> build_abstract(std::vector<sta::FieldInfo> con
             abstracts[prev_idx].flow = idx;
             stack.push_back({});
         } else if (fld.depth < abstracts[prev_idx].depth(fields)) {
-            // Returning to shallower depth: pop stack, wire exits
+            // Returning to shallower depth: wire intermediate exits, then pop
+            // Each dropped level's last element exits to the next shallower level's last
+            for (int d = static_cast<int>(stack.size()) - 1; d > fld.depth; --d) {
+                int deeper_last = stack[d].back();
+                int shallower_last = stack[d - 1].back();
+                abstracts[deeper_last].exit_ = shallower_last;
+            }
             stack.resize(fld.depth + 1);
-            abstracts[prev_idx].exit_ = stack.back().back();
+            // Last element at target depth exits to the new field
             abstracts[stack.back().back()].exit_ = idx;
         } else {
             // Same depth: prev exits to us

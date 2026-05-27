@@ -4,26 +4,22 @@
     "main": {
       "inputs": {
         "long": {
-          "max_length": 50,
           "required": true,
-          "type": "text"
+          "type": "object"
         },
         "simple": {
-          "max_length": 10,
           "required": true,
-          "type": "text"
+          "type": "object"
         },
         "tech": {
-          "max_length": 20,
           "required": true,
-          "type": "text"
+          "type": "object"
         }
       },
       "outputs": {
         "_": {
-          "max_length": 20,
           "required": true,
-          "type": "text"
+          "type": "object"
         }
       },
       "prompt": "main"
@@ -82,56 +78,74 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "A formal message."
-          ],
+          "desc": [],
           "flat_index": 0,
           "format": {
-            "length": 10,
-            "type": "completion"
+            "type": "record"
           },
-          "format_desc": [
-            "A formal message."
-          ],
-          "format_ref": "Message",
+          "format_ref": "SimpleMessage",
           "index": 0,
           "name": "simple",
           "range": null
         },
         {
-          "depth": 1,
-          "desc": [
-            "A casual message."
-          ],
+          "depth": 2,
+          "desc": [],
           "flat_index": 1,
           "format": {
-            "length": 50,
+            "length": 10,
             "type": "completion"
           },
-          "format_desc": [
-            "A casual message."
-          ],
-          "format_ref": "Message",
+          "index": 0,
+          "name": "Message",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "type": "record"
+          },
+          "format_ref": "LongCasualMessage",
           "index": 1,
           "name": "long",
           "range": null
         },
         {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 50,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Message",
+          "range": null
+        },
+        {
           "depth": 1,
-          "desc": [
-            "A technical message."
-          ],
-          "flat_index": 2,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "type": "record"
+          },
+          "format_ref": "TechnicalMessage",
+          "index": 2,
+          "name": "tech",
+          "range": null
+        },
+        {
+          "depth": 2,
+          "desc": [],
+          "flat_index": 5,
           "format": {
             "length": 20,
             "type": "completion"
           },
-          "format_desc": [
-            "A technical message."
-          ],
-          "format_ref": "Message",
-          "index": 2,
-          "name": "tech",
+          "index": 0,
+          "name": "Message",
           "range": null
         },
         {
@@ -139,14 +153,14 @@
           "desc": [
             "the next step"
           ],
-          "flat_index": 3,
+          "flat_index": 6,
           "format": {
             "type": "enum",
             "values": [
               "return"
             ]
           },
-          "index": 3,
+          "index": 6,
           "name": "next",
           "range": null
         }
@@ -186,22 +200,67 @@
       "sequence": [
         "root@",
         "simple_1_0@0",
-        "long_1_1@0",
-        "tech_1_2@0",
-        "next_1_3@0"
+        "Message_2_1@0_0",
+        "simple_1_0@1",
+        "long_1_2@0",
+        "Message_2_3@0_0",
+        "long_1_2@1",
+        "tech_1_4@0",
+        "Message_2_5@0_0",
+        "tech_1_4@1",
+        "next_1_6@0"
       ],
       "states": {
-        "long_1_1@0": {
+        "Message_2_1@0_0": {
           "field": 1,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "simple_1_0@1"
+          ]
+        },
+        "Message_2_3@0_0": {
+          "field": 3,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "long_1_2@1"
+          ]
+        },
+        "Message_2_5@0_0": {
+          "field": 5,
+          "indices": [
+            0,
+            0
+          ],
+          "successors": [
+            "tech_1_4@1"
+          ]
+        },
+        "long_1_2@0": {
+          "field": 2,
           "indices": [
             0
           ],
           "successors": [
-            "tech_1_2@0"
+            "Message_2_3@0_0"
           ]
         },
-        "next_1_3@0": {
-          "field": 3,
+        "long_1_2@1": {
+          "field": 2,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "tech_1_4@0"
+          ]
+        },
+        "next_1_6@0": {
+          "field": 6,
           "indices": [
             0
           ],
@@ -220,16 +279,34 @@
             0
           ],
           "successors": [
-            "long_1_1@0"
+            "Message_2_1@0_0"
           ]
         },
-        "tech_1_2@0": {
-          "field": 2,
+        "simple_1_0@1": {
+          "field": 0,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "long_1_2@0"
+          ]
+        },
+        "tech_1_4@0": {
+          "field": 4,
           "indices": [
             0
           ],
           "successors": [
-            "next_1_3@0"
+            "Message_2_5@0_0"
+          ]
+        },
+        "tech_1_4@1": {
+          "field": 4,
+          "indices": [
+            1
+          ],
+          "successors": [
+            "next_1_6@0"
           ]
         }
       }

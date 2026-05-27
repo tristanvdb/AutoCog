@@ -1,0 +1,64 @@
+{
+  "names": [
+    "name-1",
+    "name-2"
+  ],
+  "items": [
+    {
+      "label": "item-1",
+      "score": "low"
+    },
+    {
+      "label": "item-2",
+      "score": "medium"
+    },
+    {
+      "label": "item-3",
+      "score": "high"
+    }
+  ],
+  "buckets": [
+    {
+      "tag": "b1",
+      "values": [
+        "v1_1",
+        "v1_2"
+      ],
+      "summary": "sum-1"
+    },
+    {
+      "tag": "b2",
+      "values": [
+        "v2_1",
+        "v2_2"
+      ],
+      "summary": "sum-2"
+    },
+    {
+      "tag": "b3",
+      "values": [
+        "v3_1",
+        "v3_2"
+      ],
+      "summary": "sum-3"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "sec-1",
+      "paragraphs": [
+        "p1-1",
+        "p1-2"
+      ],
+      "footer": "foot-1"
+    },
+    {
+      "heading": "sec-2",
+      "paragraphs": [
+        "p2-1",
+        "p2-2"
+      ],
+      "footer": "foot-2"
+    }
+  ]
+}

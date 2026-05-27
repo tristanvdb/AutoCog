@@ -80,6 +80,7 @@ gcovr -r "$REPO_ROOT" . \
     --filter "$REPO_ROOT/libs/" \
     --filter "$REPO_ROOT/tools/" \
     --filter "$REPO_ROOT/bindings/" \
+    --gcov-ignore-errors=no_working_dir_found \
     --json "$CXX_COV" \
     2>/dev/null
 

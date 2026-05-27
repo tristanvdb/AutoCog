@@ -30,7 +30,7 @@
               }
             ],
             "name": "options",
-            "refname": null,
+            "refname": "Option",
             "type": "record"
           },
           "index": 0,

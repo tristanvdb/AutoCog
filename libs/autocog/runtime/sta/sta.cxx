@@ -2,37 +2,12 @@
 #include "autocog/runtime/sta/state.hxx"
 #include "autocog/runtime/sta/channel.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
-#include "autocog/runtime/sta/value.hxx"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
 
 namespace autocog::runtime::sta {
-
-// FieldValue copy operations
-FieldValue::FieldValue(FieldValue const & other) {
-    if (other.is_string()) {
-        data = other.as_string();
-    } else if (other.is_record()) {
-        data = std::make_unique<FieldRecord>(other.as_record());
-    } else if (other.is_array()) {
-        data = std::make_unique<FieldArray>(other.as_array());
-    }
-}
-
-FieldValue & FieldValue::operator=(FieldValue const & other) {
-    if (this != &other) {
-        if (other.is_string()) {
-            data = other.as_string();
-        } else if (other.is_record()) {
-            data = std::make_unique<FieldRecord>(other.as_record());
-        } else if (other.is_array()) {
-            data = std::make_unique<FieldArray>(other.as_array());
-        }
-    }
-    return *this;
-}
 
 Syntax load_syntax(std::string const & path) {
     using json = nlohmann::json;

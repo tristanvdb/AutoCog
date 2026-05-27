@@ -4,25 +4,10 @@ Unit tests for autocog.clauses — clause transformation pipeline.
 
 import pytest
 
-import importlib.util
-import pathlib
-
-# Import clauses.py directly — avoids autocog.__init__ which requires C++ bindings
-_clauses_path = pathlib.Path(__file__).parent.parent.parent.parent.parent / "modules" / "autocog" / "clauses.py"
-_spec = importlib.util.spec_from_file_location("autocog.clauses", _clauses_path)
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
-
-apply_bind = _mod.apply_bind
-apply_ravel = _mod.apply_ravel
-apply_wrap = _mod.apply_wrap
-apply_prune = _mod.apply_prune
-apply_mapped = _mod.apply_mapped
-apply_clause = _mod.apply_clause
-apply_clauses = _mod.apply_clauses
-get_mapped_clauses = _mod.get_mapped_clauses
-navigate = _mod.navigate
-set_at_path = _mod.set_at_path
+from autocog.clauses import (
+    apply_bind, apply_ravel, apply_wrap, apply_prune, apply_mapped,
+    apply_clause, apply_clauses, get_mapped_clauses, navigate, set_at_path,
+)
 
 
 class TestNavigate:

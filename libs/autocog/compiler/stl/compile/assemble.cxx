@@ -229,6 +229,7 @@ static std::unique_ptr<ir::Format> generate_format(
 
             auto const & rec_decl = rec_ref->get();
             auto rf = std::make_unique<ir::RecordFormat>(field_name);
+            rf->refname = rec_name;  // Original record type name
 
             std::visit([&](auto const & body) {
                 using B = std::decay_t<decltype(body)>;

@@ -1,0 +1,45 @@
+{
+  "groups": [
+    {
+      "label": "group-A",
+      "entries": [
+        {"name": "entry-A1", "tags": [{"key": "k1", "value": "v1"}, {"key": "k2", "value": "v2"}]},
+        {"name": "entry-A2", "tags": [{"key": "k3", "value": "v3"}, {"key": "k4", "value": "v4"}]}
+      ]
+    },
+    {
+      "label": "group-B",
+      "entries": [
+        {"name": "entry-B1", "tags": [{"key": "k5", "value": "v5"}, {"key": "k6", "value": "v6"}]},
+        {"name": "entry-B2", "tags": [{"key": "k7", "value": "v7"}, {"key": "k8", "value": "v8"}]}
+      ]
+    }
+  ],
+  "items": [
+    {"title": "item-1", "meta": {"author": "alice", "keywords": ["fast", "simple"]}},
+    {"title": "item-2", "meta": {"author": "bob", "keywords": ["slow", "complex"]}}
+  ],
+  "config": {
+    "version": "1.0",
+    "modules": [
+      {"mod_name": "core", "params": ["debug", "verbose"]},
+      {"mod_name": "extra", "params": ["quiet", "minimal"]}
+    ]
+  },
+  "teams": [
+    {
+      "team_name": "alpha",
+      "members": [
+        {"member_name": "Alice", "contact": {"street": "123 Main St", "city": "Springfield"}},
+        {"member_name": "Bob", "contact": {"street": "456 Oak Ave", "city": "Shelbyville"}}
+      ]
+    },
+    {
+      "team_name": "beta",
+      "members": [
+        {"member_name": "Carol", "contact": {"street": "789 Elm Rd", "city": "Capital"}},
+        {"member_name": "Dave", "contact": {"street": "321 Pine Ln", "city": "Townsville"}}
+      ]
+    }
+  ]
+}

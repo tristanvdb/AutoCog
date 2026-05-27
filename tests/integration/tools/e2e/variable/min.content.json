@@ -1,0 +1,47 @@
+{
+  "names": [
+    "name-1"
+  ],
+  "items": [
+    {
+      "label": "item-1",
+      "score": "low"
+    },
+    {
+      "label": "item-2",
+      "score": "medium"
+    }
+  ],
+  "buckets": [
+    {
+      "tag": "b1",
+      "values": [
+        "v1_1"
+      ],
+      "summary": "sum-1"
+    },
+    {
+      "tag": "b2",
+      "values": [
+        "v2_1"
+      ],
+      "summary": "sum-2"
+    },
+    {
+      "tag": "b3",
+      "values": [
+        "v3_1"
+      ],
+      "summary": "sum-3"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "sec-1",
+      "paragraphs": [
+        "para-1"
+      ],
+      "footer": "foot-1"
+    }
+  ]
+}

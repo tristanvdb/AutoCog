@@ -1,0 +1,148 @@
+{
+  "config": {
+    "modules": [
+      {
+        "mod_name": "core",
+        "params": [
+          "debug",
+          "verbose"
+        ]
+      },
+      {
+        "mod_name": "extra",
+        "params": [
+          "quiet",
+          "minimal"
+        ]
+      }
+    ],
+    "version": "1.0"
+  },
+  "groups": [
+    {
+      "entries": [
+        {
+          "name": "entry-A1",
+          "tags": [
+            {
+              "key": "k1",
+              "value": "v1"
+            },
+            {
+              "key": "k2",
+              "value": "v2"
+            }
+          ]
+        },
+        {
+          "name": "entry-A2",
+          "tags": [
+            {
+              "key": "k3",
+              "value": "v3"
+            },
+            {
+              "key": "k4",
+              "value": "v4"
+            }
+          ]
+        }
+      ],
+      "label": "group-A"
+    },
+    {
+      "entries": [
+        {
+          "name": "entry-B1",
+          "tags": [
+            {
+              "key": "k5",
+              "value": "v5"
+            },
+            {
+              "key": "k6",
+              "value": "v6"
+            }
+          ]
+        },
+        {
+          "name": "entry-B2",
+          "tags": [
+            {
+              "key": "k7",
+              "value": "v7"
+            },
+            {
+              "key": "k8",
+              "value": "v8"
+            }
+          ]
+        }
+      ],
+      "label": "group-B"
+    }
+  ],
+  "items": [
+    {
+      "meta": {
+        "author": "alice",
+        "keywords": [
+          "fast",
+          "simple"
+        ]
+      },
+      "title": "item-1"
+    },
+    {
+      "meta": {
+        "author": "bob",
+        "keywords": [
+          "slow",
+          "complex"
+        ]
+      },
+      "title": "item-2"
+    }
+  ],
+  "next": "return",
+  "teams": [
+    {
+      "members": [
+        {
+          "contact": {
+            "city": "Springfield",
+            "street": "123 Main St"
+          },
+          "member_name": "Alice"
+        },
+        {
+          "contact": {
+            "city": "Shelbyville",
+            "street": "456 Oak Ave"
+          },
+          "member_name": "Bob"
+        }
+      ],
+      "team_name": "alpha"
+    },
+    {
+      "members": [
+        {
+          "contact": {
+            "city": "Capital",
+            "street": "789 Elm Rd"
+          },
+          "member_name": "Carol"
+        },
+        {
+          "contact": {
+            "city": "Townsville",
+            "street": "321 Pine Ln"
+          },
+          "member_name": "Dave"
+        }
+      ],
+      "team_name": "beta"
+    }
+  ]
+}

@@ -53,7 +53,7 @@
               }
             ],
             "name": "data",
-            "refname": null,
+            "refname": "LibRecord",
             "type": "record"
           },
           "index": 0,
@@ -139,7 +139,7 @@
                     }
                   ],
                   "name": "item",
-                  "refname": null,
+                  "refname": "LibRecord",
                   "type": "record"
                 },
                 "index": 0,
@@ -168,7 +168,7 @@
                     }
                   ],
                   "name": "another",
-                  "refname": null,
+                  "refname": "AnotherType",
                   "type": "record"
                 },
                 "index": 1,
@@ -177,7 +177,7 @@
               }
             ],
             "name": "container",
-            "refname": null,
+            "refname": "Container",
             "type": "record"
           },
           "index": 0,
@@ -263,7 +263,7 @@
               }
             ],
             "name": "item",
-            "refname": null,
+            "refname": "LibRecord",
             "type": "record"
           },
           "index": 0,
@@ -292,7 +292,7 @@
               }
             ],
             "name": "another",
-            "refname": null,
+            "refname": "AnotherType",
             "type": "record"
           },
           "index": 1,

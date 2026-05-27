@@ -50,7 +50,7 @@
               }
             ],
             "name": "input",
-            "refname": null,
+            "refname": "Data",
             "type": "record"
           },
           "index": 0,

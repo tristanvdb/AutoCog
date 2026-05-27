@@ -82,7 +82,7 @@
               }
             ],
             "name": "hint",
-            "refname": null,
+            "refname": "Hint",
             "type": "record"
           },
           "index": 1,
@@ -123,7 +123,7 @@
               }
             ],
             "name": "reflection",
-            "refname": null,
+            "refname": "Hint",
             "type": "record"
           },
           "index": 3,

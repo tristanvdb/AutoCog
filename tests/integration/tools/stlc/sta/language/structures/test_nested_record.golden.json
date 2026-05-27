@@ -28,7 +28,7 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "address",
+          "format_ref": "Address",
           "index": 0,
           "name": "address",
           "range": null

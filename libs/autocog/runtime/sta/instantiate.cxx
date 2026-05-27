@@ -428,23 +428,48 @@ struct FTABuilder {
             if (next >= 0) connect(endl_id, next);
 
         } else {
-            // Multiple successors: Choose node with field labels as choices
-            std::vector<std::string> choices;
-            for (auto const & succ_tag : valid) {
-                auto const & succ = prompt.states.at(succ_tag);
-                choices.push_back(prompt_label(succ, prompt, syntax));
-            }
-            int branch_id = add_choose("branch." + cur_safe, choices);
-            entry_id = branch_id;
-
+            // Multiple successors: check if content determines the choice.
+            // When content pre-fills a successor's value, that path must be taken
+            // (content determines array length, not the model).
+            int content_forced = -1;
             for (size_t i = 0; i < valid.size(); ++i) {
-                // Field + endl (unique UIDs per parent)
-                auto [field_entry, endl_id] = create_field_endl(cur_safe, valid[i]);
-                actions[branch_id]["successors"].push_back(actions[field_entry]["uid"]);
+                auto const & succ = prompt.states.at(valid[i]);
+                auto const * val = read_content(content, succ, prompt, parent_map);
+                if (val && !val->is_null()) {
+                    content_forced = static_cast<int>(i);
+                    break;  // first pre-filled successor wins
+                }
+            }
 
-                // Recurse (memoized — shared subtree)
-                int next = instantiate_rec(valid[i]);
+            if (content_forced >= 0) {
+                // Content determines the path: use text node (forced label)
+                auto const & succ = prompt.states.at(valid[content_forced]);
+                int branch_id = add_text("branch." + cur_safe,
+                                         prompt_label(succ, prompt, syntax));
+                entry_id = branch_id;
+
+                auto [field_entry, endl_id] = create_field_endl(cur_safe, valid[content_forced]);
+                connect(branch_id, field_entry);
+
+                int next = instantiate_rec(valid[content_forced]);
                 if (next >= 0) connect(endl_id, next);
+            } else {
+                // No content determines the choice: model decides (Choose node)
+                std::vector<std::string> choices;
+                for (auto const & succ_tag : valid) {
+                    auto const & succ = prompt.states.at(succ_tag);
+                    choices.push_back(prompt_label(succ, prompt, syntax));
+                }
+                int branch_id = add_choose("branch." + cur_safe, choices);
+                entry_id = branch_id;
+
+                for (size_t i = 0; i < valid.size(); ++i) {
+                    auto [field_entry, endl_id] = create_field_endl(cur_safe, valid[i]);
+                    actions[branch_id]["successors"].push_back(actions[field_entry]["uid"]);
+
+                    int next = instantiate_rec(valid[i]);
+                    if (next >= 0) connect(endl_id, next);
+                }
             }
         }
 
