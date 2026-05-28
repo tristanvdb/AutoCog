@@ -1,5 +1,6 @@
 
 #include "autocog/backend/llama/convert.hxx"
+#include "autocog/utilities/errors.hxx"
 
 #include "autocog/runtime/fta/fta.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
@@ -14,8 +15,7 @@ using namespace autocog::runtime::fta;
 
 static void require_field(nlohmann::json const & j, std::string const & uid, char const * field) {
     if (!j.contains(field))
-        throw std::runtime_error(
-            "FTA action '" + uid + "' missing required field '" + std::string(field) + "'");
+        throw autocog::ConfigError("FTA action '" + uid + "' missing required field '" + std::string(field) + "'", uid);
 }
 
 FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
@@ -23,7 +23,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     FTA fta;
     
     if (!jsondata.contains("actions")) {
-        throw std::runtime_error("FTA JSON missing 'actions' field");
+        throw autocog::ConfigError("FTA JSON missing 'actions' field", "");
     }
     
     auto json_actions = jsondata["actions"];
@@ -32,7 +32,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     // First pass: create actions
     for (const auto& action_json : json_actions) {
         if (!action_json.contains("uid")) {
-            throw std::runtime_error("Action missing 'uid' field");
+            throw autocog::ConfigError("Action missing 'uid' field", "");
         }
         std::string uid = action_json["uid"];
         
@@ -45,7 +45,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
         } else if (action_json.contains("__type__")) {
             action_type = action_json["__type__"];
         } else {
-            throw std::runtime_error("Action missing 'type' or '__type__' field: " + uid);
+            throw autocog::ConfigError("Action missing 'type' or '__type__' field: " + uid, uid);
         }
         
         ActionID node_id = fta.actions.size();
@@ -118,7 +118,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
                 completion_action->vocab.mask.assign(model.vocab_size(), true);
             } else {
                 if (!action_json.contains("stop")) {
-                    throw std::runtime_error("Completion missing 'stop' field: " + uid);
+                    throw autocog::ConfigError("Completion missing 'stop' field: " + uid, uid);
                 }
                 for (const auto& token : action_json["stop"]) {
                     completion_action->stop.push_back(token.get<TokenID>());
@@ -169,7 +169,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             }
             
         } else {
-            throw std::runtime_error("Unknown action type: " + action_type);
+            throw autocog::ConfigError("Unknown action type: " + action_type, action_type);
         }
         
         fta.actions.push_back(std::move(action));
@@ -185,7 +185,7 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             for (const auto& successor_uid : action_json["successors"]) {
                 std::string succ_uid = successor_uid;
                 if (uid_to_id.find(succ_uid) == uid_to_id.end()) {
-                    throw std::runtime_error("Unknown successor UID: " + succ_uid);
+                    throw autocog::ConfigError("Unknown successor UID: " + succ_uid, succ_uid);
                 }
                 action->successors.push_back(uid_to_id[succ_uid]);
             }

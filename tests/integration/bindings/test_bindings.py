@@ -74,7 +74,7 @@ compiler_stl_cxx.release(pid2)
 try:
     compiler_stl_cxx.emit(pid, "sta")
     check("release invalidates id", False, "expected exception")
-except RuntimeError:
+except Exception:
     check("release invalidates id", True)
 
 # ============================================================================
@@ -112,7 +112,7 @@ check("instantiate with content", fta_id2 > 0)
 try:
     runtime_sta_cxx.instantiate(pid4, "nonexistent", {}, sid, scid)
     check("instantiate bad prompt raises", False, "expected exception")
-except RuntimeError:
+except Exception:
     check("instantiate bad prompt raises", True)
 
 # release
@@ -203,6 +203,88 @@ compiler_stl_cxx.release(pid3)
 compiler_stl_cxx.release(pid4)
 compiler_stl_cxx.release(pid5)
 compiler_stl_cxx.release(pid6)
+
+# ============================================================================
+# Logging: bridge sink + set_log_level
+# ============================================================================
+
+import logging
+
+# set_log_level should be callable
+runtime_sta_cxx.set_log_level(10)  # DEBUG
+check("set_log_level DEBUG", True)
+
+# Capture records via Python logging
+records = []
+handler = logging.Handler()
+handler.emit = lambda r: records.append(r)
+logger = logging.getLogger("autocog")
+logger.addHandler(handler)
+logger.setLevel(1)  # capture everything
+
+# Set C++ to INFO and compile something — should produce records
+runtime_sta_cxx.set_log_level(20)  # INFO
+
+pid_log = compiler_stl_cxx.compile(os.path.join(FIXTURES, "language/structures/test_basic_record.stl"))
+info_records = [r for r in records if r.levelno >= 20]
+check("bridge sink receives INFO", len(info_records) > 0,
+      f"got {len(info_records)} records")
+
+# Set to ERROR — should filter out INFO/DEBUG
+records.clear()
+runtime_sta_cxx.set_log_level(40)  # ERROR
+
+pid_log2 = compiler_stl_cxx.compile(os.path.join(FIXTURES, "language/structures/test_basic_record.stl"))
+below_error = [r for r in records if r.levelno < 40]
+check("bridge sink filters below ERROR", len(below_error) == 0,
+      f"got {len(below_error)} records below ERROR")
+
+logger.removeHandler(handler)
+runtime_sta_cxx.set_log_level(30)  # restore WARNING
+compiler_stl_cxx.release(pid_log)
+compiler_stl_cxx.release(pid_log2)
+
+# ============================================================================
+# Error translator: typed exceptions across binding boundary
+# ============================================================================
+
+# ConfigError from bad syntax file
+try:
+    runtime_sta_cxx.load_syntax("/tmp/nonexistent_syntax_binding_test.json")
+    check("ConfigError from bad syntax", False, "no exception raised")
+except Exception as e:
+    type_name = type(e).__name__
+    has_path = hasattr(e, 'path')
+    check("ConfigError from bad syntax",
+          type_name == "ConfigError" and has_path,
+          f"type={type_name} has_path={has_path}")
+
+# ConfigError from bad search config
+try:
+    runtime_sta_cxx.load_search_config("/tmp/nonexistent_search_binding_test.json")
+    check("ConfigError from bad search", False, "no exception raised")
+except Exception as e:
+    check("ConfigError from bad search", type(e).__name__ == "ConfigError",
+          f"type={type(e).__name__}")
+
+# FileError from bad program file
+try:
+    runtime_sta_cxx.load_program("/tmp/nonexistent_program_binding_test.json")
+    check("FileError from bad program", False, "no exception raised")
+except Exception as e:
+    type_name = type(e).__name__
+    is_oserror = isinstance(e, OSError)
+    check("FileError from bad program",
+          type_name == "FileError" and is_oserror,
+          f"type={type_name} is_oserror={is_oserror}")
+
+# CompileError from bad STL
+try:
+    compiler_stl_cxx.compile("/nonexistent/bad.stl")
+    check("CompileError from bad STL", False, "no exception raised")
+except Exception as e:
+    check("CompileError from bad STL", type(e).__name__ == "CompileError",
+          f"type={type(e).__name__}")
 
 # ============================================================================
 # Summary

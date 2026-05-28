@@ -13,6 +13,7 @@
 #include "autocog/build_info.hxx"
 
 #include <pybind11/pybind11.h>
+#include "errors.hxx"
 #include <pybind11/stl.h>
 
 #include <functional>
@@ -144,4 +145,5 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         py::arg("fta_id"),
         py::arg("ftt_id")
     );
+
 }

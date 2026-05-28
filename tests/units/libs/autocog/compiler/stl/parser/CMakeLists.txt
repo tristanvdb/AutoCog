@@ -1,6 +1,7 @@
 
 add_executable(stl_parser_test_driver
     driver.cxx
+    ${PROJECT_SOURCE_DIR}/libs/autocog/logging.cxx
 )
 target_include_directories(stl_parser_test_driver PRIVATE
   ${PROJECT_SOURCE_DIR}/libs

@@ -4,8 +4,8 @@
 #include <string>
 #include <optional>
 #include <fstream>
-#include <stdexcept>
 #include <nlohmann/json.hpp>
+#include "autocog/utilities/errors.hxx"
 
 namespace autocog::runtime::sta {
 
@@ -34,13 +34,13 @@ inline SearchConfig load_search_config(std::string const & path) {
     using json = nlohmann::json;
 
     std::ifstream f(path);
-    if (!f) throw std::runtime_error("Cannot read search config: " + path);
+    if (!f) throw autocog::ConfigError("Cannot read search config: " + path, path);
     auto j = json::parse(f);
 
     auto require = [&](char const * section, char const * key) {
         if (!j.contains(section) || !j[section].contains(key))
-            throw std::runtime_error(
-                std::string("Search config missing required field: ") + section + "." + key);
+            throw autocog::ConfigError(
+                std::string("Search config missing required field: ") + section + "." + key, path);
     };
 
     SearchConfig cfg;

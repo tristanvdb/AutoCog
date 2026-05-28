@@ -1,13 +1,12 @@
 
 #include "evaluate.hxx"
+#include "autocog/logging.hxx"
+#include "autocog/utilities/exception.hxx"
 
 #include "autocog/compiler/stl/symbol-table.hxx"
 
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
@@ -43,7 +42,7 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::Unary const & op, 
       }, operand_val);
       
     default:
-      throw std::runtime_error("Invalid unary operator kind: " + ast::opKindToString(op.data.kind));
+      throw autocog::utilities::InternalError("Invalid unary operator kind: " + ast::opKindToString(op.data.kind));
   }
 }
 
@@ -85,7 +84,7 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::Binary const & op,
       return eval_utils::evaluateLogical<ast::OpKind::Or>(lhs_val, rhs_val, op.location);
       
     default:
-      throw std::runtime_error("Invalid binary operator kind");
+      throw autocog::utilities::InternalError("Invalid binary operator kind");
   }
 }
 
@@ -226,12 +225,11 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::Expression const &
     } else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
       return evaluate(scope, *(e.data.expr), varmap);
     } else {
-      throw std::runtime_error("Unknown expression variant type");
+      throw autocog::utilities::InternalError("Unknown expression variant type");
     }
   }, expr.data.expr);
 }
 
-#define DEBUG_Evaluator_retrieve_value VERBOSE && 0
 
 ir::Value Evaluator::retrieve_value(
   std::string const & scope,
@@ -239,9 +237,7 @@ ir::Value Evaluator::retrieve_value(
   ir::VarMap & varmap,
   std::optional<SourceRange> const & loc
 ) {
-#if DEBUG_Evaluator_retrieve_value
-  std::cerr << "Evaluator::retrieve_value(" << varname << ")" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Evaluator::retrieve_value( )");
   ir::Value value = nullptr;
 
   auto varmap_it = varmap.find(varname);
@@ -268,7 +264,7 @@ ir::Value Evaluator::retrieve_value(
       auto const & defn = std::get<DefineSymbol>(sym).node;
       
       if (defn.data.is_argument) {
-        throw std::runtime_error("Argument `" + varname + "` should have been found in the variable map.");
+        throw autocog::utilities::InternalError("Argument `" + varname + "` should have been found in the variable map.");
       }
 
       if (!defn.data.init) {

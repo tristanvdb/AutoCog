@@ -38,7 +38,7 @@ ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const & rhs_va
         // Integer division promotes to float
         return static_cast<float>(l) / static_cast<float>(r);
       }
-      else throw std::runtime_error("Invalid arithmetic operator: " + ast::opKindToString(Op));
+      else throw autocog::utilities::InternalError("Invalid arithmetic operator: " + ast::opKindToString(Op));
     } 
     else if constexpr ((std::is_arithmetic_v<L> && std::is_arithmetic_v<R>) &&
                       (!std::is_same_v<L, bool> && !std::is_same_v<R, bool>)) {
@@ -51,7 +51,7 @@ ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const & rhs_va
         if (rf == 0.0f) throw CompileError("Division by zero", loc);
         return lf / rf;
       }
-      else throw std::runtime_error("Invalid arithmetic operator: " + ast::opKindToString(Op));
+      else throw autocog::utilities::InternalError("Invalid arithmetic operator: " + ast::opKindToString(Op));
     } 
     else {
       if constexpr (Op == ast::OpKind::Add) {
@@ -107,14 +107,14 @@ ir::Value evaluateComparison(ir::Value const & lhs_val, ir::Value const & rhs_va
         else if constexpr (Op == ast::OpKind::Lte) return ld <= rd;
         else if constexpr (Op == ast::OpKind::Gt) return ld > rd;
         else if constexpr (Op == ast::OpKind::Gte) return ld >= rd;
-        else throw std::runtime_error("Invalid comparison operator");
+        else throw autocog::utilities::InternalError("Invalid comparison operator");
       } 
       else if constexpr (std::is_same_v<L, std::string> && std::is_same_v<R, std::string>) {
         if constexpr (Op == ast::OpKind::Lt) return l < r;
         else if constexpr (Op == ast::OpKind::Lte) return l <= r;
         else if constexpr (Op == ast::OpKind::Gt) return l > r;
         else if constexpr (Op == ast::OpKind::Gte) return l >= r;
-        else throw std::runtime_error("Invalid comparison operator");
+        else throw autocog::utilities::InternalError("Invalid comparison operator");
       } 
       else {
         throw CompileError("Invalid types for ordering comparison", loc);
@@ -134,14 +134,14 @@ ir::Value evaluateLogical(ir::Value const & lhs_val, ir::Value const & rhs_val,
     if constexpr (std::is_same_v<L, bool> && std::is_same_v<R, bool>) {
       if constexpr (Op == ast::OpKind::And) return l && r;
       else if constexpr (Op == ast::OpKind::Or) return l || r;
-      else throw std::runtime_error("Invalid logical operator: " + ast::opKindToString(Op));
+      else throw autocog::utilities::InternalError("Invalid logical operator: " + ast::opKindToString(Op));
     } else {
       if constexpr (Op == ast::OpKind::And) {
         throw CompileError("Logical AND requires boolean operands", loc);
       } else if constexpr (Op == ast::OpKind::Or) {
         throw CompileError("Logical OR requires boolean operands", loc);
       } else {
-        throw std::runtime_error("Invalid logical operator: " + ast::opKindToString(Op));
+        throw autocog::utilities::InternalError("Invalid logical operator: " + ast::opKindToString(Op));
       }
     }
   }, lhs_val, rhs_val);

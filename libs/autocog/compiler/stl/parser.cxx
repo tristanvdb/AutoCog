@@ -1,14 +1,13 @@
 
 #include "autocog/compiler/stl/parser.hxx"
+#include "autocog/utilities/exception.hxx"
 #include "autocog/compiler/stl/diagnostic.hxx"
+#include "autocog/logging.hxx"
 
 #include <filesystem>
 
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
@@ -16,13 +15,9 @@ ParseError::ParseError(
   std::string msg,
   SourceLocation loc
 ) :
-  message(std::move(msg)),
-  location(loc)
+  CompileError(std::move(msg)),
+  parse_location(loc)
 {}
-  
-const char * ParseError::what() const noexcept {
-  return message.c_str();
-}
 
 Parser::Parser(
   std::list<Diagnostic> & diagnostics_,
@@ -69,19 +64,14 @@ void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std:
   }
 }
 
-#define DEBUG_Parser_parse VERBOSE && 0
 
 void Parser::parse() {
-#if DEBUG_Parser_parse
-  std::cerr << "ENTER Parser::parse()" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "ENTER Parser::parse()");
   while (!queue.empty()) {
     std::string filepath = queue.front();
     queue.pop();
 
-#if DEBUG_Parser_parse
-    std::cerr << "  filepath = " << filepath << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  filepath =");
 
     if (fileids.find(filepath) != fileids.end()) continue;
     int fid = fileids.size();
@@ -101,30 +91,28 @@ void Parser::parse() {
       queue_imports(programs.back().data, queue);
     }
   }
-#if DEBUG_Parser_parse
-  std::cerr << "LEAVE Parser::parse()" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "LEAVE Parser::parse()");
 }
 
 void clean_raw_string(std::string raw_text, ast::Data<ast::Tag::String> & data) {
   if (raw_text.empty()) {
-    throw std::runtime_error("Found empty string literal!");
+    throw autocog::utilities::InternalError("Found empty string literal!");
   }
   data.is_format = (raw_text[0] == 'f' || raw_text[0] == 'F');
   if (data.is_format) {
     raw_text = raw_text.substr(1, raw_text.length() - 1);
   }
   if (raw_text.size() < 2) {
-    throw std::runtime_error("Found string literal with less than 2 characters but expect to find quotes!");
+    throw autocog::utilities::InternalError("Found string literal with less than 2 characters but expect to find quotes!");
   }
   if (raw_text[0] != '"' || raw_text[raw_text.length()-1] != '"') {
-    throw std::runtime_error("Found string literal without leading and ending quotes!");
+    throw autocog::utilities::InternalError("Found string literal without leading and ending quotes!");
   }
   data.value = raw_text.substr(1, raw_text.length() - 2);
 }
 
 static std::string get_line(std::string const & source, int line_pos) {
-  if (line_pos <= 0) throw std::runtime_error("In get_line(): line number must be greater than 0");
+  if (line_pos <= 0) throw autocog::utilities::InternalError("In get_line(): line number must be greater than 0");
   std::stringstream ss(source);
   int cnt = 0;
   std::string line;
@@ -132,7 +120,7 @@ static std::string get_line(std::string const & source, int line_pos) {
     cnt++;
     if (cnt == line_pos) return line;
   }
-  throw std::runtime_error("In get_line(): line number must be less than the number of lines in the file");
+  throw autocog::utilities::InternalError("In get_line(): line number must be less than the number of lines in the file");
 }
 
 void Parser::parse(int fid, std::string const & name, std::string const & source) {
@@ -141,8 +129,8 @@ void Parser::parse(int fid, std::string const & name, std::string const & source
   try {
     parse<ast::Tag::Program>(state, programs.back().data);
   } catch (ParseError const & e) {
-    auto line = get_line(source, e.location.line);
-    diagnostics.emplace_back(DiagnosticLevel::Error, e.message, line, e.location);
+    auto line = get_line(source, e.parse_location.line);
+    diagnostics.emplace_back(DiagnosticLevel::Error, e.message, line, e.parse_location);
   }
 }
 
@@ -154,7 +142,7 @@ bool Parser::parse_fragment(
   switch (ast::str2tag(tag_)) {
 #define X(etag,stag) case ast::Tag::etag: return parse_fragment<ast::Tag::etag>(code);
 #include "autocog/compiler/stl/ast/nodes.def"
-    default: throw std::runtime_error("Unrecognized ast::Tag!");
+    default: throw autocog::utilities::InternalError("Unrecognized ast::Tag!");
   }
 }
 

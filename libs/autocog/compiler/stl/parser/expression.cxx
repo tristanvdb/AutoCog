@@ -1,9 +1,7 @@
 
 #include "autocog/compiler/stl/parser.hxx"
+#include "autocog/logging.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
@@ -89,12 +87,9 @@ void Parser::parse<ast::Tag::Identifier>(ParserState & state, ast::Data<ast::Tag
   identifier.name = state.previous.text;
 }
 
-#define DEBUG_parse_primary VERBOSE && 0
 
 void Parser::parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
-#if DEBUG_parse_primary
-  std::cerr << "parse_primary" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "parse_primary");
   switch (state.current.type) {
     case TokenType::IDENTIFIER: {
       expr.expr.emplace<1>();
@@ -140,13 +135,10 @@ void Parser::parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> 
   }
 }
 
-#define DEBUG_Parse_Expression VERBOSE && 0
 
 template <>
 void Parser::parse<ast::Tag::Expression>(ParserState & state, ast::Data<ast::Tag::Expression> & expr) {
-#if DEBUG_Parse_Expression
-  std::cerr << "Parser::parse<ast::Tag::Expression>" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Parser::parse<ast::Tag::Expression>");
   if (is_primary(state.current.type)) {
     parse_primary(state, expr);
 

@@ -1,5 +1,7 @@
 
 #include "autocog/compiler/stl/driver.hxx"
+#include "autocog/utilities/exception.hxx"
+#include "autocog/logging.hxx"
 #include "autocog/compiler/stl/evaluate.hxx"
 
 #include <tuple>
@@ -11,14 +13,14 @@ namespace autocog::compiler::stl {
 static std::tuple<int, std::optional<std::string>, std::string> parse_scope(std::string const & scope) {
     auto first_delim = scope.find("::");
     if (first_delim == std::string::npos) {
-        throw std::runtime_error("Invalid scope format: " + scope);
+        throw autocog::utilities::InternalError("Invalid scope format: " + scope);
     }
 
     int fid;
     try {
         fid = std::stoi(scope.substr(0, first_delim));
     } catch (...) {
-        throw std::runtime_error("Invalid fileid in scope: " + scope);
+        throw autocog::utilities::InternalError("Invalid fileid in scope: " + scope);
     }
 
     auto rest = scope.substr(first_delim + 2);
@@ -26,14 +28,14 @@ static std::tuple<int, std::optional<std::string>, std::string> parse_scope(std:
 
     if (second_delim == std::string::npos) {
         if (rest.empty()) {
-            throw std::runtime_error("Empty name in scope: " + scope);
+            throw autocog::utilities::InternalError("Empty name in scope: " + scope);
         }
         return {fid, std::nullopt, rest};
     } else {
         auto object = rest.substr(0, second_delim);
         auto name = rest.substr(second_delim + 2);
         if (object.empty() || name.empty()) {
-            throw std::runtime_error("Empty object or name in scope: " + scope);
+            throw autocog::utilities::InternalError("Empty object or name in scope: " + scope);
         }
         return {fid, object, name};
     }
@@ -73,10 +75,7 @@ std::optional<int> Driver::run_globals() {
     }
     if (report_errors()) return 3;
 
-#if !defined(NDEBUG)
-    std::cerr << "After evaluating contexts (#3):" << std::endl;
-    tables.dump_contexts(std::cerr);
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Contexts evaluated (#3)");
 
     return std::nullopt;
 }

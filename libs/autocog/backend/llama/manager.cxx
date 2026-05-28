@@ -4,11 +4,8 @@
 
 #include <string>
 #include <cstdlib>
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::backend::llama {
 
@@ -32,9 +29,6 @@ Manager::~Manager() {
 }
 
 void Manager::cleanup() {
-#if VERBOSE
-  std::cerr << "Manager::cleanup()" << std::endl;
-#endif
   if (Manager::initialized) {
     evaluations.clear();
     models.clear();
@@ -44,12 +38,8 @@ void Manager::cleanup() {
 }
 
 void Manager::initialize() {
-#if VERBOSE
-  std::cerr << "Manager::initialize()" << std::endl;
-#endif
-#if VERBOSE == 0
+  // Silence llama.cpp internal logging — we use our own logging system
   llama_log_set(quiet_log_callback, nullptr);
-#endif
   llama_backend_init();
 
   auto & manager = instance();
@@ -85,7 +75,7 @@ Evaluation & Manager::get_eval(EvalID id) {
   auto & manager = instance();
   auto it = manager.evaluations.find(id);
   if (it == manager.evaluations.end()) {
-    throw std::runtime_error("Invalid Evaluation ID: " + std::to_string(id));
+    throw autocog::utilities::InternalError("Invalid Evaluation ID: " + std::to_string(id));
   }
   return it->second;
 }

@@ -16,6 +16,8 @@ import time
 import urllib.request
 import urllib.error
 
+from .errors import RemoteError, Timeout
+
 
 class RemoteEngine:
     """Engine that dispatches prompt evaluation to a remote RPC server (level 2)."""
@@ -63,8 +65,8 @@ class RemoteEngine:
             if state == "complete":
                 return status["result"]
             elif state == "error":
-                raise RuntimeError(f"Remote evaluation failed: {status['error']}")
-        raise TimeoutError(
+                raise RemoteError(f"Remote evaluation failed: {status['error']}")
+        raise Timeout(
             f"Remote evaluation timed out after {self.timeout}s "
             f"(request_id={request_id})"
         )
@@ -83,7 +85,7 @@ class RemoteEngine:
             ctx.step()
             steps += 1
         if not ctx.done:
-            raise RuntimeError(
+            raise RemoteError(
                 f"Program did not complete after {max_steps} steps "
                 f"(at prompt '{ctx.prompt}')"
             )
@@ -122,5 +124,5 @@ def remote_run(server_url, entry="main", poll_interval=0.5, timeout=300, **input
         if status["state"] == "complete":
             return status["result"]
         elif status["state"] == "error":
-            raise RuntimeError(f"Remote execution failed: {status['error']}")
-    raise TimeoutError(f"Remote execution timed out after {timeout}s")
+            raise RemoteError(f"Remote execution failed: {status['error']}")
+    raise Timeout(f"Remote execution timed out after {timeout}s")

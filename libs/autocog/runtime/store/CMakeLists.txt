@@ -1,6 +1,7 @@
 
 add_library(autocog_runtime_store SHARED
     store.cxx
+    ${PROJECT_SOURCE_DIR}/libs/autocog/logging.cxx
 )
 
 target_include_directories(autocog_runtime_store PUBLIC

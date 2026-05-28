@@ -4,6 +4,7 @@
 
 add_executable(autocog_xfta
   main.cxx
+  ${PROJECT_SOURCE_DIR}/libs/autocog/logging.cxx
 )
 target_include_directories(autocog_xfta PRIVATE
   ${PROJECT_SOURCE_DIR}/libs

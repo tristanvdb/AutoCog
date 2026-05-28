@@ -20,12 +20,8 @@ namespace autocog::utilities {
 InternalError::InternalError(
   std::string msg
 ) :
-  message(std::move(msg))
+  AutoCogError(std::move(msg), /*recoverable=*/false)
 {}
-  
-const char * InternalError::what() const noexcept {
-  return message.c_str();
-}
 
 thread_local Backtrace g_last_throw_backtrace;
 
@@ -42,65 +38,6 @@ std::string demangle(const char* name) {
     );
     
     return (status == 0 && demangled) ? std::string(demangled.get()) : std::string(name);
-}
-
-// Helper to run addr2line and get file:line info
-struct Addr2LineResult {
-    std::string function;
-    std::string file;
-    int line;
-    bool success;
-    
-    Addr2LineResult() : line(-1), success(false) {}
-};
-
-Addr2LineResult addr2line(const std::string& executable, void* addr) {
-    Addr2LineResult result;
-
-    char cmd[512];
-    snprintf(cmd, sizeof(cmd), "addr2line -e %s -f -C -i %p 2>/dev/null",
-             executable.c_str(), addr);
-
-    struct PipeCloser {
-        void operator()(FILE* f) const { if (f) pclose(f); }
-    };
-    std::unique_ptr<FILE, PipeCloser> pipe(popen(cmd, "r"));
-    if (!pipe) {
-        return result;
-    }
-    
-    std::array<char, 256> buffer;
-    std::vector<std::string> lines;
-    
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        std::string line(buffer.data());
-        // Remove trailing newline
-        while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
-            line.pop_back();
-        }
-        lines.push_back(line);
-    }
-    
-    // addr2line output format:
-    // function_name
-    // file:line
-    if (lines.size() >= 2 && lines[0] != "??" && lines[1] != "??:0") {
-        result.function = lines[0];
-        
-        // Parse file:line
-        size_t colon_pos = lines[1].rfind(':');
-        if (colon_pos != std::string::npos) {
-            result.file = lines[1].substr(0, colon_pos);
-            try {
-                result.line = std::stoi(lines[1].substr(colon_pos + 1));
-                result.success = true;
-            } catch (...) {
-                // Invalid line number
-            }
-        }
-    }
-    
-    return result;
 }
 
 // Parse backtrace symbol and extract components
@@ -221,7 +158,7 @@ void Backtrace::capture(void* thrown_exception, std::type_info* tinfo) {
         return;
     }
     
-    // Try to get the main executable path for addr2line
+    // Try to get the main executable path
     std::string main_executable;
     Dl_info main_info;
     if (dladdr(array[0], &main_info) && main_info.dli_fname) {
@@ -242,21 +179,9 @@ void Backtrace::capture(void* thrown_exception, std::type_info* tinfo) {
         Dl_info info;
         bool has_dlinfo = dladdr(array[i], &info);
         
-        // First, try addr2line for file:line info
-        bool addr2line_success = false;
-        if (!main_executable.empty()) {
-            Addr2LineResult addr_result = addr2line(main_executable, array[i]);
-            if (addr_result.success) {
-                frame.function_name = addr_result.function;
-                frame.source_file = addr_result.file;
-                frame.line_number = addr_result.line;
-                frame.module_name = basename(main_executable);
-                addr2line_success = true;
-            }
-        }
-        
-        // If addr2line didn't work, use dladdr info
-        if (!addr2line_success) {
+        // Use dladdr for fast symbol resolution (no subprocess)
+        // addr2line is too expensive to run on every throw
+        {
             if (has_dlinfo) {
                 if (info.dli_sname) {
                     frame.function_name = demangle(info.dli_sname);

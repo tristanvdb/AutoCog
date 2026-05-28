@@ -97,6 +97,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     Driver driver;
-    auto rc = autocog::utilities::wrap_exception(&Driver::run_test_file, driver, argv[1]);
-    return rc ? rc.value() : 0;
+    try {
+        auto rc = driver.run_test_file(argv[1]);
+        return rc ? rc.value() : 0;
+    } catch (std::exception const & e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+    }
 }

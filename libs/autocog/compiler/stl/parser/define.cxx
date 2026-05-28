@@ -1,19 +1,14 @@
 
 #include "autocog/compiler/stl/parser.hxx"
+#include "autocog/logging.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
-#define DEBUG_Parser_Define VERBOSE && 0
 
 template <>
 void Parser::parse<ast::Tag::Define>(ParserState & state, ast::Data<ast::Tag::Define> & define) {
-#if DEBUG_Parser_Define
-  std::cerr << "Parser::parse<ast::Tag::Define>" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Parser::parse<ast::Tag::Define>");
   if (state.match(TokenType::DEFINE)) {
     define.is_argument = false;
   } else if (state.match(TokenType::ARGUMENT)) {

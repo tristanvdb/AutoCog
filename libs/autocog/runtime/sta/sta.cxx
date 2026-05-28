@@ -2,10 +2,10 @@
 #include "autocog/runtime/sta/state.hxx"
 #include "autocog/runtime/sta/channel.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
+#include "autocog/utilities/errors.hxx"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
-#include <stdexcept>
 
 namespace autocog::runtime::sta {
 
@@ -13,17 +13,19 @@ Syntax load_syntax(std::string const & path) {
     using json = nlohmann::json;
 
     std::ifstream f(path);
-    if (!f) throw std::runtime_error("Cannot read syntax file: " + path);
+    if (!f) throw autocog::ConfigError("Cannot read syntax file: " + path, path);
     auto j = json::parse(f);
 
     auto require_str = [&](char const * key) -> std::string {
         if (!j.contains(key))
-            throw std::runtime_error(std::string("Syntax file missing required field: ") + key);
+            throw autocog::ConfigError(
+                std::string("Syntax file missing required field: ") + key, path);
         return j[key].get<std::string>();
     };
     auto require_bool = [&](char const * key) -> bool {
         if (!j.contains(key))
-            throw std::runtime_error(std::string("Syntax file missing required field: ") + key);
+            throw autocog::ConfigError(
+                std::string("Syntax file missing required field: ") + key, path);
         return j[key].get<bool>();
     };
 

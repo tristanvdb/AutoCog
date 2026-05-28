@@ -1,13 +1,10 @@
 
 #include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/logging.hxx"
 
 #include <cmath>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_FTT_add VERBOSE && 0
 
 namespace autocog::runtime::fta {
 
@@ -32,9 +29,7 @@ FTT & FTT::add(
   TokenSequence const & tokens_,
   ProbaSequence const & logprobs_
 ) {
-#if DEBUG_FTT_add
-  std::cerr << ">> FTT::add <<" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), ">> FTT::add <<");
   float logprob_ = this->logprob;
   for (auto lpb: logprobs_) logprob_ += lpb;
   this->children.emplace_back(action_, tokens_, logprobs_, logprob_, this->length + tokens_.size());

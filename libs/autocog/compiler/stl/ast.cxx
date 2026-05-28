@@ -1,12 +1,10 @@
 
 #include "autocog/compiler/stl/ast.hxx"
+#include "autocog/utilities/exception.hxx"
 
 #include <sstream>
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl::ast {
 
@@ -24,7 +22,7 @@ std::string tag2str(Tag tag) {
   if (it == rtags.end()) {
     std::ostringstream oss;
     oss << "Unknown ast::Tag for tag2str(" << (long)tag  << ")!";
-    throw std::runtime_error(oss.str());
+    throw autocog::utilities::InternalError(oss.str());
   }
   return it->second;
 }
@@ -34,7 +32,7 @@ Tag str2tag(std::string str) {
   if (it == tags.end()) {
     std::ostringstream oss;
     oss << "Unrecognized ast::Tag for str2tag(" << str  << ")!";
-    throw std::runtime_error(oss.str());
+    throw autocog::utilities::InternalError(oss.str());
   }
   return it->second;
 }

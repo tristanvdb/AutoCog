@@ -1,6 +1,8 @@
 
 #include "autocog/compiler/stl/driver.hxx"
+#include "autocog/utilities/exception.hxx"
 #include "autocog/runtime/sta/state.hxx"
+#include "autocog/logging.hxx"
 
 #include <algorithm>
 #include <climits>
@@ -374,7 +376,7 @@ static void post_process(
                 }
             } else if (reversed_exits.count(stag)) {
                 if (state.successors.size() != 1) {
-                    throw std::runtime_error(
+                    throw autocog::utilities::InternalError(
                         "List tail '" + stag + "' is the target of exit edges but has "
                         + std::to_string(state.successors.size()) + " successors. "
                         "A variable-length list cannot be the last field in its enclosing scope.");
@@ -828,9 +830,7 @@ std::optional<int> Driver::run_generate() {
         pstas.name = pmt.mangled_name;
         pstas.desc = pmt.desc;
 
-#if !defined(NDEBUG)
-        std::cerr << "STA: building " << mangled << " (" << pmt.fields.size() << " IR fields)" << std::endl;
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "STA: building {} ({} IR fields)", mangled, pmt.fields.size());
 
         // Collect flat field list + compact info
         std::vector<ir::Field const *> flat_fields;
@@ -857,23 +857,12 @@ std::optional<int> Driver::run_generate() {
             }
         }
 
-#if !defined(NDEBUG)
-        std::cerr << "  flat: " << pstas.fields.size() << " fields" << std::endl;
-        for (size_t i = 0; i < pstas.fields.size(); ++i) {
-            auto const & f = pstas.fields[i];
-            std::cerr << "    [" << i << "] " << f.name << " d=" << f.depth
-                      << " idx=" << f.index << " flat=" << f.flat_index
-                      << (f.is_list() ? " LIST" : "") << (f.is_record() ? " REC" : "")
-                      << std::endl;
-        }
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "  flat: {} fields", pstas.fields.size());
 
         // Build abstract states
         auto abstracts = build_abstract(pstas.fields);
 
-#if !defined(NDEBUG)
-        std::cerr << "  abstract: " << abstracts.size() << " states" << std::endl;
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "  abstract: {} states", abstracts.size());
 
         // Build concrete states
         build_concrete_rec(abstracts, pstas.fields, pstas.states, 0, {0});
@@ -904,14 +893,7 @@ std::optional<int> Driver::run_generate() {
 
     if (report_errors()) return 6;
 
-#if !defined(NDEBUG)
-    std::cerr << "After generating STA (#6):" << std::endl;
-    for (auto const & [name, pstas] : sta.prompts) {
-        std::cerr << "  " << name << ": " << pstas.fields.size() << " fields, "
-                  << pstas.states.size() << " states, "
-                  << pstas.sequence.size() << " sequence" << std::endl;
-    }
-#endif
+    SPDLOG_LOGGER_INFO(autocog::log(), "STA generated (#6): {} prompts", sta.prompts.size());
 
     // Set ABI version
     sta.abi_version = AUTOCOG_VERSION;

@@ -3,23 +3,18 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/runtime/fta/fta.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/logging.hxx"
 
 #include <llama.h>
 
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 #include <vector>
 #include <queue>
 #include <algorithm>
 #include <cmath>
 #include <set>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_Evaluation_evaluate_completion VERBOSE && 0
-#define DEBUG_expand_beam VERBOSE && 0
-#define DEBUG_beam_search_step VERBOSE && 0
 
 namespace autocog::backend::llama {
 
@@ -128,11 +123,9 @@ static unsigned expand_beam(
   TokenSequence const & base_tokens,
   std::vector<BeamState> & beams
 ) {
-#if DEBUG_expand_beam
-  std::cerr << "expand_beam(...):" << std::endl;
-  std::cerr << " - base_tokens.size() = " << base_tokens.size() << std::endl;
-  std::cerr << " - beam.tokens.size() = " << beam.tokens.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "expand_beam(...):");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - base_tokens.size() =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - beam.tokens.size() =");
   TokenSequence context_tokens = base_tokens;
   context_tokens.insert(context_tokens.end(), beam.tokens.begin(), beam.tokens.end());
   model.set_tokens(context_tokens, ctx);
@@ -213,10 +206,8 @@ static bool beam_search_step(
   std::vector<BeamState> & current_beams,
   unsigned & num_token_eval
 ) {
-#if DEBUG_beam_search_step
-  std::cerr << "beam_search_step(...):" << std::endl;
-  std::cerr << " - current_beams.size() = " << current_beams.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "beam_search_step(...):");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - current_beams.size() =");
   std::vector<BeamState> next_beams;
  
   for (BeamState const & beam : current_beams) {
@@ -242,7 +233,7 @@ static bool beam_search_step(
   prune_beams(next_beams, action.beams);
  
   if (next_beams.empty()) {
-    throw std::runtime_error("No valid beams remaining in completion");
+    throw autocog::utilities::InternalError("No valid beams remaining in completion");
   }
  
   current_beams = std::move(next_beams);
@@ -250,32 +241,24 @@ static bool beam_search_step(
 }
 
 unsigned Evaluation::evaluate_completion(PathState & state) {
-#if DEBUG_Evaluation_evaluate_completion
-  std::cerr << "Executing Completion #" << state.action << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Executing Completion #");
   Completion const & action = this->fta.action(state.action).as<Completion>();
-#if DEBUG_Evaluation_evaluate_completion
-  std::cerr << " - name: " << action.name << std::endl;
-  std::cerr << " - beams: " << action.beams << std::endl;
-  std::cerr << " - length: " << action.length << std::endl;
-  std::cerr << " - ahead: " << action.ahead << std::endl;
-  std::cerr << " - width: " << action.width << std::endl;
-  std::cerr << " - threshold: " << action.threshold << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - name:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - beams:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - length:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - ahead:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - width:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - threshold:");
   auto [model, ctx] = this->restore(state);
-#if DEBUG_Evaluation_evaluate_completion
-  std::cerr << " - Model   #" << model.id << std::endl;
-  std::cerr << " - Context #" << ctx << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Model   #");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Context #");
 
   std::vector<BeamState> beams;
   beams.emplace_back();
  
   unsigned num_token_eval = 0; 
   for (unsigned pos = 0; pos < action.length; ++pos) {
-#if DEBUG_Evaluation_evaluate_completion
-    std::cerr << " - pos[" << pos << "]..." << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - pos[ ]...");
     bool should_stop = beam_search_step(
       model, ctx, action, state.tokens, beams, num_token_eval
     );
@@ -291,12 +274,10 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
 
   unsigned count = 0;
   for (auto & beam: beams) {
-#if DEBUG_Evaluation_evaluate_completion
-    std::cerr << " - beam[" << count << "]:" << std::endl;
-    std::cerr << "   length: " << beam.tokens.size() << std::endl;
-    std::cerr << "   logprob: " << beam.logprob << std::endl;
-    std::cerr << "   proba: " << beam.proba() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - beam[ ]:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "   length:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "   logprob:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "   proba:");
     FTT & child = state.parent.add(action.id, beam.tokens, beam.logprobs);
     child.pruned = ( count >= action.width ) || (count > 0 && beam.proba() < action.threshold);
     if (!child.pruned) {
@@ -305,9 +286,7 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
     count++;
   }
 
-#if DEBUG_Evaluation_evaluate_completion
-  std::cerr << " > evaluated: " << num_token_eval << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > evaluated:");
  
   return num_token_eval;
 }

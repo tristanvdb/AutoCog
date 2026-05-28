@@ -1,6 +1,7 @@
 
 add_executable(autocog_psta
   main.cxx
+  ${PROJECT_SOURCE_DIR}/libs/autocog/logging.cxx
 )
 target_include_directories(autocog_psta PRIVATE
   ${PROJECT_SOURCE_DIR}/libs

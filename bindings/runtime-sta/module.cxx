@@ -3,9 +3,12 @@
 #include "autocog/runtime/sta/load.hxx"
 #include "autocog/runtime/sta/syntax.hxx"
 #include "autocog/runtime/store/store.hxx"
+#include "autocog/logging.hxx"
+#include "autocog/python_sink.hxx"
 
 #include <fstream>
 #include <pybind11/pybind11.h>
+#include "errors.hxx"
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
@@ -37,6 +40,29 @@ static nlohmann::json py_to_json(py::handle obj) {
 PYBIND11_MODULE(runtime_sta_cxx, module) {
     module.doc() = "AutoCog STA runtime — instantiation and parsing";
 
+    autocog::binding::register_exception_translator();
+    // Install the Python bridge sink so C++ logs route to Python's logging
+    {
+        auto sink = std::make_shared<autocog::python_logging_sink_mt>();
+        autocog::init_logger(sink);  // uses default_level
+    }
+
+    module.def("set_log_level",
+        [](int level) {
+            // Map Python logging levels to spdlog levels
+            spdlog::level::level_enum lvl;
+            if (level <= 5)       lvl = spdlog::level::trace;
+            else if (level <= 10) lvl = spdlog::level::debug;
+            else if (level <= 20) lvl = spdlog::level::info;
+            else if (level <= 30) lvl = spdlog::level::warn;
+            else if (level <= 40) lvl = spdlog::level::err;
+            else                  lvl = spdlog::level::critical;
+            autocog::set_level(lvl);
+        },
+        "Set C++ log level (use Python logging level values: 5=TRACE, 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR)",
+        py::arg("level")
+    );
+
     module.def("load_syntax",
         [](std::string const & path) -> int {
             return store::syntaxes().add(sta::load_syntax(path));
@@ -57,7 +83,7 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
         [](std::string const & path) -> int {
             std::ifstream f(path);
             if (!f.is_open()) {
-                throw std::runtime_error("Cannot open STA file: " + path);
+                throw autocog::FileError("Cannot open STA file: " + path, path);
             }
             auto j = nlohmann::json::parse(f);
             auto program = sta::load_program(j);
@@ -77,7 +103,7 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
 
             auto it = program.prompts.find(prompt_name);
             if (it == program.prompts.end()) {
-                throw std::runtime_error("Prompt '" + prompt_name + "' not found in program");
+                throw autocog::ConfigError("Prompt '" + prompt_name + "' not found in program", prompt_name);
             }
 
             auto content_json = py_to_json(content);

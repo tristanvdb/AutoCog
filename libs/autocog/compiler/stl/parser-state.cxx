@@ -5,9 +5,6 @@
 
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 

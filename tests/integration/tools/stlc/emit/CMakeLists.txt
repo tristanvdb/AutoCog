@@ -93,3 +93,19 @@ add_test(NAME stlc_args_long_flags
              --input ${TEST_FILE}
              --verbose)
 set_tests_properties(stlc_args_long_flags PROPERTIES LABELS "stlc;args")
+
+# --verbose level tests
+add_test(NAME stlc_verbose_debug
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_stlc> --emit sta -V debug ${TEST_FILE} 2>&1 >/dev/null | grep -q '\\[D\\]'")
+set_tests_properties(stlc_verbose_debug PROPERTIES LABELS "stlc;logging")
+
+add_test(NAME stlc_verbose_error_silent
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "test -z \"$($<TARGET_FILE:autocog_stlc> --emit sta -V error ${TEST_FILE} 2>&1 >/dev/null)\"")
+set_tests_properties(stlc_verbose_error_silent PROPERTIES LABELS "stlc;logging")
+
+add_test(NAME stlc_verbose_trace
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_stlc> --emit sta --verbose trace ${TEST_FILE} 2>&1 >/dev/null | grep -q '\\[T\\]\\|\\[D\\]'")
+set_tests_properties(stlc_verbose_trace PROPERTIES LABELS "stlc;logging")

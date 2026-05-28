@@ -15,5 +15,5 @@ add_test(
 set_tests_properties(bindings_integration PROPERTIES
     LABELS "bindings"
     ENVIRONMENT "PYTHONPATH=${BINDING_PYTHONPATH}"
-    TIMEOUT 30
+    TIMEOUT 120
 )

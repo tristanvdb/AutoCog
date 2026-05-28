@@ -4,6 +4,7 @@ Uses the STL fixtures in tests/fixtures/stl/flows/ and tests/fixtures/stl/progra
 """
 
 import pytest
+import autocog.errors
 
 
 class TestDataflowChannels:
@@ -144,20 +145,20 @@ class TestErrorPaths:
         try:
             result = engine.run(prog, topic="math")
             assert result is not None
-        except RuntimeError as e:
+        except (RuntimeError, autocog.errors.OrchestrationError) as e:
             assert "limit" in str(e).lower()
 
     def test_compile_error(self):
-        """Compiling invalid STL raises RuntimeError."""
+        """Compiling invalid STL raises CompileError."""
         import autocog
-        with pytest.raises(RuntimeError):
+        with pytest.raises(autocog.errors.CompileError):
             autocog.compile("/nonexistent/file.stl")
 
     def test_invalid_entry_point(self, engine, repo_root):
         """Running with invalid entry point raises ValueError."""
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises(autocog.errors.ConfigError, match="not found"):
             engine.run(prog, entry="nonexistent")
 
 

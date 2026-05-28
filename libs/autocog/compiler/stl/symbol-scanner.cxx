@@ -1,13 +1,11 @@
 
 #include "autocog/compiler/stl/symbol-scanner.hxx"
+#include "autocog/utilities/exception.hxx"
 #include "autocog/compiler/stl/driver.hxx"
 
 #include <sstream>
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
@@ -59,7 +57,7 @@ void SymbolScanner::pre<ast::Tag::Import>(ast::Import const & node) {
   if (has_stl_ext) {
     auto fid = this->driver.fileid(filename);
     if (!fid) {
-      throw std::runtime_error("STL file should have been parsed!!!");
+      throw autocog::utilities::InternalError("STL file should have been parsed!!!");
     }
     for (auto const & alias_node: node.data.targets) {
       auto const & target = alias_node.data.target;

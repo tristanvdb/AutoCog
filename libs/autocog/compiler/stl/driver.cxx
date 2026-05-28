@@ -148,7 +148,7 @@ std::optional<int> Driver::compile_stages() {
 }
 
 std::optional<int> Driver::compile() {
-    return autocog::utilities::wrap_exception(&Driver::compile_stages, *this);
+    return compile_stages();
 }
 
 } // namespace autocog::compiler::stl

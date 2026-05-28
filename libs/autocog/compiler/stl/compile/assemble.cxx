@@ -2,6 +2,7 @@
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
+#include "autocog/logging.hxx"
 
 namespace autocog::compiler::stl {
 
@@ -536,18 +537,8 @@ std::optional<int> Driver::run_assemble() {
     assemble_prompts(graph, builder, *evaluator, *this);
     if (report_errors()) return 5;
 
-#if !defined(NDEBUG)
-    std::cerr << "After assembling IR (#5):" << std::endl;
-    std::cerr << "  " << records.size() << " records, "
-              << prompts.size() << " prompts" << std::endl;
-    for (auto const & [name, rec] : records) {
-        std::cerr << "    Record: " << name << " (" << rec->fields.size() << " fields)" << std::endl;
-    }
-    for (auto const & [name, pmt] : prompts) {
-        std::cerr << "    Prompt: " << name << " (" << pmt->fields.size() << " fields, "
-                  << pmt->channels.size() << " channels, " << pmt->flows.size() << " flows)" << std::endl;
-    }
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "IR assembled (#5): {} records, {} prompts",
+                        records.size(), prompts.size());
 
     return std::nullopt;
 }

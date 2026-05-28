@@ -14,6 +14,8 @@ from typing import Any, Callable, Dict, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from autocog.errors import OrchestrationError
+
 
 def _sanitize(obj):
     """Make a result JSON-serializable (replace control characters in strings)."""
@@ -64,7 +66,7 @@ class RequestQueue:
     def status(self, request_id: str) -> RequestStatus:
         """Get the status of a request."""
         if request_id not in self._requests:
-            raise KeyError(f"Unknown request: {request_id}")
+            raise OrchestrationError(f"Unknown request: {request_id}")
         r = self._requests[request_id]
         return RequestStatus(
             request_id=request_id,
@@ -112,5 +114,5 @@ def add_status_endpoint(app: FastAPI, queue: RequestQueue):
     async def get_status(request_id: str) -> RequestStatus:
         try:
             return queue.status(request_id)
-        except KeyError:
+        except (KeyError, OrchestrationError):
             raise HTTPException(status_code=404, detail=f"Unknown request: {request_id}")

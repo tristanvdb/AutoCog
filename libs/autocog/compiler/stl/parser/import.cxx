@@ -1,19 +1,14 @@
 
 #include "autocog/compiler/stl/parser.hxx"
+#include "autocog/logging.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
-#define DEBUG_Parser_Import VERBOSE && 1
 
 template <>
 void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Import> & import) {
-#if DEBUG_Parser_Import
-  std::cerr << "Parser::parse<ast::Tag::Import>" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Parser::parse<ast::Tag::Import>");
   state.expect(TokenType::FROM, "when parsing Import statement.");
   state.expect(TokenType::STRING_LITERAL, "when parsing import file path.");
   
@@ -37,9 +32,7 @@ void Parser::parse<ast::Tag::Import>(ParserState & state, ast::Data<ast::Tag::Im
   
   do {
     import.targets.emplace_back();
-#if DEBUG_Parser_Import
-    std::cerr << "  alias #" << import.targets.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  alias #");
     parse_with_location(state, import.targets.back());
   } while (state.match(TokenType::COMMA));
   

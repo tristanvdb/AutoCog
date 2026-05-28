@@ -15,6 +15,8 @@ import shutil
 import tempfile
 import zipfile
 
+from .errors import ConfigError
+
 
 def _collect_app_files(program, include_paths, stl_path=None):
     """Collect app-specific files (externals + STL imports) from include paths.
@@ -209,7 +211,7 @@ def load_stapp(stapp_path, recompile=False):
         req_ver = _parse_semver(required)
         if inst_ver[0] != req_ver[0]:
             shutil.rmtree(temp_dir, ignore_errors=True)
-            raise RuntimeError(
+            raise ConfigError(
                 f"ABI version mismatch: .stapp requires {required}, "
                 f"installed autocog is {installed} (major version differs)"
             )
@@ -243,7 +245,7 @@ def load_stapp(stapp_path, recompile=False):
     elif os.path.isfile(source_path):
         prog = autocog.compile(source_path, includes=include_paths)
     else:
-        raise RuntimeError(
+        raise ConfigError(
             f"Cannot load .stapp: no STA file and no source to compile"
         )
 

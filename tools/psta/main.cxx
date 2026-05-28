@@ -1,6 +1,8 @@
 
 #include "autocog/runtime/sta/load.hxx"
 #include "autocog/build_info.hxx"
+#include "autocog/logging.hxx"
+#include <algorithm>
 
 #include <nlohmann/json.hpp>
 
@@ -20,6 +22,7 @@ static void print_usage(char const * prog) {
               << "  -i, --input <file>     FTT JSON (default: stdin)\n"
               << "  -o, --output <file>    Output JSON (default: stdout)\n"
               << "  --metric <name>        Scoring metric: best (default)\n"
+              << "  -V, --verbose [LEVEL]  Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  -v, --version          Show version\n"
               << "  --build-info           Show build configuration\n"
               << "  -h, --help             Show this help\n";
@@ -146,6 +149,8 @@ int main(int argc, char ** argv) {
     std::string sta_file, prompt_name, input_file, output_file;
     std::string metric = "best";
 
+    autocog::init_console_logger();
+
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-h" || arg == "--help") { print_usage(argv[0]); return 0; }
@@ -155,6 +160,17 @@ int main(int argc, char ** argv) {
         if ((arg == "-i" || arg == "--input") && i + 1 < argc) { input_file = argv[++i]; continue; }
         if ((arg == "-o" || arg == "--output") && i + 1 < argc) { output_file = argv[++i]; continue; }
         if (arg == "--metric" && i + 1 < argc) { metric = argv[++i]; continue; }
+        if (arg == "-V" || arg == "--verbose") {
+          spdlog::level::level_enum lvl = spdlog::level::debug;
+          if (i + 1 < argc && argv[i + 1][0] != '-') {
+            std::string ml = argv[i + 1];
+            std::transform(ml.begin(), ml.end(), ml.begin(), ::tolower);
+            auto p = spdlog::level::from_str(ml);
+            if (p != spdlog::level::off || ml == "off") { lvl = p; ++i; }
+          }
+          autocog::init_console_logger(lvl);
+          continue;
+        }
         if (arg[0] == '-') { std::cerr << "Unknown option: " << arg << "\n"; return 1; }
         sta_file = arg;
     }

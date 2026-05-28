@@ -1,3 +1,4 @@
+from autocog.errors import ConfigError
 """Record execution artifacts (input, frame, text, FTA, FTT) per step."""
 
 import json
@@ -21,7 +22,7 @@ class Recorder:
             kinds = {k.strip() for k in kinds.split(",")}
         invalid = kinds - self.VALID_KINDS
         if invalid:
-            raise ValueError(f"Invalid record kinds: {invalid}. Valid: {self.VALID_KINDS}")
+            raise ConfigError(f"Invalid record kinds: {invalid}. Valid: {self.VALID_KINDS}")
         self.kinds = kinds
         if path:
             self.path = path

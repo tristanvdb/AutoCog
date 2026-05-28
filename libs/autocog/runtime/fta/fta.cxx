@@ -1,5 +1,6 @@
 
 #include "autocog/runtime/fta/fta.hxx"
+#include "autocog/utilities/exception.hxx"
 
 #include <map>
 #include <string>
@@ -61,7 +62,7 @@ Choice::Choice(
 Action const & FTA::action(ActionID const id) const {
   Action const & action = *(this->actions.at(id));
   if (action.id != id) {
-    throw std::runtime_error("Action's ID does not match position in FTA::actions!");
+    throw autocog::utilities::InternalError("Action ID does not match position in FTA::actions");
   }
   return action;
 }

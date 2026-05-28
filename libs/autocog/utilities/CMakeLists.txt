@@ -5,6 +5,7 @@ add_library(autocog_utilities_lib STATIC
 
 target_include_directories(autocog_utilities_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/libs
+    ${PROJECT_SOURCE_DIR}/vendors/headers
 )
 
 target_link_libraries(autocog_utilities_lib PUBLIC ${CMAKE_DL_LIBS})

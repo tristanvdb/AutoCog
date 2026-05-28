@@ -4,9 +4,6 @@
 
 #include <stdexcept>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 
@@ -247,9 +244,6 @@ void InstantiationGraphBuilder::process_reference(
     );
     queue.push_back(mangled);
 
-#if VERBOSE
-    std::cerr << "  Instantiated: " << mangled << " (from " << predecessor << ")" << std::endl;
-#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -341,9 +335,6 @@ void InstantiationGraphBuilder::process_node(InstantiationNode & node) {
 // ----------------------------------------------------------------------------
 
 void InstantiationGraphBuilder::build() {
-#if VERBOSE
-    std::cerr << "InstantiationGraphBuilder::build()" << std::endl;
-#endif
 
     // Seed from entry points
     for (auto const & entry_name : driver.entry_points) {
@@ -378,9 +369,6 @@ void InstantiationGraphBuilder::build() {
         );
         queue.push_back(mangled);
 
-#if VERBOSE
-        std::cerr << "  Entry: " << entry_name << " -> " << mangled << std::endl;
-#endif
     }
 
     // BFS
@@ -391,16 +379,9 @@ void InstantiationGraphBuilder::build() {
         auto it = graph.nodes.find(mangled);
         if (it == graph.nodes.end()) continue;
 
-#if VERBOSE
-        std::cerr << "  Processing: " << mangled << std::endl;
-#endif
         process_node(it->second);
     }
 
-#if VERBOSE
-    std::cerr << "  Graph: " << graph.nodes.size() << " nodes, "
-              << graph.edges.size() << " edges" << std::endl;
-#endif
 }
 
 } // namespace autocog::compiler::stl

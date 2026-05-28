@@ -1,6 +1,9 @@
 #ifndef AUTOCOG_UTILITIES_HXX
 #define AUTOCOG_UTILITIES_HXX
 
+#include "autocog/utilities/errors.hxx"
+#include "autocog/logging.hxx"
+
 #include <string>
 #include <iostream>
 #include <optional>
@@ -15,12 +18,8 @@ namespace autocog::utilities {
 // Forward declaration
 struct Backtrace;
 
-struct InternalError : std::exception {
-  std::string message;
-  
+struct InternalError : autocog::AutoCogError {
   InternalError(std::string msg);
-  
-  const char * what() const noexcept override;
 };
 
 // Structured backtrace information
@@ -96,38 +95,30 @@ extern "C" {
 }
 
 template <typename Callable, typename... Args>
-std::optional<int> wrap_exception(Callable&& callable, Args&&... args) {
+int run_with_diagnostics(Callable&& callable, Args&&... args) {
   try {
     return std::invoke(std::forward<Callable>(callable), 
                        std::forward<Args>(args)...);
-
-  } catch (InternalError const & e) {
-    std::cerr << "Internal error: " << e.what() << "\n";
-    if (!g_last_throw_backtrace.empty()) {
-      std::cerr << g_last_throw_backtrace.to_string() << "\n";
+  } catch (autocog::AutoCogError const & e) {
+    if (dynamic_cast<InternalError const *>(&e)) {
+      SPDLOG_LOGGER_CRITICAL(autocog::log(), "internal error: {}", e.what());
     } else {
-      std::cerr << ">> Backtrace is empty!!! Rethrow for debugging... <<" << "\n";
-      throw;
+      SPDLOG_LOGGER_ERROR(autocog::log(), "{}", e.what());
     }
-    return 250;
-
-  } catch (std::exception const & e) {
-    std::cerr << "Uncaught exception: " << e.what() << "\n";
     if (!g_last_throw_backtrace.empty()) {
-      std::cerr << g_last_throw_backtrace.to_string() << "\n";
-    } else {
-      std::cerr << ">> Backtrace is empty!!! Rethrow for debugging... <<" << "\n";
-      throw;
+      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
+    }
+    return dynamic_cast<InternalError const *>(&e) ? 250 : 1;
+  } catch (std::exception const & e) {
+    SPDLOG_LOGGER_CRITICAL(autocog::log(), "uncaught: {} ({})", e.what(), typeid(e).name());
+    if (!g_last_throw_backtrace.empty()) {
+      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
     }
     return 251;
-
   } catch (...) {
-    std::cerr << "Uncaught unknown exception\n";
+    SPDLOG_LOGGER_CRITICAL(autocog::log(), "uncaught unknown exception");
     if (!g_last_throw_backtrace.empty()) {
-      std::cerr << g_last_throw_backtrace.to_string() << "\n";
-    } else {
-      std::cerr << ">> Backtrace is empty!!! Rethrow for debugging... <<" << "\n";
-      throw;
+      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
     }
     return 252;
   }

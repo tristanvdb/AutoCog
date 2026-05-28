@@ -3,6 +3,7 @@
 
 #include "autocog/compiler/stl/token.hxx"
 #include "autocog/compiler/stl/ast.hxx"
+#include "autocog/compiler/stl/diagnostic.hxx"
 
 #include "autocog_compiler_stl_lexer.hxx" //< Generated file
 
@@ -14,13 +15,10 @@
 
 namespace autocog::compiler::stl {
 
-struct ParseError : std::exception {
-  std::string message;
-  SourceLocation location;
+struct ParseError : CompileError {
+  SourceLocation parse_location;
   
   ParseError(std::string msg, SourceLocation loc);
-  
-  const char * what() const noexcept override;
 };
 
 class Lexer;
@@ -60,7 +58,7 @@ class Parser {
     static void parse(ParserState &, ast::Data<tag> &) {
       std::ostringstream oss;
       oss << "Not implemented: autocog::compiler::stl::Parser::parse<" << ast::tag2str(tag) << ">(...)";
-      throw std::runtime_error(oss.str());
+      throw autocog::utilities::InternalError(oss.str());
     }
 
     static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr);

@@ -40,7 +40,6 @@ class Driver {
 
     CompilationStage stage = CompilationStage::Generate;
     std::optional<std::string> output = std::nullopt;
-    bool verbose = false;
 
   // ---- Stage results (populated during compile) ----
   public:

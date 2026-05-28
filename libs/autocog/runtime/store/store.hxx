@@ -10,7 +10,7 @@
 #include <atomic>
 #include <map>
 #include <mutex>
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 
 namespace autocog::runtime::store {
 
@@ -30,13 +30,13 @@ class Registry {
 
     T const & get(int id) const {
         auto it = items.find(id);
-        if (it == items.end()) throw std::runtime_error("Invalid ID: " + std::to_string(id));
+        if (it == items.end()) throw autocog::utilities::InternalError("Store: invalid ID " + std::to_string(id));
         return it->second;
     }
 
     T & get(int id) {
         auto it = items.find(id);
-        if (it == items.end()) throw std::runtime_error("Invalid ID: " + std::to_string(id));
+        if (it == items.end()) throw autocog::utilities::InternalError("Store: invalid ID " + std::to_string(id));
         return it->second;
     }
 

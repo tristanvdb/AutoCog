@@ -1,19 +1,14 @@
 
 #include "autocog/backend/llama/model.hxx"
+#include "autocog/logging.hxx"
 
 #include <llama.h>
 
 #include <cmath>
 #include <algorithm>
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_Model_set_tokens VERBOSE && 0
-#define DEBUG_Model_eval_sequences VERBOSE && 0
-#define DEBUG_Model_eval_topk_tokens VERBOSE && 0
 
 namespace autocog::backend::llama {
 
@@ -37,7 +32,7 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   llama_model_params model_params = llama_model_default_params();
   this->model = llama_model_load_from_file(model_path.c_str(), model_params);
   if (!this->model) {
-    throw std::runtime_error("Failed to load model from: " + model_path);
+    throw autocog::ModelError("Failed to load model from: " + model_path, id, "load");
   }
    
   // Create context parameters
@@ -48,16 +43,13 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   llama_context * ctx = llama_init_from_model(this->model, ctx_params);
   if (!ctx) {
     llama_model_free(this->model);
-    throw std::runtime_error("Failed to create llama context");
+    throw autocog::ModelError("Failed to create llama context", id, "context");
   }
   this->contexts.push_back(ctx);
   this->tokens.emplace_back(); 
 }
 
 Model::~Model() {
-#if VERBOSE
-  std::cerr << "Model::~Model(" << this->id << ")" << std::endl;
-#endif
   if (this->id == 0) {
     // NOP
   } else {
@@ -69,13 +61,13 @@ Model::~Model() {
 
 void Model::check_context_id(ContextID const id) const {
   if (this->contexts.size() != this->tokens.size()) {
-    throw std::runtime_error("Discrepency between contexts and tokens vector size.");
+    throw autocog::utilities::InternalError("Discrepancy between contexts and tokens vector size");
   }
   if (id >= this->contexts.size()) {
-    throw std::runtime_error("Invalid context ID: " + std::to_string(id));
+    throw autocog::utilities::InternalError("Invalid context ID: " + std::to_string(id));
   }
   if (this->contexts[id] == nullptr && this->id != 0) {
-    throw std::runtime_error("Missing context ID: " + std::to_string(id));
+    throw autocog::utilities::InternalError("Missing context ID: " + std::to_string(id));
   }
 }
 
@@ -95,7 +87,7 @@ TokenSequence & Model::get_tokens(ContextID const id) {
 }
 
 ContextID Model::fork_context(ContextID const) {
-  throw std::runtime_error("Context forking is not implemented yet (Phase 3 feature)");
+  throw autocog::NotImplementedError("Context forking is not implemented yet (Phase 3 feature)");
 }
 
 TokenSequence Model::tokenize(std::string const & text, bool add_bos, bool special) {
@@ -122,7 +114,7 @@ TokenSequence Model::tokenize(std::string const & text, bool add_bos, bool speci
   );
    
   if (n_tokens < 0) {
-    throw std::runtime_error("Tokenization failed for text: " + text);
+    throw autocog::ModelError("Tokenization failed for text: " + text, id, "tokenize");
   }
    
   TokenSequence result(tokens.begin(), tokens.begin() + n_tokens);
@@ -161,7 +153,7 @@ std::string Model::detokenize(TokenSequence const & tokens, bool spec_rm, bool s
   );
 
   if (n_chars < 0) {
-    throw std::runtime_error("Detokenization failed");
+    throw autocog::ModelError("Detokenization failed", id, "detokenize");
   }
    
   result.resize(n_chars);
@@ -170,7 +162,7 @@ std::string Model::detokenize(TokenSequence const & tokens, bool spec_rm, bool s
 
 const llama_vocab * Model::get_vocab() const {
   if (this->id == 0) {
-    throw std::runtime_error("Using model #0 (RNG) is not implemented yet!");
+    throw autocog::NotImplementedError("Using model #0 (RNG) for this operation is not implemented");
   }
   return llama_model_get_vocab(this->model);
 }
@@ -243,10 +235,8 @@ static llama_pos find_common_prefix(const TokenSequence& a, const TokenSequence&
 }
 
 unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const id) {
-#if DEBUG_Model_set_tokens
-  std::cerr << "Model::set_tokens(...):" << std::endl;
-  std::cerr << " > target_tokens.size() = " << target_tokens.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Model::set_tokens(...):");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > target_tokens.size() =");
   if (this->id == 0) {
     this->tokens[id] = target_tokens;
     return target_tokens.size();
@@ -254,27 +244,19 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
   check_context_id(id);
 
   TokenSequence & current_tokens = this->get_tokens(id);
-#if DEBUG_Model_set_tokens
-  std::cerr << " > current_tokens.size() = " << current_tokens.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > current_tokens.size() =");
   llama_context * ctx = this->get_context(id);
   unsigned n_ctx = llama_n_ctx(ctx);
   if (current_tokens.size() > n_ctx) {
-    throw std::runtime_error("Token sequence too long: " + std::to_string(current_tokens.size()) + " > " + std::to_string(n_ctx));
+    throw autocog::ModelError("Token sequence too long: " + std::to_string(current_tokens.size()) + " > " + std::to_string(n_ctx), id, "context_overflow");
   }
 
   llama_memory_t mem = llama_get_memory(ctx);
-#if DEBUG_Model_set_tokens
-  llama_pos kv_pos_max = llama_memory_seq_pos_max(mem, 0);
-  llama_pos kv_pos_min = llama_memory_seq_pos_min(mem, 0);
-  std::cerr << " > KV cache pos_min = " << kv_pos_min << std::endl;
-  std::cerr << " > KV cache pos_max = " << kv_pos_max << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > KV cache pos_min =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > KV cache pos_max =");
 
   llama_pos common_prefix = find_common_prefix(current_tokens, target_tokens);
-#if DEBUG_Model_set_tokens
-  std::cerr << " > common_prefix = " << common_prefix << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > common_prefix =");
 
   unsigned num_token_eval = 0;
   if (common_prefix == 0) {
@@ -282,7 +264,7 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
 
     llama_batch batch = llama_batch_get_one(const_cast<TokenID*>(target_tokens.data()), target_tokens.size());
     if (llama_decode(ctx, batch) != 0) {
-      throw std::runtime_error("Failed to set the token sequence.");
+      throw autocog::ModelError("Failed to set the token sequence", id, "set_tokens");
     }
     num_token_eval += target_tokens.size();
   } else {
@@ -302,7 +284,7 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
       batch.pos = positions.data();
 
       if (llama_decode(ctx, batch) != 0) {
-        throw std::runtime_error("Failed to decode token");
+        throw autocog::ModelError("Failed to decode token", id, "decode");
       }
       num_token_eval += extension.size();
     }
@@ -312,10 +294,8 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
 }
 
 unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence & logprobs, ContextID const id) {
-#if DEBUG_Model_eval_sequences
-  std::cerr << "Model::eval_sequences(...):" << std::endl;
-  std::cerr << " > new_tokens.size() = " << new_tokens.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Model::eval_sequences(...):");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > new_tokens.size() =");
   if (this->id == 0) {
     std::exponential_distribution<float> dist(0.5f);
     logprobs.clear();
@@ -331,15 +311,13 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   logprobs.clear();
 
   for (auto token: new_tokens) {
-#if DEBUG_Model_set_tokens
-    std::cerr << " > token_pos = " << token_pos << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > token_pos =");
 
     llama_batch batch = llama_batch_get_one(&token, 1);
     batch.pos = &token_pos;
 
     if (llama_decode(this->get_context(id), batch) != 0) {
-      throw std::runtime_error("Failed to decode token");
+      throw autocog::ModelError("Failed to decode token", id, "decode");
     }
 
     logprobs.push_back(retrieve_logprob(this->get_context(id), this->vocab_size(), token));
@@ -358,16 +336,14 @@ unsigned Model::eval_topk_tokens(
   std::vector<float> & topk_lobprobs,
   ContextID const id
 ) {
-#if DEBUG_Model_eval_topk_tokens
-  std::cerr << "Model::eval_topk_tokens(...):" << std::endl;
-  std::cerr << " > max_candidates = " << max_candidates << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Model::eval_topk_tokens(...):");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > max_candidates =");
 
   check_context_id(id);
   if (this->id == 0) {
     size_t vs = RNG_VOCAB_SIZE;
     if (vocab_mask.size() != vs) {
-      throw std::runtime_error("vocab_mask size (" + std::to_string(vocab_mask.size()) + ") does not match vocabulary size (" + std::to_string(vs) + ")");
+      throw autocog::ModelError("vocab_mask size mismatch: " + std::to_string(vocab_mask.size()) + " vs " + std::to_string(vs), id, "vocab_mask");
     }
 
     // RNG model: exponential logprobs (λ=0.5, mean=2)
@@ -384,7 +360,7 @@ unsigned Model::eval_topk_tokens(
     }
 
     if (candidates.empty()) {
-      throw std::runtime_error("Failed to find candidate token. Cannot have an empty vocabulary mask (all false).");
+      throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", id, "vocab_mask");
     }
 
     std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
@@ -405,7 +381,7 @@ unsigned Model::eval_topk_tokens(
 
   size_t vocab_size = this->vocab_size();
   if (vocab_mask.size() != vocab_size) {
-     throw std::runtime_error("vocab_mask size (" + std::to_string(vocab_mask.size()) + ") does not match vocabulary size (" + std::to_string(vocab_size) + ")");
+     throw autocog::ModelError("vocab_mask size mismatch: " + std::to_string(vocab_mask.size()) + " vs " + std::to_string(vocab_size), id, "vocab_mask");
   }
 
   llama_context * ctx = this->get_context(id);
@@ -418,7 +394,7 @@ unsigned Model::eval_topk_tokens(
 
   // Handle edge case: no valid candidates
   if (candidates.empty()) {
-    throw std::runtime_error("Failed to find candidate token. Cannot have an empty vocabularity mask (all false).");
+    throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", id, "vocab_mask");
   }
     
   std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {

@@ -8,6 +8,7 @@ pybind11_add_module(autocog_compiler_stl_pybind
 target_include_directories(autocog_compiler_stl_pybind PRIVATE
   ${PROJECT_SOURCE_DIR}/libs
   ${PROJECT_SOURCE_DIR}/vendors/headers
+  ${PROJECT_SOURCE_DIR}/bindings
 )
 target_link_libraries(autocog_compiler_stl_pybind PRIVATE
   autocog_compiler_stl_lib

@@ -75,7 +75,7 @@ class Context:
         flow_choice = frame.get("next", "")
 
         if flow_choice not in flows:
-            raise RuntimeError(
+            raise OrchestrationError(
                 f"Flow choice '{flow_choice}' not found in prompt '{self.prompt}'. "
                 f"Available: {list(flows.keys())}. "
                 f"This usually means the parser failed to extract the 'next' field."
@@ -93,7 +93,7 @@ class Context:
             count = self.branches[self.prompt].get(flow_choice, 0)
             limit = flow_def.get("limit", 1)
             if count >= limit:
-                raise RuntimeError(
+                raise OrchestrationError(
                     f"Flow limit exceeded for '{flow_choice}' in '{self.prompt}' "
                     f"(count={count}, limit={limit})"
                 )
@@ -115,7 +115,7 @@ class Context:
         has_root = "_" in aliases
         has_named = any(a != "_" for a in aliases)
         if has_root and has_named:
-            raise RuntimeError("Invalid return: cannot mix '_' (root) with named aliases")
+            raise OrchestrationError("Invalid return: cannot mix '_' (root) with named aliases")
 
         if has_root and len(fields) == 1:
             # Single field with _ alias: return the value directly

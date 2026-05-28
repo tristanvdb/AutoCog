@@ -3,6 +3,8 @@
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/runtime/sta/search.hxx"
 #include "autocog/build_info.hxx"
+#include "autocog/logging.hxx"
+#include <algorithm>
 
 #include <nlohmann/json.hpp>
 
@@ -23,6 +25,7 @@ static void print_usage(char const * prog) {
               << "  -d, --data <file>      Initial content JSON (default: {})\n"
               << "  -o, --output <file>    Output FTA JSON (default: stdout)\n"
               << "  -t, --text             Print FTA as text instead of JSON\n"
+              << "  -V, --verbose [LEVEL]  Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  -v, --version          Show version\n"
               << "  --build-info           Show build configuration\n"
               << "  -h, --help             Show this help\n";
@@ -31,6 +34,8 @@ static void print_usage(char const * prog) {
 int main(int argc, char ** argv) {
     std::string sta_file, prompt_name, syntax_file, search_file, data_file, output_file;
     bool text_mode = false;
+
+    autocog::init_console_logger();
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -43,6 +48,17 @@ int main(int argc, char ** argv) {
         if (arg == "--search" && i + 1 < argc) { search_file = argv[++i]; continue; }
         if ((arg == "-d" || arg == "--data") && i + 1 < argc) { data_file = argv[++i]; continue; }
         if ((arg == "-o" || arg == "--output") && i + 1 < argc) { output_file = argv[++i]; continue; }
+        if (arg == "-V" || arg == "--verbose") {
+          spdlog::level::level_enum lvl = spdlog::level::debug;
+          if (i + 1 < argc && argv[i + 1][0] != '-') {
+            std::string ml = argv[i + 1];
+            std::transform(ml.begin(), ml.end(), ml.begin(), ::tolower);
+            auto p = spdlog::level::from_str(ml);
+            if (p != spdlog::level::off || ml == "off") { lvl = p; ++i; }
+          }
+          autocog::init_console_logger(lvl);
+          continue;
+        }
         if (arg[0] == '-') { std::cerr << "Unknown option: " << arg << "\n"; return 1; }
         sta_file = arg;
     }

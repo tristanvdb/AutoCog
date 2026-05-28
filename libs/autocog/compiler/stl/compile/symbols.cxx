@@ -1,6 +1,7 @@
 
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/symbol-scanner.hxx"
+#include "autocog/logging.hxx"
 
 namespace autocog::compiler::stl {
 
@@ -9,10 +10,7 @@ std::optional<int> Driver::run_symbols() {
     traverse_ast(symbol_scanner);
     if (report_errors()) return 2;
 
-#if !defined(NDEBUG)
-    std::cerr << "After collecting symbol (#2):" << std::endl;
-    tables.dump_symbols(std::cerr);
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Symbols collected (#2)");
 
     return std::nullopt;
 }

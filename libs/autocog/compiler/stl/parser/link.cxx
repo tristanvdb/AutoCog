@@ -1,9 +1,6 @@
 
 #include "autocog/compiler/stl/parser.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
 namespace autocog::compiler::stl {
 

@@ -1,3 +1,4 @@
+from autocog.errors import ConfigError
 """
 Clause transformations — applied in parse order to channel data.
 """
@@ -145,7 +146,7 @@ def apply_clause(data, clause):
         # mapped is handled specially by the caller
         return data
     else:
-        raise ValueError(f"Unknown clause type: {t}")
+        raise ConfigError(f"Unknown clause type: {t}")
 
 
 def apply_clauses(data, clauses):

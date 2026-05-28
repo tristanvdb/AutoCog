@@ -5,6 +5,7 @@ Engine — holds a model and syntax, drives program execution.
 from autocog.runtime.sta import runtime_sta_cxx
 from autocog.backend.llama import backend_llama_cxx
 
+from .errors import ConfigError, OrchestrationError
 from .context import Context
 
 
@@ -27,11 +28,11 @@ class Engine:
             self.model_id = 0  # RNG model
 
         if syntax is None:
-            raise ValueError("syntax is required — pass a path to a syntax JSON file")
+            raise ConfigError("syntax is required — pass a path to a syntax JSON file")
         self.syntax_id = runtime_sta_cxx.load_syntax(syntax)
 
         if search is None:
-            raise ValueError("search is required — pass a path to a search config JSON file")
+            raise ConfigError("search is required — pass a path to a search config JSON file")
         self.search_id = runtime_sta_cxx.load_search_config(search)
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
@@ -107,7 +108,7 @@ class Engine:
             ctx.step()
             steps += 1
         if not ctx.done:
-            raise RuntimeError(
+            raise OrchestrationError(
                 f"Program did not complete after {max_steps} steps "
                 f"(at prompt '{ctx.prompt}'). Increase --max-steps if needed."
             )

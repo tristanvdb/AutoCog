@@ -6,6 +6,7 @@ import os
 
 from autocog.compiler.stl import compiler_stl_cxx
 from autocog.runtime.sta import runtime_sta_cxx
+from autocog.errors import ConfigError
 
 
 class Program:
@@ -31,7 +32,7 @@ class Program:
         """Get the prompt name for an entry point."""
         ep = self.entry_points.get(entry)
         if ep is None:
-            raise ValueError(f"Entry point '{entry}' not found")
+            raise ConfigError(f"Entry point '{entry}' not found")
         return ep["prompt"]
 
     def input_schema(self, entry="main"):

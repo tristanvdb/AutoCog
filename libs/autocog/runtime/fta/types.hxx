@@ -4,9 +4,6 @@
 #include <cstdint>
 #include <vector>
 
-#ifndef VERBOSE
-#  define VERBOSE 0
-#endif
 
 namespace autocog::runtime::fta {
 

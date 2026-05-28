@@ -4,6 +4,7 @@
 #include "autocog/runtime/store/store.hxx"
 
 #include <pybind11/pybind11.h>
+#include "errors.hxx"
 #include <pybind11/stl.h>
 
 #include <sstream>
@@ -29,7 +30,7 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
 
             auto err = driver.compile();
             if (err) {
-                throw std::runtime_error("Compilation failed with error code " + std::to_string(*err));
+                throw autocog::compiler::stl::CompileError("Compilation failed with error code " + std::to_string(*err));
             }
 
             return store::programs().add(std::move(driver.sta));
@@ -43,7 +44,7 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
     module.def("emit",
         [](int program_id, std::string const & target) -> py::object {
             if (target != "sta") {
-                throw std::runtime_error("Unknown emit target: " + target);
+                throw autocog::ConfigError("Unknown emit target: " + target, target);
             }
             auto const & program = store::programs().get(program_id);
             auto j = autocog::runtime::sta::serialize_program(program);
@@ -62,4 +63,5 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
         "Release a compiled program",
         py::arg("program_id")
     );
+
 }

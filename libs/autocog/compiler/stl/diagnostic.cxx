@@ -79,13 +79,9 @@ CompileError::CompileError(
   std::string msg,
   std::optional<SourceRange> loc
 ) :
-  message(std::move(msg)),
+  AutoCogError(std::move(msg), /*recoverable=*/false),
   location(loc)
 {}
-  
-const char * CompileError::what() const noexcept {
-  return message.c_str();
-}
 
 }
 

@@ -4,13 +4,9 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
 #include "autocog/runtime/fta/fta.hxx"
+#include "autocog/logging.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_Evaluation_enqueue VERBOSE && 0
-#define DEBUG_Evaluation_advance VERBOSE && 0
 
 namespace autocog::backend::llama {
 
@@ -47,16 +43,11 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
   unsigned num_token_eval = 0;
   while (!queue.empty() && (max_token_eval == std::nullopt || num_token_eval < max_token_eval)) {
     PathState & state = queue.front();
-#if VERBOSE
-    std::cerr << "Evaluation::advance [ Q=" << queue.size() << ", A=" << num_action_eval << ", T=" << num_token_eval << " ]" << std::endl;
-#endif
-#if DEBUG_Evaluation_advance
-    std::cerr << "  state.action         = " << state.action << std::endl;
-    std::cerr << "  state.tokens.size()  = " << state.tokens.size() << std::endl;
-    std::cerr << "  state.proba()        = " << state.proba() << std::endl;
-    std::cerr << "  state.parent.length  = " << state.parent.length << std::endl;
-    std::cerr << "  state.parent.logprob = " << state.parent.logprob << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  state.action         =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  state.tokens.size()  =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  state.proba()        =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  state.parent.length  =");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "  state.parent.logprob =");
     Action const & action = this->fta.action(state.action);
     switch (action.kind) {
       case ActionKind::Text:
@@ -96,9 +87,7 @@ void Evaluation::enqueue(
   FTT & parent,
   PathState const & state
 ) {
-#if DEBUG_Evaluation_enqueue
-  std::cerr << ">> Evaluation::enqueue <<" << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), ">> Evaluation::enqueue <<");
   std::optional<ContextID> ctx = state.context;
   ctx.reset(); // TODO context saving logic
   

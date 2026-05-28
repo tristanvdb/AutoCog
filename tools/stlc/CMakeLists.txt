@@ -4,6 +4,7 @@
 
 add_executable(autocog_stlc
   main.cxx
+  ${PROJECT_SOURCE_DIR}/libs/autocog/logging.cxx
   args.cxx
 )
 target_include_directories(autocog_stlc PRIVATE

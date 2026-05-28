@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 #include <memory>
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 
 namespace autocog::runtime::fta {
 
@@ -36,7 +36,7 @@ struct Action {
   template <class T>
   T const & as() const {
     if (T::Kind != kind) {
-      throw std::runtime_error("Calling Action::as() with uncompatible ActionKind.");
+      throw autocog::utilities::InternalError("Calling Action::as() with incompatible ActionKind");
     }
     return static_cast<const T &>(*this);
   }

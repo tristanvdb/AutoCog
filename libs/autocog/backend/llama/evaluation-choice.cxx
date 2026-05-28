@@ -3,20 +3,17 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/runtime/fta/fta.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/logging.hxx"
 
 #include <llama.h>
 
 
 #include <cmath>
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 #include <vector>
 #include <algorithm>
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_Evaluation_evaluate_choice VERBOSE && 0
 
 namespace autocog::backend::llama {
 
@@ -35,22 +32,18 @@ struct ChoiceResult {
 };
 
 unsigned Evaluation::evaluate_choice(PathState & state) {
-#if DEBUG_Evaluation_evaluate_choice
-  std::cerr << "Executing Choice     #" << state.action << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Executing Choice     #");
   Choice const & action = this->fta.action(state.action).as<Choice>();
-#if DEBUG_Evaluation_evaluate_choice
-  std::cerr << " - name: " << action.name << std::endl;
-  std::cerr << " - width: " << action.width << std::endl;
-  std::cerr << " - number of choices: " << action.choices.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - name:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - width:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - number of choices:");
   
   if (action.choices.empty()) {
-    throw std::runtime_error("Choice action has no choices");
+    throw autocog::utilities::InternalError("Choice action has no choices");
   }
 
   if (action.successors.size() != action.choices.size()) {
-    throw std::runtime_error("Choice action must have as many successors as choices");
+    throw autocog::utilities::InternalError("Choice action must have as many successors as choices");
   }
   
   unsigned num_token_eval = 0;
@@ -59,12 +52,10 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   // Evaluate ALL choices in full
   for (size_t idx = 0; idx < action.choices.size(); ++idx) {
     auto [model, ctx] = this->restore(state);
-#if DEBUG_Evaluation_evaluate_choice
-    std::cerr << " - Model   #" << model.id << std::endl;
-    std::cerr << " - Context #" << ctx << std::endl;
-    std::cerr << " - choice[" << idx << "]:" << std::endl;
-    std::cerr << "   - number of tokens: " << action.choices[idx].size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Model   #");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Context #");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - choice[ ]:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), "   - number of tokens:");
     
     // Save current state to restore after evaluation
     TokenSequence saved_tokens = model.get_tokens_const(ctx);
@@ -75,9 +66,7 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
     float proba = 0.;
     for (float lpb : logprobs) proba += lpb;
     proba = std::exp(-proba/logprobs.size());
-#if DEBUG_Evaluation_evaluate_choice
-    std::cerr << "   - proba: " << proba << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "   - proba:");
 
     results.emplace_back(idx, logprobs, proba);
 
@@ -100,9 +89,7 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
     count++;
   }
 
-#if DEBUG_Evaluation_evaluate_choice
-  std::cerr << " > evaluated: " << num_token_eval << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > evaluated:");
   
   return num_token_eval;
 }

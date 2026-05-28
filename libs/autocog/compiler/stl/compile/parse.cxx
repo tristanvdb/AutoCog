@@ -1,7 +1,7 @@
 
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/parser.hxx"
-#include "autocog/compiler/stl/ast/printer.hxx"
+#include "autocog/logging.hxx"
 
 namespace autocog::compiler::stl {
 
@@ -10,13 +10,7 @@ std::optional<int> Driver::run_parse() {
     parser.parse();
     if (report_errors()) return 1;
 
-#if !defined(NDEBUG)
-    std::cerr << "After parsing (#1):" << std::endl;
-    for (auto const & program : programs) {
-        std::cerr << "  " << program.data.fid << ": " << program.data.filename << std::endl;
-        ast::printTagTree(program, std::cerr, "> ");
-    }
-#endif
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Parsed {} program(s) (#1)", programs.size());
 
     return std::nullopt;
 }

@@ -4,48 +4,37 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/runtime/fta/fta.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/logging.hxx"
 
-#include <stdexcept>
+#include "autocog/utilities/exception.hxx"
 
-#if VERBOSE
-#  include <iostream>
-#endif
 
-#define DEBUG_Evaluation_evaluate_text VERBOSE && 0
 
 namespace autocog::backend::llama {
 
 using namespace autocog::runtime::fta;
 
 unsigned Evaluation::evaluate_text(PathState & state) {
-#if DEBUG_Evaluation_evaluate_text
-  std::cerr << "Executing Text       #" << state.action << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Executing Text       #");
   Text const & action = this->fta.action(state.action).as<Text>();
-#if DEBUG_Evaluation_evaluate_text
-  std::cerr << " - name: " << action.name << std::endl;
-  std::cerr << " - number of tokens: " << action.tokens.size() << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - name:");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - number of tokens:");
 
   unsigned num_token_eval = 0;
   ProbaSequence logprobs(action.tokens.size(), 0.);
   if (action.evaluate) {
     auto [model,ctx] = this->restore(state);
-#if DEBUG_Evaluation_evaluate_text
-    std::cerr << " - Model   #" << model.id << std::endl;
-    std::cerr << " - Context #" << ctx << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Model   #");
+  SPDLOG_LOGGER_TRACE(autocog::log(), " - Context #");
     num_token_eval += model.eval_sequences(action.tokens, logprobs, ctx);
   }
-#if DEBUG_Evaluation_evaluate_text
-  std::cerr << " > evaluated: " << num_token_eval << std::endl;
-#endif
+  SPDLOG_LOGGER_TRACE(autocog::log(), " > evaluated:");
 
   auto & child = state.parent.add(action.id, action.tokens, logprobs);
   if (action.successors.size() == 1) {
     this->enqueue(action.successors[0], child, state);
   } else if (action.successors.size() > 1) {
-    throw std::runtime_error("Text action should never have more than 1 successor.");
+    throw autocog::utilities::InternalError("Text action should never have more than 1 successor");
   }
   
   return num_token_eval;

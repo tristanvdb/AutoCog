@@ -22,11 +22,11 @@ endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_compile_definitions(VERBOSE=1)
   add_compile_definitions(DEBUG=1)
+  add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 else()
-  add_compile_definitions(VERBOSE=0)
   add_compile_definitions(NDEBUG=1)
+  add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO)
 endif()
 
 # Coverage support: cmake -DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug

@@ -1,6 +1,8 @@
 
 #include "autocog/compiler/stl/driver.hxx"
+#include "autocog/logging.hxx"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -39,7 +41,8 @@ static void print_usage(const char* program) {
   std::cerr << "  -e, --emit <target>    Emit target (default: sta)\n";
   std::cerr << "               Targets: ast, symbols, globals, graph,\n";
   std::cerr << "                        ir, sta (default)\n";
-  std::cerr << "  -V, --verbose      Enable verbose output\n";
+  std::cerr << "  -V, --verbose [LEVEL]  Set log level (trace,debug,info,warn,error,critical)\n"
+              << "                         Default: debug if bare, warn if absent\n";
   std::cerr << "  -h, --help         Show this help message\n";
   std::cerr << "  -v, --version      Show version information\n";
   std::cerr << "  --build-info       Show build configuration\n";
@@ -230,7 +233,17 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
 
     // Verbose
     if (arg == "-V" || arg == "--verbose") {
-      driver.verbose = true;
+      spdlog::level::level_enum lvl = spdlog::level::debug;  // bare --verbose → DEBUG
+      if (i + 1 < argc && argv[i + 1][0] != '-') {
+        std::string maybe_level = argv[i + 1];
+        std::transform(maybe_level.begin(), maybe_level.end(), maybe_level.begin(), ::tolower);
+        auto parsed = spdlog::level::from_str(maybe_level);
+        if (parsed != spdlog::level::off || maybe_level == "off") {
+          lvl = parsed;
+          ++i;  // consume the level arg
+        }
+      }
+      autocog::init_console_logger(lvl);
       continue;
     }
 
@@ -321,46 +334,9 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     return 1;
   }
 
-  // Debug output in verbose mode
-  if (driver.verbose) {
-    std::cerr << "Input files:" << std::endl;
-    for (auto const & input : driver.inputs) {
-      std::cerr << "  " << input << std::endl;
-    }
-    
-    if (driver.output) {
-      std::cerr << "Output file: " << *driver.output << std::endl;
-    } else {
-      std::cerr << "Output: stdout" << std::endl;
-    }
-
-    if (!driver.includes.empty()) {
-      std::cerr << "Include paths:" << std::endl;
-      for (const auto& inc : driver.includes) {
-        std::cerr << "  " << inc << std::endl;
-      }
-    }
-
-    if (!driver.defines.empty()) {
-      std::cerr << "Defines:" << std::endl;
-      for (const auto& [name, value] : driver.defines) {
-        std::cerr << "  " << name << " = ";
-        std::visit([](const auto& v) {
-          using T = std::decay_t<decltype(v)>;
-          if constexpr (std::is_same_v<T, bool>) {
-            std::cerr << (v ? "true" : "false") << " (bool)";
-          } else if constexpr (std::is_same_v<T, int>) {
-            std::cerr << v << " (int)";
-          } else if constexpr (std::is_same_v<T, float>) {
-            std::cerr << v << " (float)";
-          } else if constexpr (std::is_same_v<T, std::string>) {
-            std::cerr << "\"" << v << "\" (string)";
-          }
-        }, value);
-        std::cerr << std::endl;
-      }
-    }
-  }
+  // Log parsed arguments
+  SPDLOG_LOGGER_DEBUG(autocog::log(), "Inputs: {}, Includes: {}",
+                      driver.inputs.size(), driver.includes.size());
 
   return std::nullopt;
 }
