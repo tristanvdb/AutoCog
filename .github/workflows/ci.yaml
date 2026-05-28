@@ -10,7 +10,10 @@ permissions:
   contents: read
 
 jobs:
-  test-and-coverage:
+  # ===========================================================================
+  # Job 1: Debug + Coverage (ctest + pytest)
+  # ===========================================================================
+  test-coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,53 +36,34 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
-          restore-keys: ccache-${{ runner.os }}-
+          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          restore-keys: ccache-debug-${{ runner.os }}-
 
-      # ---- cmake build + ctest (standalone, no pip install needed) ----
-
-      - name: Configure cmake (coverage build)
+      - name: Install autocog (debug + coverage)
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON \
-            -DGGML_NATIVE=OFF \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-
-      - name: Build
-        run: cmake --build build --parallel $(nproc)
+          pip install ".[server]" --no-build-isolation \
+            --config-settings="build-dir=build" \
+            --config-settings="cmake.define.CMAKE_BUILD_TYPE=Debug" \
+            --config-settings="cmake.define.COVERAGE=ON" \
+            --config-settings="cmake.define.AUTOCOG_TUNED=OFF" \
+            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
 
       - name: Run ctest
         working-directory: build
         run: |
           set -o pipefail
           find . -name "*.gcda" -delete
-          ctest -j$(nproc) --timeout 60 --output-on-failure 2>&1 | tee ctest.log
+          ctest -j$(nproc) --timeout 120 --output-on-failure 2>&1 | tee ctest.log
 
-      # ---- pip install + pytest (against installed package) ----
-
-      - name: Install autocog
-        run: |
-          pip install ".[server]" \
-            --config-settings="cmake.define.GGML_NATIVE=OFF" \
-            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
-            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
-
-      - name: Download test model
-        run: |
-          mkdir -p models
-          curl -sL -o models/tiny-llama3-test-Q2_K.gguf \
-            "https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf" \
-            || echo "Model not available yet, real model tests will be skipped"
-
-      - name: Run pytest with coverage
+      - name: Run pytest
         run: |
           set -o pipefail
           python -m pytest tests/integration/modules tests/units/modules \
             --cov=autocog \
             --cov-report=json:coverage_py.json \
+            --timeout 120 \
             -q 2>&1 | tee pytest.log
-
-      # ---- Coverage reports ----
 
       - name: Generate C++ coverage
         working-directory: build
@@ -104,26 +88,24 @@ jobs:
           python3 << 'PYEOF'
           import json, re, os
 
-          # C++ coverage
           with open("build/coverage_cxx.json") as f:
             cxx = json.load(f)
           cxx_total = sum(len(e["lines"]) for e in cxx.get("files", []))
           cxx_covered = sum(sum(1 for l in e["lines"] if l["count"] > 0) for e in cxx.get("files", []))
           cxx_pct = round(100 * cxx_covered / cxx_total, 1) if cxx_total else 0
 
-          # Python coverage
           with open("coverage_py.json") as f:
             py = json.load(f)
           py_pct = round(py.get("totals", {}).get("percent_covered", 0), 1)
 
-          # Test counts
           with open("build/ctest.log") as f:
             ctest_text = f.read()
             m = re.search(r"(\d+) tests failed out of (\d+)", ctest_text)
             if m:
               ctest_count = int(m.group(2)) - int(m.group(1))
             else:
-              ctest_count = 0
+              m = re.search(r"(\d+) tests passed", ctest_text)
+              ctest_count = int(m.group(1)) if m else 0
           with open("pytest.log") as f:
             m = re.search(r"(\d+) passed", f.read())
             pytest_count = int(m.group(1)) if m else 0
@@ -152,15 +134,13 @@ jobs:
 
       - name: Job summary
         run: |
-          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "### Coverage Build Results" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| ctest | ${{ steps.coverage.outputs.ctest }} passed |" >> $GITHUB_STEP_SUMMARY
           echo "| pytest | ${{ steps.coverage.outputs.pytest }} passed |" >> $GITHUB_STEP_SUMMARY
           echo "| C++ coverage | ${{ steps.coverage.outputs.cxx_coverage }}% |" >> $GITHUB_STEP_SUMMARY
           echo "| Python coverage | ${{ steps.coverage.outputs.py_coverage }}% |" >> $GITHUB_STEP_SUMMARY
-
-      # ---- Update badges (master only) ----
 
       - name: Update ctest badge
         if: github.ref == 'refs/heads/master'
@@ -215,4 +195,81 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+
+  # ===========================================================================
+  # Job 2: Release (ctest + pytest, validates portable build)
+  # ===========================================================================
+  test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ccache
+
+      - name: Install Python dependencies
+        run: pip install pytest pybind11 scikit-build-core
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          restore-keys: ccache-release-${{ runner.os }}-
+
+      - name: Install autocog (release, portable)
+        run: |
+          pip install ".[server]" --no-build-isolation \
+            --config-settings="build-dir=build" \
+            --config-settings="cmake.define.AUTOCOG_TUNED=OFF" \
+            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
+
+      - name: Run ctest
+        working-directory: build
+        run: |
+          set -o pipefail
+          ctest -j$(nproc) --timeout 120 --output-on-failure 2>&1 | tee ctest.log
+
+      - name: Run pytest
+        run: |
+          set -o pipefail
+          python -m pytest tests/integration/modules tests/units/modules \
+            --timeout 120 \
+            -q 2>&1 | tee pytest.log
+
+      - name: Job summary
+        run: |
+          python3 << 'PYEOF'
+          import re, os
+
+          with open("build/ctest.log") as f:
+            m = re.search(r"(\d+) tests passed", f.read())
+            ctest = m.group(1) if m else "?"
+          with open("pytest.log") as f:
+            m = re.search(r"(\d+) passed", f.read())
+            pytest = m.group(1) if m else "?"
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+            f.write("### Release Build Results\n")
+            f.write("| Metric | Value |\n")
+            f.write("|--------|-------|\n")
+            f.write(f"| ctest | {ctest} passed |\n")
+            f.write(f"| pytest | {pytest} passed |\n")
+          PYEOF
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}

@@ -17,8 +17,14 @@ inline std::string build_info() {
         << "  compiler:    " << AUTOCOG_COMPILER_ID << " " << AUTOCOG_COMPILER_VERSION << "\n"
         << "  system:      " << AUTOCOG_SYSTEM << "\n"
         << "  llama:       " << AUTOCOG_LLAMA_SOURCE << "\n"
+        << "  tuned:       " << (AUTOCOG_TUNED ? "yes" : "no") << "\n"
+        << "  native:      " << (AUTOCOG_NATIVE ? "yes" : "no") << "\n"
         << "  cuda:        " << (AUTOCOG_CUDA ? "yes" : "no") << "\n"
-        << "  native:      " << (AUTOCOG_NATIVE ? "yes" : "no") << "\n";
+        << "  rocm:        " << (AUTOCOG_ROCM ? "yes" : "no") << "\n"
+        << "  blas:        " << (AUTOCOG_BLAS ? "yes" : "no") << "\n"
+        << "  vulkan:      " << (AUTOCOG_VULKAN ? "yes" : "no") << "\n"
+        << "  metal:       " << (AUTOCOG_METAL ? "yes" : "no") << "\n"
+        << "  sycl:        " << (AUTOCOG_SYCL ? "yes" : "no") << "\n";
     return out.str();
 }
 

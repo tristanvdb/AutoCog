@@ -83,9 +83,103 @@ else()
   get_target_property(REFLEX_EXECUTABLE Reflex::Reflex LOCATION)
 endif()
 
+# ===========================================================================
+# Backend selection: AUTOCOG_TUNED + individual flags
+# ===========================================================================
+# AUTOCOG_TUNED (default ON): autodetect available hardware backends.
+# Individual AUTOCOG_* flags can override. Set AUTOCOG_TUNED=OFF for portable builds.
+#
+# Usage:
+#   cmake -B build                           # TUNED=ON, autodetect
+#   cmake -B build -DAUTOCOG_TUNED=OFF       # portable
+#   cmake -B build -DAUTOCOG_CUDA=OFF        # autodetect but skip CUDA
+#   pip install .                             # TUNED=ON (building from source)
+#   pip install . --config-settings="cmake.define.AUTOCOG_TUNED=OFF"  # portable
+
+option(AUTOCOG_TUNED  "Autodetect and enable available backends" ON)
+option(AUTOCOG_NATIVE "Use native CPU instructions (-march=native)" OFF)
+option(AUTOCOG_BLAS   "Use system BLAS (OpenBLAS, MKL, Accelerate)" OFF)
+option(AUTOCOG_CUDA   "Enable NVIDIA CUDA" OFF)
+option(AUTOCOG_ROCM   "Enable AMD ROCm/HIP" OFF)
+option(AUTOCOG_VULKAN "Enable Vulkan compute" OFF)
+option(AUTOCOG_METAL  "Enable Apple Metal" OFF)
+option(AUTOCOG_SYCL   "Enable Intel SYCL/oneAPI" OFF)
+
+if(AUTOCOG_TUNED)
+  set(AUTOCOG_NATIVE ON)
+
+  if(NOT AUTOCOG_CUDA)
+    find_package(CUDAToolkit QUIET)
+    if(CUDAToolkit_FOUND)
+      set(AUTOCOG_CUDA ON)
+      message(STATUS "AutoCog: CUDA detected (${CUDAToolkit_VERSION})")
+    endif()
+  endif()
+
+  if(NOT AUTOCOG_ROCM)
+    find_package(hip QUIET)
+    if(hip_FOUND)
+      set(AUTOCOG_ROCM ON)
+      message(STATUS "AutoCog: ROCm/HIP detected")
+    endif()
+  endif()
+
+  if(NOT AUTOCOG_BLAS)
+    find_package(BLAS QUIET)
+    if(BLAS_FOUND)
+      set(AUTOCOG_BLAS ON)
+      message(STATUS "AutoCog: BLAS detected")
+    endif()
+  endif()
+
+  if(NOT AUTOCOG_VULKAN)
+    find_package(Vulkan QUIET)
+    if(Vulkan_FOUND)
+      set(AUTOCOG_VULKAN ON)
+      message(STATUS "AutoCog: Vulkan detected")
+    endif()
+  endif()
+
+  if(NOT AUTOCOG_METAL AND APPLE)
+    set(AUTOCOG_METAL ON)
+    message(STATUS "AutoCog: Metal enabled (macOS)")
+  endif()
+endif()
+
+message(STATUS "AutoCog backends: tuned=${AUTOCOG_TUNED} native=${AUTOCOG_NATIVE} cuda=${AUTOCOG_CUDA} rocm=${AUTOCOG_ROCM} blas=${AUTOCOG_BLAS} vulkan=${AUTOCOG_VULKAN} metal=${AUTOCOG_METAL} sycl=${AUTOCOG_SYCL}")
+
+# Map AUTOCOG_* -> GGML_* flags (consumed by llama.cpp)
+if(AUTOCOG_NATIVE)
+  set(GGML_NATIVE ON CACHE BOOL "" FORCE)
+else()
+  set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_CUDA)
+  set(GGML_CUDA ON CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_ROCM)
+  set(GGML_HIP ON CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_BLAS)
+  set(GGML_BLAS ON CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_VULKAN)
+  set(GGML_VULKAN ON CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_METAL)
+  set(GGML_METAL ON CACHE BOOL "" FORCE)
+endif()
+if(AUTOCOG_SYCL)
+  set(GGML_SYCL ON CACHE BOOL "" FORCE)
+endif()
+
+# ===========================================================================
+# llama.cpp: vendored or system
+# ===========================================================================
+
 find_package(llama QUIET)
 if(NOT llama_FOUND)
-  message(STATUS "llama.cpp not found — building from vendored submodule")
+  message(STATUS "llama.cpp not found -- building from vendored submodule")
   set(LLAMA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendors/llama")
   if(NOT EXISTS "${LLAMA_SOURCE_DIR}/CMakeLists.txt")
     message(FATAL_ERROR "Vendored llama.cpp not found. Run: git submodule update --init --recursive")
@@ -98,31 +192,22 @@ if(NOT llama_FOUND)
   set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   set(LLAMA_BUILD_APP OFF CACHE BOOL "" FORCE)
   set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
-  # Propagate LLAMA_CUDA to GGML_CUDA (modern llama.cpp uses GGML_CUDA)
-  if(LLAMA_CUDA)
-    set(GGML_CUDA ON CACHE BOOL "Enable CUDA" FORCE)
-  elseif(GGML_CUDA)
-    set(LLAMA_CUDA ON)  # for our build info
-  endif()
   add_subdirectory("${LLAMA_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_vendor/llama" EXCLUDE_FROM_ALL)
   set(_LLAMA_SOURCE "vendored")
 else()
   set(_LLAMA_SOURCE "system")
 endif()
 
-# Build info: CUDA and llama source
-if(LLAMA_CUDA OR GGML_CUDA)
-  add_compile_definitions(AUTOCOG_CUDA=1)
-else()
-  add_compile_definitions(AUTOCOG_CUDA=0)
-endif()
+# Build info defines
 add_compile_definitions(AUTOCOG_LLAMA_SOURCE="${_LLAMA_SOURCE}")
-
-if(GGML_NATIVE OR NOT DEFINED GGML_NATIVE)
-  add_compile_definitions(AUTOCOG_NATIVE=1)
-else()
-  add_compile_definitions(AUTOCOG_NATIVE=0)
-endif()
+add_compile_definitions(AUTOCOG_TUNED=$<BOOL:${AUTOCOG_TUNED}>)
+add_compile_definitions(AUTOCOG_NATIVE=$<BOOL:${AUTOCOG_NATIVE}>)
+add_compile_definitions(AUTOCOG_CUDA=$<BOOL:${AUTOCOG_CUDA}>)
+add_compile_definitions(AUTOCOG_ROCM=$<BOOL:${AUTOCOG_ROCM}>)
+add_compile_definitions(AUTOCOG_BLAS=$<BOOL:${AUTOCOG_BLAS}>)
+add_compile_definitions(AUTOCOG_VULKAN=$<BOOL:${AUTOCOG_VULKAN}>)
+add_compile_definitions(AUTOCOG_METAL=$<BOOL:${AUTOCOG_METAL}>)
+add_compile_definitions(AUTOCOG_SYCL=$<BOOL:${AUTOCOG_SYCL}>)
 
 enable_testing()
 
