@@ -78,7 +78,9 @@ PromptSTA load_prompt(json const & j) {
     for (auto const & [name, fj] : j["flows"].items()) {
         auto type = fj["type"].get<std::string>();
         if (type == "control") {
-            p.flows[name] = FlowTarget{fj["prompt"], fj["limit"]};
+            std::optional<int> lim;
+            if (fj.contains("limit")) lim = fj["limit"].get<int>();
+            p.flows[name] = FlowTarget{fj["prompt"], lim};
         } else if (type == "return") {
             ReturnTarget rt;
             for (auto const & rf : fj["fields"]) {
@@ -362,8 +364,11 @@ json serialize_prompt(PromptSTA const & p) {
     for (auto const & [name, entry] : p.flows) {
         std::visit([&](auto const & e) {
             using T = std::decay_t<decltype(e)>;
-            if constexpr (std::is_same_v<T, FlowTarget>)
-                j["flows"][name] = json{{"type","control"}, {"prompt", e.prompt}, {"limit", e.limit}};
+            if constexpr (std::is_same_v<T, FlowTarget>) {
+                json fj = {{"type","control"}, {"prompt", e.prompt}};
+                if (e.limit) fj["limit"] = *e.limit;
+                j["flows"][name] = fj;
+            }
             else if constexpr (std::is_same_v<T, ReturnTarget>) {
                 json fields = json::array();
                 for (auto const & rf : e.fields) {

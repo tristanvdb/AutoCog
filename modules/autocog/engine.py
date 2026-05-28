@@ -35,6 +35,10 @@ class Engine:
             raise ConfigError("search is required — pass a path to a search config JSON file")
         self.search_id = runtime_sta_cxx.load_search_config(search)
 
+    def set_seed(self, seed):
+        """Set the RNG seed for the underlying model."""
+        backend_llama_cxx.set_seed(self.model_id, seed)
+
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         """
         Evaluate a single prompt: instantiate → evaluate → walk FTT.

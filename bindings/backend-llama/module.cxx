@@ -41,6 +41,15 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         py::arg("n_ctx") = 4096
     );
 
+    module.def("set_seed",
+        [](ModelID model, unsigned seed) {
+            Manager::get_model(model).set_seed(seed);
+        },
+        "Set the RNG seed for a model",
+        py::arg("model"),
+        py::arg("seed")
+    );
+
     module.def("vocab_size", [](ModelID model) {
         return Manager::get_model(model).vocab_size();
     }, "Get vocabulary size");

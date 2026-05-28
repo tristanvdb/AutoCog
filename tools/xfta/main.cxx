@@ -29,6 +29,7 @@ void print_usage(const char* program_name) {
               << "  -c, --ctx    SIZE     Maximum context size for the model.\n"
               << "  -m, --model  PATH     Path to GGUF model file\n"
               << "  -r, --rng             Use built-in RNG model (no model file needed)\n"
+              << "  -s, --seed   N        RNG seed (default: 42)\n"
               << "  -o, --output PATH     Output FTT JSON file (default: stdout)\n"
               << "  -V, --verbose [LEVEL] Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  -v, --version         Show version\n"
@@ -42,6 +43,7 @@ int main(int argc, char** argv) {
   std::string model_path;
   std::string output_file;
   unsigned ctx_size = 4096;
+  unsigned seed = 42;
   bool use_rng = false;
 
   autocog::init_console_logger();
@@ -52,6 +54,7 @@ int main(int argc, char** argv) {
     if (arg == "-v" || arg == "--version") { std::cout << "xfta " << autocog::version() << "\n"; return 0; }
     if (arg == "--build-info") { std::cout << autocog::build_info(); return 0; }
     if (arg == "-r" || arg == "--rng") { use_rng = true; continue; }
+    if ((arg == "-s" || arg == "--seed") && i + 1 < argc) { seed = std::stoul(argv[++i]); continue; }
     if ((arg == "-m" || arg == "--model") && i + 1 < argc) { model_path = argv[++i]; continue; }
     if ((arg == "-o" || arg == "--output") && i + 1 < argc) { output_file = argv[++i]; continue; }
     if ((arg == "-c" || arg == "--ctx") && i + 1 < argc) { ctx_size = std::stoi(argv[++i]); continue; }
@@ -87,6 +90,9 @@ int main(int argc, char** argv) {
       model_id = Manager::add_model(model_path, ctx_size);
       SPDLOG_LOGGER_DEBUG(autocog::log(), "Model #{}", model_id);
     }
+
+    Manager::get_model(model_id).set_seed(seed);
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "RNG seed: {}", seed);
 
     for (auto const & input_file : input_files) {
       SPDLOG_LOGGER_DEBUG(autocog::log(), "FTA: \"{}\"", input_file);

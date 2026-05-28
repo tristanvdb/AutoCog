@@ -83,7 +83,7 @@ struct ConcreteState {
 
 struct FlowTarget {
     std::string prompt;
-    int limit;
+    std::optional<int> limit;
 };
 
 struct ReturnField {

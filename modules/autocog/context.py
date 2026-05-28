@@ -3,6 +3,7 @@ Context — execution state for one program invocation.
 """
 
 from .channels import resolve_channels
+from .errors import OrchestrationError
 
 
 class Context:
@@ -88,11 +89,11 @@ class Context:
             self.result = self._extract_return(frame, flow_def)
             self.done = True
         elif flow_def["type"] == "control":
-            # Check limit
+            # Check limit (only for flows with explicit limits)
             self.branches.setdefault(self.prompt, {})
             count = self.branches[self.prompt].get(flow_choice, 0)
-            limit = flow_def.get("limit", 1)
-            if count >= limit:
+            limit = flow_def.get("limit")
+            if limit is not None and count >= limit:
                 raise OrchestrationError(
                     f"Flow limit exceeded for '{flow_choice}' in '{self.prompt}' "
                     f"(count={count}, limit={limit})"

@@ -466,8 +466,7 @@ static std::map<std::string, sta::FlowEntry> extract_flows(ir::Prompt const & pm
     std::map<std::string, sta::FlowEntry> flows;
     for (auto const & flow : pmt.flows) {
         std::string label = flow.label.value_or(flow.target_prompt);
-        int limit = flow.limit.value_or(1);
-        flows[label] = sta::FlowTarget{flow.target_prompt, limit};
+        flows[label] = sta::FlowTarget{flow.target_prompt, flow.limit};
     }
     if (pmt.return_info) {
         auto const & ri = pmt.return_info.value();

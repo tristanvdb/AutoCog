@@ -208,7 +208,6 @@
       ],
       "flows": {
         "LibPrompt": {
-          "limit": 1,
           "prompt": "LibPrompt",
           "type": "control"
         },

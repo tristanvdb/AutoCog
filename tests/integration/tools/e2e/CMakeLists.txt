@@ -40,7 +40,7 @@ foreach(golden_path ${GOLDEN_FILES})
                 STL_DIR=$(dirname ${stl_path})
                 $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} -I \$STL_DIR ${stl_path} > \$STA 2>/dev/null
                 $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -p ${prompt_name} \$STA 2>/dev/null | \
-                    $<TARGET_FILE:autocog_xfta> --rng /dev/stdin 2>/dev/null | \
+                    $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
                     $<TARGET_FILE:autocog_psta> -p ${prompt_name} \$STA > \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -74,7 +74,7 @@ add_test(
             STA=$(mktemp) RESULT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${DN_STL} > \$STA 2>/dev/null
             $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -d ${DN_CONTENT} -p test \$STA 2>/dev/null | \
-                $<TARGET_FILE:autocog_xfta> --rng /dev/stdin 2>/dev/null | \
+                $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
                 $<TARGET_FILE:autocog_psta> -p test \$STA > \$RESULT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -112,7 +112,7 @@ foreach(variant min max mid mixed asym)
                 STA=$(mktemp) RESULT=$(mktemp)
                 $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${VA_STL} > \$STA 2>/dev/null
                 $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -d ${VA_CONTENT} -p test \$STA 2>/dev/null | \
-                    $<TARGET_FILE:autocog_xfta> --rng /dev/stdin 2>/dev/null | \
+                    $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
                     $<TARGET_FILE:autocog_psta> -p test \$STA > \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -146,7 +146,7 @@ add_test(
             STA=$(mktemp) RESULT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${STL_FIXTURES}/language/structures/test_prompt_with_fields.stl > \$STA 2>/dev/null
             $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH_FULL} -p person \$STA 2>/dev/null | \
-                $<TARGET_FILE:autocog_xfta> --rng /dev/stdin 2>/dev/null | \
+                $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
                 $<TARGET_FILE:autocog_psta> -p person \$STA > \$RESULT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys

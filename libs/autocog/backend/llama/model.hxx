@@ -34,6 +34,8 @@ class Model {
     Model(ModelID const id, std::string const & model_path, int n_ctx);
     ~Model();
 
+    void set_seed(unsigned seed) { rng.seed(seed); }
+
     ContextID fork_context(ContextID const id = 0);
 
     TokenSequence tokenize(std::string const & text, bool add_bos, bool special);

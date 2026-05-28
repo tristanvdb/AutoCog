@@ -231,7 +231,6 @@
       ],
       "flows": {
         "consumer": {
-          "limit": 1,
           "prompt": "consumer",
           "type": "control"
         }

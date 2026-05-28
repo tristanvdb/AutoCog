@@ -230,6 +230,8 @@ def _cmd_run_inner(args, prog, include_paths):
         print("Error: --model or --rng required", file=sys.stderr)
         sys.exit(1)
 
+    engine.set_seed(args.seed)
+
     # Auto-load Python externals
     externals = load_externals(prog, include_paths)
 
@@ -339,6 +341,7 @@ def main():
     )
     p_run.add_argument("--entry", default="main", help="Entry point (default: main)")
     p_run.add_argument("--ctx", type=int, default=4096, help="Model context size")
+    p_run.add_argument("--seed", type=int, default=42, help="RNG seed (default: 42)")
     p_run.add_argument("-o", "--output", help="Output file (default: stdout)")
     p_run.add_argument("-v", "--verbose", action="store_true", help="Show step progress")
     p_run.add_argument("--max-steps", type=int, default=100, help="Max prompt steps")

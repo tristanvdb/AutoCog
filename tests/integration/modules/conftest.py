@@ -59,6 +59,12 @@ def engine(syntax_path, search_path):
     return autocog.Engine(syntax=syntax_path, search=search_path)
 
 
+@pytest.fixture(autouse=True)
+def reset_rng_seed(engine):
+    """Reset RNG seed before each test for deterministic results."""
+    engine.set_seed(42)
+
+
 @pytest.fixture(scope="session")
 def llama3_model_path(repo_root):
     """Path to TensorBlock/tiny-llama3-test Q2_K (21MB, 128k tokens).
