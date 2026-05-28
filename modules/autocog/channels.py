@@ -135,7 +135,8 @@ def expand_mapped(base_kwargs, mapped_axes):
     return jobs
 
 
-def resolve_call(channel, inputs, frames, current_prompt, engine, program, externals, content=None):
+def resolve_call(channel, inputs, frames, current_prompt, engine, program, externals,
+                 content=None, recorder=None, ctx_id=None):
     """
     Resolve a call channel.
 
@@ -150,19 +151,27 @@ def resolve_call(channel, inputs, frames, current_prompt, engine, program, exter
 
     entry = channel.get("entry")
     extern = channel.get("extern")
+    target = channel.get("target", [])
+    field_name = ".".join(t["name"] for t in target)
 
     results = []
     for job in jobs:
         if extern and extern in externals:
             # Python callable
             result = externals[extern](**job)
+            if recorder:
+                recorder.record_call(ctx_id, field_name, callable_name=extern)
         elif entry:
             # Sub-prompt execution
             from .context import Context
-            ctx = Context(program, engine, entry, job, externals)
+            ctx = Context(program, engine, entry, job, externals,
+                          recorder=recorder, parent_ctx=ctx_id)
             while not ctx.done:
                 ctx.step()
             result = ctx.result
+            if recorder:
+                recorder.record_call(ctx_id, field_name,
+                                     prompt_name=entry, sub_ctx=ctx.ctx_id)
         else:
             result = None
         results.append(result)
@@ -180,7 +189,8 @@ def resolve_call(channel, inputs, frames, current_prompt, engine, program, exter
     return data
 
 
-def resolve_channels(program, prompt_name, inputs, frames, engine, externals):
+def resolve_channels(program, prompt_name, inputs, frames, engine, externals,
+                     recorder=None, ctx_id=None):
     """
     Resolve all channels for a prompt, building the content dict.
     """
@@ -196,7 +206,8 @@ def resolve_channels(program, prompt_name, inputs, frames, engine, externals):
         elif ch_type == "dataflow":
             value = resolve_dataflow(ch, frames, prompt_name)
         elif ch_type == "call":
-            value = resolve_call(ch, inputs, frames, prompt_name, engine, program, externals, content)
+            value = resolve_call(ch, inputs, frames, prompt_name, engine, program,
+                                 externals, content, recorder=recorder, ctx_id=ctx_id)
         else:
             continue
 

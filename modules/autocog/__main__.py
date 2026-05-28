@@ -261,8 +261,6 @@ def _cmd_run_inner(args, prog, include_paths):
         total = time.time() - t0
         print(f"  Done in {steps} steps ({total:.1f}s)", file=sys.stderr)
         result = ctx.result if ctx.done else ctx.frames.get(ctx.prompt, {})
-        if recorder:
-            recorder.finalize(entry=args.entry, inputs=inputs, outputs=result)
     else:
         result = engine.run(prog, entry=args.entry, externals=externals,
                             max_steps=args.max_steps, recorder=recorder, **inputs)

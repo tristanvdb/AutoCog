@@ -83,7 +83,7 @@ for seed in $SEEDS; do
         printf "."
     else
         # Orchestration errors are expected with random tokens
-        if echo "$output" | grep -qE "OrchestrationError|Flow choice|Flow limit|did not complete"; then
+        if echo "$output" | grep -qE "OrchestrationError|Flow choice|Flow limit|did not complete|Content provides.*but the field requires"; then
             fail=$((fail + 1))
             printf "o"
             if $VERBOSE; then

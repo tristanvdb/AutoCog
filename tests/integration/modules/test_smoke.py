@@ -943,26 +943,22 @@ class TestRecorder:
                 topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
             )
 
-            # Check context metadata
-            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            # Check context trace
+            ctx_path = os.path.join(tmpdir, "ctx-0.json")
             assert os.path.isfile(ctx_path)
             with open(ctx_path) as f:
                 ctx = json.load(f)
             assert ctx["entry"] == "main"
-            assert len(ctx["steps"]) > 0
+            assert len(ctx["trace"]) > 0
 
             # Check step artifacts
-            step_name = ctx["steps"][0]
-            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
-            txt_path = os.path.join(tmpdir, f"ctx0-{step_name}.txt")
+            prompt = ctx["trace"][0]["prompt"]
+            step = ctx["trace"][0]["step"]
+            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
             assert os.path.isfile(json_path)
-            assert os.path.isfile(txt_path)
             with open(json_path) as f:
                 data = json.load(f)
             assert "frame" in data
-            with open(txt_path) as f:
-                text = f.read()
-            assert len(text) > 0
 
     def test_record_input(self, repo_root):
         import autocog, tempfile, os, json
@@ -978,11 +974,12 @@ class TestRecorder:
                 topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
             )
 
-            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            ctx_path = os.path.join(tmpdir, "ctx-0.json")
             with open(ctx_path) as f:
                 ctx = json.load(f)
-            step_name = ctx["steps"][0]
-            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
+            prompt = ctx["trace"][0]["prompt"]
+            step = ctx["trace"][0]["step"]
+            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
             with open(json_path) as f:
                 data = json.load(f)
             assert "input" in data
@@ -1007,7 +1004,7 @@ class TestRecorder:
                 capture_output=True, text=True, timeout=30
             )
             assert result.returncode == 0
-            assert os.path.isfile(os.path.join(tmpdir, "ctx0.json"))
+            assert os.path.isfile(os.path.join(tmpdir, "ctx-0.json"))
 
 
 class TestSyntaxVariants:
@@ -1064,17 +1061,16 @@ class TestRecorderFtaFtt:
                 topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
             )
 
-            ctx_path = os.path.join(tmpdir, "ctx0.json")
+            ctx_path = os.path.join(tmpdir, "ctx-0.json")
             assert os.path.isfile(ctx_path)
             with open(ctx_path) as f:
                 ctx = json.load(f)
 
-            step_name = ctx["steps"][0]
-            json_path = os.path.join(tmpdir, f"ctx0-{step_name}.json")
-            txt_path = os.path.join(tmpdir, f"ctx0-{step_name}.txt")
+            prompt = ctx["trace"][0]["prompt"]
+            step = ctx["trace"][0]["step"]
+            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
 
             assert os.path.isfile(json_path)
-            assert os.path.isfile(txt_path)
 
             with open(json_path) as f:
                 data = json.load(f)
@@ -1239,7 +1235,7 @@ class TestCLIErrorsDirect:
             with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO):
                 main()
             import os
-            assert os.path.isfile(os.path.join(tmpdir, "ctx0.json"))
+            assert os.path.isfile(os.path.join(tmpdir, "ctx-0.json"))
 
     def test_run_output_file_direct(self, repo_root):
         """Test -o output path (lines 256-257)."""

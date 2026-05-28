@@ -1,18 +1,21 @@
-from autocog.errors import ConfigError
-"""Record execution artifacts (input, frame, text, FTA, FTT) per step."""
+"""Record execution artifacts and trace per context/step."""
 
 import json
 import os
 import tempfile
 
+from autocog.errors import ConfigError
+
 
 class Recorder:
-    """Captures artifacts during program execution.
+    """Tracks execution across contexts (main + sub-calls).
 
-    Usage:
-        recorder = Recorder(kinds={"input", "frame", "text"}, path="/tmp/recording")
-        # ... pass to engine/context ...
-        recorder.finalize(context_id=0, entry="main", inputs={...}, outputs={...})
+    Directory layout:
+        {path}/ctx-{id}.json          — trace: prompt sequence, calls, flows
+        {path}/ctx-{id}/{prompt}/{step}.json — step artifacts (input, frame, etc.)
+
+    The trace file is updated after every event (flow, return, call) so it
+    reflects progress even when execution crashes mid-way.
     """
 
     VALID_KINDS = {"input", "frame", "text", "fta", "ftt"}
@@ -24,52 +27,97 @@ class Recorder:
         if invalid:
             raise ConfigError(f"Invalid record kinds: {invalid}. Valid: {self.VALID_KINDS}")
         self.kinds = kinds
-        if path:
-            self.path = path
-            os.makedirs(path, exist_ok=True)
-        else:
-            self.path = tempfile.mkdtemp(prefix="autocog-record-")
-        self.steps = []       # list of step names: "prompt_name-stack_depth"
-        self.context_id = 0
+        self.path = path or tempfile.mkdtemp(prefix="autocog-record-")
+        os.makedirs(self.path, exist_ok=True)
+        self._next_ctx_id = 0
 
-    def record_step(self, prompt_name, stack_depth, *, input=None, frame=None,
-                    text=None, fta=None, ftt=None):
-        """Record artifacts for a single step."""
-        step_name = f"{prompt_name}-{stack_depth}"
-        self.steps.append(step_name)
+    # -- Context lifecycle --
 
-        prefix = f"ctx{self.context_id}-{step_name}"
+    def new_context(self, entry, inputs=None, parent_ctx=None):
+        """Allocate a new context ID, write initial trace file. Returns ctx_id."""
+        ctx_id = self._next_ctx_id
+        self._next_ctx_id += 1
+        trace = {
+            "ctx": ctx_id,
+            "parent": parent_ctx,
+            "entry": entry,
+            "trace": [],
+        }
+        self._write_trace(ctx_id, trace)
+        return ctx_id
 
-        # Build JSON with requested fields
+    # -- Prompt-level events --
+
+    def begin_prompt(self, ctx_id, prompt_name, step):
+        """Append a new prompt entry to the trace."""
+        trace = self._read_trace(ctx_id)
+        trace["trace"].append({
+            "prompt": prompt_name,
+            "step": step,
+            "calls": [],
+        })
+        self._write_trace(ctx_id, trace)
+
+    def record_call(self, ctx_id, field, *, callable_name=None,
+                    prompt_name=None, sub_ctx=None):
+        """Record a channel call (extern or sub-prompt) on the current prompt."""
+        trace = self._read_trace(ctx_id)
+        entry = {"field": field}
+        if callable_name is not None:
+            entry["callable"] = callable_name
+        if prompt_name is not None:
+            entry["prompt"] = prompt_name
+        if sub_ctx is not None:
+            entry["context"] = sub_ctx
+        trace["trace"][-1]["calls"].append(entry)
+        self._write_trace(ctx_id, trace)
+
+    def record_flow(self, ctx_id, next_prompt):
+        """Record a flow transition on the current prompt."""
+        trace = self._read_trace(ctx_id)
+        if trace["trace"]:
+            trace["trace"][-1]["next"] = next_prompt
+        self._write_trace(ctx_id, trace)
+
+    def record_return(self, ctx_id, result=None):
+        """Finalize a context (return from prompt flow)."""
+        trace = self._read_trace(ctx_id)
+        trace["result"] = result
+        self._write_trace(ctx_id, trace)
+
+    # -- Step artifacts --
+
+    def record_step(self, ctx_id, prompt_name, step, **artifacts):
+        """Write step artifacts to ctx-{id}/{prompt}/{step}.json (and .txt for text)."""
         data = {}
-        if "input" in self.kinds and input is not None:
-            data["input"] = input
-        if "frame" in self.kinds and frame is not None:
-            data["frame"] = frame
-        if "fta" in self.kinds and fta is not None:
-            data["fta"] = fta
-        if "ftt" in self.kinds and ftt is not None:
-            data["ftt"] = ftt
+        for kind in self.kinds:
+            if kind == "text":
+                continue  # text goes to a separate file
+            if kind in artifacts and artifacts[kind] is not None:
+                data[kind] = artifacts[kind]
+
+        step_dir = os.path.join(self.path, f"ctx-{ctx_id}", prompt_name)
+        os.makedirs(step_dir, exist_ok=True)
 
         if data:
-            json_path = os.path.join(self.path, f"{prefix}.json")
-            with open(json_path, "w") as f:
+            fpath = os.path.join(step_dir, f"{step}.json")
+            with open(fpath, "w") as f:
                 json.dump(data, f, indent=2, default=str)
 
-        if "text" in self.kinds and text is not None:
-            text_path = os.path.join(self.path, f"{prefix}.txt")
-            with open(text_path, "w") as f:
-                f.write(text)
+        if "text" in self.kinds and "text" in artifacts and artifacts["text"] is not None:
+            tpath = os.path.join(step_dir, f"{step}.txt")
+            with open(tpath, "w") as f:
+                f.write(artifacts["text"])
 
-    def finalize(self, entry, inputs, outputs):
-        """Write the context-level metadata file."""
-        ctx = {
-            "context_id": self.context_id,
-            "entry": entry,
-            "inputs": inputs,
-            "outputs": outputs,
-            "steps": self.steps,
-        }
-        ctx_path = os.path.join(self.path, f"ctx{self.context_id}.json")
-        with open(ctx_path, "w") as f:
-            json.dump(ctx, f, indent=2, default=str)
+    # -- Internal --
+
+    def _trace_path(self, ctx_id):
+        return os.path.join(self.path, f"ctx-{ctx_id}.json")
+
+    def _write_trace(self, ctx_id, trace):
+        with open(self._trace_path(ctx_id), "w") as f:
+            json.dump(trace, f, indent=2, default=str)
+
+    def _read_trace(self, ctx_id):
+        with open(self._trace_path(ctx_id)) as f:
+            return json.load(f)

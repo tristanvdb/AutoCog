@@ -1,5 +1,6 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
+#include "autocog/utilities/errors.hxx"
 
 #include <sstream>
 #include <set>
@@ -35,6 +36,68 @@ static std::vector<int> build_ancestors(int field_idx, std::vector<int> const & 
     }
     std::reverse(chain.begin(), chain.end());
     return chain;
+}
+
+// Validate that content arrays satisfy field range minimums.
+// Throws ExecutionError if content provides fewer elements than the field's minimum.
+static void validate_content_ranges(
+    std::vector<FieldInfo> const & fields,
+    std::vector<int> const & parent_map,
+    json const & content
+) {
+    // For each field with a range, navigate content to find the array and check size.
+    // Uses a recursive approach to handle nested array-of-record structures.
+    struct Walker {
+        std::vector<FieldInfo> const & fields;
+        std::vector<int> const & parent_map;
+
+        void check(json const & node, int field_idx, std::string const & path) const {
+            auto const & fld = fields[field_idx];
+            std::string fpath = path.empty() ? fld.name : path + "." + fld.name;
+
+            if (!node.is_object() || !node.contains(fld.name)) return;
+            auto const & val = node[fld.name];
+
+            if (fld.range && fld.is_list()) {
+                if (val.is_array()) {
+                    auto [lo, hi] = *fld.range;
+                    int n = static_cast<int>(val.size());
+                    if (n < lo) {
+                        throw ExecutionError(
+                            "Content provides " + std::to_string(n) +
+                            " element(s) for '" + fpath +
+                            "' but the field requires at least " + std::to_string(lo));
+                    }
+                    // Check children of each array element
+                    for (int i = 0; i < n; ++i) {
+                        if (val[i].is_object()) {
+                            check_children(val[i], field_idx, fpath + "[" + std::to_string(i) + "]");
+                        }
+                    }
+                }
+            } else if (fld.is_record()) {
+                if (val.is_object()) {
+                    check_children(val, field_idx, fpath);
+                }
+            }
+        }
+
+        void check_children(json const & obj, int parent_idx, std::string const & path) const {
+            for (size_t i = 0; i < fields.size(); ++i) {
+                if (parent_map[i] == parent_idx) {
+                    check(obj, static_cast<int>(i), path);
+                }
+            }
+        }
+    };
+
+    Walker w{fields, parent_map};
+    // Start with top-level fields (parent == -1)
+    for (size_t i = 0; i < fields.size(); ++i) {
+        if (parent_map[i] == -1) {
+            w.check(content, static_cast<int>(i), "");
+        }
+    }
 }
 
 static json const * read_content(json const & content, ConcreteState const & state,
@@ -484,6 +547,9 @@ struct FTABuilder {
 
 json instantiate(PromptSTA const & prompt, json const & content,
                  Syntax const & syntax, SearchConfig const & search) {
+    auto parent_map = build_parent_map(prompt.fields);
+    validate_content_ranges(prompt.fields, parent_map, content);
+
     FTABuilder b(prompt, content, syntax, search);
 
     // Build header

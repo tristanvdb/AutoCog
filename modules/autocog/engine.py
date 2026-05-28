@@ -117,9 +117,6 @@ class Engine:
                 f"(at prompt '{ctx.prompt}'). Increase --max-steps if needed."
             )
 
-        if recorder:
-            recorder.finalize(entry=entry, inputs=inputs, outputs=ctx.result)
-
         return ctx.result
 
     async def run_async(self, program, entry="main", externals=None, **inputs):
