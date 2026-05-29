@@ -2,7 +2,7 @@
 # Fuzz an STL program with random RNG seeds.
 #
 # Usage:
-#   tests/fuzz.sh [OPTIONS] --stl PROGRAM.stl --input DATA
+#   tests/scripts/fuzz.sh [OPTIONS] --stl PROGRAM.stl --input DATA
 #
 # Options:
 #   --stl PATH        STL source file (required)
@@ -14,7 +14,7 @@
 #   -v                Show each seed's output on failure
 #
 # Example:
-#   tests/fuzz.sh --stl share/demos/story-writer/writer.stl \
+#   tests/scripts/fuzz.sh --stl share/demos/story-writer/writer.stl \
 #                 --input '{"query":"bedtime story","age":"3"}' \
 #                 -I share/library -I share/demos/story-writer \
 #                 -n 100
@@ -70,30 +70,54 @@ echo "Input: $INPUT"
 echo ""
 
 for seed in $SEEDS; do
-    output=$(python3 -m autocog run \
+    # Run in --json mode and capture the NDJSON log stream (stderr). Data goes
+    # to stdout (discarded here); logs/errors are structured on stderr.
+    output=$(python3 -m autocog --json run \
         --stl "$STL" "${INCLUDES[@]}" \
         --rng --seed "$seed" \
         --input "$INPUT" \
         --entry "$ENTRY" \
-        --max-steps "$MAX_STEPS" 2>&1)
+        --max-steps "$MAX_STEPS" 2>&1 >/dev/null)
     rc=$?
 
     if [[ $rc -eq 0 ]]; then
         pass=$((pass + 1))
         printf "."
-    else
-        # Orchestration errors are expected with random tokens
-        if echo "$output" | grep -qE "OrchestrationError|Flow choice|Flow limit|did not complete|Content provides.*but the field requires"; then
-            fail=$((fail + 1))
-            printf "o"
-            if $VERBOSE; then
-                errors="${errors}\n--- seed=$seed (orchestration) ---\n${output}\n"
-            fi
-        else
-            error=$((error + 1))
-            printf "X"
-            errors="${errors}\n--- seed=$seed (rc=$rc) ---\n${output}\n"
+        continue
+    fi
+
+    # Classify the failure on the structured error.type rather than substring
+    # matching the message. An OrchestrationError is the expected outcome with
+    # random tokens (recoverable); anything else -- a bare Python type, an
+    # InternalError (event.kind "alert"), etc. -- is an unexpected error.
+    # Parse with python3 (already a hard dependency) so the harness needs no jq.
+    etype=$(printf '%s' "$output" | python3 -c "
+import sys, json
+etype = ''
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        rec = json.loads(line)
+    except ValueError:
+        continue
+    if rec.get('error.type'):
+        etype = rec['error.type']  # last error record wins
+print(etype)
+")
+
+    if [[ "$etype" == "OrchestrationError" ]]; then
+        fail=$((fail + 1))
+        printf "o"
+        if $VERBOSE; then
+            errors="${errors}\n--- seed=$seed (orchestration) ---\n${output}\n"
         fi
+    else
+        error=$((error + 1))
+        printf "X"
+        label="${etype:-unclassified}"
+        errors="${errors}\n--- seed=$seed (rc=$rc, error.type=${label}) ---\n${output}\n"
     fi
 done
 

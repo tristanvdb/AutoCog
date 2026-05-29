@@ -9,10 +9,36 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import sys
 
 from autocog.errors import AutoCogError, FileError
+
+log = logging.getLogger("autocog")
+
+
+def setup_logging(args):
+    """Configure the 'autocog' logger from CLI args.
+
+    With --json, install an ECS NDJSON handler (to --json-log-file or stderr);
+    otherwise leave the default human-readable configuration in place. Level
+    follows -v/--verbose where the subcommand defines it.
+    """
+    level = logging.DEBUG if getattr(args, "verbose", False) else logging.INFO
+    log.setLevel(level)
+
+    if getattr(args, "json", False):
+        from ._json_formatter import ECSFormatter
+        if getattr(args, "json_log_file", None):
+            handler = logging.FileHandler(args.json_log_file)
+        else:
+            handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(ECSFormatter())
+        # Replace any existing handlers so output is pure NDJSON.
+        log.handlers.clear()
+        log.addHandler(handler)
+        log.propagate = False
 
 
 def load_externals(program, include_paths):
@@ -303,6 +329,10 @@ def main():
         prog="autocog",
         description="AutoCog — Structured Thought Language tools",
     )
+    parser.add_argument("--json", action="store_true",
+        help="Emit log records as NDJSON (ECS-flavored) on stderr")
+    parser.add_argument("--json-log-file", metavar="PATH",
+        help="With --json: write log records to PATH instead of stderr")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # --- compile ---
@@ -392,6 +422,8 @@ def main():
 
     args = parser.parse_args()
 
+    setup_logging(args)
+
     # Default syntax (for run, rpc, serve)
     if args.command in ("run", "rpc", "serve") and getattr(args, 'syntax', None) is None:
         from .program import _default_syntax_path
@@ -426,11 +458,28 @@ def main():
         elif args.command == "serve":
             cmd_serve(args)
     except AutoCogError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        if args.json:
+            # Structured record carries error.type, event.outcome, recoverable,
+            # and subtype fields via the ECS formatter's exc_info handling.
+            log.error("%s", e, exc_info=e)
+        else:
+            print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except json.JSONDecodeError as e:
-        print(f"Error: invalid JSON — {e}", file=sys.stderr)
+        if args.json:
+            log.error("invalid JSON: %s", e, exc_info=e)
+        else:
+            print(f"Error: invalid JSON — {e}", file=sys.stderr)
         sys.exit(1)
+    except Exception as e:
+        # A non-AutoCog exception escaping a command is unexpected. In JSON mode
+        # surface it as an alert with its real type (error.type: e.g.
+        # "RuntimeError") so a SIEM can flag it; otherwise re-raise to preserve
+        # the existing traceback-on-stderr behavior.
+        if args.json:
+            log.critical("unexpected error: %s", e, exc_info=e)
+            sys.exit(1)
+        raise
 
 
 if __name__ == "__main__":

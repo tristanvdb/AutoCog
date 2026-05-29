@@ -53,23 +53,16 @@ struct FlowInvariantError : OrchestrationError {
         : OrchestrationError(std::move(msg), std::move(p), std::move(choice), /*rec=*/false) {}
 };
 
-struct RemoteError : ExecutionError {
-    std::string endpoint;
-    RemoteError(std::string msg, std::string ep, bool rec = true)
-        : ExecutionError(std::move(msg), rec), endpoint(std::move(ep)) {}
-};
-
-struct Timeout : ExecutionError {
-    float seconds;
-    Timeout(std::string msg, float s, bool rec = true)
-        : ExecutionError(std::move(msg), rec), seconds(s) {}
-};
-
 struct FileError : ExecutionError {
     std::string path;
     FileError(std::string msg, std::string p, bool rec = false)
         : ExecutionError(std::move(msg), rec), path(std::move(p)) {}
 };
+
+// Note: RemoteError and Timeout are intentionally Python-only (see
+// modules/autocog/errors.py). They originate from the Python remote layer and
+// are never thrown from C++, so there are no C++ structs (or translator
+// catches) for them. Reintroduce here if a C++ remote/timeout path is added.
 
 // ============================================================================
 // NotImplementedError — temporary gaps, slated for removal before 1.0

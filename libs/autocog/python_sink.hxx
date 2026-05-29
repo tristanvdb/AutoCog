@@ -11,17 +11,33 @@ namespace py = pybind11;
 namespace autocog {
 
 // Custom spdlog sink that forwards log records to Python's logging module.
-// Looks up the Python logger on each call to avoid destructor ordering issues.
+// The Python logger handle is cached at construction and refreshed lazily if
+// it is missing (e.g. constructed before the logging module was importable),
+// so the hot path avoids re-importing `logging` and re-looking-up the logger
+// on every record.
 template <typename Mutex>
 class python_logging_sink : public spdlog::sinks::base_sink<Mutex> {
+public:
+    python_logging_sink() {
+        try {
+            py::gil_scoped_acquire gil;
+            py_logger_ = py::module_::import("logging").attr("getLogger")("autocog");
+        } catch (...) {
+            // Couldn't acquire the GIL / import logging at construction time;
+            // we retry per-call. Defensive against unusual init ordering.
+        }
+    }
+
 protected:
     void sink_it_(const spdlog::details::log_msg & msg) override {
         try {
             py::gil_scoped_acquire gil;
-            auto py_logger = py::module_::import("logging").attr("getLogger")("autocog");
+            if (!py_logger_) {
+                py_logger_ = py::module_::import("logging").attr("getLogger")("autocog");
+            }
             int py_level = to_python_level(msg.level);
             std::string text(msg.payload.data(), msg.payload.size());
-            py_logger.attr("log")(py_level, text);
+            py_logger_.attr("log")(py_level, text);
         } catch (...) {
             // Interpreter may be finalizing — silently drop the record
         }
@@ -30,6 +46,8 @@ protected:
     void flush_() override {}
 
 private:
+    py::object py_logger_;
+
     static int to_python_level(spdlog::level::level_enum lvl) {
         switch (lvl) {
             case spdlog::level::trace:    return 5;   // TRACE (custom)
