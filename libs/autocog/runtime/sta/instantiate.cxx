@@ -63,10 +63,14 @@ static void validate_content_ranges(
                     auto [lo, hi] = *fld.range;
                     int n = static_cast<int>(val.size());
                     if (n < lo) {
-                        throw ExecutionError(
+                        // A content/range mismatch during instantiation is a
+                        // recoverable orchestration failure (the loop may retry
+                        // with different tokens), located at the offending field.
+                        throw OrchestrationError(
                             "Content provides " + std::to_string(n) +
                             " element(s) for '" + fpath +
-                            "' but the field requires at least " + std::to_string(lo));
+                            "' but the field requires at least " + std::to_string(lo),
+                            /*prompt=*/"", /*field=*/fpath);
                     }
                     // Check children of each array element
                     for (int i = 0; i < n; ++i) {

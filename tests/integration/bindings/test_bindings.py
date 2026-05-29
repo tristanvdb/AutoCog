@@ -278,13 +278,34 @@ except Exception as e:
           type_name == "FileError" and is_oserror,
           f"type={type_name} is_oserror={is_oserror}")
 
-# CompileError from bad STL
-try:
-    compiler_stl_cxx.compile("/nonexistent/bad.stl")
-    check("CompileError from bad STL", False, "no exception raised")
-except Exception as e:
-    check("CompileError from bad STL", type(e).__name__ == "CompileError",
-          f"type={type(e).__name__}")
+# Compile errors surface as diagnostics, not exceptions. The raw binding
+# returns a program id and records error-level diagnostics retrievable by id;
+# the Python layer is what turns those into a raised CompileError.
+bad_pid = compiler_stl_cxx.compile(f"{FIXTURES}/errors/test_missing_semicolon.stl")
+bad_diags = compiler_stl_cxx.get_diagnostics(bad_pid)
+has_error = any(d.get("level") == "error" for d in bad_diags)
+check("bad STL records error diagnostics", has_error,
+      f"num_diags={len(bad_diags)}")
+# Each diagnostic carries a resolved file path and line/column.
+located = [d for d in bad_diags if d.get("location")]
+check("diagnostic carries resolved location", bool(located),
+      f"located={len(located)}/{len(bad_diags)}")
+if located:
+    loc = located[0]["location"]
+    check("diagnostic location has file/line/column",
+          loc.get("file", "").endswith(".stl")
+          and isinstance(loc.get("line"), int)
+          and isinstance(loc.get("column"), int),
+          f"loc={loc}")
+compiler_stl_cxx.release(bad_pid)
+
+# A successful compile records no error-level diagnostics.
+ok_pid = compiler_stl_cxx.compile(f"{FIXTURES}/language/structures/test_basic_record.stl")
+ok_diags = compiler_stl_cxx.get_diagnostics(ok_pid)
+check("clean STL has no error diagnostics",
+      not any(d.get("level") == "error" for d in ok_diags),
+      f"num_diags={len(ok_diags)}")
+compiler_stl_cxx.release(ok_pid)
 
 # ============================================================================
 # Summary

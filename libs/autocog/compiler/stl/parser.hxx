@@ -45,14 +45,25 @@ struct ParserState {
 
 class Parser {
   private:
+    // A file to parse, plus the location of the `import` statement that pulled
+    // it in (nullopt for the top-level inputs, which have no importing site).
+    struct QueueEntry {
+      std::string filepath;
+      std::optional<SourceRange> import_location;
+    };
+
     std::list<std::string> const & search_paths;
     std::list<Diagnostic> & diagnostics;
     std::unordered_map<std::string, int> & fileids;
     std::list<ast::Program> & programs;
-    std::queue<std::string> queue;
+    std::queue<QueueEntry> queue;
 
   private:
     void parse(int fid, std::string const & filename, std::string const & source);
+
+    // Enqueue the .stl files imported by a just-parsed program, tagging each
+    // with the location of its import statement for diagnostics.
+    void queue_imports(ast::Node<ast::Tag::Program> const & program);
 
     template <ast::Tag tag>
     static void parse(ParserState &, ast::Data<tag> &) {

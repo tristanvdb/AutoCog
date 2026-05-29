@@ -18,13 +18,11 @@ inline void register_exception_translator() {
         try {
             if (p) std::rethrow_exception(p);
         }
-        // Compile-time tree
-        catch (compiler::stl::CompileError const & e) {
-            py::object cls = errors.attr("CompileError");
-            py::object exc = cls(e.message,
-                py::arg("recoverable") = e.recoverable);
-            PyErr_SetObject(cls.ptr(), exc.ptr());
-        }
+        // Note: compiler::stl::CompileError does NOT cross the boundary. STL
+        // compile errors are collected as diagnostics and surfaced by the
+        // Python layer (which raises autocog.errors.CompileError itself). A
+        // CompileError reaching here would be a bug; the compile binding turns
+        // that into an InternalError before it ever gets to this translator.
         // Execution tree (most specific first)
         catch (FlowInvariantError const & e) {
             py::object cls = errors.attr("FlowInvariantError");

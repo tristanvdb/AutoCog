@@ -28,6 +28,14 @@ class Registry {
         return id;
     }
 
+    // Insert (or replace) under a caller-chosen id. Used when an entry must
+    // share the id of an entry in another registry (e.g. diagnostics keyed by
+    // their program's id). Does not advance next_id.
+    void set(int id, T value) {
+        std::lock_guard lock(mutex);
+        items[id] = std::move(value);
+    }
+
     T const & get(int id) const {
         auto it = items.find(id);
         if (it == items.end()) throw autocog::utilities::InternalError("Store: invalid ID " + std::to_string(id));
@@ -55,6 +63,12 @@ Registry<sta::Program> & programs();
 Registry<sta::Syntax>  & syntaxes();
 Registry<sta::SearchConfig> & search_configs();
 Registry<nlohmann::json> & ftas();
+
+// Compile diagnostics, keyed by the same id as the program they came from.
+// Each entry is a JSON array of diagnostic records (level, message, resolved
+// file path + line/column, source_line, notes). Populated by the STL compile
+// binding; consumed by the Python layer to log and to raise on errors.
+Registry<nlohmann::json> & diagnostics();
 
 }
 

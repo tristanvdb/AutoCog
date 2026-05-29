@@ -4,6 +4,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/sinks/null_sink.h>
 
+#include <algorithm>
+#include <cctype>
+
 namespace autocog {
 
 static std::shared_ptr<spdlog::logger> g_logger;
@@ -30,6 +33,26 @@ void init_console_logger(spdlog::level::level_enum lvl) {
 
 void set_level(spdlog::level::level_enum lvl) {
     log()->set_level(lvl);
+}
+
+bool looks_like_level_token(std::string const & tok) {
+    if (tok.empty() || tok[0] == '-') return false;
+    for (char c : tok) {
+        if (!std::isalpha(static_cast<unsigned char>(c))) return false;
+    }
+    return true;
+}
+
+bool parse_level(std::string const & tok, spdlog::level::level_enum & out) {
+    std::string lower = tok;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    auto parsed = spdlog::level::from_str(lower);
+    // from_str maps anything unrecognized to `off`, so only accept that result
+    // when the token literally said "off".
+    if (parsed == spdlog::level::off && lower != "off") return false;
+    out = parsed;
+    return true;
 }
 
 }

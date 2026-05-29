@@ -94,10 +94,23 @@ extern "C" {
   void __cxa_throw(void* thrown_exception, std::type_info* tinfo, void(*destructor)(void*));
 }
 
+// Wrap a CLI tool's body so that an uncaught exception is logged (and, in
+// Debug builds, accompanied by the backtrace captured at throw time by the
+// __cxa_throw hook below). Returns the callable's int result on success, or a
+// non-zero code if it threw. This is for the standalone C++ tools; the Python
+// bindings translate exceptions via their own translator instead.
 template <typename Callable, typename... Args>
-int run_with_diagnostics(Callable&& callable, Args&&... args) {
+int guard_main(Callable&& callable, Args&&... args) {
+  auto log_backtrace = []() {
+#ifndef NDEBUG
+    if (!g_last_throw_backtrace.empty()) {
+      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}",
+                          g_last_throw_backtrace.to_string());
+    }
+#endif
+  };
   try {
-    return std::invoke(std::forward<Callable>(callable), 
+    return std::invoke(std::forward<Callable>(callable),
                        std::forward<Args>(args)...);
   } catch (autocog::AutoCogError const & e) {
     if (dynamic_cast<InternalError const *>(&e)) {
@@ -105,21 +118,15 @@ int run_with_diagnostics(Callable&& callable, Args&&... args) {
     } else {
       SPDLOG_LOGGER_ERROR(autocog::log(), "{}", e.what());
     }
-    if (!g_last_throw_backtrace.empty()) {
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
-    }
+    log_backtrace();
     return dynamic_cast<InternalError const *>(&e) ? 250 : 1;
   } catch (std::exception const & e) {
     SPDLOG_LOGGER_CRITICAL(autocog::log(), "uncaught: {} ({})", e.what(), typeid(e).name());
-    if (!g_last_throw_backtrace.empty()) {
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
-    }
+    log_backtrace();
     return 251;
   } catch (...) {
     SPDLOG_LOGGER_CRITICAL(autocog::log(), "uncaught unknown exception");
-    if (!g_last_throw_backtrace.empty()) {
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "backtrace:\n{}", g_last_throw_backtrace.to_string());
-    }
+    log_backtrace();
     return 252;
   }
 }

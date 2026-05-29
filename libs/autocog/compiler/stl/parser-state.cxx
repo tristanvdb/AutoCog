@@ -15,9 +15,14 @@ ParserState::ParserState(
   stream(source_),
   lexer(stream),
   previous(),
-  current(lexer.advance())
+  current()
 {
+  // Set the file id before advancing: the first token's location must carry
+  // the correct fid (otherwise it defaults to -1, which no fileids entry maps
+  // to). This matters for diagnostics anchored at the start of a file, such as
+  // an unresolved import whose statement begins on the first token.
   lexer.set_file_id(fileid);
+  current = lexer.advance();
 }
 
 ParserState::ParserState(

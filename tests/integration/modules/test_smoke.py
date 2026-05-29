@@ -1387,16 +1387,19 @@ class TestErrorHierarchy:
         finally:
             os.unlink(bad_syntax)
 
-    def test_compile_error(self):
-        """Compiling invalid STL raises CompileError."""
+    def test_compile_error(self, repo_root):
+        """Compiling malformed STL raises CompileError with diagnostics."""
         import autocog
         from autocog.errors import CompileError, AutoCogError
 
+        bad = repo_root / "tests/fixtures/stl/errors/test_missing_semicolon.stl"
         with pytest.raises(CompileError) as exc_info:
-            autocog.compile("/nonexistent/bad.stl")
+            autocog.compile(str(bad))
         e = exc_info.value
         assert isinstance(e, AutoCogError)
         assert not e.recoverable
+        assert e.diagnostics
+        assert any(d.level == "error" for d in e.diagnostics)
 
     def test_config_error_bad_entry(self, repo_root):
         """Running with invalid entry point raises ConfigError."""

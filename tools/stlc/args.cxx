@@ -1,8 +1,10 @@
 
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/errors.hxx"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -233,14 +235,14 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
 
     // Verbose
     if (arg == "-V" || arg == "--verbose") {
-      spdlog::level::level_enum lvl = spdlog::level::debug;  // bare --verbose → DEBUG
-      if (i + 1 < argc && argv[i + 1][0] != '-') {
-        std::string maybe_level = argv[i + 1];
-        std::transform(maybe_level.begin(), maybe_level.end(), maybe_level.begin(), ::tolower);
-        auto parsed = spdlog::level::from_str(maybe_level);
-        if (parsed != spdlog::level::off || maybe_level == "off") {
-          lvl = parsed;
+      spdlog::level::level_enum lvl = spdlog::level::debug;  // bare --verbose -> DEBUG
+      if (i + 1 < argc && autocog::looks_like_level_token(argv[i + 1])) {
+        if (autocog::parse_level(argv[i + 1], lvl)) {
           ++i;  // consume the level arg
+        } else {
+          std::cerr << "Error: unknown verbosity level '" << argv[i + 1]
+                    << "' (expected: trace, debug, info, warn, error, critical, off)\n";
+          return 1;
         }
       }
       autocog::init_console_logger(lvl);
@@ -332,6 +334,14 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     std::cerr << "Error: No input files specified" << std::endl;
     print_usage(argv[0]);
     return 1;
+  }
+
+  // A missing top-level input is a file error, not a compile diagnostic (there
+  // is no source to point into). Caught and reported by guard_main in main().
+  for (auto const & input : driver.inputs) {
+    if (!std::filesystem::exists(input)) {
+      throw autocog::FileError("Cannot find file: " + input, input);
+    }
   }
 
   // Log parsed arguments

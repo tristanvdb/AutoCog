@@ -10,6 +10,40 @@ Recovery is a per-exception flag with category defaults.
 """
 
 import builtins
+from dataclasses import dataclass, field
+
+
+# ============================================================================
+# Compile diagnostics
+# ============================================================================
+
+@dataclass
+class SourceLocation:
+    """A resolved position in STL source: file path, 1-based line and column."""
+    file: str
+    line: int
+    column: int
+
+    def __str__(self):
+        return f"{self.file}:{self.line}:{self.column}"
+
+
+@dataclass
+class Diagnostic:
+    """One compiler diagnostic (error, warning, or note).
+
+    `level` is one of "error", "warning", "note". `location` is a
+    SourceLocation or None (some diagnostics are not tied to a position).
+    """
+    level: str
+    message: str
+    location: "SourceLocation | None" = None
+    source_line: "str | None" = None
+    notes: list = field(default_factory=list)
+
+    def __str__(self):
+        prefix = f"{self.location}: " if self.location is not None else ""
+        return f"{prefix}{self.level}: {self.message}"
 
 
 class AutoCogError(Exception):
@@ -28,12 +62,19 @@ class AutoCogError(Exception):
 # ============================================================================
 
 class CompileError(AutoCogError):
-    """STL compilation error."""
-    def __init__(self, message, *, recoverable=None, location=None, source_line=None, notes=None):
+    """STL compilation error.
+
+    `diagnostics` is the full list of Diagnostic records produced by the
+    compile (errors, warnings, notes). `location` and `source_line` mirror the
+    first error-level diagnostic for convenience.
+    """
+    def __init__(self, message, *, recoverable=None, location=None,
+                 source_line=None, notes=None, diagnostics=None):
         super().__init__(message, recoverable=recoverable)
         self.location = location
         self.source_line = source_line
         self.notes = notes or []
+        self.diagnostics = diagnostics or []
 
 
 class ParseError(CompileError):

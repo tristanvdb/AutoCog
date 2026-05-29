@@ -134,25 +134,22 @@ class TestErrorPaths:
     """Test error handling in the orchestration layer."""
 
     def test_flow_limit_exceeded(self, engine, repo_root):
-        """Flow loop that exceeds its limit raises RuntimeError."""
+        """Flow loop that exceeds its limit raises a typed OrchestrationError."""
         import autocog
         # self_dataflow has flow solver[3] — limit 3
         prog = autocog.compile(
             str(repo_root / "tests/fixtures/stl/flows/data/test_self_dataflow.stl")
         )
-        # With RNG model, the flow choice is random — it might return or loop
-        # We can't guarantee it hits the limit, but at least verify it doesn't crash
+        # With the RNG model the flow choice is random — it may return or loop,
+        # so we can't force the limit. But if it does fire, it must be a typed
+        # OrchestrationError (never a bare RuntimeError leaking from the loop).
         try:
             result = engine.run(prog, topic="math")
             assert result is not None
-        except (RuntimeError, autocog.errors.OrchestrationError) as e:
+        except autocog.errors.OrchestrationError as e:
             assert "limit" in str(e).lower()
-
-    def test_compile_error(self):
-        """Compiling invalid STL raises CompileError."""
-        import autocog
-        with pytest.raises(autocog.errors.CompileError):
-            autocog.compile("/nonexistent/file.stl")
+        except RuntimeError as e:  # pragma: no cover - guards against regressions
+            pytest.fail(f"flow limit raised bare RuntimeError, not OrchestrationError: {e}")
 
     def test_invalid_entry_point(self, engine, repo_root):
         """Running with invalid entry point raises ValueError."""
@@ -160,6 +157,22 @@ class TestErrorPaths:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         with pytest.raises(autocog.errors.ConfigError, match="not found"):
             engine.run(prog, entry="nonexistent")
+
+    def test_content_range_violation_is_orchestration_error(self, engine, repo_root):
+        """Input content that violates a field's range raises OrchestrationError.
+
+        select.stl requires at least 4 choices; supplying 3 is a recoverable
+        orchestration failure located at the offending field — not a bare
+        ExecutionError/RuntimeError. This is deterministic (input validation,
+        independent of token sampling).
+        """
+        import autocog
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        with pytest.raises(autocog.errors.OrchestrationError) as exc_info:
+            engine.run(prog, question="What is 2+2?", choices=["3", "4", "5"])
+        e = exc_info.value
+        assert e.recoverable
+        assert getattr(e, "field", None) == "choices"
 
 
 class TestExternCalls:

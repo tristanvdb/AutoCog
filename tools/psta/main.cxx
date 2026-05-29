@@ -2,7 +2,10 @@
 #include "autocog/runtime/sta/load.hxx"
 #include "autocog/build_info.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/errors.hxx"
+#include "autocog/utilities/exception.hxx"
 #include <algorithm>
+#include <filesystem>
 
 #include <nlohmann/json.hpp>
 
@@ -145,7 +148,7 @@ static json build_result(
     return result;
 }
 
-int main(int argc, char ** argv) {
+static int run(int argc, char ** argv) {
     std::string sta_file, prompt_name, input_file, output_file;
     std::string metric = "best";
 
@@ -162,11 +165,14 @@ int main(int argc, char ** argv) {
         if (arg == "--metric" && i + 1 < argc) { metric = argv[++i]; continue; }
         if (arg == "-V" || arg == "--verbose") {
           spdlog::level::level_enum lvl = spdlog::level::debug;
-          if (i + 1 < argc && argv[i + 1][0] != '-') {
-            std::string ml = argv[i + 1];
-            std::transform(ml.begin(), ml.end(), ml.begin(), ::tolower);
-            auto p = spdlog::level::from_str(ml);
-            if (p != spdlog::level::off || ml == "off") { lvl = p; ++i; }
+          if (i + 1 < argc && autocog::looks_like_level_token(argv[i + 1])) {
+            if (autocog::parse_level(argv[i + 1], lvl)) {
+              ++i;
+            } else {
+              std::cerr << "Error: unknown verbosity level '" << argv[i + 1]
+                        << "' (expected: trace, debug, info, warn, error, critical, off)\n";
+              return 1;
+            }
           }
           autocog::init_console_logger(lvl);
           continue;
@@ -180,8 +186,11 @@ int main(int argc, char ** argv) {
     // Load STA
     json sta_json;
     {
+        if (!std::filesystem::exists(sta_file)) {
+            throw autocog::FileError("Cannot find file: " + sta_file, sta_file);
+        }
         std::ifstream f(sta_file);
-        if (!f) { std::cerr << "Error: cannot read " << sta_file << "\n"; return 1; }
+        if (!f) { throw autocog::FileError("Cannot read file: " + sta_file, sta_file); }
         sta_json = json::parse(f);
     }
 
@@ -226,4 +235,8 @@ int main(int argc, char ** argv) {
     *out << result.dump(2) << std::endl;
 
     return 0;
+}
+
+int main(int argc, char ** argv) {
+    return autocog::utilities::guard_main([&]{ return run(argc, argv); });
 }

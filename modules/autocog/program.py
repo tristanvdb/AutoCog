@@ -2,11 +2,70 @@
 Program — compiled or loaded STA, wraps a ProgramID.
 """
 
+import logging
 import os
 
 from autocog.compiler.stl import compiler_stl_cxx
 from autocog.runtime.sta import runtime_sta_cxx
-from autocog.errors import ConfigError
+from autocog.errors import (
+    ConfigError, CompileError, FileError, Diagnostic, SourceLocation,
+)
+
+log = logging.getLogger("autocog")
+
+# Map a diagnostic level name to a Python logging level. Errors log at ERROR
+# (the recoverable tier); the presence of any error then raises a CompileError,
+# which a server loop may recover from or main turns into a fatal exit.
+_DIAG_LOG_LEVEL = {
+    "error": logging.ERROR,
+    "warning": logging.WARNING,
+    "note": logging.INFO,
+}
+
+
+def _to_diagnostic(record):
+    """Translate a raw diagnostic dict (from the binding) into a Diagnostic."""
+    loc = record.get("location")
+    location = None
+    if loc is not None:
+        location = SourceLocation(
+            file=loc["file"], line=loc["line"], column=loc["column"],
+        )
+    return Diagnostic(
+        level=record.get("level", "error"),
+        message=record.get("message", ""),
+        location=location,
+        source_line=record.get("source_line"),
+        notes=list(record.get("notes") or []),
+    )
+
+
+def _process_diagnostics(program_id):
+    """Retrieve, translate, and log the diagnostics for a compiled program.
+
+    Logs each diagnostic at its mapped level, then — if any are errors —
+    releases the (unusable) program and raises CompileError carrying the full
+    list. Returns the diagnostics list when there are no errors.
+    """
+    raw = compiler_stl_cxx.get_diagnostics(program_id)
+    diagnostics = [_to_diagnostic(r) for r in raw]
+
+    for d in diagnostics:
+        log.log(_DIAG_LOG_LEVEL.get(d.level, logging.ERROR), "%s", d)
+
+    errors = [d for d in diagnostics if d.level == "error"]
+    if errors:
+        # The program is unusable; drop it before raising.
+        compiler_stl_cxx.release(program_id)
+        first = errors[0]
+        raise CompileError(
+            f"compilation failed with {len(errors)} error(s)",
+            location=first.location,
+            source_line=first.source_line,
+            notes=first.notes,
+            diagnostics=diagnostics,
+        )
+    return diagnostics
 
 
 class Program:
@@ -112,6 +171,12 @@ def _default_search_path():
 
 def compile(filepath, includes=None, entry_points=None):
     """Compile an STL file into a Program."""
+    # A missing top-level input is a file error, not a compile diagnostic:
+    # there is no source to point into. (Imports that fail to resolve are
+    # reported as located CompileError diagnostics by the compiler instead.)
+    if not os.path.isfile(filepath):
+        raise FileError(f"Cannot find file: {filepath}", path=filepath)
+
     inc = list(includes or [])
     # Add stdlib as implicit include (lowest priority)
     stdlib = _stdlib_path()
@@ -122,6 +187,9 @@ def compile(filepath, includes=None, entry_points=None):
         includes=inc,
         entry_points=entry_points or ["main"]
     )
+    # Log diagnostics and raise CompileError if the compile produced errors
+    # (this releases the unusable program before raising).
+    _process_diagnostics(pid)
     return Program(pid)
 
 

@@ -14,6 +14,7 @@
 #include <fstream>
 #include <string>
 #include "autocog/utilities/errors.hxx"
+#include "autocog/utilities/exception.hxx"
 #include <algorithm>
 
 #include "autocog/build_info.hxx"
@@ -38,7 +39,7 @@ void print_usage(const char* program_name) {
               << std::endl;
 }
 
-int main(int argc, char** argv) {
+static int run(int argc, char** argv) {
   std::vector<std::string> input_files;
   std::string model_path;
   std::string output_file;
@@ -60,11 +61,14 @@ int main(int argc, char** argv) {
     if ((arg == "-c" || arg == "--ctx") && i + 1 < argc) { ctx_size = std::stoi(argv[++i]); continue; }
     if (arg == "-V" || arg == "--verbose") {
       spdlog::level::level_enum lvl = spdlog::level::debug;
-      if (i + 1 < argc && argv[i + 1][0] != '-') {
-        std::string ml = argv[i + 1];
-        std::transform(ml.begin(), ml.end(), ml.begin(), ::tolower);
-        auto p = spdlog::level::from_str(ml);
-        if (p != spdlog::level::off || ml == "off") { lvl = p; ++i; }
+      if (i + 1 < argc && autocog::looks_like_level_token(argv[i + 1])) {
+        if (autocog::parse_level(argv[i + 1], lvl)) {
+          ++i;
+        } else {
+          std::cerr << "Error: unknown verbosity level '" << argv[i + 1]
+                    << "' (expected: trace, debug, info, warn, error, critical, off)\n";
+          return 1;
+        }
       }
       autocog::init_console_logger(lvl);
       continue;
@@ -78,52 +82,51 @@ int main(int argc, char** argv) {
   if (input_files.empty()) { std::cerr << "Error: No input file specified\n"; print_usage(argv[0]); return 1; }
   if (model_path.empty() && !use_rng) { std::cerr << "Error: No model file specified (use -m or --rng)\n"; return 1; }
 
-  try {
-    Manager::initialize();
+  Manager::initialize();
 
-    ModelID model_id;
-    if (use_rng) {
-      model_id = 0;
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "Using built-in RNG model (Model #0)");
+  ModelID model_id;
+  if (use_rng) {
+    model_id = 0;
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Using built-in RNG model (Model #0)");
+  } else {
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Loading model from {} with {} tokens of context", model_path, ctx_size);
+    model_id = Manager::add_model(model_path, ctx_size);
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "Model #{}", model_id);
+  }
+
+  Manager::get_model(model_id).set_seed(seed);
+  SPDLOG_LOGGER_DEBUG(autocog::log(), "RNG seed: {}", seed);
+
+  for (auto const & input_file : input_files) {
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "FTA: \"{}\"", input_file);
+
+    std::ifstream input_stream(input_file);
+    if (!input_stream.is_open()) throw autocog::FileError("Failed to open: " + input_file, input_file);
+    nlohmann::json fta_json;
+    input_stream >> fta_json;
+    input_stream.close();
+
+    FTA fta = convert_json_to_fta(model_id, fta_json);
+    EvalID eval_id = Manager::add_eval(model_id, fta);
+    Manager::advance(eval_id, std::nullopt);
+    FTT const & ftt = Manager::retrieve(eval_id);
+
+    nlohmann::json ftt_json = convert_ftt_to_json(model_id, fta_json, fta, ftt);
+
+    if (!output_file.empty()) {
+      std::ofstream out(output_file);
+      if (!out.is_open()) throw autocog::FileError("Failed to open: " + output_file, output_file);
+      out << ftt_json.dump(2) << std::endl;
+      SPDLOG_LOGGER_DEBUG(autocog::log(), "FTT: \"{}\"", output_file);
     } else {
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "Loading model from {} with {} tokens of context", model_path, ctx_size);
-      model_id = Manager::add_model(model_path, ctx_size);
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "Model #{}", model_id);
+      std::cout << ftt_json.dump(2) << std::endl;
     }
 
-    Manager::get_model(model_id).set_seed(seed);
-    SPDLOG_LOGGER_DEBUG(autocog::log(), "RNG seed: {}", seed);
-
-    for (auto const & input_file : input_files) {
-      SPDLOG_LOGGER_DEBUG(autocog::log(), "FTA: \"{}\"", input_file);
-
-      std::ifstream input_stream(input_file);
-      if (!input_stream.is_open()) throw autocog::FileError("Failed to open: " + input_file, input_file);
-      nlohmann::json fta_json;
-      input_stream >> fta_json;
-      input_stream.close();
-
-      FTA fta = convert_json_to_fta(model_id, fta_json);
-      EvalID eval_id = Manager::add_eval(model_id, fta);
-      Manager::advance(eval_id, std::nullopt);
-      FTT const & ftt = Manager::retrieve(eval_id);
-
-      nlohmann::json ftt_json = convert_ftt_to_json(model_id, fta_json, fta, ftt);
-
-      if (!output_file.empty()) {
-        std::ofstream out(output_file);
-        if (!out.is_open()) throw autocog::FileError("Failed to open: " + output_file, output_file);
-        out << ftt_json.dump(2) << std::endl;
-        SPDLOG_LOGGER_DEBUG(autocog::log(), "FTT: \"{}\"", output_file);
-      } else {
-        std::cout << ftt_json.dump(2) << std::endl;
-      }
-
-      Manager::rm_eval(eval_id);
-    }
-  } catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << "\n";
-    return 1;
+    Manager::rm_eval(eval_id);
   }
   return 0;
+}
+
+int main(int argc, char** argv) {
+  return autocog::utilities::guard_main([&]{ return run(argc, argv); });
 }

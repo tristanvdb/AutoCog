@@ -71,11 +71,22 @@ class Driver {
     void emit_note(std::string msg, std::optional<SourceRange> const & loc);
     bool report_errors();
 
+    // When true (default, used by the CLI tools), report_errors() prints each
+    // diagnostic to stderr. The Python binding sets this false: it retrieves
+    // the retained diagnostics and routes them through Python's logging instead,
+    // so they are not also printed here (which would double-log).
+    bool print_diagnostics = true;
+
+    // All diagnostics seen across every stage, retained for retrieval after
+    // compile() returns (report_errors() moves into here rather than discarding).
+    std::list<Diagnostic> const & diagnostics_log() const { return collected; }
+
   private:
     unsigned errors = 0;
     unsigned warnings = 0;
     unsigned notes = 0;
     std::list<Diagnostic> diagnostics;
+    std::list<Diagnostic> collected;
 
   // ---- Utilities ----
   public:

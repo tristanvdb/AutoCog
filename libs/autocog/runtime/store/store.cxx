@@ -23,4 +23,9 @@ Registry<nlohmann::json> & ftas() {
     return instance;
 }
 
+Registry<nlohmann::json> & diagnostics() {
+    static Registry<nlohmann::json> instance;
+    return instance;
+}
+
 }

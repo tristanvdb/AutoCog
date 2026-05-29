@@ -33,7 +33,7 @@ Parser::Parser(
   queue()
 {
   for (auto & filepath: filepaths) {
-    queue.push(filepath);
+    queue.push(QueueEntry{filepath, std::nullopt});
   }
 }
 
@@ -53,13 +53,13 @@ static std::string file_lookup(std::string const & filepath, std::list<std::stri
   return found_path;
 }
 
-void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std::string> & queue) {
-  for (auto & stmt: program.statements) {
+void Parser::queue_imports(ast::Node<ast::Tag::Program> const & program) {
+  for (auto & stmt: program.data.statements) {
     if (stmt.index() == 0) {
       auto & import = std::get<0>(stmt);
       std::string const & file = import.data.file;
       bool has_stl_extension = file.size() >= 4 && ( file.rfind(".stl") == file.size() - 4 );
-      if (has_stl_extension) queue.push(file);
+      if (has_stl_extension) queue.push(QueueEntry{file, import.location});
     }
   }
 }
@@ -68,8 +68,9 @@ void queue_imports(ast::Data<ast::Tag::Program> const & program, std::queue<std:
 void Parser::parse() {
   SPDLOG_LOGGER_TRACE(autocog::log(), "ENTER Parser::parse()");
   while (!queue.empty()) {
-    std::string filepath = queue.front();
+    QueueEntry entry = queue.front();
     queue.pop();
+    std::string const & filepath = entry.filepath;
 
   SPDLOG_LOGGER_TRACE(autocog::log(), "  filepath =");
 
@@ -81,14 +82,21 @@ void Parser::parse() {
     if (found_path.empty()) {
       std::ostringstream oss;
       oss << "Cannot find file: `" << filepath << "`";
-      diagnostics.emplace_back(DiagnosticLevel::Error, oss.str());
+      // An import that fails to resolve points at the import statement; a
+      // missing top-level input has no source location (and is normally caught
+      // earlier, at the tool/binding boundary).
+      if (entry.import_location) {
+        diagnostics.emplace_back(DiagnosticLevel::Error, oss.str(), entry.import_location->start);
+      } else {
+        diagnostics.emplace_back(DiagnosticLevel::Error, oss.str());
+      }
     } else {
       std::ifstream file(found_path);
       std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
       file.close();
 
       parse(fid, filepath, source);
-      queue_imports(programs.back().data, queue);
+      queue_imports(programs.back());
     }
   }
   SPDLOG_LOGGER_TRACE(autocog::log(), "LEAVE Parser::parse()");

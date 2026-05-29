@@ -83,7 +83,9 @@ void Driver::emit_note(std::string msg, std::optional<SourceRange> const & loc) 
 
 bool Driver::report_errors() {
     for (auto const & diag : diagnostics) {
-        std::cerr << diag.format(fileids) << std::endl;
+        if (print_diagnostics) {
+            std::cerr << diag.format(fileids) << std::endl;
+        }
         switch (diag.level) {
             case DiagnosticLevel::Error:   errors++;   break;
             case DiagnosticLevel::Warning: warnings++; break;
@@ -91,15 +93,20 @@ bool Driver::report_errors() {
         }
     }
 
-    if (errors > 0) {
-        std::cerr << "Failed with " << errors << " error(s), "
-                  << warnings << " warning(s), and " << notes << " note(s).\n";
-    } else if (warnings > 0) {
-        std::cerr << "Passed with " << warnings << " warning(s) and " << notes << " note(s).\n";
-    } else if (notes > 0) {
-        std::cerr << "Passed with " << notes << " note(s).\n";
+    if (print_diagnostics) {
+        if (errors > 0) {
+            std::cerr << "Failed with " << errors << " error(s), "
+                      << warnings << " warning(s), and " << notes << " note(s).\n";
+        } else if (warnings > 0) {
+            std::cerr << "Passed with " << warnings << " warning(s) and " << notes << " note(s).\n";
+        } else if (notes > 0) {
+            std::cerr << "Passed with " << notes << " note(s).\n";
+        }
     }
-    diagnostics.clear();
+
+    // Retain diagnostics for post-compile retrieval (e.g. the Python binding),
+    // then clear the per-stage buffer so the next stage starts fresh.
+    collected.splice(collected.end(), diagnostics);
 
     return errors > 0;
 }

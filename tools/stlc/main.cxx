@@ -2,6 +2,7 @@
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/serialize.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/exception.hxx"
 
 #include <fstream>
 
@@ -9,7 +10,7 @@ using namespace autocog::compiler::stl;
 
 std::optional<int> parse_args(int argc, char** argv, Driver & driver);
 
-int main(int argc, char** argv) {
+static int run(int argc, char** argv) {
     autocog::init_console_logger();  // default level; --verbose overrides
     Driver driver;
     auto retval = parse_args(argc, argv, driver);
@@ -40,4 +41,8 @@ int main(int argc, char** argv) {
     }
 
     return 0;
+}
+
+int main(int argc, char** argv) {
+    return autocog::utilities::guard_main([&]{ return run(argc, argv); });
 }
