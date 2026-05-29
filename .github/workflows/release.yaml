@@ -34,6 +34,27 @@ jobs:
             exit 1
           fi
 
+      - name: Schema-version coupling
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag; first release"
+            exit 0
+          fi
+          if git diff --quiet "$PREV_TAG" HEAD -- share/schemas/; then
+            echo "share/schemas/ unchanged since $PREV_TAG; no version constraint"
+            exit 0
+          fi
+          PREV_MINOR=$(git show "$PREV_TAG:VERSION" | sed -E 's/v?([0-9]+)\.([0-9]+).*/\1.\2/')
+          HEAD_MINOR=$(sed -E 's/v?([0-9]+)\.([0-9]+).*/\1.\2/' VERSION)
+          if [ "$PREV_MINOR" = "$HEAD_MINOR" ]; then
+            echo "::error::share/schemas/ changed since $PREV_TAG ($PREV_MINOR) but minor version did not bump (HEAD=$HEAD_MINOR)."
+            echo "Diff:"
+            git diff "$PREV_TAG" HEAD -- share/schemas/ | head -50
+            exit 1
+          fi
+          echo "Schema change accompanied by minor bump $PREV_MINOR → $HEAD_MINOR; OK"
+
       - name: Check CI passed for this commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

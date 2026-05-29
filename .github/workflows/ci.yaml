@@ -30,7 +30,7 @@ jobs:
           sudo apt-get install -y build-essential cmake ccache gcovr
 
       - name: Install Python dependencies
-        run: pip install pytest pytest-cov pytest-timeout pybind11 scikit-build-core
+        run: pip install pytest pytest-cov pytest-timeout deepdiff jsonschema referencing pybind11 scikit-build-core
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
@@ -217,7 +217,7 @@ jobs:
           sudo apt-get install -y build-essential cmake ccache
 
       - name: Install Python dependencies
-        run: pip install pytest pytest-timeout pybind11 scikit-build-core
+        run: pip install pytest pytest-timeout deepdiff jsonschema referencing pybind11 scikit-build-core
 
       - name: Restore ccache
         uses: actions/cache/restore@v4

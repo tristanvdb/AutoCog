@@ -64,6 +64,7 @@ target_include_directories(autocog_compiler_stl_serialize PUBLIC
 
 target_link_libraries(autocog_compiler_stl_serialize PUBLIC
     autocog_compiler_stl_lib
+    autocog_utilities_lib
 )
 
 set_property(TARGET autocog_compiler_stl_serialize PROPERTY POSITION_INDEPENDENT_CODE ON)

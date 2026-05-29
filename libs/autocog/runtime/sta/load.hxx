@@ -10,7 +10,8 @@ namespace autocog::runtime::sta {
 PromptSTA load_prompt(nlohmann::json const & j);
 Program load_program(nlohmann::json const & j);
 
-nlohmann::json serialize_program(Program const & prog);
+nlohmann::json serialize_program(Program const & prog,
+                                 std::string const & source_uid = "");
 nlohmann::json serialize_prompt(PromptSTA const & prompt);
 
 }

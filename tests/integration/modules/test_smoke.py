@@ -1548,3 +1548,290 @@ class TestErrorHierarchy:
             raise NotImplementedError("todo")
         except builtins.NotImplementedError:
             pass  # Should be caught
+
+
+class TestSchemaValidation:
+    """Test JSON Schema validation of artifacts."""
+
+    def test_validate_sta_artifact(self, repo_root):
+        """validate_artifact passes on a valid STA."""
+        import autocog
+        from autocog._schema import validate_artifact
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        # Should not raise
+        validate_artifact(prog.sta, filepath="test_mcq")
+
+    def test_validate_detects_format(self, repo_root):
+        """validate_artifact auto-detects STA format."""
+        import autocog
+        from autocog._schema import _detect_format
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        assert _detect_format(prog.sta) == "sta"
+
+    def test_validate_invalid_artifact(self, repo_root):
+        """validate_artifact raises ConfigError on invalid data."""
+        import pytest
+        from autocog._schema import validate_artifact
+        from autocog.errors import ConfigError
+        bad = {"metadata": {"format": "sta"}, "prompts": "not_an_object"}
+        with pytest.raises(ConfigError, match="Schema violation"):
+            validate_artifact(bad)
+
+    def test_compute_uid_stable(self, repo_root):
+        """compute_uid returns same value for same input."""
+        from autocog._schema import compute_uid
+        artifact = {"prompts": {"a": 1}, "entry_points": {"main": "a"}}
+        uid1 = compute_uid(artifact)
+        uid2 = compute_uid(artifact)
+        assert uid1 == uid2
+        assert len(uid1) == 16
+
+    def test_compute_uid_ignores_metadata(self):
+        """compute_uid strips metadata so timestamps don't affect it."""
+        from autocog._schema import compute_uid
+        a1 = {"data": 1, "metadata": {"timestamp": "2026-01-01T00:00:00Z"}}
+        a2 = {"data": 1, "metadata": {"timestamp": "2026-12-31T23:59:59Z"}}
+        assert compute_uid(a1) == compute_uid(a2)
+
+    def test_compute_uid_differs_on_content(self):
+        """compute_uid produces different values for different content."""
+        from autocog._schema import compute_uid
+        a1 = {"data": 1}
+        a2 = {"data": 2}
+        assert compute_uid(a1) != compute_uid(a2)
+
+
+class TestGoldenCompare:
+    """Test the golden file comparator."""
+
+    def test_compare_identical(self, repo_root):
+        """compare returns None for identical artifacts."""
+        import sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import compare
+        a = {"prompts": {"x": 1}, "abi_version": "1.0.0"}
+        b = {"prompts": {"x": 1}, "abi_version": "2.0.0"}
+        assert compare(a, b) is None  # abi_version excluded
+
+    def test_compare_mismatch(self, repo_root):
+        """compare returns diff message on mismatch."""
+        import sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import compare
+        a = {"prompts": {"x": 1}}
+        b = {"prompts": {"x": 2}}
+        diff = compare(a, b)
+        assert diff is not None
+        assert "GOLDEN MISMATCH" in diff
+        assert "$.prompts.x" in diff
+
+    def test_compare_ignores_metadata(self, repo_root):
+        """compare ignores metadata block differences."""
+        import sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import compare
+        a = {"data": 1, "metadata": {"uid": "aaaa", "timestamp": "2026-01-01"}}
+        b = {"data": 1, "metadata": {"uid": "bbbb", "timestamp": "2026-12-31"}}
+        assert compare(a, b) is None
+
+    def test_validate_valid_golden(self, repo_root):
+        """validate passes on a real golden file."""
+        import json, sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import validate
+        golden = json.load(open(
+            repo_root / "tests/integration/tools/stlc/sta/language/structures/test_basic_record.golden.json"
+        ))
+        assert validate(golden) is None
+
+    def test_validate_invalid_golden(self, repo_root):
+        """validate returns error message on schema violation."""
+        import sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import validate
+        bad = {"metadata": {"format": "sta"}, "entry_points": 42}
+        err = validate(bad)
+        assert err is not None
+        assert "SCHEMA VIOLATION" in err
+
+    def test_format_diff_readability(self, repo_root):
+        """format_diff produces JSONPath-anchored output."""
+        import sys
+        sys.path.insert(0, str(repo_root / "tests"))
+        from golden_compare import compare
+        a = {"data": {"nested": {"value": "actual"}}}
+        b = {"data": {"nested": {"value": "golden"}}}
+        diff = compare(a, b)
+        assert "$.data.nested.value" in diff
+        assert 'actual' in diff.lower() or '"actual"' in diff
+
+    def test_cli_compare(self, repo_root, tmp_path):
+        """golden_compare.py CLI works end-to-end."""
+        import json, subprocess
+        a = {"prompts": {"x": 1}, "abi_version": "1.0"}
+        b = {"prompts": {"x": 1}, "abi_version": "2.0"}
+        af = tmp_path / "actual.json"
+        bf = tmp_path / "golden.json"
+        af.write_text(json.dumps(a))
+        bf.write_text(json.dumps(b))
+        result = subprocess.run(
+            ["python3", str(repo_root / "tests/golden_compare.py"),
+             "--no-validate", str(af), str(bf)],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 0
+
+    def test_cli_mismatch(self, repo_root, tmp_path):
+        """golden_compare.py CLI exits 1 on mismatch."""
+        import json, subprocess
+        a = {"prompts": {"x": 1}}
+        b = {"prompts": {"x": 2}}
+        af = tmp_path / "actual.json"
+        bf = tmp_path / "golden.json"
+        af.write_text(json.dumps(a))
+        bf.write_text(json.dumps(b))
+        result = subprocess.run(
+            ["python3", str(repo_root / "tests/golden_compare.py"),
+             "--no-validate", str(af), str(bf)],
+            capture_output=True, text=True, timeout=10
+        )
+        assert result.returncode == 1
+        assert "GOLDEN MISMATCH" in result.stderr
+
+
+class TestWriterRecording:
+    """Run writer demo with recording to exercise recorder + channels + context."""
+
+    def test_writer_recorded_trace(self, repo_root, engine):
+        """Full writer run with recording produces complete trace with sub-contexts."""
+        import autocog, json, os, tempfile
+        from autocog.recorder import Recorder
+        from autocog.context import Context
+        from autocog.__main__ import load_externals
+
+        prog = autocog.compile(
+            str(repo_root / "share/demos/story-writer/writer.stl"),
+            includes=[
+                str(repo_root / "share/library"),
+                str(repo_root / "share/demos/story-writer"),
+            ],
+        )
+        externals = load_externals(prog, [
+            str(repo_root / "share/library"),
+            str(repo_root / "share/demos/story-writer"),
+        ])
+
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            recorder = Recorder(kinds="input,frame", path=tmpdir)
+            ctx = Context(
+                prog, engine, "init_idea",
+                {"query": "bedtime story", "age": "3"},
+                externals, recorder=recorder,
+            )
+
+            steps = 0
+            while not ctx.done and steps < 50:
+                ctx.step()
+                steps += 1
+
+            # Main context trace must exist
+            trace_path = os.path.join(tmpdir, "ctx-0.json")
+            assert os.path.isfile(trace_path), "main context trace missing"
+            with open(trace_path) as f:
+                trace = json.load(f)
+
+            assert trace["ctx"] == 0
+            assert trace["parent"] is None
+            assert trace["entry"] == "init_idea"
+            assert len(trace["trace"]) >= 4, f"expected ≥4 prompt steps, got {len(trace['trace'])}"
+
+            # Check prompt sequence starts correctly
+            prompts = [t["prompt"] for t in trace["trace"]]
+            assert prompts[0] == "init_idea"
+            assert "init_task" in prompts
+            assert "init_draft" in prompts
+
+            # At least one prompt should have calls (externals or sub-prompts)
+            all_calls = [c for t in trace["trace"] for c in t.get("calls", [])]
+            assert len(all_calls) > 0, "no channel calls recorded"
+
+            # Sub-contexts should exist (create_pages, edit_title, reflexion)
+            sub_ctx_files = [f for f in os.listdir(tmpdir) if f.startswith("ctx-") and f != "ctx-0.json"]
+            assert len(sub_ctx_files) > 0, "no sub-context traces"
+
+            # Check a sub-context has parent link
+            for scf in sub_ctx_files:
+                if scf.endswith(".json"):
+                    with open(os.path.join(tmpdir, scf)) as f:
+                        sub = json.load(f)
+                    assert sub["parent"] == 0, f"sub-context {scf} parent != 0"
+                    assert len(sub["trace"]) > 0
+                    break
+
+            # Step artifacts should exist in ctx-0/{prompt}/ directories
+            ctx_dir = os.path.join(tmpdir, "ctx-0")
+            assert os.path.isdir(ctx_dir), "ctx-0 artifact directory missing"
+            artifact_files = []
+            for root, dirs, files in os.walk(ctx_dir):
+                for f in files:
+                    if f.endswith(".json"):
+                        artifact_files.append(os.path.join(root, f))
+            assert len(artifact_files) >= 4, f"expected ≥4 step artifacts, got {len(artifact_files)}"
+
+            # Each step artifact should have input and/or frame
+            for af in artifact_files[:3]:
+                with open(af) as f:
+                    data = json.load(f)
+                assert "input" in data or "frame" in data, f"artifact {af} has neither input nor frame"
+
+    def test_writer_recorded_sub_context_pages(self, repo_root, engine):
+        """Verify create_pages sub-contexts record their frames."""
+        import autocog, json, os, tempfile
+        from autocog.recorder import Recorder
+        from autocog.context import Context
+        from autocog.__main__ import load_externals
+
+        prog = autocog.compile(
+            str(repo_root / "share/demos/story-writer/writer.stl"),
+            includes=[
+                str(repo_root / "share/library"),
+                str(repo_root / "share/demos/story-writer"),
+            ],
+        )
+        externals = load_externals(prog, [
+            str(repo_root / "share/library"),
+            str(repo_root / "share/demos/story-writer"),
+        ])
+
+        with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
+            recorder = Recorder(kinds="frame", path=tmpdir)
+            ctx = Context(
+                prog, engine, "init_idea",
+                {"query": "bedtime story", "age": "3"},
+                externals, recorder=recorder,
+            )
+
+            steps = 0
+            while not ctx.done and steps < 50:
+                ctx.step()
+                steps += 1
+
+            # Find create_pages sub-contexts
+            create_pages_ctxs = []
+            for f in sorted(os.listdir(tmpdir)):
+                if f.startswith("ctx-") and f.endswith(".json") and f != "ctx-0.json":
+                    with open(os.path.join(tmpdir, f)) as fh:
+                        sub = json.load(fh)
+                    if sub.get("entry") == "create_pages":
+                        create_pages_ctxs.append((f, sub))
+
+            assert len(create_pages_ctxs) >= 2, (
+                f"expected ≥2 create_pages sub-contexts, got {len(create_pages_ctxs)}"
+            )
+
+            # Each should have a result (the returned pages)
+            for fname, sub in create_pages_ctxs:
+                assert "result" in sub, f"{fname} missing result"
+                result = sub["result"]
+                assert isinstance(result, list), f"{fname} result is not a list"
+                assert len(result) > 0, f"{fname} returned empty pages"

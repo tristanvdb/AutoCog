@@ -204,6 +204,14 @@ def _cmd_run_inner(args, prog, include_paths):
     """Inner run logic (separated for cleanup)."""
     import autocog
 
+    # Schema validation
+    if not getattr(args, 'no_schema_check', False):
+        from ._schema import validate_artifact
+        try:
+            validate_artifact(prog.sta, filepath=getattr(args, 'stl', '<program>'))
+        except Exception:
+            pass  # validation is best-effort; don't block execution
+
     # Parse inputs
     inputs = {}
     if args.input:
@@ -350,6 +358,10 @@ def main():
     p_run.add_argument(
         "--record-path", default=None,
         help="Directory for recorded artifacts (default: temp dir)",
+    )
+    p_run.add_argument(
+        "--no-schema-check", action="store_true",
+        help="Disable schema validation of compiled artifacts",
     )
 
     # --- Server common args ---

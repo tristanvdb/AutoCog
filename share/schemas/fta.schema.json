@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fta.schema.json",
+  "title": "Finite Tree Automaton (FTA)",
+  "description": "Instantiated prompt: a sequence of actions (text, choose, complete) that the LLM evaluates. Produced by ista.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "allOf": [
+        { "$ref": "common/metadata.schema.json" },
+        {
+          "properties": {
+            "format": { "const": "fta" },
+            "model_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_:-]+$",
+              "description": "Identifier of the model used for evaluation (e.g. 'rng', '0')."
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    }
+  },
+  "required": ["actions"],
+  "unevaluatedProperties": false,
+
+  "$defs": {
+    "action": {
+      "oneOf": [
+        { "$ref": "#/$defs/action_text" },
+        { "$ref": "#/$defs/action_choose" },
+        { "$ref": "#/$defs/action_complete" }
+      ]
+    },
+
+    "action_text": {
+      "type": "object",
+      "properties": {
+        "type":       { "const": "text" },
+        "uid":        { "type": "string" },
+        "text":       { "type": "string" },
+        "successors": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["type", "uid", "text", "successors"],
+      "additionalProperties": false
+    },
+
+    "action_choose": {
+      "type": "object",
+      "properties": {
+        "type":       { "const": "choose" },
+        "uid":        { "type": "string" },
+        "field":      { "type": "integer" },
+        "indices":    { "type": "array", "items": { "type": "integer" } },
+        "choices":    { "type": "array", "items": { "type": "string" } },
+        "threshold":  { "type": "number" },
+        "width":      { "type": "integer" },
+        "successors": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["type", "uid", "field", "indices", "choices", "successors"],
+      "additionalProperties": false
+    },
+
+    "action_complete": {
+      "type": "object",
+      "properties": {
+        "type":       { "const": "complete" },
+        "uid":        { "type": "string" },
+        "field":      { "type": "integer" },
+        "indices":    { "type": "array", "items": { "type": "integer" } },
+        "length":     { "type": "integer" },
+        "beams":      { "type": "integer" },
+        "ahead":      { "type": "integer" },
+        "width":      { "type": "integer" },
+        "threshold":  { "type": "number" },
+        "stop_text":  { "type": "string" },
+        "successors": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["type", "uid", "field", "indices", "length", "successors"],
+      "additionalProperties": false
+    }
+  }
+}

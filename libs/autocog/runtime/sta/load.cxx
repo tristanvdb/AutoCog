@@ -1,5 +1,6 @@
 
 #include "autocog/runtime/sta/load.hxx"
+#include "autocog/utilities/metadata.hxx"
 
 namespace autocog::runtime::sta {
 
@@ -411,7 +412,7 @@ static json schema_field_to_json(SchemaField const & s) {
     return j;
 }
 
-json serialize_program(Program const & prog) {
+json serialize_program(Program const & prog, std::string const & source_uid) {
     json output;
     output["abi_version"] = prog.abi_version;
     output["entry_points"] = json::object();
@@ -434,6 +435,11 @@ json serialize_program(Program const & prog) {
     }
     output["prompts"] = json::object();
     for (auto const & [name, p] : prog.prompts) output["prompts"][name] = serialize_prompt(p);
+
+    // Attach metadata (format, version, uid, source_uid, timestamp)
+    if (!source_uid.empty()) {
+        autocog::attach_metadata(output, "sta", source_uid);
+    }
     return output;
 }
 

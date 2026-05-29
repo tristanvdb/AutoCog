@@ -1,7 +1,7 @@
 # ista integration tests — instantiate STA fixtures
 
 set(FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
-set(STA_GOLDEN ${CMAKE_BINARY_DIR}/tests/integration/tools/stlc/sta/golden)
+set(STA_GOLDEN ${PROJECT_SOURCE_DIR}/tests/integration/tools/stlc/sta)
 
 function(add_ista_test test_name sta_golden)
     add_test(

@@ -3,6 +3,13 @@
   "entry_points": {
     "main": "solver"
   },
+  "metadata": {
+    "format": "ir",
+    "source_uid": "6343bc97f7a3c448",
+    "timestamp": "2026-05-29T02:07:46.544Z",
+    "uid": "5b5eb8ae9f7689aa",
+    "version": "0.5.3"
+  },
   "prompts": {
     "solver": {
       "channels": [

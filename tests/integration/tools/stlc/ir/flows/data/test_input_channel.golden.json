@@ -3,6 +3,13 @@
   "entry_points": {
     "main": "quiz"
   },
+  "metadata": {
+    "format": "ir",
+    "source_uid": "f50acd270f4098b9",
+    "timestamp": "2026-05-29T02:07:50.245Z",
+    "uid": "87b1b4dc0050fe59",
+    "version": "0.5.3"
+  },
   "prompts": {
     "quiz": {
       "channels": [

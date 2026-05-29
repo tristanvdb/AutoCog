@@ -3,6 +3,13 @@
   "entry_points": {
     "main": "calculator"
   },
+  "metadata": {
+    "format": "ir",
+    "source_uid": "e258f706a52920eb",
+    "timestamp": "2026-05-29T02:08:26.049Z",
+    "uid": "31bfe44446cc259c",
+    "version": "0.5.3"
+  },
   "prompts": {
     "calculator": {
       "channels": [],

@@ -28,7 +28,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-server = ["fastapi>=0.100", "uvicorn>=0.20"]
+validate = ["jsonschema>=4.18", "referencing"]
+server = ["fastapi>=0.100", "uvicorn>=0.20", "jsonschema>=4.18", "referencing"]
 
 [project.urls]
 Homepage = "https://github.com/LLNL/autocog/"

@@ -3,6 +3,13 @@
   "entry_points": {
     "main": "writer"
   },
+  "metadata": {
+    "format": "ir",
+    "source_uid": "dcb78f2813d10966",
+    "timestamp": "2026-05-29T02:08:15.982Z",
+    "uid": "03bb66cce91ee2fb",
+    "version": "0.5.3"
+  },
   "prompts": {
     "writer": {
       "channels": [],

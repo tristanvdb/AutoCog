@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "syntax.schema.json",
+  "title": "AutoCog Syntax Configuration",
+  "description": "Prompt formatting rules for a specific model family (e.g. ChatML, Llama2Chat, plain).",
+  "type": "object",
+  "properties": {
+    "system_msg":        { "type": "string", "description": "System message prepended to every prompt." },
+    "header_pre":        { "type": "string", "description": "Text before the header block." },
+    "header_mid":        { "type": "string", "description": "Text between header sections." },
+    "header_post":       { "type": "string", "description": "Text after the header block." },
+    "header_mechanic":   { "type": "string", "description": "Header line introducing the syntax." },
+    "header_formats":    { "type": "string", "description": "Header line introducing named formats." },
+    "field_separator":   { "type": "string", "description": "Separator between fields in the prompt." },
+    "field_suffix":      { "type": "string", "description": "Suffix appended to each field name." },
+    "desc_pre":          { "type": "string", "description": "Prefix for field descriptions." },
+    "desc_post":         { "type": "string", "description": "Suffix for field descriptions." },
+    "desc_inline":       { "type": "boolean", "description": "Whether descriptions appear inline with fields." },
+    "format_listing":    { "type": "string", "description": "Prefix for format listing items." },
+    "prompt_indent":     { "type": "string", "description": "Indentation for prompt content." },
+    "prompt_with_format": { "type": "boolean", "description": "Whether to show format annotations." },
+    "prompt_with_index":  { "type": "boolean", "description": "Whether to show array indices." },
+    "prompt_zero_index":  { "type": "boolean", "description": "Whether array indices start at 0." },
+    "detailed_formats":   { "type": "boolean", "description": "Whether to show detailed format descriptions." },
+    "completion_stop":    { "type": "string", "description": "Stop token for completions." }
+  },
+  "required": [
+    "system_msg", "header_pre", "header_mid", "header_post",
+    "header_mechanic", "header_formats",
+    "field_separator", "field_suffix",
+    "desc_pre", "desc_post", "desc_inline",
+    "format_listing", "prompt_indent",
+    "prompt_with_format", "prompt_with_index", "prompt_zero_index",
+    "detailed_formats", "completion_stop"
+  ],
+  "additionalProperties": false
+}

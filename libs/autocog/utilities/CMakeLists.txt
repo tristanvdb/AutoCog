@@ -1,6 +1,7 @@
 
 add_library(autocog_utilities_lib STATIC
     exception.cxx
+    metadata.cxx
 )
 
 target_include_directories(autocog_utilities_lib PUBLIC

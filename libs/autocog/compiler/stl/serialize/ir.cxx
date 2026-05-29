@@ -1,7 +1,11 @@
 
 #include "autocog/compiler/stl/serialize.hxx"
 #include "autocog/compiler/stl/driver.hxx"
+#include "autocog/utilities/metadata.hxx"
 #include "helpers.hxx"
+
+#include <fstream>
+#include <sstream>
 
 namespace autocog::compiler::stl {
 
@@ -262,6 +266,14 @@ void serialize_ir(Driver const & driver, std::ostream & out) {
     output["prompts"] = json::object();
     for (auto const & [mangled_name, prompt] : driver.prompts) {
         output["prompts"][mangled_name] = prompt_to_json(*prompt);
+    }
+
+    // Attach metadata
+    if (!driver.inputs.empty()) {
+        std::ifstream ifs(driver.inputs.front());
+        std::ostringstream ss;
+        ss << ifs.rdbuf();
+        autocog::attach_metadata(output, "ir", autocog::compute_source_uid(ss.str()));
     }
 
     out << output.dump(2) << std::endl;

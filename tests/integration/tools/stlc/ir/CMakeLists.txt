@@ -2,6 +2,7 @@
 
 set(FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
 set(GOLDEN ${CMAKE_CURRENT_SOURCE_DIR})
+set(COMPARE ${PROJECT_SOURCE_DIR}/tests/golden_compare.py)
 
 function(add_ir_test fixture_path)
     # Derive test name from fixture path relative to FIXTURES
@@ -16,7 +17,7 @@ function(add_ir_test fixture_path)
         COMMAND ${CMAKE_COMMAND} -E env bash -c "
             TMPF=$(mktemp) &&
             $<TARGET_FILE:autocog_stlc> --emit ir ${extra_args} ${fixture_path} > \$TMPF 2>/dev/null &&
-            diff -u ${GOLDEN}/${rel_noext}.golden.json \$TMPF &&
+            python3 ${COMPARE} --no-validate \$TMPF ${GOLDEN}/${rel_noext}.golden.json &&
             rm -f \$TMPF
         "
     )

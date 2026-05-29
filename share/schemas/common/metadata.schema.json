@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/metadata.schema.json",
+  "title": "AutoCog artifact metadata",
+  "description": "Universal metadata block carried by every generated AutoCog artifact (IR, STA, FTA). STL source files have no metadata.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": ["ir", "sta", "fta"],
+      "description": "Discriminator; identifies which schema governs this artifact."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "AutoCog project version that produced this artifact."
+    },
+    "uid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "Truncated SHA-256 of this artifact's JCS-canonicalized content (with this field absent during hashing)."
+    },
+    "source_uid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "uid of the artifact (or hash of the source file) from which this was derived."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC timestamp of artifact creation."
+    }
+  },
+  "required": ["format", "version", "uid", "source_uid", "timestamp"]
+}

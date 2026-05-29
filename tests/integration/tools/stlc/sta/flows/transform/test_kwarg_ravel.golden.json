@@ -1,5 +1,5 @@
 {
-  "abi_version": "ABI_VERSION",
+  "abi_version": "0.5.3",
   "entry_points": {
     "main": {
       "inputs": {
@@ -17,6 +17,13 @@
       },
       "prompt": "main"
     }
+  },
+  "metadata": {
+    "format": "sta",
+    "source_uid": "f403eddae57f4f29",
+    "timestamp": "2026-05-29T02:07:58.086Z",
+    "uid": "bd7b5d22cedeed58",
+    "version": "0.5.3"
   },
   "prompts": {
     "aggregator": {
