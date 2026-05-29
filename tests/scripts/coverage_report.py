@@ -38,20 +38,36 @@ def load_cxx_coverage(path):
     return files
 
 
-def load_python_coverage(path):
-    """Parse pytest-cov JSON into per-file line coverage."""
+def load_python_coverage(path, install_prefix=None):
+    """Parse pytest-cov JSON into per-file line coverage.
+
+    install_prefix: path prefix to strip from file paths. Both the prefix and
+                    each file path are resolved to absolute before comparison,
+                    so this works whether pytest-cov recorded absolute paths or
+                    paths relative to the run directory.
+                    If None, falls back to the legacy "modules" heuristic.
+    """
+    import os
+
     with open(path) as f:
         data = json.load(f)
+
+    abs_prefix = os.path.abspath(install_prefix) if install_prefix else None
 
     files = {}
     for filepath, fdata in data.get("files", {}).items():
         s = fdata["summary"]
-        parts = filepath.split("/")
-        if "modules" in parts:
-            idx = parts.index("modules")
-            key = "/".join(parts[idx + 1:])
+        abs_path = os.path.abspath(filepath)
+        if abs_prefix and abs_path.startswith(abs_prefix):
+            key = abs_path[len(abs_prefix):].lstrip("/")
         else:
-            key = filepath
+            # Legacy fallback — kept for compat during transition.
+            parts = filepath.split("/")
+            if "modules" in parts:
+                idx = parts.index("modules")
+                key = "/".join(parts[idx + 1:])
+            else:
+                key = filepath
         files[key] = (s["num_statements"], s["covered_lines"])
 
     return files
@@ -210,6 +226,7 @@ def main():
     cxx_path = sys.argv[1]
     py_path = None
     output_path = None
+    install_prefix = None
 
     args = sys.argv[2:]
     i = 0
@@ -217,12 +234,18 @@ def main():
         if args[i] == "-o" and i + 1 < len(args):
             output_path = args[i + 1]
             i += 2
+        elif args[i].startswith("--install-prefix="):
+            install_prefix = args[i].split("=", 1)[1]
+            i += 1
+        elif args[i] == "--install-prefix" and i + 1 < len(args):
+            install_prefix = args[i + 1]
+            i += 2
         else:
             py_path = args[i]
             i += 1
 
     cxx_files = load_cxx_coverage(cxx_path)
-    py_files = load_python_coverage(py_path) if py_path else {}
+    py_files = load_python_coverage(py_path, install_prefix) if py_path else {}
 
     if output_path:
         with open(output_path, "w") as f:

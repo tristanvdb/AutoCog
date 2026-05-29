@@ -66,7 +66,7 @@ STL source (hash of file) ─► IR.source_uid
 
 ```bash
 # Regenerate all golden files and validate against schemas
-BUILD_DIR=build tests/update-golden.sh
+BUILD_DIR=build tests/scripts/update-golden.sh
 ```
 
 Never run `stlc > golden.json` directly. The regen script validates every

@@ -29,9 +29,41 @@ import deepdiff
 # Schema resolution
 # ---------------------------------------------------------------------------
 
-SCHEMA_ROOT = Path(__file__).resolve().parent.parent / "share" / "schemas"
+SCHEMA_ROOT = Path(__file__).resolve().parent.parent.parent / "share" / "schemas"
 
 _schema_cache = {}
+
+# When true, a missing jsonschema/referencing install is a hard error instead
+# of a silent skip. Set from --force-validate so CI and the test suite can
+# guarantee validation actually ran. The warning is emitted at most once.
+_force_validate = False
+_jsonschema_warned = False
+
+
+def _try_import_jsonschema():
+    """Return (jsonschema, Registry, Resource, DRAFT202012) or None.
+
+    With --force-validate, a missing install exits the process; otherwise it
+    warns once and returns None so the caller skips validation.
+    """
+    global _jsonschema_warned
+    try:
+        import jsonschema
+        from referencing import Registry, Resource
+        from referencing.jsonschema import DRAFT202012
+        return (jsonschema, Registry, Resource, DRAFT202012)
+    except ImportError as e:
+        if _force_validate:
+            print(f"ERROR: jsonschema/referencing required but not installed: {e}\n"
+                  "Install with: pip install autocog[validate]", file=sys.stderr)
+            sys.exit(2)
+        if not _jsonschema_warned:
+            print("WARNING: jsonschema not installed; skipping schema validation. "
+                  "Install with: pip install autocog[validate], "
+                  "or pass --force-validate to make this an error.",
+                  file=sys.stderr)
+            _jsonschema_warned = True
+        return None
 
 
 def _load_schema_store():
@@ -64,12 +96,10 @@ def validate(artifact, filepath="<unknown>"):
 
     Returns None on success, error message string on failure.
     """
-    try:
-        import jsonschema
-        from referencing import Registry, Resource
-        from referencing.jsonschema import DRAFT202012
-    except ImportError:
-        return None  # skip validation if dependencies not installed
+    deps = _try_import_jsonschema()
+    if deps is None:
+        return None  # already warned (or exited under --force-validate)
+    jsonschema, Registry, Resource, DRAFT202012 = deps
 
     fmt = _detect_format(artifact)
     if not fmt:
@@ -90,8 +120,8 @@ def validate(artifact, filepath="<unknown>"):
         validator = jsonschema.Draft202012Validator(schema, registry=registry)
         validator.validate(artifact)
     except jsonschema.ValidationError as e:
-        path = "$.".join(str(p) for p in e.absolute_path) or "$"
-        hint = _typo_hint(e)
+        path = ".".join(str(p) for p in e.absolute_path) or "$"
+        hint = _typo_hint(e, registry)
         msg = f"SCHEMA VIOLATION in {filepath}\n"
         msg += f"  at $.{path}\n"
         msg += f"  message: {e.message}\n"
@@ -102,23 +132,49 @@ def validate(artifact, filepath="<unknown>"):
     return None
 
 
-def _typo_hint(error):
-    """If the error looks like a typo'd field name, suggest the closest match."""
-    if "unexpected" not in error.message.lower():
+def _typo_hint(error, registry=None):
+    """If the error looks like a typo'd field name, suggest the closest match.
+
+    For `unevaluatedProperties` failures the offending field is reported against
+    an inner subschema with no `properties` of its own -- the real field names
+    live in $ref'd / allOf-composed parents. Walk those (resolving $refs via the
+    registry) so the hint fires for composed schemas, not just flat ones.
+    """
+    if error.validator != "unevaluatedProperties" \
+            and "unexpected" not in error.message.lower():
         return None
-    # Extract the unexpected property name
+
     import re
     m = re.search(r"'([^']+)' was unexpected", error.message)
     if not m:
         return None
     typo = m.group(1)
 
-    # Get expected properties from the schema
     expected = set()
-    if isinstance(error.schema, dict):
-        expected.update(error.schema.get("properties", {}).keys())
 
-    # Levenshtein distance ≤ 2
+    def collect(schema):
+        if not isinstance(schema, dict):
+            return
+        for name in schema.get("properties", {}):
+            expected.add(name)
+        for sub in schema.get("allOf", []):
+            ref = isinstance(sub, dict) and sub.get("$ref")
+            if ref and registry is not None:
+                try:
+                    collect(registry.resolver().lookup(ref).contents)
+                except Exception:
+                    pass
+            else:
+                collect(sub)
+        for sub in schema.get("anyOf", []) + schema.get("oneOf", []):
+            collect(sub)
+
+    if isinstance(error.schema, dict):
+        collect(error.schema)
+    parent = getattr(error, "parent", None)
+    if parent is not None and isinstance(getattr(parent, "schema", None), dict):
+        collect(parent.schema)
+
     for name in expected:
         if _levenshtein(typo, name) <= 2:
             return f"typo'd field name? Schema declares '{name}'."
@@ -172,13 +228,31 @@ def compare(actual, golden, actual_path="<actual>", golden_path="<golden>"):
     return format_diff(diff, actual_path, golden_path)
 
 
+def _count_changes(diff):
+    """Count changes across the known deepdiff categories.
+
+    Counting len(diff.values()) is fragile because categories are
+    heterogeneous (dicts vs PrettyOrderedSets) and the set of categories
+    varies across deepdiff versions. Sum only the categories we render.
+    """
+    total = 0
+    for category in (
+        "type_changes", "values_changed",
+        "dictionary_item_added", "dictionary_item_removed",
+        "iterable_item_added", "iterable_item_removed",
+        "set_item_added", "set_item_removed",
+    ):
+        items = diff.get(category)
+        if items:
+            total += len(items)
+    return total
+
+
 def format_diff(diff, actual_path, golden_path):
     """Produce an agent/human-friendly diff message with JSONPaths."""
     lines = []
 
-    # Count total changes
-    total = sum(len(v) if isinstance(v, (dict, list)) else 1
-                for v in diff.values())
+    total = _count_changes(diff)
     lines.append(f"GOLDEN MISMATCH: {total} difference(s)")
     lines.append(f"  actual: {actual_path}")
     lines.append(f"  golden: {golden_path}")
@@ -255,6 +329,7 @@ def _short(value, max_len=40):
 # ---------------------------------------------------------------------------
 
 def main():
+    global _force_validate
     parser = argparse.ArgumentParser(
         description="Compare golden files with schema validation")
     parser.add_argument("files", nargs="*",
@@ -263,7 +338,13 @@ def main():
                         help="Validate file(s) against schema without comparison")
     parser.add_argument("--no-validate", action="store_true",
                         help="Skip schema validation")
+    parser.add_argument("--force-validate", action="store_true",
+                        help="Hard-require jsonschema; fail (exit 2) if it is not installed")
     args = parser.parse_args()
+
+    # --no-validate (explicit skip) wins over --force-validate (explicit
+    # require) if both are somehow passed.
+    _force_validate = args.force_validate and not args.no_validate
 
     if args.validate_only:
         if not args.files:

@@ -132,18 +132,26 @@ pip install -r tests/requirements.txt
 ### Running Coverage
 
 ```bash
-tests/coverage.sh [BUILD_DIR]
+tests/scripts/coverage.sh [BUILD_DIR] [VENV_DIR]
 ```
 
-This script:
-1. Configures a coverage build (`-DCOVERAGE=ON`)
-2. Builds and runs all C++ tests (ctest)
-3. Generates C++ coverage via `gcovr` (JSON)
-4. Runs Python tests with `pytest-cov` (JSON)
-5. Generates `tests/coverage.md` — a combined markdown report
+Both arguments are optional:
+- `BUILD_DIR` — cmake build directory. If supplied, it is reused across runs
+  (ccache stays hot) and wiped at the start of each run. If omitted, a temporary
+  directory is used and removed on exit.
+- `VENV_DIR` — a Python venv you manage (not cleaned, not refreshed). If omitted,
+  a temporary venv is created from `tests/requirements.txt` and removed on exit.
 
-The report includes a global summary table, per-component C++ coverage,
-expandable per-file detail, and Python module coverage.
+This runs five discrete steps (each independently invocable via
+`BUILD_DIR=… VENV_DIR=… tests/scripts/coverage/<step>.sh`):
+1. `build.sh` — coverage-instrumented install into the venv (`-DCOVERAGE=ON`, Debug)
+2. `ctest.sh` — C++ tests, accumulating `.gcda`
+3. `pytest.sh` — Python tests with `pytest-cov`, accumulating `.gcda`
+4. `cxx-report.sh` — `gcovr` → `coverage_cxx.json`
+5. `report.sh` — combine into `tests/coverage.md`
+
+A parallel `tests/scripts/release.sh [BUILD_DIR] [VENV_DIR]` runs the suite
+against a Release-mode build (no coverage instrumentation).
 
 ### Coverage Targets
 

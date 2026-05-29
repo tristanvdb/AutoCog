@@ -98,7 +98,7 @@ ctest -j4 --timeout 30
 pytest tests/integration/modules tests/units/modules -v
 
 # Coverage analysis
-tests/coverage.sh [BUILD_DIR]
+tests/scripts/coverage.sh [BUILD_DIR]
 ```
 
 ## Getting Models

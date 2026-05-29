@@ -1607,7 +1607,7 @@ class TestGoldenCompare:
     def test_compare_identical(self, repo_root):
         """compare returns None for identical artifacts."""
         import sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
         a = {"prompts": {"x": 1}, "abi_version": "1.0.0"}
         b = {"prompts": {"x": 1}, "abi_version": "2.0.0"}
@@ -1616,7 +1616,7 @@ class TestGoldenCompare:
     def test_compare_mismatch(self, repo_root):
         """compare returns diff message on mismatch."""
         import sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
         a = {"prompts": {"x": 1}}
         b = {"prompts": {"x": 2}}
@@ -1628,7 +1628,7 @@ class TestGoldenCompare:
     def test_compare_ignores_metadata(self, repo_root):
         """compare ignores metadata block differences."""
         import sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
         a = {"data": 1, "metadata": {"uid": "aaaa", "timestamp": "2026-01-01"}}
         b = {"data": 1, "metadata": {"uid": "bbbb", "timestamp": "2026-12-31"}}
@@ -1637,7 +1637,7 @@ class TestGoldenCompare:
     def test_validate_valid_golden(self, repo_root):
         """validate passes on a real golden file."""
         import json, sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import validate
         golden = json.load(open(
             repo_root / "tests/integration/tools/stlc/sta/language/structures/test_basic_record.golden.json"
@@ -1647,7 +1647,7 @@ class TestGoldenCompare:
     def test_validate_invalid_golden(self, repo_root):
         """validate returns error message on schema violation."""
         import sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import validate
         bad = {"metadata": {"format": "sta"}, "entry_points": 42}
         err = validate(bad)
@@ -1657,7 +1657,7 @@ class TestGoldenCompare:
     def test_format_diff_readability(self, repo_root):
         """format_diff produces JSONPath-anchored output."""
         import sys
-        sys.path.insert(0, str(repo_root / "tests"))
+        sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
         a = {"data": {"nested": {"value": "actual"}}}
         b = {"data": {"nested": {"value": "golden"}}}
@@ -1675,7 +1675,7 @@ class TestGoldenCompare:
         af.write_text(json.dumps(a))
         bf.write_text(json.dumps(b))
         result = subprocess.run(
-            ["python3", str(repo_root / "tests/golden_compare.py"),
+            ["python3", str(repo_root / "tests/scripts/golden_compare.py"),
              "--no-validate", str(af), str(bf)],
             capture_output=True, text=True, timeout=10
         )
@@ -1691,7 +1691,7 @@ class TestGoldenCompare:
         af.write_text(json.dumps(a))
         bf.write_text(json.dumps(b))
         result = subprocess.run(
-            ["python3", str(repo_root / "tests/golden_compare.py"),
+            ["python3", str(repo_root / "tests/scripts/golden_compare.py"),
              "--no-validate", str(af), str(bf)],
             capture_output=True, text=True, timeout=10
         )
