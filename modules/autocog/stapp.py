@@ -118,11 +118,15 @@ def pack(stl_path, include_paths, output_path,
     # Collect app files
     externals, stl_imports = _collect_app_files(prog, include_paths, stl_path)
 
-    # The STA's ABI version now lives in metadata.version (the former top-level
-    # abi_version field was removed). The .stapp manifest keeps its own
-    # abi_version key (a stable package contract) sourced from there.
-    _sta = sta_json if sta_json else prog.sta
-    _abi_version = _sta.get("metadata", {}).get("version", "")
+    # The .stapp manifest records the ABI version it was packed with (a stable
+    # package contract the load-time gate checks). Source it from the installed
+    # autocog version: the in-memory STA object carries no metadata block (that
+    # is attached only at serialization), so reading metadata.version here would
+    # yield an empty string and silently disable the load-time ABI gate.
+    import autocog
+    _abi_version = getattr(autocog, "__version__", "") or ""
+    if _abi_version == "unknown":
+        _abi_version = ""
 
     # Build manifest
     manifest = {

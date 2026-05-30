@@ -226,6 +226,31 @@ class TestStapp:
         finally:
             os.unlink(stapp_path)
 
+    def test_pack_manifest_abi_version_populated(self, repo_root):
+        """The .stapp manifest records a non-empty ABI version.
+
+        Regression guard: the manifest abi_version must be populated and match
+        the installed autocog version. An empty value silently disables the
+        load-time ABI gate, so this asserts it is present and correct.
+        """
+        import autocog, tempfile, os, json, zipfile
+        from autocog.stapp import pack
+
+        stl = str(repo_root / "share/demos/mcq/select.stl")
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+        try:
+            pack(stl, [], stapp_path)
+            with zipfile.ZipFile(stapp_path) as zf:
+                manifest = json.loads(zf.read("manifest.json"))
+            abi = manifest.get("abi_version")
+            assert abi, f"manifest abi_version is empty/missing: {abi!r}"
+            assert abi == autocog.__version__, (
+                f"manifest abi_version {abi!r} != installed {autocog.__version__!r}"
+            )
+        finally:
+            os.unlink(stapp_path)
+
     def test_pack_no_source(self, repo_root):
         import tempfile, os, zipfile
         from autocog.stapp import pack
