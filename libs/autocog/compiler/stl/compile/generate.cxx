@@ -894,9 +894,6 @@ std::optional<int> Driver::run_generate() {
 
     SPDLOG_LOGGER_INFO(autocog::log(), "STA generated (#6): {} prompts", sta.prompts.size());
 
-    // Set ABI version
-    sta.abi_version = AUTOCOG_VERSION;
-
     // Build entry points with schemas (must be after prompts are populated)
     for (auto const & [entry_name, mangled] : entry_point_map) {
         sta::EntryPoint ep;

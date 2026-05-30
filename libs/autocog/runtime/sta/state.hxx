@@ -144,7 +144,6 @@ struct PythonImport {
 };
 
 struct Program {
-    std::string abi_version;
     std::map<std::string, EntryPoint> entry_points;
     std::map<std::string, PromptSTA> prompts;
     std::map<std::string, PythonImport> python_imports;

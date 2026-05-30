@@ -206,7 +206,6 @@ def _levenshtein(a, b):
 # Paths stripped before comparison — these change between runs by design
 EXCLUDE_PATHS = {
     "root['metadata']",
-    "root['abi_version']",
 }
 
 

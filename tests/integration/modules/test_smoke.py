@@ -1612,9 +1612,9 @@ class TestGoldenCompare:
         import sys
         sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
-        a = {"prompts": {"x": 1}, "abi_version": "1.0.0"}
-        b = {"prompts": {"x": 1}, "abi_version": "2.0.0"}
-        assert compare(a, b) is None  # abi_version excluded
+        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0.0"}}
+        b = {"prompts": {"x": 1}, "metadata": {"version": "2.0.0"}}
+        assert compare(a, b) is None  # metadata excluded
 
     def test_compare_mismatch(self, repo_root):
         """compare returns diff message on mismatch."""
@@ -1671,8 +1671,8 @@ class TestGoldenCompare:
     def test_cli_compare(self, repo_root, tmp_path):
         """golden_compare.py CLI works end-to-end."""
         import json, subprocess
-        a = {"prompts": {"x": 1}, "abi_version": "1.0"}
-        b = {"prompts": {"x": 1}, "abi_version": "2.0"}
+        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0"}}
+        b = {"prompts": {"x": 1}, "metadata": {"version": "2.0"}}
         af = tmp_path / "actual.json"
         bf = tmp_path / "golden.json"
         af.write_text(json.dumps(a))

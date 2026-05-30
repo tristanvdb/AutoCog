@@ -1,5 +1,4 @@
 {
-  "abi_version": "0.5.3",
   "entry_points": {
     "main": {
       "inputs": {},

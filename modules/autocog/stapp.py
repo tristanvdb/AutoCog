@@ -118,11 +118,17 @@ def pack(stl_path, include_paths, output_path,
     # Collect app files
     externals, stl_imports = _collect_app_files(prog, include_paths, stl_path)
 
+    # The STA's ABI version now lives in metadata.version (the former top-level
+    # abi_version field was removed). The .stapp manifest keeps its own
+    # abi_version key (a stable package contract) sourced from there.
+    _sta = sta_json if sta_json else prog.sta
+    _abi_version = _sta.get("metadata", {}).get("version", "")
+
     # Build manifest
     manifest = {
         "name": os.path.splitext(os.path.basename(stl_path))[0],
         "version": "1.0",
-        "abi_version": sta_json["abi_version"] if sta_json else prog.sta["abi_version"],
+        "abi_version": _abi_version,
         "entry_points": sta_json["entry_points"] if sta_json else prog.sta["entry_points"],
         "python_imports": sta_json["python_imports"] if sta_json else prog.sta["python_imports"],
         "vendor_stdlib": vendor_stdlib,

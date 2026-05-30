@@ -204,9 +204,8 @@ static SchemaField load_schema_field(json const & j) {
 
 Program load_program(json const & j) {
     Program prog;
-    if (j.contains("abi_version")) {
-        prog.abi_version = j["abi_version"].get<std::string>();
-    }
+    // Note: older STAs carried a top-level "abi_version"; it is now superseded
+    // by metadata.version and simply ignored if present.
     for (auto const & [name, entry_json] : j["entry_points"].items()) {
         EntryPoint ep;
         ep.prompt = entry_json["prompt"];
@@ -414,7 +413,6 @@ static json schema_field_to_json(SchemaField const & s) {
 
 json serialize_program(Program const & prog, std::string const & source_uid) {
     json output;
-    output["abi_version"] = prog.abi_version;
     output["entry_points"] = json::object();
     for (auto const & [name, ep] : prog.entry_points) {
         json entry;

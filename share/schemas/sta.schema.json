@@ -12,11 +12,6 @@
       ],
       "unevaluatedProperties": false
     },
-    "abi_version": {
-      "type": "string",
-      "description": "Legacy version field. Deprecated in favor of metadata.version.",
-      "x-status": "deprecated"
-    },
     "entry_points": {
       "type": "object",
       "description": "Named entry points into the program.",
