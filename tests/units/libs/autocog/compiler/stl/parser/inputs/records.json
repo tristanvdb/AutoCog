@@ -38,7 +38,7 @@
   {
     "description": "Record with search block",
     "tag": "Program",
-    "code": "record Config { search { model is \"gpt-4\"; } is text; }",
+    "code": "record Config { search { custom_field is \"some-value\"; } is text; }",
     "should_pass": true
   },
   {
@@ -62,7 +62,7 @@
   {
     "description": "Record with all elements",
     "tag": "Program",
-    "code": "record Complete { argument mode = \"strict\"; define max = 100; annotate \"Complete record\"; search { temperature is 0.7; } is { content is text<length=max>; } }",
+    "code": "record Complete { argument mode = \"strict\"; define max = 100; annotate \"Complete record\"; search { custom_field is 0.7; } is { content is text<length=max>; } }",
     "should_pass": true
   },
   {

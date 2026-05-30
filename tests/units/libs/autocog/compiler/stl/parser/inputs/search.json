@@ -8,133 +8,133 @@
   {
     "description": "Search with single parameter",
     "tag": "Search",
-    "code": "search { temperature is 0.7; }",
+    "code": "search { custom_field is 0.7; }",
     "should_pass": true
   },
   {
     "description": "Search with integer parameter",
     "tag": "Search",
-    "code": "search { max_tokens is 100; }",
+    "code": "search { custom_count is 100; }",
     "should_pass": true
   },
   {
     "description": "Search with string parameter",
     "tag": "Search",
-    "code": "search { model is \"gpt-4\"; }",
+    "code": "search { custom_name is \"some-value\"; }",
     "should_pass": true
   },
   {
     "description": "Search with boolean parameter",
     "tag": "Search",
-    "code": "search { streaming is true; }",
+    "code": "search { custom_flag is true; }",
     "should_pass": true
   },
   {
     "description": "Search with multiple parameters",
     "tag": "Search",
-    "code": "search { temperature is 0.8; max_tokens is 500; model is \"claude\"; }",
+    "code": "search { custom_a is 0.8; custom_b is 500; custom_c is \"some-value\"; }",
     "should_pass": true
   },
   {
     "description": "Search with identifier value",
     "tag": "Search",
-    "code": "search { setting is default_value; }",
+    "code": "search { custom_field is default_value; }",
     "should_pass": true
   },
   {
     "description": "Search with expression value",
     "tag": "Search",
-    "code": "search { limit is (base * 2); }",
+    "code": "search { custom_field is (base * 2); }",
     "should_pass": true
   },
   {
     "description": "Search with nested path parameter",
     "tag": "Search",
-    "code": "search { config.temperature is 0.5; }",
+    "code": "search { category.custom_field is 0.5; }",
     "should_pass": true
   },
   {
     "description": "Search with deep nested path",
     "tag": "Search",
-    "code": "search { settings.model.version is \"latest\"; }",
+    "code": "search { category.sub.custom_field is \"latest\"; }",
     "should_pass": true
   },
   {
     "description": "Search with underscore in parameter name",
     "tag": "Search",
-    "code": "search { max_length is 1000; }",
+    "code": "search { custom_length is 1000; }",
     "should_pass": true
   },
   {
     "description": "Search with numbers in parameter name",
     "tag": "Search",
-    "code": "search { param1 is \"value\"; param2 is 42; }",
+    "code": "search { custom1 is \"value\"; custom2 is 42; }",
     "should_pass": true
   },
   {
     "description": "Search with f-string value",
     "tag": "Search",
-    "code": "search { param1 is f\"Generate {n} items\"; }",
+    "code": "search { custom_field is f\"Generate {n} items\"; }",
     "should_pass": true
   },
   {
     "description": "Search with negative number",
     "tag": "Search",
-    "code": "search { offset is -10; }",
+    "code": "search { custom_offset is -10; }",
     "should_pass": true
   },
   {
     "description": "Search with float value",
     "tag": "Search",
-    "code": "search { threshold is 0.95; }",
+    "code": "search { custom_threshold is 0.95; }",
     "should_pass": true
   },
   {
     "description": "Search with conditional expression",
     "tag": "Search",
-    "code": "search { mode is (debug ? \"verbose\" : \"quiet\"); }",
+    "code": "search { custom_field is (debug ? \"verbose\" : \"quiet\"); }",
     "should_pass": true
   },
   {
     "description": "Search with complex nested expression",
     "tag": "Search",
-    "code": "search { size is ((width + margin) * (height + margin)); }",
+    "code": "search { custom_field is ((width + margin) * (height + margin)); }",
     "should_pass": true
   },
   {
     "description": "Search with all parameter types",
     "tag": "Search",
-    "code": "search { str is \"text\"; num is 42; float is 3.14; bool is false; expr is (a + b); }",
+    "code": "search { custom_str is \"text\"; custom_num is 42; custom_float is 3.14; custom_bool is false; custom_expr is (a + b); }",
     "should_pass": true
   },
   {
     "description": "Search missing 'is' keyword - fails",
     "tag": "Search",
-    "code": "search { temperature 0.7; }",
+    "code": "search { custom_field 0.7; }",
     "should_pass": false
   },
   {
     "description": "Search missing value - fails",
     "tag": "Search",
-    "code": "search { temperature is; }",
+    "code": "search { custom_field is; }",
     "should_pass": false
   },
   {
     "description": "Search missing semicolon - fails",
     "tag": "Search",
-    "code": "search { temp is 0.7 max is 100; }",
+    "code": "search { custom_a is 0.7 custom_b is 100; }",
     "should_pass": false
   },
   {
     "description": "Search with unclosed block - fails",
     "tag": "Search",
-    "code": "search { temperature is 0.7;",
+    "code": "search { custom_field is 0.7;",
     "should_pass": false
   },
   {
     "description": "Search without block - fails",
     "tag": "Search",
-    "code": "search temperature is 0.7",
+    "code": "search custom_field is 0.7",
     "should_pass": false
   },
   {
