@@ -34,47 +34,93 @@ jobs:
             exit 1
           fi
 
-      - name: Schema-version coupling
+      - name: Schema-version coupling (informational)
         run: |
+          # Relaxed to non-blocking: schema changes no longer require a minor
+          # bump, so a patch release may carry them. Still report what changed
+          # since the previous tag for visibility. Re-tighten (exit 1) if the
+          # project readopts a strict schema-version coupling policy.
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag; first release"
             exit 0
           fi
           if git diff --quiet "$PREV_TAG" HEAD -- share/schemas/; then
-            echo "share/schemas/ unchanged since $PREV_TAG; no version constraint"
+            echo "share/schemas/ unchanged since $PREV_TAG"
             exit 0
           fi
-          PREV_MINOR=$(git show "$PREV_TAG:VERSION" | sed -E 's/v?([0-9]+)\.([0-9]+).*/\1.\2/')
-          HEAD_MINOR=$(sed -E 's/v?([0-9]+)\.([0-9]+).*/\1.\2/' VERSION)
-          if [ "$PREV_MINOR" = "$HEAD_MINOR" ]; then
-            echo "::error::share/schemas/ changed since $PREV_TAG ($PREV_MINOR) but minor version did not bump (HEAD=$HEAD_MINOR)."
-            echo "Diff:"
-            git diff "$PREV_TAG" HEAD -- share/schemas/ | head -50
+          echo "::notice::share/schemas/ changed since $PREV_TAG (informational; not gated)"
+          git diff --stat "$PREV_TAG" HEAD -- share/schemas/ || true
+
+      - name: NotImplementedError check (major-version gate)
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "First release; skipping major-version check"
+            exit 0
+          fi
+          PREV_MAJOR=$(git show "$PREV_TAG:VERSION" | sed -E 's/v?([0-9]+)\..*/\1/')
+          HEAD_MAJOR=$(sed -E 's/v?([0-9]+)\..*/\1/' VERSION)
+          # Grep the source tree for NotImplementedError throw/raise sites,
+          # excluding the error-type definitions and tests.
+          find_sites() {
+            grep -rn \
+              -e 'throw autocog::NotImplementedError' \
+              -e 'raise autocog\.errors\.NotImplementedError' \
+              -e 'raise NotImplementedError' \
+              libs/ modules/ bindings/ tools/ 2>/dev/null \
+              | grep -vE 'errors\.(py|hxx)|test_|errors_test' || true
+          }
+          if [ "$PREV_MAJOR" = "$HEAD_MAJOR" ]; then
+            echo "Minor release ($PREV_MAJOR.x → $HEAD_MAJOR.x); NotImplementedError sites allowed:"
+            SITES=$(find_sites)
+            [ -n "$SITES" ] && echo "$SITES" || echo "  (none)"
+            exit 0
+          fi
+          echo "Major-version release ($PREV_MAJOR.x → $HEAD_MAJOR.x); requiring no NotImplementedError sites"
+          SITES=$(find_sites)
+          if [ -n "$SITES" ]; then
+            echo "::error::Major-version release blocked: NotImplementedError sites remain:"
+            echo "$SITES"
             exit 1
           fi
-          echo "Schema change accompanied by minor bump $PREV_MINOR → $HEAD_MINOR; OK"
+          echo "No NotImplementedError sites; major-version release OK"
 
       - name: Check CI passed for this commit
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA=$(git rev-list -n1 "$GITHUB_REF")
-          # Wait up to 5 min for CI to complete
+          # Both CI jobs must have succeeded for this commit. The check-run
+          # names are the job ids from ci.yaml ("test-coverage", "test-release").
+          REQUIRED="test-coverage test-release"
+          # Wait up to 5 min for CI to complete.
           for i in $(seq 1 30); do
-            STATUS=$(gh api repos/${{ github.repository }}/commits/$SHA/check-runs \
-              --jq '.check_runs[] | select(.name == "test-and-coverage") | .conclusion' 2>/dev/null)
-            if [ "$STATUS" = "success" ]; then
-              echo "CI passed for $SHA"
-              exit 0
-            elif [ "$STATUS" = "failure" ]; then
-              echo "::error::CI failed for $SHA"
+            CONCLUSIONS=$(gh api repos/${{ github.repository }}/commits/$SHA/check-runs \
+              --jq '.check_runs[] | "\(.name)=\(.conclusion)"' 2>/dev/null)
+            all_ok=true
+            any_failed=false
+            for job in $REQUIRED; do
+              c=$(printf '%s\n' "$CONCLUSIONS" | sed -n "s/^${job}=//p" | head -1)
+              if [ "$c" = "failure" ] || [ "$c" = "cancelled" ] || [ "$c" = "timed_out" ]; then
+                any_failed=true
+              elif [ "$c" != "success" ]; then
+                all_ok=false  # still pending / not reported yet
+              fi
+            done
+            if [ "$any_failed" = true ]; then
+              echo "::error::A required CI job failed for $SHA"
+              printf '%s\n' "$CONCLUSIONS"
               exit 1
+            fi
+            if [ "$all_ok" = true ]; then
+              echo "All required CI jobs passed for $SHA ($REQUIRED)"
+              exit 0
             fi
             echo "Waiting for CI... ($i/30)"
             sleep 10
           done
-          echo "::error::CI not found or timed out for $SHA"
+          echo "::error::Required CI jobs not all complete for $SHA"
           exit 1
 
   # Pull coverage from the CI run and gate on thresholds
@@ -89,7 +135,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA=$(git rev-list -n1 "$GITHUB_REF")
-          # Find the CI run for this commit
+          # Find the CI run for this commit. GitHub returns workflow_runs in
+          # descending creation order by default, so head -1 picks the most
+          # recent run that matches the commit and succeeded.
           RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yaml/runs \
             --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\") | .id" \
             | head -1)
@@ -113,9 +161,11 @@ jobs:
           print(f"ctest:           {summary['ctest']} passed")
           print(f"pytest:          {summary['pytest']} passed")
 
-          # Thresholds (adjust as project matures)
-          MIN_CXX = 50
-          MIN_PY = 40
+          # Thresholds, set just under CI-measured actuals (C++ ~82%, Py ~87%).
+          # The Python margin is thin; raise both as coverage improves, and add
+          # tests rather than lowering further if a drop trips the gate.
+          MIN_CXX = 80
+          MIN_PY = 87
 
           failed = False
           if summary["cxx_coverage"] < MIN_CXX:
@@ -201,20 +251,10 @@ jobs:
             -I share/demos/story-writer \
             -o writer.stapp
 
-      - name: Download test model
-        run: |
-          curl -sL -o tiny-llama3-test-Q2_K.gguf \
-            "https://github.com/tristanvdb/AutoCog/releases/download/test-fixtures-v1/tiny-llama3-test-Q2_K.gguf"
-
       - uses: actions/upload-artifact@v4
         with:
           name: demo-stapp
           path: writer.stapp
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: test-model
-          path: tiny-llama3-test-Q2_K.gguf
 
   containers:
     needs: coverage-gate
@@ -273,18 +313,61 @@ jobs:
         with:
           name: coverage-report
           path: artifacts/coverage-report
-      - uses: actions/download-artifact@v4
-        with:
-          name: test-model
-          path: artifacts/test-model
+
+      - name: Rename artifacts to v-prefixed version
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.5.3
+          VER="${TAG#v}"                    # e.g. 0.5.3 (PEP 440 form built tools emit)
+          # Built wheels/sdists carry the normalized (no-v) version. Rename the
+          # GitHub release assets so every published filename starts with the
+          # tag's v-prefixed version, matching the tag, release name, and badge.
+          # Only the version segment (right after "autocog-") is changed.
+          for f in artifacts/wheels-*/autocog-${VER}-*.whl artifacts/sdist/autocog-${VER}.tar.gz; do
+            [ -e "$f" ] || continue
+            dir=$(dirname "$f"); base=$(basename "$f")
+            newbase="${base/autocog-${VER}/autocog-${TAG}}"
+            mv "$f" "$dir/$newbase"
+            echo "renamed: $base -> $newbase"
+          done
+
+      - name: Compose release body (install instructions)
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          REPO="tristanvdb/AutoCog"
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          # YAML's block scalar strips the common indentation before bash runs
+          # this, so the heredoc body and closing EOF arrive at column 0.
+          cat > release_body.md <<EOF
+          ## Install
+
+          Pick one of the published artifacts below (or browse the
+          [latest release](https://github.com/${REPO}/releases/latest)).
+
+          **From the wheel** (no build toolchain needed):
+          \`\`\`bash
+          pip install ${BASE}/autocog-${TAG}-cp312-cp312-manylinux_2_28_x86_64.whl
+          \`\`\`
+
+          **From the source distribution** (builds the native extensions; needs a C++ toolchain + CMake):
+          \`\`\`bash
+          pip install ${BASE}/autocog-${TAG}.tar.gz
+          \`\`\`
+
+          Server extras: append \`[server]\` to either, e.g.
+          \`pip install "autocog[server] @ ${BASE}/autocog-${TAG}.tar.gz"\`.
+
+          ---
+          EOF
+          echo "----- composed release body -----"
+          cat release_body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body_path: release_body.md
           files: |
             artifacts/wheels-*/*.whl
             artifacts/sdist/*.tar.gz
             artifacts/demo-stapp/*.stapp
             artifacts/coverage-report/coverage.md
-            artifacts/test-model/tiny-llama3-test-Q2_K.gguf

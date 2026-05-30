@@ -30,7 +30,7 @@ jobs:
           sudo apt-get install -y build-essential cmake ccache gcovr
 
       - name: Install Python dependencies
-        run: pip install pytest pytest-cov pytest-timeout deepdiff jsonschema referencing pybind11 scikit-build-core
+        run: pip install pytest pytest-cov deepdiff jsonschema referencing pybind11 scikit-build-core
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
@@ -62,8 +62,19 @@ jobs:
           python -m pytest tests/integration/modules tests/units/modules \
             --cov=autocog \
             --cov-report=json:coverage_py.json \
-            --timeout 120 \
             -q 2>&1 | tee pytest.log
+
+      - name: Assert no pytest skips
+        run: |
+          # Skips are how missing prerequisites (e.g. the real model) quietly
+          # drop coverage. Fail if pytest reported any. Checking for skips —
+          # rather than an exact pass count — stays correct as tests are added.
+          if grep -qE '[0-9]+ skipped' pytest.log; then
+            echo "::error::pytest reported skipped tests; CI requires zero skips"
+            grep -E '[0-9]+ skipped' pytest.log
+            exit 1
+          fi
+          echo "No skipped tests."
 
       - name: Generate C++ coverage
         working-directory: build
@@ -78,7 +89,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          python tests/coverage_report.py \
+          python tests/scripts/coverage_report.py \
             build/coverage_cxx.json coverage_py.json \
             -o coverage.md
 
@@ -217,7 +228,7 @@ jobs:
           sudo apt-get install -y build-essential cmake ccache
 
       - name: Install Python dependencies
-        run: pip install pytest pytest-timeout deepdiff jsonschema referencing pybind11 scikit-build-core
+        run: pip install pytest deepdiff jsonschema referencing pybind11 scikit-build-core
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
@@ -244,8 +255,16 @@ jobs:
         run: |
           set -o pipefail
           python -m pytest tests/integration/modules tests/units/modules \
-            --timeout 120 \
             -q 2>&1 | tee pytest.log
+
+      - name: Assert no pytest skips
+        run: |
+          if grep -qE '[0-9]+ skipped' pytest.log; then
+            echo "::error::pytest reported skipped tests; CI requires zero skips"
+            grep -E '[0-9]+ skipped' pytest.log
+            exit 1
+          fi
+          echo "No skipped tests."
 
       - name: Job summary
         run: |

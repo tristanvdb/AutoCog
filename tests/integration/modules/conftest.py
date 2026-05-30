@@ -70,14 +70,30 @@ def llama3_model_path(repo_root):
     """Path to TensorBlock/tiny-llama3-test Q2_K (21MB, 128k tokens).
 
     Full Llama 3 tokenizer — can run real STL programs.
-    Downloads on first use if missing. Skips test if unavailable.
+    Downloads on first use if missing.
+
+    The real model is required by default: if it can't be obtained, the
+    dependent tests fail loudly rather than silently skipping (so CI needs no
+    special configuration and never quietly drops the real-model coverage). Set
+    AUTOCOG_NO_MINIMAL_GGUF to opt out — then an unavailable model skips those
+    tests instead, for offline or air-gapped local development.
     """
+    import os
     path = repo_root / "models" / "tiny-llama3-test-Q2_K.gguf"
     result = _download_model(LLAMA3_TEST_MODEL_URL, path, LLAMA3_TEST_MODEL_MIN_SIZE)
     if result is None:
-        pytest.skip(
+        download_hint = (
             "tiny-llama3-test-Q2_K.gguf not available. Download manually:\n"
             f"  mkdir -p models && cd models && wget {LLAMA3_TEST_MODEL_URL}"
+        )
+        if os.environ.get("AUTOCOG_NO_MINIMAL_GGUF"):
+            pytest.skip(download_hint)
+        pytest.fail(
+            "The real test model could not be obtained, so the real-model tests "
+            "cannot run.\n" + download_hint +
+            "\nTo skip these tests instead (e.g. offline development), set "
+            "AUTOCOG_NO_MINIMAL_GGUF=1.",
+            pytrace=False,
         )
     return str(result)
 

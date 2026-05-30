@@ -1,6 +1,5 @@
 pytest>=7.0
 pytest-cov>=4.0
-pytest-timeout>=2.0
 gcovr>=7.0
 deepdiff>=6.0
 jsonschema>=4.18

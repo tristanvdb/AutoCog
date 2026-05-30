@@ -2,6 +2,11 @@
 
 [![CI](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml)
 [![Release](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml/badge.svg)](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml)
+[![Latest release](https://img.shields.io/github/v/release/tristanvdb/AutoCog)](https://github.com/tristanvdb/AutoCog/releases/latest)
+![Release date](https://img.shields.io/github/release-date/tristanvdb/AutoCog)
+[![Downloads](https://img.shields.io/github/downloads/tristanvdb/AutoCog/total)](https://github.com/tristanvdb/AutoCog/releases)
+![License](https://img.shields.io/github/license/tristanvdb/AutoCog)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![ctest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-ctest.json)
 ![pytest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-pytest.json)
 ![C++ coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-cxx-coverage.json)
