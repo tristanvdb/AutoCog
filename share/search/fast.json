@@ -1,18 +1,7 @@
 {
-  "completion": {
-    "beams": 1,
-    "ahead": 0,
-    "width": 1,
-    "threshold": 0.1,
-    "repetition": null,
-    "diversity": null,
-    "stop": "\n"
-  },
-  "choice": {
-    "threshold": 0.1,
-    "width": 1
-  },
-  "text": {
-    "evaluate": false
-  }
+  "text":   { "threshold": 0.1, "beams": 1, "ahead": 0, "width": 1, "repetition": null, "diversity": null },
+  "enum":   { "threshold": 0.1, "width": 1 },
+  "branch": { "threshold": 0.1, "width": 1 },
+  "flow":   { "threshold": 0.1, "width": 1 },
+  "queue":  { "metric": "perplexity" }
 }

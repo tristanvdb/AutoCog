@@ -608,31 +608,73 @@ struct FTABuilder {
         return id;
     }
 
-    int add_choose(std::string const & uid, std::vector<std::string> const & choices) {
+    // Resolve a per-field policy against the config defaults into the typed
+    // structs xfta consumes. The policy (open category->param map from the IR/
+    // STA) wins per-param; otherwise the config default is used. The full
+    // context (field policy, prompt/STA, state, indices) is available for future
+    // advanced policies; the raw policy below is just policy-value ?? config.
+    static std::optional<float> pol_f(SearchParams const & pol, std::string const & cat, char const * key) {
+        auto c = pol.find(cat);
+        if (c == pol.end()) return std::nullopt;
+        auto p = c->second.find(key);
+        if (p == c->second.end()) return std::nullopt;
+        if (auto const * v = std::get_if<float>(&p->second)) return *v;
+        if (auto const * iv = std::get_if<int>(&p->second)) return static_cast<float>(*iv);
+        return std::nullopt;
+    }
+    static std::optional<unsigned> pol_u(SearchParams const & pol, std::string const & cat, char const * key) {
+        auto c = pol.find(cat);
+        if (c == pol.end()) return std::nullopt;
+        auto p = c->second.find(key);
+        if (p == c->second.end()) return std::nullopt;
+        if (auto const * iv = std::get_if<int>(&p->second)) return static_cast<unsigned>(*iv);
+        return std::nullopt;
+    }
+
+    TextSearch resolve_text(SearchParams const & pol) const {
+        TextSearch r = search.text;  // config defaults
+        if (auto v = pol_f(pol, "text", "threshold")) r.threshold = *v;
+        if (auto v = pol_u(pol, "text", "beams"))     r.beams = *v;
+        if (auto v = pol_u(pol, "text", "ahead"))     r.ahead = *v;
+        if (auto v = pol_u(pol, "text", "width"))     r.width = *v;
+        if (auto v = pol_f(pol, "text", "repetition")) r.repetition = *v;
+        if (auto v = pol_f(pol, "text", "diversity"))  r.diversity = *v;
+        return r;
+    }
+    ChoiceSearch resolve_choice(SearchParams const & pol, std::string const & cat,
+                                ChoiceSearch const & defaults) const {
+        ChoiceSearch r = defaults;
+        if (auto v = pol_f(pol, cat, "threshold")) r.threshold = *v;
+        if (auto v = pol_u(pol, cat, "width"))     r.width = *v;
+        return r;
+    }
+
+    int add_choose(std::string const & uid, std::vector<std::string> const & choices,
+                   ChoiceSearch const & cs) {
         int id = action_id++;
         actions.push_back({
             {"uid", uid}, {"type", "choose"}, {"choices", choices},
-            {"threshold", search.choice.threshold},
-            {"width", search.choice.width},
+            {"threshold", cs.threshold},
+            {"width", cs.width},
             {"successors", json::array()}
         });
         return id;
     }
 
-    int add_complete(std::string const & uid, CompletionFormat const & cf) {
+    int add_complete(std::string const & uid, CompletionFormat const & cf, TextSearch const & ts) {
         int id = action_id++;
         json j = {
             {"uid", uid}, {"type", "complete"},
             {"length", cf.length.has_value() ? cf.length.value() : 50},
-            {"threshold", search.completion.threshold},
-            {"beams", search.completion.beams},
-            {"ahead", search.completion.ahead},
-            {"width", search.completion.width},
-            {"stop_text", search.completion.stop},
+            {"threshold", ts.threshold},
+            {"beams", ts.beams},
+            {"ahead", ts.ahead},
+            {"width", ts.width},
+            {"stop_text", syntax.completion_stop},
             {"successors", json::array()}
         };
-        if (search.completion.repetition) j["repetition"] = *search.completion.repetition;
-        if (search.completion.diversity) j["diversity"] = *search.completion.diversity;
+        if (ts.repetition) j["repetition"] = *ts.repetition;
+        if (ts.diversity) j["diversity"] = *ts.diversity;
         actions.push_back(j);
         return id;
     }
@@ -671,6 +713,8 @@ struct FTABuilder {
 
         std::visit([&](auto const & fmt) {
             using F = std::decay_t<decltype(fmt)>;
+            // The field's resolved policy (from the IR cascade, carried on the STA).
+            SearchParams const & pol = fld.search;
             if constexpr (std::is_same_v<F, std::monostate>) {
                 // record — skip
             } else if constexpr (std::is_same_v<F, CompletionFormat>) {
@@ -678,7 +722,7 @@ struct FTABuilder {
                     std::string text = val->is_string() ? val->get<std::string>() : val->dump();
                     field_id = add_text("field." + succ_safe, text);
                 } else {
-                    field_id = add_complete("field." + succ_safe, fmt);
+                    field_id = add_complete("field." + succ_safe, fmt, resolve_text(pol));
                 }
                 add_field_meta(field_id);
             } else if constexpr (std::is_same_v<F, EnumFormat>) {
@@ -686,7 +730,13 @@ struct FTABuilder {
                     std::string text = val->is_string() ? val->get<std::string>() : val->dump();
                     field_id = add_text("field." + succ_safe, text);
                 } else {
-                    field_id = add_choose("field." + succ_safe, fmt.values);
+                    // The synthetic "next" field is the flow choice; real enums
+                    // are enum-content choices.
+                    bool is_flow = (fld.name == "next");
+                    ChoiceSearch cs = is_flow
+                        ? resolve_choice(pol, "flow", search.flow)
+                        : resolve_choice(pol, "enum", search.enums);
+                    field_id = add_choose("field." + succ_safe, fmt.values, cs);
                     choose_count = static_cast<int>(fmt.values.size());
                 }
                 add_field_meta(field_id);
@@ -696,7 +746,8 @@ struct FTABuilder {
                     field_id = add_text("field." + succ_safe, text);
                 } else {
                     auto choices = ravel_choices(content, fmt, syntax);
-                    field_id = add_choose("field." + succ_safe, choices);
+                    field_id = add_choose("field." + succ_safe, choices,
+                                          resolve_choice(pol, "enum", search.enums));
                     choose_count = static_cast<int>(choices.size());
                 }
                 add_field_meta(field_id);
@@ -797,7 +848,11 @@ struct FTABuilder {
                     auto const & succ = states.at(succ_tag);
                     choices.push_back(prompt_label(succ, prompt, syntax));
                 }
-                int branch_id = add_choose("branch." + cur_safe, choices);
+                SearchParams empty_pol;
+                SearchParams const & branch_pol =
+                    (state.field >= 0) ? prompt.fields[state.field].search : empty_pol;
+                int branch_id = add_choose("branch." + cur_safe, choices,
+                    resolve_choice(branch_pol, "branch", search.branch));
                 entry_id = branch_id;
 
                 for (size_t i = 0; i < valid.size(); ++i) {
@@ -885,7 +940,18 @@ json instantiate(PromptSTA const & prompt, json const & content,
         b.connect(header_id, first_branch);
     }
 
-    return json{{"actions", b.actions}};
+    // Queue params (prompt-scope): carried into the FTA even though the current
+    // xfta queue does not consume them yet. Policy (prompt.search["queue"]) wins
+    // over the config default. TODO(xfta-queue).
+    std::string metric = search.queue.metric;
+    auto qit = prompt.search.find("queue");
+    if (qit != prompt.search.end()) {
+        auto mit = qit->second.find("metric");
+        if (mit != qit->second.end())
+            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = *s;
+    }
+
+    return json{{"actions", b.actions}, {"queue", json{{"metric", metric}}}};
 }
 
 // ============================================================================

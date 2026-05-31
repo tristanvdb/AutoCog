@@ -7,6 +7,39 @@ namespace autocog::runtime::sta {
 
 using json = nlohmann::json;
 
+// Search params (open dict: category -> param -> scalar). Shared by the
+// prompt-scope policy and per-field resolved policies.
+static void load_search(json const & sj, SearchParams & out) {
+    for (auto const & [category, params] : sj.items()) {
+        for (auto const & [key, val] : params.items()) {
+            if (val.is_number_integer())      out[category][key] = val.get<int>();
+            else if (val.is_number_float())   out[category][key] = val.get<float>();
+            else if (val.is_boolean())        out[category][key] = val.get<bool>();
+            else if (val.is_string())         out[category][key] = val.get<std::string>();
+            else                              out[category][key] = nullptr;
+        }
+    }
+}
+
+static json search_to_json(SearchParams const & search) {
+    json sj = json::object();
+    for (auto const & [category, params] : search) {
+        json pj = json::object();
+        for (auto const & [key, val] : params) {
+            std::visit([&](auto const & v) {
+                using V = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<V, std::nullptr_t>) pj[key] = nullptr;
+                else if constexpr (std::is_same_v<V, float>)
+                    // Canonical 3-decimal form (matches the IR serializer).
+                    pj[key] = std::round(static_cast<double>(v) * 1000.0) / 1000.0;
+                else pj[key] = v;
+            }, val);
+        }
+        sj[category] = pj;
+    }
+    return sj;
+}
+
 static FieldFormat load_format(json const & j) {
     auto type = j["type"].get<std::string>();
     if (type == "record") return std::monostate{};
@@ -62,6 +95,7 @@ PromptSTA load_prompt(json const & j) {
         if (fj.contains("format_desc")) {
             for (auto const & d : fj["format_desc"]) fi.format_desc.push_back(d);
         }
+        if (fj.contains("search")) load_search(fj["search"], fi.search);
         p.fields.push_back(std::move(fi));
     }
 
@@ -179,17 +213,7 @@ PromptSTA load_prompt(json const & j) {
     }
 
     // Load prompt-scope search params (open dict: category -> param -> scalar).
-    if (j.contains("search")) {
-        for (auto const & [category, params] : j["search"].items()) {
-            for (auto const & [key, val] : params.items()) {
-                if (val.is_number_integer())      p.search[category][key] = val.get<int>();
-                else if (val.is_number_float())   p.search[category][key] = val.get<float>();
-                else if (val.is_boolean())        p.search[category][key] = val.get<bool>();
-                else if (val.is_string())         p.search[category][key] = val.get<std::string>();
-                else                              p.search[category][key] = nullptr;
-            }
-        }
-    }
+    if (j.contains("search")) load_search(j["search"], p.search);
 
     return p;
 }
@@ -361,6 +385,7 @@ json serialize_prompt(PromptSTA const & p) {
         fj["format"] = format_to_json(f.format);
         if (f.format_ref) fj["format_ref"] = *f.format_ref;
         if (!f.format_desc.empty()) fj["format_desc"] = f.format_desc;
+        if (!f.search.empty()) fj["search"] = search_to_json(f.search);
         j["fields"].push_back(fj);
     }
     j["abstracts"] = json::array();
@@ -393,24 +418,7 @@ json serialize_prompt(PromptSTA const & p) {
     }
     j["channels"] = json::array();
     for (auto const & ch : p.channels) j["channels"].push_back(channel_to_json(ch));
-    if (!p.search.empty()) {
-        json sj = json::object();
-        for (auto const & [category, params] : p.search) {
-            json pj = json::object();
-            for (auto const & [key, val] : params) {
-                std::visit([&](auto const & v) {
-                    using V = std::decay_t<decltype(v)>;
-                    if constexpr (std::is_same_v<V, std::nullptr_t>) pj[key] = nullptr;
-                    else if constexpr (std::is_same_v<V, float>)
-                        // Canonical 3-decimal form (matches the IR serializer).
-                        pj[key] = std::round(static_cast<double>(v) * 1000.0) / 1000.0;
-                    else pj[key] = v;
-                }, val);
-            }
-            sj[category] = pj;
-        }
-        j["search"] = sj;
-    }
+    if (!p.search.empty()) j["search"] = search_to_json(p.search);
     return j;
 }
 

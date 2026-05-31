@@ -2,50 +2,47 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "search.schema.json",
   "title": "AutoCog Search Configuration",
-  "description": "Search parameters for completion, choice, and text evaluation strategies.",
+  "description": "Concrete default search parameters per category (text, enum, branch, flow, queue). These mirror what xfta implements and provide the fallback values used when a program's search policy does not set a parameter.",
   "type": "object",
   "properties": {
-    "completion": {
+    "text": {
       "type": "object",
-      "description": "Parameters for text completion (beam search).",
+      "description": "Defaults for `complete` (text) actions.",
       "properties": {
+        "threshold":  { "type": "number", "description": "Probability threshold for pruning." },
         "beams":      { "type": "integer", "minimum": 0, "description": "Number of beams (0 = disabled)." },
         "ahead":      { "type": "integer", "minimum": 0, "description": "Look-ahead depth (0 = disabled)." },
         "width":      { "type": "integer", "minimum": 1, "description": "Beam width." },
-        "threshold":  { "type": "number", "description": "Probability threshold for pruning." },
-        "repetition": {
-          "oneOf": [{ "type": "number" }, { "type": "null" }],
-          "description": "Repetition penalty (null = disabled)."
-        },
-        "diversity": {
-          "oneOf": [{ "type": "number" }, { "type": "null" }],
-          "description": "Diversity penalty (null = disabled)."
-        },
-        "stop": { "type": "string", "description": "Stop sequence for completions." }
+        "repetition": { "oneOf": [{ "type": "number" }, { "type": "null" }], "description": "Repetition penalty (null = disabled)." },
+        "diversity":  { "oneOf": [{ "type": "number" }, { "type": "null" }], "description": "Diversity penalty (null = disabled)." }
       },
-      "required": ["beams", "ahead", "width", "threshold", "stop"],
+      "required": ["threshold", "beams", "ahead", "width"],
       "additionalProperties": false
     },
+    "enum":   { "$ref": "#/$defs/choice", "description": "Defaults for enum-content `choose` actions." },
+    "branch": { "$ref": "#/$defs/choice", "description": "Defaults for record-successor branch `choose` actions." },
+    "flow":   { "$ref": "#/$defs/choice", "description": "Defaults for the flow / next `choose` action." },
+    "queue": {
+      "type": "object",
+      "description": "Prompt-scope queue parameters (carried to the FTA; not yet consumed).",
+      "properties": {
+        "metric": { "type": "string", "description": "Scoring metric for the queue." }
+      },
+      "required": ["metric"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["text", "enum", "branch", "flow", "queue"],
+  "additionalProperties": false,
+  "$defs": {
     "choice": {
       "type": "object",
-      "description": "Parameters for choice (enum/select) evaluation.",
       "properties": {
         "threshold": { "type": "number", "description": "Probability threshold." },
         "width":     { "type": "integer", "minimum": 1, "description": "Top-k width." }
       },
       "required": ["threshold", "width"],
       "additionalProperties": false
-    },
-    "text": {
-      "type": "object",
-      "description": "Parameters for raw text evaluation.",
-      "properties": {
-        "evaluate": { "type": "boolean", "description": "Whether to evaluate text tokens." }
-      },
-      "required": ["evaluate"],
-      "additionalProperties": false
     }
-  },
-  "required": ["completion", "choice", "text"],
-  "additionalProperties": false
+  }
 }

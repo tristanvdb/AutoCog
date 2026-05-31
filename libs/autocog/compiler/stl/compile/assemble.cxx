@@ -520,6 +520,25 @@ static void assemble_prompts(
     Evaluator & evaluator,
     Driver & driver
 ) {
+    // File-scope search { }: the outermost cascade layer. Collect each file's
+    // top-level search statements, keyed by fileid, so a prompt can start its
+    // policy from its file's policy before applying its own.
+    std::map<int, ir::SearchPolicies> file_policies;
+    for (auto const & program : driver.programs) {
+        int fid = program.data.fid;
+        std::string fscope = std::to_string(fid) + "::";
+        ir::VarMap fctx;
+        for (auto const & stmt : program.data.statements) {
+            std::visit([&](auto const & s) {
+                using T = std::decay_t<decltype(s)>;
+                if constexpr (std::is_same_v<T, ast::Search>) {
+                    // File scope is outside any record; flow/queue are allowed.
+                    lower_search(s, evaluator, fscope, fctx, SearchScope::File, driver, file_policies[fid]);
+                }
+            }, stmt);
+        }
+    }
+
     // Helper: resolve an unmangled prompt name to its mangled instance name
     auto resolve_prompt_ref = [&](std::string const & name) -> std::string {
         for (auto const & [m, n] : graph.nodes) {
@@ -536,11 +555,12 @@ static void assemble_prompts(
         auto scope = std::to_string(node.fileid) + "::" + node.base_name;
         auto pmt = std::make_unique<ir::Prompt>(node.base_name, mangled, node.arguments);
 
-        // Collect the prompt's own search { } (all categories) up front. flow and
-        // queue stay on the prompt; text/enum/branch become the enclosing policy
-        // that cascades down onto the fields. (File-scope search { } is a further
-        // outer layer, not yet plumbed through the graph — TODO.)
+        // Policy cascade base = this file's file-scope search { }, then the
+        // prompt's own search { } overrides it (innermost wins). flow/queue stay
+        // on the prompt; text/enum/branch cascade down onto the fields.
         ir::SearchPolicies prompt_policy;
+        auto fit = file_policies.find(node.fileid);
+        if (fit != file_policies.end()) prompt_policy = fit->second;
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
