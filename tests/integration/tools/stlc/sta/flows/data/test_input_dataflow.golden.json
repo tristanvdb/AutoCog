@@ -26,12 +26,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "97971d51f837f265",
-    "timestamp": "2026-05-29T02:07:50.855Z",
-    "uid": "2688bcbca58a1967",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:21.508Z",
+    "uid": "8b16b5c6640d85fd",
+    "version": "0.5.4"
   },
   "prompts": {
     "greeter": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -98,49 +120,36 @@
           "type": "control"
         }
       },
-      "name": "greeter",
-      "sequence": [
-        "root@",
-        "name_1_0@0",
-        "greeting_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "greeting_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "name_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "greeting_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "name_1_0@0"
-          ]
-        }
-      }
+      "name": "greeter"
     },
     "summarizer": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "clauses": [],
@@ -245,57 +254,7 @@
           "type": "return"
         }
       },
-      "name": "summarizer",
-      "sequence": [
-        "root@",
-        "greeting_1_0@0",
-        "age_1_1@0",
-        "summary_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "age_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "summary_1_2@0"
-          ]
-        },
-        "greeting_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "age_1_1@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "greeting_1_0@0"
-          ]
-        },
-        "summary_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        }
-      }
+      "name": "summarizer"
     }
   },
   "python_imports": {}

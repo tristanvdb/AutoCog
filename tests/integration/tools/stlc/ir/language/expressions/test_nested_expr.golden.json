@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "8994c941a5977e15",
-    "timestamp": "2026-05-29T02:08:11.029Z",
-    "uid": "75bd619e0ffceff8",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:48.963Z",
+    "uid": "1c3483a0c67e3231",
+    "version": "0.5.4"
   },
   "prompts": {
     "grid__2": {
@@ -22,10 +22,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "cells",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -38,10 +35,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 40,
-            "name": "header",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -52,10 +46,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 14,
-            "name": "total",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,

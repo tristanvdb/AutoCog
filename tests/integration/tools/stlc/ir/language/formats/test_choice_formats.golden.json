@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "5a223176a90402e6",
-    "timestamp": "2026-05-29T02:08:14.795Z",
-    "uid": "ad79085e6f80388a",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:50.138Z",
+    "uid": "65fc66e516a0ea05",
+    "version": "0.5.4"
   },
   "prompts": {
     "chooser": {
@@ -20,39 +20,20 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Option",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Option",
-                "range": null
-              }
-            ],
-            "name": "options",
-            "refname": "Option",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "options",
           "range": [
             4
-          ]
+          ],
+          "refname": "Option"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "mode": "select",
-            "name": "selected",
             "path": {
               "is_input": false,
               "prompt": null,
@@ -63,7 +44,6 @@
                 }
               ]
             },
-            "refname": null,
             "type": "choice"
           },
           "index": 1,
@@ -74,9 +54,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "mode": "select",
-            "name": "repeated",
             "path": {
               "is_input": false,
               "prompt": null,
@@ -87,7 +65,6 @@
                 }
               ]
             },
-            "refname": null,
             "type": "choice"
           },
           "index": 2,
@@ -141,9 +118,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Option",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

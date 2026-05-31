@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "bdbde206acab2268",
-    "timestamp": "2026-05-29T02:08:30.142Z",
-    "uid": "da0cfc39aee57b20",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:55.079Z",
+    "uid": "86985260eb32efc3",
+    "version": "0.5.4"
   },
   "prompts": {
     "processor": {
@@ -20,29 +20,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Data",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Data",
-                "range": null
-              }
-            ],
-            "name": "input",
-            "refname": "Data",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "input",
-          "range": null
+          "range": null,
+          "refname": "Data"
         }
       ],
       "flows": [],
@@ -59,9 +42,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Data",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

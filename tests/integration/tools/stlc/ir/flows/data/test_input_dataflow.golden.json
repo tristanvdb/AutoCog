@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "97971d51f837f265",
-    "timestamp": "2026-05-29T02:07:51.455Z",
-    "uid": "e0c6e4618b6d8d32",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:42.670Z",
+    "uid": "3dad4d466ca293e0",
+    "version": "0.5.4"
   },
   "prompts": {
     "greeter": {
@@ -40,10 +40,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "name",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -54,10 +51,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "greeting",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -126,10 +120,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "greeting",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -140,10 +131,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 5,
-            "name": "age",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -154,10 +142,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 30,
-            "name": "summary",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,

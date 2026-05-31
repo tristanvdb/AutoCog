@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "2e5d0bcfe0202b2a",
-    "timestamp": "2026-05-29T02:08:03.519Z",
-    "uid": "158a60da1d5d6048",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:46.640Z",
+    "uid": "1fcc9b5196824c1a",
+    "version": "0.5.4"
   },
   "prompts": {
     "questioner": {
@@ -40,33 +40,16 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "The subject matter being discussed"
+          ],
           "format": {
-            "desc": [
-              "The subject matter being discussed"
-            ],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Topic",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Topic",
-                "range": null
-              }
-            ],
-            "name": "topic",
-            "refname": "Topic",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "topic",
-          "range": null
+          "range": null,
+          "refname": "Topic"
         },
         {
           "depth": 1,
@@ -74,9 +57,6 @@
             "the question to answer"
           ],
           "format": {
-            "desc": [],
-            "name": "question",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -89,14 +69,11 @@
             "your answer to the question"
           ],
           "format": {
-            "desc": [],
-            "name": "answer",
-            "refname": null,
             "type": "enum",
             "values": [
-              "\"yes\"",
-              "\"no\"",
-              "\"maybe\""
+              "yes",
+              "no",
+              "maybe"
             ]
           },
           "index": 2,
@@ -138,9 +115,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Topic",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

@@ -15,12 +15,84 @@
   "metadata": {
     "format": "sta",
     "source_uid": "674942b76e69651a",
-    "timestamp": "2026-05-29T02:08:04.158Z",
-    "uid": "c6c0b5af3a439807",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:25.956Z",
+    "uid": "9e019d4fd1cef159",
+    "version": "0.5.4"
   },
   "prompts": {
     "test__7": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 5,
+          "field": 3,
+          "flow": -1
+        },
+        {
+          "exit": 6,
+          "field": 4,
+          "flow": -1
+        },
+        {
+          "exit": 7,
+          "field": 5,
+          "flow": -1
+        },
+        {
+          "exit": 8,
+          "field": 6,
+          "flow": -1
+        },
+        {
+          "exit": 9,
+          "field": 7,
+          "flow": -1
+        },
+        {
+          "exit": 10,
+          "field": 8,
+          "flow": -1
+        },
+        {
+          "exit": 11,
+          "field": 9,
+          "flow": -1
+        },
+        {
+          "exit": 12,
+          "field": 10,
+          "flow": -1
+        },
+        {
+          "exit": 13,
+          "field": 11,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 12,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -200,147 +272,7 @@
           "type": "return"
         }
       },
-      "name": "test__7",
-      "sequence": [
-        "root@",
-        "diff_1_0@0",
-        "div_check_1_1@0",
-        "remainder_1_2@0",
-        "both_1_3@0",
-        "either_1_4@0",
-        "negated_1_5@0",
-        "lt_result_1_6@0",
-        "lte_result_1_7@0",
-        "gte_result_1_8@0",
-        "neq_result_1_9@0",
-        "neg_add_1_10@0",
-        "complex_1_11@0",
-        "next_1_12@0"
-      ],
-      "states": {
-        "both_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "either_1_4@0"
-          ]
-        },
-        "complex_1_11@0": {
-          "field": 11,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_12@0"
-          ]
-        },
-        "diff_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "div_check_1_1@0"
-          ]
-        },
-        "div_check_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "remainder_1_2@0"
-          ]
-        },
-        "either_1_4@0": {
-          "field": 4,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "negated_1_5@0"
-          ]
-        },
-        "gte_result_1_8@0": {
-          "field": 8,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "neq_result_1_9@0"
-          ]
-        },
-        "lt_result_1_6@0": {
-          "field": 6,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "lte_result_1_7@0"
-          ]
-        },
-        "lte_result_1_7@0": {
-          "field": 7,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "gte_result_1_8@0"
-          ]
-        },
-        "neg_add_1_10@0": {
-          "field": 10,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "complex_1_11@0"
-          ]
-        },
-        "negated_1_5@0": {
-          "field": 5,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "lt_result_1_6@0"
-          ]
-        },
-        "neq_result_1_9@0": {
-          "field": 9,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "neg_add_1_10@0"
-          ]
-        },
-        "next_1_12@0": {
-          "field": 12,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "remainder_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "both_1_3@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "diff_1_0@0"
-          ]
-        }
-      }
+      "name": "test__7"
     }
   },
   "python_imports": {}

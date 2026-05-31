@@ -26,12 +26,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "4cc50bf3085a2aec",
-    "timestamp": "2026-05-29T02:07:56.903Z",
-    "uid": "b722172074104ffe",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:23.510Z",
+    "uid": "0ea3f08ca2aa1b86",
+    "version": "0.5.4"
   },
   "prompts": {
     "consumer": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "clauses": [
@@ -117,49 +139,31 @@
           "type": "return"
         }
       },
-      "name": "consumer",
-      "sequence": [
-        "root@",
-        "titles_1_0@0",
-        "result_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "result_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "titles_1_0@0"
-          ]
-        },
-        "titles_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "result_1_1@0"
-          ]
-        }
-      }
+      "name": "consumer"
     },
     "producer": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -241,47 +245,7 @@
           "type": "control"
         }
       },
-      "name": "producer",
-      "sequence": [
-        "root@",
-        "topic_1_0@0",
-        "title_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "topic_1_0@0"
-          ]
-        },
-        "title_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "topic_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "title_1_1@0"
-          ]
-        }
-      }
+      "name": "producer"
     }
   },
   "python_imports": {}

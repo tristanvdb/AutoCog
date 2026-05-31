@@ -15,12 +15,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "41cd94d1fcd976fb",
-    "timestamp": "2026-05-29T02:08:09.001Z",
-    "uid": "e074c0965f6f37ed",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:27.575Z",
+    "uid": "c3a5a7a5ebeb253f",
+    "version": "0.5.4"
   },
   "prompts": {
     "test__12909789474868431288_4": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [
         "You are performing the task: classify. Your goal is to answer questions."
@@ -86,47 +108,7 @@
           "type": "return"
         }
       },
-      "name": "test__12909789474868431288_4",
-      "sequence": [
-        "root@",
-        "question_1_0@0",
-        "answer_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "answer_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "question_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "answer_1_1@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "question_1_0@0"
-          ]
-        }
-      }
+      "name": "test__12909789474868431288_4"
     }
   },
   "python_imports": {}

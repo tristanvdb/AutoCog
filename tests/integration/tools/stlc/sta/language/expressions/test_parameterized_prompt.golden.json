@@ -14,12 +14,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "9c7504fa71174087",
-    "timestamp": "2026-05-29T02:08:11.682Z",
-    "uid": "d745bf1cf6623d39",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:28.372Z",
+    "uid": "b0b5402861117819",
+    "version": "0.5.4"
   },
   "prompts": {
     "worker__10_6390854715352638587": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -80,137 +102,7 @@
           "type": "return"
         }
       },
-      "name": "worker__10_6390854715352638587",
-      "sequence": [
-        "root@",
-        "items_1_0@0",
-        "items_1_0@1",
-        "items_1_0@2",
-        "items_1_0@3",
-        "items_1_0@4",
-        "items_1_0@5",
-        "items_1_0@6",
-        "items_1_0@7",
-        "items_1_0@8",
-        "items_1_0@9",
-        "result_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "items_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "items_1_0@1"
-          ]
-        },
-        "items_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "items_1_0@2"
-          ]
-        },
-        "items_1_0@2": {
-          "field": 0,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "items_1_0@3"
-          ]
-        },
-        "items_1_0@3": {
-          "field": 0,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "items_1_0@4"
-          ]
-        },
-        "items_1_0@4": {
-          "field": 0,
-          "indices": [
-            4
-          ],
-          "successors": [
-            "items_1_0@5"
-          ]
-        },
-        "items_1_0@5": {
-          "field": 0,
-          "indices": [
-            5
-          ],
-          "successors": [
-            "items_1_0@6"
-          ]
-        },
-        "items_1_0@6": {
-          "field": 0,
-          "indices": [
-            6
-          ],
-          "successors": [
-            "items_1_0@7"
-          ]
-        },
-        "items_1_0@7": {
-          "field": 0,
-          "indices": [
-            7
-          ],
-          "successors": [
-            "items_1_0@8"
-          ]
-        },
-        "items_1_0@8": {
-          "field": 0,
-          "indices": [
-            8
-          ],
-          "successors": [
-            "items_1_0@9"
-          ]
-        },
-        "items_1_0@9": {
-          "field": 0,
-          "indices": [
-            9
-          ],
-          "successors": [
-            "result_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "result_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "items_1_0@0"
-          ]
-        }
-      }
+      "name": "worker__10_6390854715352638587"
     }
   },
   "python_imports": {}

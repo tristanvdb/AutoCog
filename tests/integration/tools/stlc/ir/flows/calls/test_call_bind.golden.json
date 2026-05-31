@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "402dd14afd526e96",
-    "timestamp": "2026-05-29T02:07:42.845Z",
-    "uid": "355ecc4539c8548f",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:39.945Z",
+    "uid": "bd560611d3752ee9",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -86,10 +86,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "query",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -100,10 +97,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "answer",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -163,10 +157,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "query",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -177,10 +168,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "result",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

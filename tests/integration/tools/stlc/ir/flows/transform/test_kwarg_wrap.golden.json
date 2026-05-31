@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "c14e04a8bd042f8d",
-    "timestamp": "2026-05-29T02:07:59.879Z",
-    "uid": "f116b7ce5a7f2183",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:45.463Z",
+    "uid": "d6c72645dd2e3c25",
+    "version": "0.5.4"
   },
   "prompts": {
     "list_handler": {
@@ -40,10 +40,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "titles",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -56,10 +53,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "result",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -135,10 +129,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "answer",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

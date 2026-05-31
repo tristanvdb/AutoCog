@@ -5,7 +5,10 @@ record ShortText {
 }
 
 record LongText {
-  is text<length=100, threshold=0.95>;
+  is text<length=100>;
+  search {
+    text.threshold is 0.95;
+  }
 }
 
 prompt writer {

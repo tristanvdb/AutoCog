@@ -19,12 +19,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "6343bc97f7a3c448",
-    "timestamp": "2026-05-29T02:07:45.938Z",
-    "uid": "cea9b7ca89e65a6d",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:19.887Z",
+    "uid": "6afe185be90142fd",
+    "version": "0.5.4"
   },
   "prompts": {
     "solver": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -74,8 +101,8 @@
           "format": {
             "type": "enum",
             "values": [
-              "\"yes\"",
-              "\"no\""
+              "yes",
+              "no"
             ]
           },
           "index": 2,
@@ -120,57 +147,7 @@
           "type": "return"
         }
       },
-      "name": "solver",
-      "sequence": [
-        "root@",
-        "problem_1_0@0",
-        "attempt_1_1@0",
-        "success_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "attempt_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "success_1_2@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "problem_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "attempt_1_1@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "problem_1_0@0"
-          ]
-        },
-        "success_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        }
-      }
+      "name": "solver"
     }
   },
   "python_imports": {}

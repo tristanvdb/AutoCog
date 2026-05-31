@@ -156,10 +156,10 @@
     "should_pass": false
   },
   {
-    "description": "Struct with empty field name - fails",
+    "description": "Self-form struct (is <fmt>) - parses",
     "tag": "Struct",
     "code": "{ is text; }",
-    "should_pass": false
+    "should_pass": true
   },
   {
     "description": "Struct with reserved keyword as field name - fails",

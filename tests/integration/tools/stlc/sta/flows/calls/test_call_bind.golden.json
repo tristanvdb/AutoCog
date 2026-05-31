@@ -21,12 +21,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "402dd14afd526e96",
-    "timestamp": "2026-05-29T02:07:42.152Z",
-    "uid": "855849d943533fc2",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:18.684Z",
+    "uid": "cc21b96613468a89",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -145,49 +167,31 @@
           "type": "return"
         }
       },
-      "name": "main",
-      "sequence": [
-        "root@",
-        "query_1_0@0",
-        "answer_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "answer_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "query_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "answer_1_1@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "query_1_0@0"
-          ]
-        }
-      }
+      "name": "main"
     },
     "worker": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -263,47 +267,7 @@
           "type": "return"
         }
       },
-      "name": "worker",
-      "sequence": [
-        "root@",
-        "query_1_0@0",
-        "result_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "query_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "result_1_1@0"
-          ]
-        },
-        "result_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "query_1_0@0"
-          ]
-        }
-      }
+      "name": "worker"
     }
   },
   "python_imports": {}

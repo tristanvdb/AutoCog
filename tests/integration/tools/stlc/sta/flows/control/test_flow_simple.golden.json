@@ -23,12 +23,29 @@
   "metadata": {
     "format": "sta",
     "source_uid": "273382d4ca76f033",
-    "timestamp": "2026-05-29T02:07:47.184Z",
-    "uid": "b819e067421422ca",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:20.296Z",
+    "uid": "f643b5e4156bc44b",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 1,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -88,39 +105,31 @@
           "type": "control"
         }
       },
-      "name": "main",
-      "sequence": [
-        "root@",
-        "task_1_0@0",
-        "next_1_1@0"
-      ],
-      "states": {
-        "next_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "task_1_0@0"
-          ]
-        },
-        "task_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_1@0"
-          ]
-        }
-      }
+      "name": "main"
     },
     "step1": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -195,49 +204,31 @@
           "type": "return"
         }
       },
-      "name": "step1",
-      "sequence": [
-        "root@",
-        "input_1_0@0",
-        "output_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "input_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "output_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "output_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "input_1_0@0"
-          ]
-        }
-      }
+      "name": "step1"
     },
     "step2": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -295,47 +286,7 @@
           "type": "return"
         }
       },
-      "name": "step2",
-      "sequence": [
-        "root@",
-        "input_1_0@0",
-        "output_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "input_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "output_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "output_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "input_1_0@0"
-          ]
-        }
-      }
+      "name": "step2"
     }
   },
   "python_imports": {}

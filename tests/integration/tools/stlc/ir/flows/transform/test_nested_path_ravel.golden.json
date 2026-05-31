@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "f1e7636fb011b944",
-    "timestamp": "2026-05-29T02:08:01.081Z",
-    "uid": "a64daa37a6d6f112",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:45.868Z",
+    "uid": "4418a26e7eaade6b",
+    "version": "0.5.4"
   },
   "prompts": {
     "consumer": {
@@ -52,10 +52,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 5,
-            "name": "all_tags",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -68,10 +65,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "summary",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -131,16 +125,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "label",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -151,10 +141,7 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 5,
-                  "name": "tags",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 1,
@@ -164,9 +151,7 @@
                 ]
               }
             ],
-            "name": "items",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 0,
           "name": "items",

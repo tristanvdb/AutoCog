@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "ed7b1969c65ad7b5",
-    "timestamp": "2026-05-29T02:08:31.512Z",
-    "uid": "2c08a9f7af5cc9ce",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:55.507Z",
+    "uid": "ab40c8ce267bbcde",
+    "version": "0.5.4"
   },
   "prompts": {
     "LibPrompt": {
@@ -38,34 +38,17 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "A record from the library"
+          ],
           "format": {
-            "desc": [
-              "A record from the library"
-            ],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 10,
-                  "name": "LibRecord",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "LibRecord",
-                "range": null
-              }
-            ],
-            "name": "data",
-            "refname": "LibRecord",
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "index": 0,
           "name": "data",
-          "range": null
+          "range": null,
+          "refname": "LibRecord"
         }
       ],
       "flows": [],
@@ -120,76 +103,40 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 1,
-                "desc": [],
+                "desc": [
+                  "A record from the library"
+                ],
                 "format": {
-                  "desc": [
-                    "A record from the library"
-                  ],
-                  "fields": [
-                    {
-                      "depth": 1,
-                      "desc": [],
-                      "format": {
-                        "desc": [],
-                        "length": 10,
-                        "name": "LibRecord",
-                        "refname": null,
-                        "type": "completion"
-                      },
-                      "index": 0,
-                      "name": "LibRecord",
-                      "range": null
-                    }
-                  ],
-                  "name": "item",
-                  "refname": "LibRecord",
-                  "type": "record"
+                  "length": 10,
+                  "type": "completion"
                 },
                 "index": 0,
                 "name": "item",
-                "range": null
+                "range": null,
+                "refname": "LibRecord"
               },
               {
                 "depth": 1,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "fields": [
-                    {
-                      "depth": 1,
-                      "desc": [],
-                      "format": {
-                        "desc": [],
-                        "length": 20,
-                        "name": "AnotherType",
-                        "refname": null,
-                        "type": "completion"
-                      },
-                      "index": 0,
-                      "name": "AnotherType",
-                      "range": null
-                    }
-                  ],
-                  "name": "another",
-                  "refname": "AnotherType",
-                  "type": "record"
+                  "length": 20,
+                  "type": "completion"
                 },
                 "index": 1,
                 "name": "another",
-                "range": null
+                "range": null,
+                "refname": "AnotherType"
               }
             ],
-            "name": "container",
-            "refname": "Container",
-            "type": "record"
+            "type": "struct"
           },
           "index": 0,
           "name": "container",
-          "range": null
+          "range": null,
+          "refname": "Container"
         }
       ],
       "flows": [
@@ -230,10 +177,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "AnotherType",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -248,63 +192,29 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "A record from the library"
+          ],
           "format": {
-            "desc": [
-              "A record from the library"
-            ],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 10,
-                  "name": "LibRecord",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "LibRecord",
-                "range": null
-              }
-            ],
-            "name": "item",
-            "refname": "LibRecord",
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "index": 0,
           "name": "item",
-          "range": null
+          "range": null,
+          "refname": "LibRecord"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 20,
-                  "name": "AnotherType",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "AnotherType",
-                "range": null
-              }
-            ],
-            "name": "another",
-            "refname": "AnotherType",
-            "type": "record"
+            "length": 20,
+            "type": "completion"
           },
           "index": 1,
           "name": "another",
-          "range": null
+          "range": null,
+          "refname": "AnotherType"
         }
       ],
       "name": "Container"
@@ -318,10 +228,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "LibRecord",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "f5cd820ef7f32543",
-    "timestamp": "2026-05-29T02:08:22.128Z",
-    "uid": "c45a09a37d84103d",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:52.592Z",
+    "uid": "bcd713913b68b84c",
+    "version": "0.5.4"
   },
   "prompts": {
     "test": {
@@ -20,16 +20,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "label",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -40,16 +36,12 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "fields": [
                     {
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 10,
-                        "name": "name",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 0,
@@ -60,16 +52,12 @@
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "fields": [
                           {
                             "depth": 1,
                             "desc": [],
                             "format": {
-                              "desc": [],
                               "length": 10,
-                              "name": "key",
-                              "refname": null,
                               "type": "completion"
                             },
                             "index": 0,
@@ -80,10 +68,7 @@
                             "depth": 1,
                             "desc": [],
                             "format": {
-                              "desc": [],
                               "length": 10,
-                              "name": "value",
-                              "refname": null,
                               "type": "completion"
                             },
                             "index": 1,
@@ -91,20 +76,17 @@
                             "range": null
                           }
                         ],
-                        "name": "tags",
-                        "refname": "Tag",
-                        "type": "record"
+                        "type": "struct"
                       },
                       "index": 1,
                       "name": "tags",
                       "range": [
                         2
-                      ]
+                      ],
+                      "refname": "Tag"
                     }
                   ],
-                  "name": "entries",
-                  "refname": null,
-                  "type": "record"
+                  "type": "struct"
                 },
                 "index": 1,
                 "name": "entries",
@@ -113,9 +95,7 @@
                 ]
               }
             ],
-            "name": "groups",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 0,
           "name": "groups",
@@ -127,16 +107,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "title",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -147,16 +123,12 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "fields": [
                     {
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 10,
-                        "name": "author",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 0,
@@ -167,10 +139,7 @@
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 8,
-                        "name": "keywords",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 1,
@@ -180,18 +149,14 @@
                       ]
                     }
                   ],
-                  "name": "meta",
-                  "refname": null,
-                  "type": "record"
+                  "type": "struct"
                 },
                 "index": 1,
                 "name": "meta",
                 "range": null
               }
             ],
-            "name": "items",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 1,
           "name": "items",
@@ -203,16 +168,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 5,
-                  "name": "version",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -223,16 +184,12 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "fields": [
                     {
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 10,
-                        "name": "mod_name",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 0,
@@ -243,10 +200,7 @@
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 8,
-                        "name": "params",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 1,
@@ -256,9 +210,7 @@
                       ]
                     }
                   ],
-                  "name": "modules",
-                  "refname": null,
-                  "type": "record"
+                  "type": "struct"
                 },
                 "index": 1,
                 "name": "modules",
@@ -267,9 +219,7 @@
                 ]
               }
             ],
-            "name": "config",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 2,
           "name": "config",
@@ -279,16 +229,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "team_name",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -299,16 +245,12 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "fields": [
                     {
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "length": 10,
-                        "name": "member_name",
-                        "refname": null,
                         "type": "completion"
                       },
                       "index": 0,
@@ -319,16 +261,12 @@
                       "depth": 3,
                       "desc": [],
                       "format": {
-                        "desc": [],
                         "fields": [
                           {
                             "depth": 1,
                             "desc": [],
                             "format": {
-                              "desc": [],
                               "length": 15,
-                              "name": "street",
-                              "refname": null,
                               "type": "completion"
                             },
                             "index": 0,
@@ -339,10 +277,7 @@
                             "depth": 1,
                             "desc": [],
                             "format": {
-                              "desc": [],
                               "length": 10,
-                              "name": "city",
-                              "refname": null,
                               "type": "completion"
                             },
                             "index": 1,
@@ -350,18 +285,15 @@
                             "range": null
                           }
                         ],
-                        "name": "contact",
-                        "refname": "Address",
-                        "type": "record"
+                        "type": "struct"
                       },
                       "index": 1,
                       "name": "contact",
-                      "range": null
+                      "range": null,
+                      "refname": "Address"
                     }
                   ],
-                  "name": "members",
-                  "refname": null,
-                  "type": "record"
+                  "type": "struct"
                 },
                 "index": 1,
                 "name": "members",
@@ -370,9 +302,7 @@
                 ]
               }
             ],
-            "name": "teams",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 3,
           "name": "teams",
@@ -413,10 +343,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 15,
-            "name": "street",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -427,10 +354,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "city",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -447,10 +371,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "key",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -461,10 +382,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "value",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

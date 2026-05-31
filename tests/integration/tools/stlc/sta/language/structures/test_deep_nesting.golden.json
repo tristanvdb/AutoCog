@@ -14,12 +14,144 @@
   "metadata": {
     "format": "sta",
     "source_uid": "f5cd820ef7f32543",
-    "timestamp": "2026-05-29T02:08:21.492Z",
-    "uid": "ffce3db83c99f4dc",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:31.612Z",
+    "uid": "872d4b402fe5a105",
+    "version": "0.5.4"
   },
   "prompts": {
     "test": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 8,
+          "field": 0,
+          "flow": 2
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 1,
+          "field": 2,
+          "flow": 4
+        },
+        {
+          "exit": 5,
+          "field": 3,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 4,
+          "flow": 6
+        },
+        {
+          "exit": 7,
+          "field": 5,
+          "flow": -1
+        },
+        {
+          "exit": 5,
+          "field": 6,
+          "flow": -1
+        },
+        {
+          "exit": 13,
+          "field": 7,
+          "flow": 9
+        },
+        {
+          "exit": 10,
+          "field": 8,
+          "flow": -1
+        },
+        {
+          "exit": 8,
+          "field": 9,
+          "flow": 11
+        },
+        {
+          "exit": 12,
+          "field": 10,
+          "flow": -1
+        },
+        {
+          "exit": 10,
+          "field": 11,
+          "flow": 12
+        },
+        {
+          "exit": 18,
+          "field": 12,
+          "flow": 14
+        },
+        {
+          "exit": 15,
+          "field": 13,
+          "flow": -1
+        },
+        {
+          "exit": 13,
+          "field": 14,
+          "flow": 16
+        },
+        {
+          "exit": 17,
+          "field": 15,
+          "flow": -1
+        },
+        {
+          "exit": 15,
+          "field": 16,
+          "flow": 17
+        },
+        {
+          "exit": 25,
+          "field": 17,
+          "flow": 19
+        },
+        {
+          "exit": 20,
+          "field": 18,
+          "flow": -1
+        },
+        {
+          "exit": 18,
+          "field": 19,
+          "flow": 21
+        },
+        {
+          "exit": 22,
+          "field": 20,
+          "flow": -1
+        },
+        {
+          "exit": 20,
+          "field": 21,
+          "flow": 23
+        },
+        {
+          "exit": 24,
+          "field": 22,
+          "flow": -1
+        },
+        {
+          "exit": 22,
+          "field": 23,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 24,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -30,7 +162,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "groups",
           "index": 0,
           "name": "groups",
           "range": [
@@ -57,7 +188,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "entries",
           "index": 1,
           "name": "entries",
           "range": [
@@ -123,7 +253,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "items",
           "index": 1,
           "name": "items",
           "range": [
@@ -150,7 +279,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "meta",
           "index": 1,
           "name": "meta",
           "range": null
@@ -189,7 +317,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "config",
           "index": 2,
           "name": "config",
           "range": null
@@ -213,7 +340,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "modules",
           "index": 1,
           "name": "modules",
           "range": [
@@ -255,7 +381,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "teams",
           "index": 3,
           "name": "teams",
           "range": [
@@ -282,7 +407,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "members",
           "index": 1,
           "name": "members",
           "range": [
@@ -370,1082 +494,7 @@
           "type": "return"
         }
       },
-      "name": "test",
-      "sequence": [
-        "root@",
-        "groups_1_0@0",
-        "label_2_1@0_0",
-        "entries_2_2@0_0",
-        "name_3_3@0_0_0",
-        "tags_3_4@0_0_0",
-        "key_4_5@0_0_0_0",
-        "value_4_6@0_0_0_0",
-        "tags_3_4@0_0_1",
-        "key_4_5@0_0_1_0",
-        "value_4_6@0_0_1_0",
-        "entries_2_2@0_1",
-        "name_3_3@0_1_0",
-        "tags_3_4@0_1_0",
-        "key_4_5@0_1_0_0",
-        "value_4_6@0_1_0_0",
-        "tags_3_4@0_1_1",
-        "key_4_5@0_1_1_0",
-        "value_4_6@0_1_1_0",
-        "groups_1_0@1",
-        "label_2_1@1_0",
-        "entries_2_2@1_0",
-        "name_3_3@1_0_0",
-        "tags_3_4@1_0_0",
-        "key_4_5@1_0_0_0",
-        "value_4_6@1_0_0_0",
-        "tags_3_4@1_0_1",
-        "key_4_5@1_0_1_0",
-        "value_4_6@1_0_1_0",
-        "entries_2_2@1_1",
-        "name_3_3@1_1_0",
-        "tags_3_4@1_1_0",
-        "key_4_5@1_1_0_0",
-        "value_4_6@1_1_0_0",
-        "tags_3_4@1_1_1",
-        "key_4_5@1_1_1_0",
-        "value_4_6@1_1_1_0",
-        "items_1_7@0",
-        "title_2_8@0_0",
-        "meta_2_9@0_0",
-        "author_3_10@0_0_0",
-        "keywords_3_11@0_0_0",
-        "keywords_3_11@0_0_1",
-        "meta_2_9@0_1",
-        "items_1_7@1",
-        "title_2_8@1_0",
-        "meta_2_9@1_0",
-        "author_3_10@1_0_0",
-        "keywords_3_11@1_0_0",
-        "keywords_3_11@1_0_1",
-        "meta_2_9@1_1",
-        "config_1_12@0",
-        "version_2_13@0_0",
-        "modules_2_14@0_0",
-        "mod_name_3_15@0_0_0",
-        "params_3_16@0_0_0",
-        "params_3_16@0_0_1",
-        "modules_2_14@0_1",
-        "mod_name_3_15@0_1_0",
-        "params_3_16@0_1_0",
-        "params_3_16@0_1_1",
-        "config_1_12@1",
-        "teams_1_17@0",
-        "team_name_2_18@0_0",
-        "members_2_19@0_0",
-        "member_name_3_20@0_0_0",
-        "contact_3_21@0_0_0",
-        "street_4_22@0_0_0_0",
-        "city_4_23@0_0_0_0",
-        "contact_3_21@0_0_1",
-        "members_2_19@0_1",
-        "member_name_3_20@0_1_0",
-        "contact_3_21@0_1_0",
-        "street_4_22@0_1_0_0",
-        "city_4_23@0_1_0_0",
-        "contact_3_21@0_1_1",
-        "teams_1_17@1",
-        "team_name_2_18@1_0",
-        "members_2_19@1_0",
-        "member_name_3_20@1_0_0",
-        "contact_3_21@1_0_0",
-        "street_4_22@1_0_0_0",
-        "city_4_23@1_0_0_0",
-        "contact_3_21@1_0_1",
-        "members_2_19@1_1",
-        "member_name_3_20@1_1_0",
-        "contact_3_21@1_1_0",
-        "street_4_22@1_1_0_0",
-        "city_4_23@1_1_0_0",
-        "contact_3_21@1_1_1",
-        "next_1_24@0"
-      ],
-      "states": {
-        "author_3_10@0_0_0": {
-          "field": 10,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "keywords_3_11@0_0_0"
-          ]
-        },
-        "author_3_10@1_0_0": {
-          "field": 10,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "keywords_3_11@1_0_0"
-          ]
-        },
-        "city_4_23@0_0_0_0": {
-          "field": 23,
-          "indices": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@0_0_1"
-          ]
-        },
-        "city_4_23@0_1_0_0": {
-          "field": 23,
-          "indices": [
-            0,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@0_1_1"
-          ]
-        },
-        "city_4_23@1_0_0_0": {
-          "field": 23,
-          "indices": [
-            1,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@1_0_1"
-          ]
-        },
-        "city_4_23@1_1_0_0": {
-          "field": 23,
-          "indices": [
-            1,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@1_1_1"
-          ]
-        },
-        "config_1_12@0": {
-          "field": 12,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "version_2_13@0_0"
-          ]
-        },
-        "config_1_12@1": {
-          "field": 12,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "teams_1_17@0"
-          ]
-        },
-        "contact_3_21@0_0_0": {
-          "field": 21,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "street_4_22@0_0_0_0"
-          ]
-        },
-        "contact_3_21@0_0_1": {
-          "field": 21,
-          "indices": [
-            0,
-            0,
-            1
-          ],
-          "successors": [
-            "members_2_19@0_1"
-          ]
-        },
-        "contact_3_21@0_1_0": {
-          "field": 21,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "street_4_22@0_1_0_0"
-          ]
-        },
-        "contact_3_21@0_1_1": {
-          "field": 21,
-          "indices": [
-            0,
-            1,
-            1
-          ],
-          "successors": [
-            "teams_1_17@1"
-          ]
-        },
-        "contact_3_21@1_0_0": {
-          "field": 21,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "street_4_22@1_0_0_0"
-          ]
-        },
-        "contact_3_21@1_0_1": {
-          "field": 21,
-          "indices": [
-            1,
-            0,
-            1
-          ],
-          "successors": [
-            "members_2_19@1_1"
-          ]
-        },
-        "contact_3_21@1_1_0": {
-          "field": 21,
-          "indices": [
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "street_4_22@1_1_0_0"
-          ]
-        },
-        "contact_3_21@1_1_1": {
-          "field": 21,
-          "indices": [
-            1,
-            1,
-            1
-          ],
-          "successors": [
-            "next_1_24@0"
-          ]
-        },
-        "entries_2_2@0_0": {
-          "field": 2,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "name_3_3@0_0_0"
-          ]
-        },
-        "entries_2_2@0_1": {
-          "field": 2,
-          "indices": [
-            0,
-            1
-          ],
-          "successors": [
-            "name_3_3@0_1_0"
-          ]
-        },
-        "entries_2_2@1_0": {
-          "field": 2,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "name_3_3@1_0_0"
-          ]
-        },
-        "entries_2_2@1_1": {
-          "field": 2,
-          "indices": [
-            1,
-            1
-          ],
-          "successors": [
-            "name_3_3@1_1_0"
-          ]
-        },
-        "groups_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "label_2_1@0_0"
-          ]
-        },
-        "groups_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "label_2_1@1_0"
-          ]
-        },
-        "items_1_7@0": {
-          "field": 7,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "title_2_8@0_0"
-          ]
-        },
-        "items_1_7@1": {
-          "field": 7,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "title_2_8@1_0"
-          ]
-        },
-        "key_4_5@0_0_0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "value_4_6@0_0_0_0"
-          ]
-        },
-        "key_4_5@0_0_1_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "value_4_6@0_0_1_0"
-          ]
-        },
-        "key_4_5@0_1_0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "value_4_6@0_1_0_0"
-          ]
-        },
-        "key_4_5@0_1_1_0": {
-          "field": 5,
-          "indices": [
-            0,
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "value_4_6@0_1_1_0"
-          ]
-        },
-        "key_4_5@1_0_0_0": {
-          "field": 5,
-          "indices": [
-            1,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "value_4_6@1_0_0_0"
-          ]
-        },
-        "key_4_5@1_0_1_0": {
-          "field": 5,
-          "indices": [
-            1,
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "value_4_6@1_0_1_0"
-          ]
-        },
-        "key_4_5@1_1_0_0": {
-          "field": 5,
-          "indices": [
-            1,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "value_4_6@1_1_0_0"
-          ]
-        },
-        "key_4_5@1_1_1_0": {
-          "field": 5,
-          "indices": [
-            1,
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "value_4_6@1_1_1_0"
-          ]
-        },
-        "keywords_3_11@0_0_0": {
-          "field": 11,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "keywords_3_11@0_0_1"
-          ]
-        },
-        "keywords_3_11@0_0_1": {
-          "field": 11,
-          "indices": [
-            0,
-            0,
-            1
-          ],
-          "successors": [
-            "meta_2_9@0_1"
-          ]
-        },
-        "keywords_3_11@1_0_0": {
-          "field": 11,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "keywords_3_11@1_0_1"
-          ]
-        },
-        "keywords_3_11@1_0_1": {
-          "field": 11,
-          "indices": [
-            1,
-            0,
-            1
-          ],
-          "successors": [
-            "meta_2_9@1_1"
-          ]
-        },
-        "label_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "entries_2_2@0_0"
-          ]
-        },
-        "label_2_1@1_0": {
-          "field": 1,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "entries_2_2@1_0"
-          ]
-        },
-        "member_name_3_20@0_0_0": {
-          "field": 20,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@0_0_0"
-          ]
-        },
-        "member_name_3_20@0_1_0": {
-          "field": 20,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "contact_3_21@0_1_0"
-          ]
-        },
-        "member_name_3_20@1_0_0": {
-          "field": 20,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "contact_3_21@1_0_0"
-          ]
-        },
-        "member_name_3_20@1_1_0": {
-          "field": 20,
-          "indices": [
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "contact_3_21@1_1_0"
-          ]
-        },
-        "members_2_19@0_0": {
-          "field": 19,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "member_name_3_20@0_0_0"
-          ]
-        },
-        "members_2_19@0_1": {
-          "field": 19,
-          "indices": [
-            0,
-            1
-          ],
-          "successors": [
-            "member_name_3_20@0_1_0"
-          ]
-        },
-        "members_2_19@1_0": {
-          "field": 19,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "member_name_3_20@1_0_0"
-          ]
-        },
-        "members_2_19@1_1": {
-          "field": 19,
-          "indices": [
-            1,
-            1
-          ],
-          "successors": [
-            "member_name_3_20@1_1_0"
-          ]
-        },
-        "meta_2_9@0_0": {
-          "field": 9,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "author_3_10@0_0_0"
-          ]
-        },
-        "meta_2_9@0_1": {
-          "field": 9,
-          "indices": [
-            0,
-            1
-          ],
-          "successors": [
-            "items_1_7@1"
-          ]
-        },
-        "meta_2_9@1_0": {
-          "field": 9,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "author_3_10@1_0_0"
-          ]
-        },
-        "meta_2_9@1_1": {
-          "field": 9,
-          "indices": [
-            1,
-            1
-          ],
-          "successors": [
-            "config_1_12@0"
-          ]
-        },
-        "mod_name_3_15@0_0_0": {
-          "field": 15,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "params_3_16@0_0_0"
-          ]
-        },
-        "mod_name_3_15@0_1_0": {
-          "field": 15,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "params_3_16@0_1_0"
-          ]
-        },
-        "modules_2_14@0_0": {
-          "field": 14,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "mod_name_3_15@0_0_0"
-          ]
-        },
-        "modules_2_14@0_1": {
-          "field": 14,
-          "indices": [
-            0,
-            1
-          ],
-          "successors": [
-            "mod_name_3_15@0_1_0"
-          ]
-        },
-        "name_3_3@0_0_0": {
-          "field": 3,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@0_0_0"
-          ]
-        },
-        "name_3_3@0_1_0": {
-          "field": 3,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "tags_3_4@0_1_0"
-          ]
-        },
-        "name_3_3@1_0_0": {
-          "field": 3,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@1_0_0"
-          ]
-        },
-        "name_3_3@1_1_0": {
-          "field": 3,
-          "indices": [
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "tags_3_4@1_1_0"
-          ]
-        },
-        "next_1_24@0": {
-          "field": 24,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "params_3_16@0_0_0": {
-          "field": 16,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "params_3_16@0_0_1"
-          ]
-        },
-        "params_3_16@0_0_1": {
-          "field": 16,
-          "indices": [
-            0,
-            0,
-            1
-          ],
-          "successors": [
-            "modules_2_14@0_1"
-          ]
-        },
-        "params_3_16@0_1_0": {
-          "field": 16,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "params_3_16@0_1_1"
-          ]
-        },
-        "params_3_16@0_1_1": {
-          "field": 16,
-          "indices": [
-            0,
-            1,
-            1
-          ],
-          "successors": [
-            "config_1_12@1"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "groups_1_0@0"
-          ]
-        },
-        "street_4_22@0_0_0_0": {
-          "field": 22,
-          "indices": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "city_4_23@0_0_0_0"
-          ]
-        },
-        "street_4_22@0_1_0_0": {
-          "field": 22,
-          "indices": [
-            0,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "city_4_23@0_1_0_0"
-          ]
-        },
-        "street_4_22@1_0_0_0": {
-          "field": 22,
-          "indices": [
-            1,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "city_4_23@1_0_0_0"
-          ]
-        },
-        "street_4_22@1_1_0_0": {
-          "field": 22,
-          "indices": [
-            1,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "city_4_23@1_1_0_0"
-          ]
-        },
-        "tags_3_4@0_0_0": {
-          "field": 4,
-          "indices": [
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "key_4_5@0_0_0_0"
-          ]
-        },
-        "tags_3_4@0_0_1": {
-          "field": 4,
-          "indices": [
-            0,
-            0,
-            1
-          ],
-          "successors": [
-            "key_4_5@0_0_1_0"
-          ]
-        },
-        "tags_3_4@0_1_0": {
-          "field": 4,
-          "indices": [
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "key_4_5@0_1_0_0"
-          ]
-        },
-        "tags_3_4@0_1_1": {
-          "field": 4,
-          "indices": [
-            0,
-            1,
-            1
-          ],
-          "successors": [
-            "key_4_5@0_1_1_0"
-          ]
-        },
-        "tags_3_4@1_0_0": {
-          "field": 4,
-          "indices": [
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "key_4_5@1_0_0_0"
-          ]
-        },
-        "tags_3_4@1_0_1": {
-          "field": 4,
-          "indices": [
-            1,
-            0,
-            1
-          ],
-          "successors": [
-            "key_4_5@1_0_1_0"
-          ]
-        },
-        "tags_3_4@1_1_0": {
-          "field": 4,
-          "indices": [
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "key_4_5@1_1_0_0"
-          ]
-        },
-        "tags_3_4@1_1_1": {
-          "field": 4,
-          "indices": [
-            1,
-            1,
-            1
-          ],
-          "successors": [
-            "key_4_5@1_1_1_0"
-          ]
-        },
-        "team_name_2_18@0_0": {
-          "field": 18,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "members_2_19@0_0"
-          ]
-        },
-        "team_name_2_18@1_0": {
-          "field": 18,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "members_2_19@1_0"
-          ]
-        },
-        "teams_1_17@0": {
-          "field": 17,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "team_name_2_18@0_0"
-          ]
-        },
-        "teams_1_17@1": {
-          "field": 17,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "team_name_2_18@1_0"
-          ]
-        },
-        "title_2_8@0_0": {
-          "field": 8,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "meta_2_9@0_0"
-          ]
-        },
-        "title_2_8@1_0": {
-          "field": 8,
-          "indices": [
-            1,
-            0
-          ],
-          "successors": [
-            "meta_2_9@1_0"
-          ]
-        },
-        "value_4_6@0_0_0_0": {
-          "field": 6,
-          "indices": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@0_0_1"
-          ]
-        },
-        "value_4_6@0_0_1_0": {
-          "field": 6,
-          "indices": [
-            0,
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "entries_2_2@0_1"
-          ]
-        },
-        "value_4_6@0_1_0_0": {
-          "field": 6,
-          "indices": [
-            0,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@0_1_1"
-          ]
-        },
-        "value_4_6@0_1_1_0": {
-          "field": 6,
-          "indices": [
-            0,
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "groups_1_0@1"
-          ]
-        },
-        "value_4_6@1_0_0_0": {
-          "field": 6,
-          "indices": [
-            1,
-            0,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@1_0_1"
-          ]
-        },
-        "value_4_6@1_0_1_0": {
-          "field": 6,
-          "indices": [
-            1,
-            0,
-            1,
-            0
-          ],
-          "successors": [
-            "entries_2_2@1_1"
-          ]
-        },
-        "value_4_6@1_1_0_0": {
-          "field": 6,
-          "indices": [
-            1,
-            1,
-            0,
-            0
-          ],
-          "successors": [
-            "tags_3_4@1_1_1"
-          ]
-        },
-        "value_4_6@1_1_1_0": {
-          "field": 6,
-          "indices": [
-            1,
-            1,
-            1,
-            0
-          ],
-          "successors": [
-            "items_1_7@0"
-          ]
-        },
-        "version_2_13@0_0": {
-          "field": 13,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "modules_2_14@0_0"
-          ]
-        }
-      }
+      "name": "test"
     }
   },
   "python_imports": {}

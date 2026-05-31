@@ -139,18 +139,6 @@
             "$ref": "#/$defs/field"
           }
         },
-        "states": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/state"
-          }
-        },
-        "sequence": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "flows": {
           "type": "object",
           "additionalProperties": {
@@ -177,14 +165,19 @@
               ]
             }
           }
+        },
+        "abstracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/abstract_state"
+          }
         }
       },
       "required": [
         "name",
         "desc",
         "fields",
-        "states",
-        "sequence",
+        "abstracts",
         "flows",
         "channels"
       ],
@@ -257,6 +250,9 @@
               "type": "null"
             }
           ]
+        },
+        "search": {
+          "$ref": "#/$defs/search_policy"
         }
       },
       "required": [
@@ -285,9 +281,6 @@
         "length": {
           "type": "integer",
           "minimum": 0
-        },
-        "threshold": {
-          "type": "number"
         },
         "values": {
           "type": "array",
@@ -328,6 +321,12 @@
                 "additionalProperties": false
               }
             ]
+          }
+        },
+        "within": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       },
@@ -593,6 +592,41 @@
       },
       "required": [
         "type"
+      ],
+      "additionalProperties": false
+    },
+    "search_policy": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "abstract_state": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "integer"
+        },
+        "flow": {
+          "type": "integer"
+        },
+        "exit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "field",
+        "flow",
+        "exit"
       ],
       "additionalProperties": false
     }

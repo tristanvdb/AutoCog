@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "bb1a4ce396403fb1",
-    "timestamp": "2026-05-29T02:07:41.534Z",
-    "uid": "48cce30301b69afd",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:39.556Z",
+    "uid": "b437288ae5621637",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -70,10 +70,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "topic",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -84,10 +81,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "answer",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -147,10 +141,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "topic",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -161,10 +152,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "result",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

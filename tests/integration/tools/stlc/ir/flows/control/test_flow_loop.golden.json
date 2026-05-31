@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "6343bc97f7a3c448",
-    "timestamp": "2026-05-29T02:07:46.544Z",
-    "uid": "5b5eb8ae9f7689aa",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:41.117Z",
+    "uid": "bb8290eca6a1fcee",
+    "version": "0.5.4"
   },
   "prompts": {
     "solver": {
@@ -40,37 +40,17 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Problem",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Problem",
-                "range": null
-              }
-            ],
-            "name": "problem",
-            "refname": "Problem",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "problem",
-          "range": null
+          "range": null,
+          "refname": "Problem"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "attempt",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -81,13 +61,10 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "success",
-            "refname": null,
             "type": "enum",
             "values": [
-              "\"yes\"",
-              "\"no\""
+              "yes",
+              "no"
             ]
           },
           "index": 2,
@@ -133,9 +110,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Problem",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

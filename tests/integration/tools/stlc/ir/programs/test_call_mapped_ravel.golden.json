@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "6d2b22253ecc28dd",
-    "timestamp": "2026-05-29T02:08:34.177Z",
-    "uid": "9175d65c041f673e",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:56.317Z",
+    "uid": "11ab81a51954ad39",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -62,10 +62,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 15,
-            "name": "all_pages",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -78,10 +75,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "summary",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -141,10 +135,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "section",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -155,10 +146,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 15,
-            "name": "pages",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

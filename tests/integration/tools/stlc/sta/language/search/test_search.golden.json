@@ -26,12 +26,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "d94ad1f37e3e63b0",
-    "timestamp": "2026-05-30T16:16:19.469Z",
-    "uid": "e80fe6f394a076ee",
+    "timestamp": "2026-05-31T00:53:29.973Z",
+    "uid": "5a883275fa263eb2",
     "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -77,7 +99,20 @@
           "format_ref": "Message",
           "index": 0,
           "name": "greeting",
-          "range": null
+          "range": null,
+          "search": {
+            "branch": {
+              "width": 2
+            },
+            "enum": {
+              "width": 3
+            },
+            "text": {
+              "ahead": 2,
+              "beams": 4,
+              "threshold": 0.2
+            }
+          }
         },
         {
           "depth": 1,
@@ -90,7 +125,20 @@
           "format_ref": "SpecialText",
           "index": 1,
           "name": "creative",
-          "range": null
+          "range": null,
+          "search": {
+            "branch": {
+              "threshold": 0.2,
+              "width": 2
+            },
+            "enum": {
+              "width": 3
+            },
+            "text": {
+              "threshold": 0.2,
+              "width": 1
+            }
+          }
         },
         {
           "depth": 1,
@@ -134,60 +182,11 @@
       },
       "name": "main",
       "search": {
-        "branch": {
-          "width": 2
-        },
-        "enum": {
-          "width": 3
-        },
         "flow": {
           "threshold": 0.05
         },
         "queue": {
           "metric": "mean_logprob"
-        },
-        "text": {
-          "threshold": 0.2
-        }
-      },
-      "sequence": [
-        "root@",
-        "greeting_1_0@0",
-        "creative_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "creative_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "greeting_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "creative_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "greeting_1_0@0"
-          ]
         }
       }
     }

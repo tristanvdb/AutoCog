@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "717d610785ec56ee",
-    "timestamp": "2026-05-29T02:07:44.106Z",
-    "uid": "861a7157207be6a8",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:40.337Z",
+    "uid": "5b4b843f3dc6ecd2",
+    "version": "0.5.4"
   },
   "prompts": {
     "main_prompt": {
@@ -70,10 +70,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "input",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -84,10 +81,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 50,
-            "name": "processed",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -98,10 +92,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "result",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,

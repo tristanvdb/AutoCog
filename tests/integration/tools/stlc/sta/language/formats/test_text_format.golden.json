@@ -14,13 +14,40 @@
   },
   "metadata": {
     "format": "sta",
-    "source_uid": "dcb78f2813d10966",
-    "timestamp": "2026-05-29T02:08:15.383Z",
-    "uid": "7655ade9b4b5be93",
-    "version": "0.5.3"
+    "source_uid": "fda273b190ca6903",
+    "timestamp": "2026-05-31T00:53:29.565Z",
+    "uid": "ffabbc93ab73ed3b",
+    "version": "0.5.4"
   },
   "prompts": {
     "writer": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -43,13 +70,17 @@
           "flat_index": 1,
           "format": {
             "length": 100,
-            "threshold": 0.949999988079071,
             "type": "completion"
           },
           "format_ref": "LongText",
           "index": 1,
           "name": "content",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "threshold": 0.95
+            }
+          }
         },
         {
           "depth": 1,
@@ -95,57 +126,7 @@
           "type": "return"
         }
       },
-      "name": "writer",
-      "sequence": [
-        "root@",
-        "title_1_0@0",
-        "content_1_1@0",
-        "summary_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "content_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "summary_1_2@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "title_1_0@0"
-          ]
-        },
-        "summary_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        },
-        "title_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "content_1_1@0"
-          ]
-        }
-      }
+      "name": "writer"
     }
   },
   "python_imports": {}

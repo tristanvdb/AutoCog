@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "0ad8f2122236f334",
-    "timestamp": "2026-05-29T02:08:27.408Z",
-    "uid": "3f75946ece6fb2c5",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:54.227Z",
+    "uid": "661e2017be56767e",
+    "version": "0.5.4"
   },
   "prompts": {
     "test": {
@@ -20,10 +20,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "names",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -37,16 +34,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "label",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -57,14 +50,11 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "name": "score",
-                  "refname": null,
                   "type": "enum",
                   "values": [
-                    "\"low\"",
-                    "\"medium\"",
-                    "\"high\""
+                    "low",
+                    "medium",
+                    "high"
                   ]
                 },
                 "index": 1,
@@ -72,9 +62,7 @@
                 "range": null
               }
             ],
-            "name": "items",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 1,
           "name": "items",
@@ -87,16 +75,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 5,
-                  "name": "tag",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -107,10 +91,7 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 8,
-                  "name": "values",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 1,
@@ -124,10 +105,7 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "summary",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 2,
@@ -135,9 +113,7 @@
                 "range": null
               }
             ],
-            "name": "buckets",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 2,
           "name": "buckets",
@@ -149,16 +125,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "heading",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -169,10 +141,7 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 15,
-                  "name": "paragraphs",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 1,
@@ -186,10 +155,7 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
                   "length": 10,
-                  "name": "footer",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 2,
@@ -197,9 +163,7 @@
                 "range": null
               }
             ],
-            "name": "sections",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 3,
           "name": "sections",

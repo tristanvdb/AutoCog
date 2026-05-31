@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "f50acd270f4098b9",
-    "timestamp": "2026-05-29T02:07:50.245Z",
-    "uid": "87b1b4dc0050fe59",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:42.288Z",
+    "uid": "abeede46f5c67fcd",
+    "version": "0.5.4"
   },
   "prompts": {
     "quiz": {
@@ -40,37 +40,17 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Question",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Question",
-                "range": null
-              }
-            ],
-            "name": "question",
-            "refname": "Question",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "question",
-          "range": null
+          "range": null,
+          "refname": "Question"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "answer",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -110,9 +90,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Question",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

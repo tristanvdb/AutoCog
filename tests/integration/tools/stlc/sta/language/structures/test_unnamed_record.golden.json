@@ -14,12 +14,59 @@
   "metadata": {
     "format": "sta",
     "source_uid": "e258f706a52920eb",
-    "timestamp": "2026-05-29T02:08:25.410Z",
-    "uid": "bf8412ecd9b0c17a",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:32.869Z",
+    "uid": "1afb77db0e0b153e",
+    "version": "0.5.4"
   },
   "prompts": {
     "calculator": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 4,
+          "field": 0,
+          "flow": 2
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 1,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 5,
+          "field": 3,
+          "flow": -1
+        },
+        {
+          "exit": 8,
+          "field": 4,
+          "flow": 6
+        },
+        {
+          "exit": 7,
+          "field": 5,
+          "flow": -1
+        },
+        {
+          "exit": 5,
+          "field": 6,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 7,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -30,7 +77,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "operands",
           "index": 0,
           "name": "operands",
           "range": null
@@ -64,10 +110,10 @@
           "format": {
             "type": "enum",
             "values": [
-              "\"add\"",
-              "\"subtract\"",
-              "\"multiply\"",
-              "\"divide\""
+              "add",
+              "subtract",
+              "multiply",
+              "divide"
             ]
           },
           "index": 1,
@@ -81,7 +127,6 @@
           "format": {
             "type": "record"
           },
-          "format_ref": "result",
           "index": 2,
           "name": "result",
           "range": null
@@ -104,9 +149,9 @@
           "format": {
             "type": "enum",
             "values": [
-              "\"high\"",
-              "\"medium\"",
-              "\"low\""
+              "high",
+              "medium",
+              "low"
             ]
           },
           "index": 1,
@@ -145,121 +190,7 @@
           "type": "return"
         }
       },
-      "name": "calculator",
-      "sequence": [
-        "root@",
-        "operands_1_0@0",
-        "left_2_1@0_0",
-        "right_2_2@0_0",
-        "operands_1_0@1",
-        "operation_1_3@0",
-        "result_1_4@0",
-        "value_2_5@0_0",
-        "confidence_2_6@0_0",
-        "result_1_4@1",
-        "next_1_7@0"
-      ],
-      "states": {
-        "confidence_2_6@0_0": {
-          "field": 6,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "result_1_4@1"
-          ]
-        },
-        "left_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "right_2_2@0_0"
-          ]
-        },
-        "next_1_7@0": {
-          "field": 7,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "operands_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "left_2_1@0_0"
-          ]
-        },
-        "operands_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "operation_1_3@0"
-          ]
-        },
-        "operation_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "result_1_4@0"
-          ]
-        },
-        "result_1_4@0": {
-          "field": 4,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "value_2_5@0_0"
-          ]
-        },
-        "result_1_4@1": {
-          "field": 4,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "next_1_7@0"
-          ]
-        },
-        "right_2_2@0_0": {
-          "field": 2,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "operands_1_0@1"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "operands_1_0@0"
-          ]
-        },
-        "value_2_5@0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "confidence_2_6@0_0"
-          ]
-        }
-      }
+      "name": "calculator"
     }
   },
   "python_imports": {}

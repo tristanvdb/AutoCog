@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "674942b76e69651a",
-    "timestamp": "2026-05-29T02:08:04.794Z",
-    "uid": "51b739b8e7d4dc29",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:47.027Z",
+    "uid": "9dd3cef3ce53c474",
+    "version": "0.5.4"
   },
   "prompts": {
     "test__7": {
@@ -22,10 +22,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 75,
-            "name": "diff",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -36,10 +33,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 25,
-            "name": "div_check",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -50,10 +44,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 1,
-            "name": "remainder",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,
@@ -64,10 +55,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "both",
-            "refname": null,
             "type": "completion"
           },
           "index": 3,
@@ -78,10 +66,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 30,
-            "name": "either",
-            "refname": null,
             "type": "completion"
           },
           "index": 4,
@@ -92,10 +77,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 15,
-            "name": "negated",
-            "refname": null,
             "type": "completion"
           },
           "index": 5,
@@ -106,10 +88,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "lt_result",
-            "refname": null,
             "type": "completion"
           },
           "index": 6,
@@ -120,10 +99,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "lte_result",
-            "refname": null,
             "type": "completion"
           },
           "index": 7,
@@ -134,10 +110,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "gte_result",
-            "refname": null,
             "type": "completion"
           },
           "index": 8,
@@ -148,10 +121,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "neq_result",
-            "refname": null,
             "type": "completion"
           },
           "index": 9,
@@ -162,10 +132,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 75,
-            "name": "neg_add",
-            "refname": null,
             "type": "completion"
           },
           "index": 10,
@@ -176,10 +143,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 153,
-            "name": "complex",
-            "refname": null,
             "type": "completion"
           },
           "index": 11,

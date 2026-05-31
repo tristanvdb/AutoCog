@@ -14,12 +14,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "5a223176a90402e6",
-    "timestamp": "2026-05-29T02:08:14.199Z",
-    "uid": "250c0e2907360e39",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:29.170Z",
+    "uid": "0ea86db04c94febb",
+    "version": "0.5.4"
   },
   "prompts": {
     "chooser": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -114,87 +141,7 @@
           "type": "return"
         }
       },
-      "name": "chooser",
-      "sequence": [
-        "root@",
-        "options_1_0@0",
-        "options_1_0@1",
-        "options_1_0@2",
-        "options_1_0@3",
-        "selected_1_1@0",
-        "repeated_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "options_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "options_1_0@1"
-          ]
-        },
-        "options_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "options_1_0@2"
-          ]
-        },
-        "options_1_0@2": {
-          "field": 0,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "options_1_0@3"
-          ]
-        },
-        "options_1_0@3": {
-          "field": 0,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "selected_1_1@0"
-          ]
-        },
-        "repeated_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "options_1_0@0"
-          ]
-        },
-        "selected_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "repeated_1_2@0"
-          ]
-        }
-      }
+      "name": "chooser"
     }
   },
   "python_imports": {}

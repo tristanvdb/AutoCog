@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "e258f706a52920eb",
-    "timestamp": "2026-05-29T02:08:26.049Z",
-    "uid": "31bfe44446cc259c",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:53.812Z",
+    "uid": "72fad04a187c4907",
+    "version": "0.5.4"
   },
   "prompts": {
     "calculator": {
@@ -20,15 +20,11 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "name": "left",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -39,9 +35,6 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "name": "right",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 1,
@@ -49,9 +42,7 @@
                 "range": null
               }
             ],
-            "name": "operands",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 0,
           "name": "operands",
@@ -61,15 +52,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "operation",
-            "refname": null,
             "type": "enum",
             "values": [
-              "\"add\"",
-              "\"subtract\"",
-              "\"multiply\"",
-              "\"divide\""
+              "add",
+              "subtract",
+              "multiply",
+              "divide"
             ]
           },
           "index": 1,
@@ -80,15 +68,11 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "fields": [
               {
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "name": "value",
-                  "refname": null,
                   "type": "completion"
                 },
                 "index": 0,
@@ -99,14 +83,11 @@
                 "depth": 2,
                 "desc": [],
                 "format": {
-                  "desc": [],
-                  "name": "confidence",
-                  "refname": null,
                   "type": "enum",
                   "values": [
-                    "\"high\"",
-                    "\"medium\"",
-                    "\"low\""
+                    "high",
+                    "medium",
+                    "low"
                   ]
                 },
                 "index": 1,
@@ -114,9 +95,7 @@
                 "range": null
               }
             ],
-            "name": "result",
-            "refname": null,
-            "type": "record"
+            "type": "struct"
           },
           "index": 2,
           "name": "result",

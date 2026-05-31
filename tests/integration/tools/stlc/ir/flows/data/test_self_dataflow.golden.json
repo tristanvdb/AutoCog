@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "fdc2cfcea2c2341e",
-    "timestamp": "2026-05-29T02:07:52.672Z",
-    "uid": "44352c82436e68a9",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:43.051Z",
+    "uid": "52058d53cf28dcd7",
+    "version": "0.5.4"
   },
   "prompts": {
     "solver": {
@@ -61,10 +61,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "topic",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -75,10 +72,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 15,
-            "name": "hint",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -92,10 +86,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "attempt",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,

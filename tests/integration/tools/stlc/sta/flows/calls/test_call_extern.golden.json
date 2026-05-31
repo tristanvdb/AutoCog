@@ -21,12 +21,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "717d610785ec56ee",
-    "timestamp": "2026-05-29T02:07:43.471Z",
-    "uid": "ce60955e1357afac",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:19.087Z",
+    "uid": "9f95e810c71fc19b",
+    "version": "0.5.4"
   },
   "prompts": {
     "main_prompt": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -141,57 +168,7 @@
           "type": "return"
         }
       },
-      "name": "main_prompt",
-      "sequence": [
-        "root@",
-        "input_1_0@0",
-        "processed_1_1@0",
-        "result_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "input_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "processed_1_1@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "processed_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "result_1_2@0"
-          ]
-        },
-        "result_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "input_1_0@0"
-          ]
-        }
-      }
+      "name": "main_prompt"
     }
   },
   "python_imports": {

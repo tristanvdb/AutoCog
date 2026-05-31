@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "0107d97f1cc985c2",
-    "timestamp": "2026-05-29T02:07:45.350Z",
-    "uid": "cdedf8f44333d375",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:40.725Z",
+    "uid": "2753c8027ea5aea6",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -56,10 +56,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "results",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -72,10 +69,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "summary",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -135,10 +129,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 5,
-            "name": "item",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -149,10 +140,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "output",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

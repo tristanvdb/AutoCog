@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "d94ad1f37e3e63b0",
-    "timestamp": "2026-05-30T16:16:19.791Z",
-    "uid": "93feaea33eaad552",
+    "timestamp": "2026-05-31T00:52:50.965Z",
+    "uid": "0fc512560c95cc86",
     "version": "0.5.4"
   },
   "prompts": {
@@ -59,59 +59,51 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 50,
-                  "name": "Message",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Message",
-                "range": null
-              }
-            ],
-            "name": "greeting",
-            "refname": "Message",
-            "type": "record"
+            "length": 50,
+            "type": "completion"
           },
           "index": 0,
           "name": "greeting",
-          "range": null
+          "range": null,
+          "refname": "Message",
+          "search": {
+            "branch": {
+              "width": 2
+            },
+            "enum": {
+              "width": 3
+            },
+            "text": {
+              "ahead": 2,
+              "beams": 4,
+              "threshold": 0.2
+            }
+          }
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 50,
-                  "name": "SpecialText",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "SpecialText",
-                "range": null
-              }
-            ],
-            "name": "creative",
-            "refname": "SpecialText",
-            "type": "record"
+            "length": 50,
+            "type": "completion"
           },
           "index": 1,
           "name": "creative",
-          "range": null
+          "range": null,
+          "refname": "SpecialText",
+          "search": {
+            "branch": {
+              "threshold": 0.2,
+              "width": 2
+            },
+            "enum": {
+              "width": 3
+            },
+            "text": {
+              "threshold": 0.2,
+              "width": 1
+            }
+          }
         }
       ],
       "flows": [],
@@ -151,20 +143,11 @@
         "label": null
       },
       "search": {
-        "branch": {
-          "width": 2
-        },
-        "enum": {
-          "width": 3
-        },
         "flow": {
           "threshold": 0.05
         },
         "queue": {
           "metric": "mean_logprob"
-        },
-        "text": {
-          "threshold": 0.2
         }
       }
     }
@@ -177,10 +160,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 50,
-            "name": "Message",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -203,10 +183,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 50,
-            "name": "SpecialText",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

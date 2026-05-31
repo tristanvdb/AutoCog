@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "ec5576593c7b74c4",
-    "timestamp": "2026-05-29T02:08:08.397Z",
-    "uid": "b226ddd478e7815b",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:48.164Z",
+    "uid": "e925a532b575c293",
+    "version": "0.5.4"
   },
   "prompts": {
     "test": {
@@ -20,29 +20,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Item",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Item",
-                "range": null
-              }
-            ],
-            "name": "item",
-            "refname": "Item",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "item",
-          "range": null
+          "range": null,
+          "refname": "Item"
         }
       ],
       "flows": [],
@@ -59,9 +42,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Item",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

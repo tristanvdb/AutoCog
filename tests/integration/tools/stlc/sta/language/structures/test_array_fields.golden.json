@@ -18,12 +18,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "b389733ea77b891e",
-    "timestamp": "2026-05-29T02:08:17.883Z",
-    "uid": "5f5f8a6ecf5f7f7b",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:30.371Z",
+    "uid": "2d4cf66f56700b5b",
+    "version": "0.5.4"
   },
   "prompts": {
     "collector": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": 2
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": 3
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -63,9 +90,9 @@
           "format": {
             "type": "enum",
             "values": [
-              "\"a\"",
-              "\"b\"",
-              "\"c\""
+              "a",
+              "b",
+              "c"
             ]
           },
           "index": 2,
@@ -107,272 +134,7 @@
           "type": "return"
         }
       },
-      "name": "collector",
-      "sequence": [
-        "root@",
-        "fixed_1_0@0",
-        "fixed_1_0@1",
-        "fixed_1_0@2",
-        "fixed_1_0@3",
-        "fixed_1_0@4",
-        "ranged_1_1@0",
-        "ranged_1_1@1",
-        "ranged_1_1@2",
-        "ranged_1_1@3",
-        "ranged_1_1@4",
-        "ranged_1_1@5",
-        "ranged_1_1@6",
-        "ranged_1_1@7",
-        "variable_1_2@0",
-        "variable_1_2@1",
-        "variable_1_2@2",
-        "variable_1_2@3",
-        "variable_1_2@4",
-        "variable_1_2@5",
-        "variable_1_2@6",
-        "variable_1_2@7",
-        "variable_1_2@8",
-        "variable_1_2@9",
-        "next_1_3@0"
-      ],
-      "states": {
-        "fixed_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "fixed_1_0@1"
-          ]
-        },
-        "fixed_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "fixed_1_0@2"
-          ]
-        },
-        "fixed_1_0@2": {
-          "field": 0,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "fixed_1_0@3"
-          ]
-        },
-        "fixed_1_0@3": {
-          "field": 0,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "fixed_1_0@4"
-          ]
-        },
-        "fixed_1_0@4": {
-          "field": 0,
-          "indices": [
-            4
-          ],
-          "successors": [
-            "ranged_1_1@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "ranged_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "ranged_1_1@1"
-          ]
-        },
-        "ranged_1_1@1": {
-          "field": 1,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "ranged_1_1@2",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@2": {
-          "field": 1,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "ranged_1_1@3",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@3": {
-          "field": 1,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "ranged_1_1@4",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@4": {
-          "field": 1,
-          "indices": [
-            4
-          ],
-          "successors": [
-            "ranged_1_1@5",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@5": {
-          "field": 1,
-          "indices": [
-            5
-          ],
-          "successors": [
-            "ranged_1_1@6",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@6": {
-          "field": 1,
-          "indices": [
-            6
-          ],
-          "successors": [
-            "ranged_1_1@7",
-            "variable_1_2@0"
-          ]
-        },
-        "ranged_1_1@7": {
-          "field": 1,
-          "indices": [
-            7
-          ],
-          "successors": [
-            "variable_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "fixed_1_0@0"
-          ]
-        },
-        "variable_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "variable_1_2@1",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@1": {
-          "field": 2,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "variable_1_2@2",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@2": {
-          "field": 2,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "variable_1_2@3",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@3": {
-          "field": 2,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "variable_1_2@4",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@4": {
-          "field": 2,
-          "indices": [
-            4
-          ],
-          "successors": [
-            "variable_1_2@5",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@5": {
-          "field": 2,
-          "indices": [
-            5
-          ],
-          "successors": [
-            "variable_1_2@6",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@6": {
-          "field": 2,
-          "indices": [
-            6
-          ],
-          "successors": [
-            "variable_1_2@7",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@7": {
-          "field": 2,
-          "indices": [
-            7
-          ],
-          "successors": [
-            "variable_1_2@8",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@8": {
-          "field": 2,
-          "indices": [
-            8
-          ],
-          "successors": [
-            "variable_1_2@9",
-            "next_1_3@0"
-          ]
-        },
-        "variable_1_2@9": {
-          "field": 2,
-          "indices": [
-            9
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        }
-      }
+      "name": "collector"
     }
   },
   "python_imports": {}

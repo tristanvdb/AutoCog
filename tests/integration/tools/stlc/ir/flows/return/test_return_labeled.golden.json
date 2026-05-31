@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "a82db44d5e643e5d",
-    "timestamp": "2026-05-29T02:07:53.933Z",
-    "uid": "8b07a0f7be015b97",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:43.449Z",
+    "uid": "929825ab1bcb4722",
+    "version": "0.5.4"
   },
   "prompts": {
     "processor": {
@@ -40,37 +40,17 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Data",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Data",
-                "range": null
-              }
-            ],
-            "name": "input",
-            "refname": "Data",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "input",
-          "range": null
+          "range": null,
+          "refname": "Data"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "intermediate",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -81,9 +61,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "result",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,
@@ -137,9 +114,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Data",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

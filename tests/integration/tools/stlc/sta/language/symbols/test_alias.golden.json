@@ -3,22 +3,26 @@
     "main": {
       "inputs": {
         "long": {
+          "max_length": 50,
           "required": true,
-          "type": "object"
+          "type": "text"
         },
         "simple": {
+          "max_length": 10,
           "required": true,
-          "type": "object"
+          "type": "text"
         },
         "tech": {
+          "max_length": 20,
           "required": true,
-          "type": "object"
+          "type": "text"
         }
       },
       "outputs": {
         "_": {
+          "max_length": 20,
           "required": true,
-          "type": "object"
+          "type": "text"
         }
       },
       "prompt": "main"
@@ -27,12 +31,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "ab3a8df0b4f031d2",
-    "timestamp": "2026-05-29T02:08:28.097Z",
-    "uid": "03874a2bc5e81d44",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:33.668Z",
+    "uid": "5c5a2e1016de74aa",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -84,10 +115,13 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [],
+          "desc": [
+            "A formal message."
+          ],
           "flat_index": 0,
           "format": {
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "format_ref": "SimpleMessage",
           "index": 0,
@@ -95,23 +129,14 @@
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
+          "depth": 1,
+          "desc": [
+            "A casual message."
+          ],
           "flat_index": 1,
           "format": {
-            "length": 10,
+            "length": 50,
             "type": "completion"
-          },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 2,
-          "format": {
-            "type": "record"
           },
           "format_ref": "LongCasualMessage",
           "index": 1,
@@ -119,23 +144,14 @@
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 3,
-          "format": {
-            "length": 50,
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
           "depth": 1,
-          "desc": [],
-          "flat_index": 4,
+          "desc": [
+            "A technical message."
+          ],
+          "flat_index": 2,
           "format": {
-            "type": "record"
+            "length": 20,
+            "type": "completion"
           },
           "format_ref": "TechnicalMessage",
           "index": 2,
@@ -143,30 +159,18 @@
           "range": null
         },
         {
-          "depth": 2,
-          "desc": [],
-          "flat_index": 5,
-          "format": {
-            "length": 20,
-            "type": "completion"
-          },
-          "index": 0,
-          "name": "Message",
-          "range": null
-        },
-        {
           "depth": 1,
           "desc": [
             "the next step"
           ],
-          "flat_index": 6,
+          "flat_index": 3,
           "format": {
             "type": "enum",
             "values": [
               "return"
             ]
           },
-          "index": 6,
+          "index": 3,
           "name": "next",
           "range": null
         }
@@ -202,120 +206,7 @@
           "type": "return"
         }
       },
-      "name": "main",
-      "sequence": [
-        "root@",
-        "simple_1_0@0",
-        "Message_2_1@0_0",
-        "simple_1_0@1",
-        "long_1_2@0",
-        "Message_2_3@0_0",
-        "long_1_2@1",
-        "tech_1_4@0",
-        "Message_2_5@0_0",
-        "tech_1_4@1",
-        "next_1_6@0"
-      ],
-      "states": {
-        "Message_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "simple_1_0@1"
-          ]
-        },
-        "Message_2_3@0_0": {
-          "field": 3,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "long_1_2@1"
-          ]
-        },
-        "Message_2_5@0_0": {
-          "field": 5,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "tech_1_4@1"
-          ]
-        },
-        "long_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "Message_2_3@0_0"
-          ]
-        },
-        "long_1_2@1": {
-          "field": 2,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "tech_1_4@0"
-          ]
-        },
-        "next_1_6@0": {
-          "field": 6,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "simple_1_0@0"
-          ]
-        },
-        "simple_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "Message_2_1@0_0"
-          ]
-        },
-        "simple_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "long_1_2@0"
-          ]
-        },
-        "tech_1_4@0": {
-          "field": 4,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "Message_2_5@0_0"
-          ]
-        },
-        "tech_1_4@1": {
-          "field": 4,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "next_1_6@0"
-          ]
-        }
-      }
+      "name": "main"
     }
   },
   "python_imports": {}

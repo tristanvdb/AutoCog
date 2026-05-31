@@ -55,8 +55,7 @@ check("emit has prompt 'test'", "test" in prompts)
 
 prompt = prompts["test"]
 check("prompt has fields", "fields" in prompt)
-check("prompt has states", "states" in prompt)
-check("prompt has sequence", "sequence" in prompt)
+check("prompt has abstracts", "abstracts" in prompt)
 check("prompt has flows", "flows" in prompt)
 check("prompt has channels", "channels" in prompt)
 

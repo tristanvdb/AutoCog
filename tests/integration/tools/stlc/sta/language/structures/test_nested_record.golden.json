@@ -18,12 +18,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "af33447506c78ebc",
-    "timestamp": "2026-05-29T02:08:22.757Z",
-    "uid": "c59d59d52073dd09",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:32.032Z",
+    "uid": "a22b02e87cbee818",
+    "version": "0.5.4"
   },
   "prompts": {
     "location": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 0,
+          "field": 0,
+          "flow": 2
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 1,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -64,59 +86,7 @@
         }
       ],
       "flows": {},
-      "name": "location",
-      "sequence": [
-        "root@",
-        "address_1_0@0",
-        "street_2_1@0_0",
-        "city_2_2@0_0",
-        "address_1_0@1"
-      ],
-      "states": {
-        "address_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "street_2_1@0_0"
-          ]
-        },
-        "address_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": []
-        },
-        "city_2_2@0_0": {
-          "field": 2,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "address_1_0@1"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "address_1_0@0"
-          ]
-        },
-        "street_2_1@0_0": {
-          "field": 1,
-          "indices": [
-            0,
-            0
-          ],
-          "successors": [
-            "city_2_2@0_0"
-          ]
-        }
-      }
+      "name": "location"
     }
   },
   "python_imports": {}

@@ -20,12 +20,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "6d2b22253ecc28dd",
-    "timestamp": "2026-05-29T02:08:33.589Z",
-    "uid": "8fd351e38c90ecec",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:35.231Z",
+    "uid": "a46e1de11f05c481",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "clauses": [
@@ -127,99 +149,31 @@
           "type": "return"
         }
       },
-      "name": "main",
-      "sequence": [
-        "root@",
-        "all_pages_1_0@0",
-        "all_pages_1_0@1",
-        "all_pages_1_0@2",
-        "all_pages_1_0@3",
-        "all_pages_1_0@4",
-        "all_pages_1_0@5",
-        "summary_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "all_pages_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "all_pages_1_0@1"
-          ]
-        },
-        "all_pages_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "all_pages_1_0@2"
-          ]
-        },
-        "all_pages_1_0@2": {
-          "field": 0,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "all_pages_1_0@3"
-          ]
-        },
-        "all_pages_1_0@3": {
-          "field": 0,
-          "indices": [
-            3
-          ],
-          "successors": [
-            "all_pages_1_0@4"
-          ]
-        },
-        "all_pages_1_0@4": {
-          "field": 0,
-          "indices": [
-            4
-          ],
-          "successors": [
-            "all_pages_1_0@5"
-          ]
-        },
-        "all_pages_1_0@5": {
-          "field": 0,
-          "indices": [
-            5
-          ],
-          "successors": [
-            "summary_1_1@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "all_pages_1_0@0"
-          ]
-        },
-        "summary_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        }
-      }
+      "name": "main"
     },
     "section_writer": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": 2
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -298,57 +252,7 @@
           "type": "return"
         }
       },
-      "name": "section_writer",
-      "sequence": [
-        "root@",
-        "section_1_0@0",
-        "pages_1_1@0",
-        "pages_1_1@1",
-        "next_1_2@0"
-      ],
-      "states": {
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "pages_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "pages_1_1@1"
-          ]
-        },
-        "pages_1_1@1": {
-          "field": 1,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "section_1_0@0"
-          ]
-        },
-        "section_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "pages_1_1@0"
-          ]
-        }
-      }
+      "name": "section_writer"
     }
   },
   "python_imports": {}

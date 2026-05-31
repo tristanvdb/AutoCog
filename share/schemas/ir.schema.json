@@ -154,6 +154,22 @@
         },
         "format": {
           "$ref": "#/$defs/field_format"
+        },
+        "refname": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refargs": {
+          "type": "object"
+        },
+        "search": {
+          "$ref": "#/$defs/search_policy"
         }
       },
       "required": [
@@ -175,40 +191,11 @@
             "completion",
             "enum",
             "choice",
-            "record"
+            "struct"
           ]
-        },
-        "name": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "refname": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "desc": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         },
         "length": {
           "type": "integer"
-        },
-        "threshold": {
-          "type": "number"
         },
         "values": {
           "type": "array",
@@ -236,6 +223,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/field"
+          }
+        },
+        "within": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       },
@@ -595,6 +588,22 @@
         "source"
       ],
       "additionalProperties": false
+    },
+    "search_policy": {
+      "type": "object",
+      "description": "Resolved search policy: category -> param -> scalar (OPEN).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "null"
+          ]
+        }
+      }
     }
   }
 }

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "c74c39e83c66d581",
-    "timestamp": "2026-05-29T02:08:13.601Z",
-    "uid": "0ad1aeacbcde2b6a",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:49.742Z",
+    "uid": "bb60b133faa08147",
+    "version": "0.5.4"
   },
   "prompts": {
     "storage": {
@@ -20,88 +20,43 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 10,
-                  "name": "Container",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Container",
-                "range": null
-              }
-            ],
-            "name": "small",
-            "refname": "Container",
-            "type": "record"
+            "length": 10,
+            "type": "completion"
           },
           "index": 0,
           "name": "small",
-          "range": null
+          "range": null,
+          "refargs": {
+            "size": 10
+          },
+          "refname": "Container"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 25,
-                  "name": "Container",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Container",
-                "range": null
-              }
-            ],
-            "name": "medium",
-            "refname": "Container",
-            "type": "record"
+            "length": 25,
+            "type": "completion"
           },
           "index": 1,
           "name": "medium",
-          "range": null
+          "range": null,
+          "refargs": {
+            "size": 25
+          },
+          "refname": "Container"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 50,
-                  "name": "Container",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Container",
-                "range": null
-              }
-            ],
-            "name": "large",
-            "refname": "Container",
-            "type": "record"
+            "length": 50,
+            "type": "completion"
           },
           "index": 2,
           "name": "large",
-          "range": null
+          "range": null,
+          "refname": "Container"
         }
       ],
       "flows": [],
@@ -136,10 +91,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "Container",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -156,10 +108,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 25,
-            "name": "Container",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -176,10 +125,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 50,
-            "name": "Container",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "b00a05d75ed3ae03",
-    "timestamp": "2026-05-29T02:08:32.924Z",
-    "uid": "f43f1229fcec800b",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:55.915Z",
+    "uid": "c44b86e37f5f94af",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -77,10 +77,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "responses",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -93,10 +90,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "conclusion",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -156,10 +150,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 10,
-            "name": "task",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -170,10 +161,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "response",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,

@@ -23,12 +23,39 @@
   "metadata": {
     "format": "sta",
     "source_uid": "a82db44d5e643e5d",
-    "timestamp": "2026-05-29T02:07:53.301Z",
-    "uid": "00fbb329a5ede1ff",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:22.304Z",
+    "uid": "a976f240da52bac4",
+    "version": "0.5.4"
   },
   "prompts": {
     "processor": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 3,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -122,57 +149,7 @@
           "type": "return"
         }
       },
-      "name": "processor",
-      "sequence": [
-        "root@",
-        "input_1_0@0",
-        "intermediate_1_1@0",
-        "result_1_2@0",
-        "next_1_3@0"
-      ],
-      "states": {
-        "input_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "intermediate_1_1@0"
-          ]
-        },
-        "intermediate_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "result_1_2@0"
-          ]
-        },
-        "next_1_3@0": {
-          "field": 3,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "result_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_3@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "input_1_0@0"
-          ]
-        }
-      }
+      "name": "processor"
     }
   },
   "python_imports": {}

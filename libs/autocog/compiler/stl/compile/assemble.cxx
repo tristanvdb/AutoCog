@@ -50,9 +50,14 @@ static void lower_search(
         std::string category;
         std::string key;
         if (loc.size() == 1) {
-            // No category prefix → bare param under the "" category.
-            category = "";
-            key = loc.front().data.name;
+            // No category prefix: a search param must be category-qualified
+            // (text/enum/branch/flow/queue). An un-prefixed param is almost
+            // certainly an authoring mistake — warn and drop it (never stored).
+            driver.emit_warning(
+                "search parameter '" + loc.front().data.name + "' has no category "
+                "prefix (expected e.g. text." + loc.front().data.name + "); ignoring",
+                param.location);
+            continue;
         } else {
             auto it = loc.begin();
             category = it->data.name;

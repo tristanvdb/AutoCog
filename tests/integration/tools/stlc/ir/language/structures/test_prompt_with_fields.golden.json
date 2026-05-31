@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "a9e6516baef640dd",
-    "timestamp": "2026-05-29T02:08:24.769Z",
-    "uid": "c4b6c94c129cff4d",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:53.403Z",
+    "uid": "6d9ea9da0a50d92c",
+    "version": "0.5.4"
   },
   "prompts": {
     "person": {
@@ -20,63 +20,29 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Name",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Name",
-                "range": null
-              }
-            ],
-            "name": "name",
-            "refname": "Name",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "name",
-          "range": null
+          "range": null,
+          "refname": "Name"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Age",
-                  "refname": null,
-                  "type": "enum",
-                  "values": [
-                    "\"child\"",
-                    "\"teen\"",
-                    "\"adult\"",
-                    "\"senior\""
-                  ]
-                },
-                "index": 0,
-                "name": "Age",
-                "range": null
-              }
-            ],
-            "name": "age",
-            "refname": "Age",
-            "type": "record"
+            "type": "enum",
+            "values": [
+              "child",
+              "teen",
+              "adult",
+              "senior"
+            ]
           },
           "index": 1,
           "name": "age",
-          "range": null
+          "range": null,
+          "refname": "Age"
         }
       ],
       "flows": [],
@@ -93,15 +59,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Age",
-            "refname": null,
             "type": "enum",
             "values": [
-              "\"child\"",
-              "\"teen\"",
-              "\"adult\"",
-              "\"senior\""
+              "child",
+              "teen",
+              "adult",
+              "senior"
             ]
           },
           "index": 0,
@@ -118,9 +81,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Name",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

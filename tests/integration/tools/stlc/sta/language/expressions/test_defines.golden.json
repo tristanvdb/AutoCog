@@ -14,12 +14,24 @@
   "metadata": {
     "format": "sta",
     "source_uid": "ec5576593c7b74c4",
-    "timestamp": "2026-05-29T02:08:07.816Z",
-    "uid": "a8acf5c03895d294",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:27.182Z",
+    "uid": "85503f7776df457a",
+    "version": "0.5.4"
   },
   "prompts": {
     "test": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 0,
+          "field": 0,
+          "flow": -1
+        }
+      ],
       "channels": [],
       "desc": [],
       "fields": [
@@ -37,27 +49,7 @@
         }
       ],
       "flows": {},
-      "name": "test",
-      "sequence": [
-        "root@",
-        "item_1_0@0"
-      ],
-      "states": {
-        "item_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "item_1_0@0"
-          ]
-        }
-      }
+      "name": "test"
     }
   },
   "python_imports": {}

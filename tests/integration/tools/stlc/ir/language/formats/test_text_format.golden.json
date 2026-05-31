@@ -5,10 +5,10 @@
   },
   "metadata": {
     "format": "ir",
-    "source_uid": "dcb78f2813d10966",
-    "timestamp": "2026-05-29T02:08:15.982Z",
-    "uid": "03bb66cce91ee2fb",
-    "version": "0.5.3"
+    "source_uid": "fda273b190ca6903",
+    "timestamp": "2026-05-31T00:52:50.550Z",
+    "uid": "c6076ed5d5fa1764",
+    "version": "0.5.4"
   },
   "prompts": {
     "writer": {
@@ -20,69 +20,36 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 20,
-                  "name": "ShortText",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "ShortText",
-                "range": null
-              }
-            ],
-            "name": "title",
-            "refname": "ShortText",
-            "type": "record"
+            "length": 20,
+            "type": "completion"
           },
           "index": 0,
           "name": "title",
-          "range": null
+          "range": null,
+          "refname": "ShortText"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "length": 100,
-                  "name": "LongText",
-                  "refname": null,
-                  "threshold": 0.949999988079071,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "LongText",
-                "range": null
-              }
-            ],
-            "name": "content",
-            "refname": "LongText",
-            "type": "record"
+            "length": 100,
+            "type": "completion"
           },
           "index": 1,
           "name": "content",
-          "range": null
+          "range": null,
+          "refname": "LongText",
+          "search": {
+            "text": {
+              "threshold": 0.95
+            }
+          }
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 50,
-            "name": "summary",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,
@@ -122,11 +89,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 100,
-            "name": "LongText",
-            "refname": null,
-            "threshold": 0.949999988079071,
             "type": "completion"
           },
           "index": 0,
@@ -134,7 +97,12 @@
           "range": null
         }
       ],
-      "name": "LongText"
+      "name": "LongText",
+      "search": {
+        "text": {
+          "threshold": 0.95
+        }
+      }
     },
     "ShortText": {
       "desc": [],
@@ -143,10 +111,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
             "length": 20,
-            "name": "ShortText",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

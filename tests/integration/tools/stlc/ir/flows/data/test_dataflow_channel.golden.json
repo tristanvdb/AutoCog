@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "d627d3f737cf829b",
-    "timestamp": "2026-05-29T02:07:49.022Z",
-    "uid": "eb5d07c4d852d7fc",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:41.889Z",
+    "uid": "656cc1785d7c399a",
+    "version": "0.5.4"
   },
   "prompts": {
     "thinker": {
@@ -59,9 +59,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "problem",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -72,37 +69,17 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Hint",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Hint",
-                "range": null
-              }
-            ],
-            "name": "hint",
-            "refname": "Hint",
-            "type": "record"
+            "type": "completion"
           },
           "index": 1,
           "name": "hint",
-          "range": null
+          "range": null,
+          "refname": "Hint"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "solution",
-            "refname": null,
             "type": "completion"
           },
           "index": 2,
@@ -113,29 +90,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Hint",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Hint",
-                "range": null
-              }
-            ],
-            "name": "reflection",
-            "refname": "Hint",
-            "type": "record"
+            "type": "completion"
           },
           "index": 3,
           "name": "reflection",
-          "range": null
+          "range": null,
+          "refname": "Hint"
         }
       ],
       "flows": [],
@@ -170,9 +130,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Hint",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

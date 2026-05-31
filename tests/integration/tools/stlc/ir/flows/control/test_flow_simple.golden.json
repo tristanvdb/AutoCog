@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "273382d4ca76f033",
-    "timestamp": "2026-05-29T02:07:47.823Z",
-    "uid": "59e368cf8e114480",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:52:41.506Z",
+    "uid": "1f75388ecd54fce0",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -40,29 +40,12 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Task",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Task",
-                "range": null
-              }
-            ],
-            "name": "task",
-            "refname": "Task",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "task",
-          "range": null
+          "range": null,
+          "refname": "Task"
         }
       ],
       "flows": [
@@ -110,37 +93,17 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "fields": [
-              {
-                "depth": 1,
-                "desc": [],
-                "format": {
-                  "desc": [],
-                  "name": "Task",
-                  "refname": null,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "Task",
-                "range": null
-              }
-            ],
-            "name": "input",
-            "refname": "Task",
-            "type": "record"
+            "type": "completion"
           },
           "index": 0,
           "name": "input",
-          "range": null
+          "range": null,
+          "refname": "Task"
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "output",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -180,9 +143,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "input",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,
@@ -193,9 +153,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "output",
-            "refname": null,
             "type": "completion"
           },
           "index": 1,
@@ -235,9 +192,6 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "desc": [],
-            "name": "Task",
-            "refname": null,
             "type": "completion"
           },
           "index": 0,

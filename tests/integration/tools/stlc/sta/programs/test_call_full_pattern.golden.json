@@ -20,12 +20,34 @@
   "metadata": {
     "format": "sta",
     "source_uid": "b00a05d75ed3ae03",
-    "timestamp": "2026-05-29T02:08:32.212Z",
-    "uid": "4f8269ec3ab22583",
-    "version": "0.5.3"
+    "timestamp": "2026-05-31T00:53:34.841Z",
+    "uid": "cb6d7365224a65ac",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "clauses": [
@@ -142,69 +164,31 @@
           "type": "return"
         }
       },
-      "name": "main",
-      "sequence": [
-        "root@",
-        "responses_1_0@0",
-        "responses_1_0@1",
-        "responses_1_0@2",
-        "conclusion_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "conclusion_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "responses_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "responses_1_0@1"
-          ]
-        },
-        "responses_1_0@1": {
-          "field": 0,
-          "indices": [
-            1
-          ],
-          "successors": [
-            "responses_1_0@2"
-          ]
-        },
-        "responses_1_0@2": {
-          "field": 0,
-          "indices": [
-            2
-          ],
-          "successors": [
-            "conclusion_1_1@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "responses_1_0@0"
-          ]
-        }
-      }
+      "name": "main"
     },
     "task_runner": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
       "channels": [
         {
           "source": [
@@ -280,47 +264,7 @@
           "type": "return"
         }
       },
-      "name": "task_runner",
-      "sequence": [
-        "root@",
-        "task_1_0@0",
-        "response_1_1@0",
-        "next_1_2@0"
-      ],
-      "states": {
-        "next_1_2@0": {
-          "field": 2,
-          "indices": [
-            0
-          ],
-          "successors": []
-        },
-        "response_1_1@0": {
-          "field": 1,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "next_1_2@0"
-          ]
-        },
-        "root@": {
-          "field": -1,
-          "indices": [],
-          "successors": [
-            "task_1_0@0"
-          ]
-        },
-        "task_1_0@0": {
-          "field": 0,
-          "indices": [
-            0
-          ],
-          "successors": [
-            "response_1_1@0"
-          ]
-        }
-      }
+      "name": "task_runner"
     }
   },
   "python_imports": {}
