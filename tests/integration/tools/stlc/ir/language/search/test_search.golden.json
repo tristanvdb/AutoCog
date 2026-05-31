@@ -5,9 +5,9 @@
   },
   "metadata": {
     "format": "ir",
-    "source_uid": "d94ad1f37e3e63b0",
-    "timestamp": "2026-05-31T00:52:50.965Z",
-    "uid": "0fc512560c95cc86",
+    "source_uid": "8e03af46cd9a85f6",
+    "timestamp": "2026-05-31T02:49:25.486Z",
+    "uid": "2849a4ceb2746606",
     "version": "0.5.4"
   },
   "prompts": {
@@ -102,6 +102,70 @@
             "text": {
               "threshold": 0.2,
               "width": 1
+            }
+          }
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "extra detail block"
+          ],
+          "format": {
+            "fields": [
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "length": 30,
+                  "type": "completion"
+                },
+                "index": 0,
+                "name": "note",
+                "range": null,
+                "search": {
+                  "branch": {
+                    "width": 2
+                  },
+                  "enum": {
+                    "width": 2
+                  },
+                  "text": {
+                    "threshold": 0.3
+                  }
+                }
+              },
+              {
+                "depth": 2,
+                "desc": [],
+                "format": {
+                  "length": 20,
+                  "type": "completion"
+                },
+                "index": 1,
+                "name": "scored",
+                "range": null,
+                "search": {
+                  "branch": {
+                    "width": 2
+                  },
+                  "enum": {
+                    "width": 2
+                  },
+                  "text": {
+                    "beams": 2,
+                    "threshold": 0.3
+                  }
+                }
+              }
+            ],
+            "type": "struct"
+          },
+          "index": 2,
+          "name": "details",
+          "range": null,
+          "search": {
+            "branch": {
+              "width": 2
             }
           }
         }

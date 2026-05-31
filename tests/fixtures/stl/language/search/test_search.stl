@@ -33,6 +33,24 @@ prompt main {
   is {
     greeting is Message;
     creative is SpecialText;
+
+    // Inline struct with its own search policy and annotation, plus a nested
+    // self-form inline struct field (exercises the inline-struct cascade,
+    // self-form collapse, and inline annotate).
+    details is {
+      note is text<length=30>;
+      scored is {
+        is text<length=20>;
+        search {
+          text.beams is 2;
+        }
+      }
+      annotate "extra detail block";
+      search {
+        text.threshold is 0.3;
+        enum.width is 2;
+      }
+    }
   }
 
   search {
