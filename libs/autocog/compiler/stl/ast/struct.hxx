@@ -29,14 +29,17 @@ DATA(FormatRef) {
 TRAVERSE_CHILDREN(FormatRef, type, args, kwargs)
 
 DATA(Struct) {
+  // An inline/anonymous struct is an anonymous record. Like a named record, its
+  // body is EITHER a self-form format (`is text<...>`, captured in `selfform`)
+  // OR a list of fields. It may also carry the constructs that describe it:
+  // `search` (exploration policy) and `annotate` (documentation). It does NOT
+  // accept `define` (a named-scope-only declaration) or prompt-only constructs
+  // (channel/flow/return).
+  ONODE(FormatRef) selfform;
   PNODES(Field) fields;
-  // An inline/anonymous struct may also carry the constructs that describe its
-  // fields: `search` (exploration policy) and `annotate` (documentation). It
-  // does NOT accept `define` (a named-scope-only declaration) or prompt-only
-  // constructs (channel/flow/return).
   VARIANTS(Annotate, Search) constructs;
 };
-TRAVERSE_CHILDREN(Struct, fields, constructs)
+TRAVERSE_CHILDREN(Struct, selfform, fields, constructs)
 
 DATA(Field) {
   NODE(Identifier) name;

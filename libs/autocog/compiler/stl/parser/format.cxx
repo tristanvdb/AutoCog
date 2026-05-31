@@ -8,11 +8,11 @@ template <>
 void Parser::parse<ast::Tag::Enum>(ParserState & state, ast::Data<ast::Tag::Enum> & type) {
   state.expect(TokenType::LPAREN, "");
   state.expect(TokenType::STRING_LITERAL, " when parsing enumerators.");
-  type.enumerators.emplace_back(state.previous.text);
+  clean_raw_string(state.previous.text, type.enumerators.emplace_back().data);
   while (!state.match(TokenType::RPAREN)) {
     state.expect(TokenType::COMMA, " when parsing enumerators.");
     state.expect(TokenType::STRING_LITERAL, " when parsing enumerators.");
-    type.enumerators.emplace_back(state.previous.text);     
+    clean_raw_string(state.previous.text, type.enumerators.emplace_back().data);
   }
 }
 

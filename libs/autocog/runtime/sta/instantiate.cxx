@@ -354,7 +354,7 @@ struct FTABuilder {
         json j = {
             {"uid", uid}, {"type", "complete"},
             {"length", cf.length.has_value() ? cf.length.value() : 50},
-            {"threshold", cf.threshold.has_value() ? cf.threshold.value() : search.completion.threshold},
+            {"threshold", search.completion.threshold},
             {"beams", search.completion.beams},
             {"ahead", search.completion.ahead},
             {"width", search.completion.width},

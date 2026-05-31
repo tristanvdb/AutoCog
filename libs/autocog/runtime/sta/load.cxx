@@ -13,22 +13,21 @@ static FieldFormat load_format(json const & j) {
     if (type == "completion") {
         CompletionFormat f;
         if (j.contains("length"))    f.length    = j["length"].get<int>();
-        if (j.contains("threshold")) f.threshold = j["threshold"].get<float>();
-        if (j.contains("beams"))     f.beams     = j["beams"].get<int>();
-        if (j.contains("ahead"))     f.ahead     = j["ahead"].get<int>();
-        if (j.contains("width"))     f.width     = j["width"].get<int>();
+        if (j.contains("within") && !j["within"].is_null()) {
+            std::vector<std::string> w;
+            for (auto const & s : j["within"]) w.push_back(s.get<std::string>());
+            f.within = std::move(w);
+        }
         return f;
     }
     if (type == "enum") {
         EnumFormat f;
         for (auto const & v : j["values"]) f.values.push_back(v.get<std::string>());
-        if (j.contains("width") && !j["width"].is_null()) f.width = j["width"].get<int>();
         return f;
     }
     if (type == "choice") {
         ChoiceFormat f;
         f.mode = j["mode"].get<std::string>();
-        if (j.contains("width") && !j["width"].is_null()) f.width = j["width"].get<int>();
         for (auto const & step : j["path"]) {
             std::string name = step["name"];
             std::optional<std::pair<int,int>> range;
@@ -266,15 +265,11 @@ static json format_to_json(FieldFormat const & fmt) {
         else if constexpr (std::is_same_v<T, CompletionFormat>) {
             json j = {{"type","completion"}};
             if (f.length) j["length"] = *f.length;
-            if (f.threshold) j["threshold"] = *f.threshold;
-            if (f.beams) j["beams"] = *f.beams;
-            if (f.ahead) j["ahead"] = *f.ahead;
-            if (f.width) j["width"] = *f.width;
+            if (f.within) j["within"] = *f.within;
             return j;
         }
         else if constexpr (std::is_same_v<T, EnumFormat>) {
             json j = {{"type","enum"}, {"values", f.values}};
-            if (f.width) j["width"] = *f.width;
             return j;
         }
         else if constexpr (std::is_same_v<T, ChoiceFormat>) {
@@ -286,7 +281,6 @@ static json format_to_json(FieldFormat const & fmt) {
                 path.push_back(step);
             }
             json j = {{"type","choice"}, {"mode", f.mode}, {"path", path}};
-            if (f.width) j["width"] = *f.width;
             return j;
         }
         return json{{"type","unknown"}};

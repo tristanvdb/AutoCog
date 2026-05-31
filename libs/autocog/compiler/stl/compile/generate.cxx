@@ -20,76 +20,43 @@ namespace sta = autocog::runtime::sta;
 
 namespace {
 
-static sta::FieldFormat extract_format(ir::Format const * fmt) {
-    if (!fmt) return std::monostate{};
-
-    if (auto * c = dynamic_cast<ir::Completion const *>(fmt)) {
-        return sta::CompletionFormat{c->length, c->threshold, c->beams, c->ahead, c->width};
-    }
-    if (auto * e = dynamic_cast<ir::Enum const *>(fmt)) {
-        sta::EnumFormat ef;
-        ef.values = e->values;
-        ef.width = e->width;
-        return ef;
-    }
-    if (auto * ch = dynamic_cast<ir::Choice const *>(fmt)) {
-        sta::ChoiceFormat cf;
-        cf.mode = ch->mode;
-        cf.width = ch->width;
-        for (auto const & step : ch->path.steps) {
-            cf.path.emplace_back(step.name, step.range);
+// Convert an IR leaf format (variant alternative) to the STA FieldFormat.
+// The struct (sub-fields) arm is handled by the caller (collect_fields), not here.
+static sta::FieldFormat extract_format(ir::Format const & fmt) {
+    return std::visit([](auto const & f) -> sta::FieldFormat {
+        using T = std::decay_t<decltype(f)>;
+        if constexpr (std::is_same_v<T, ir::Completion>) {
+            sta::CompletionFormat cf;
+            cf.length = f.length;
+            cf.within = f.within;
+            return cf;
+        } else if constexpr (std::is_same_v<T, ir::Enum>) {
+            sta::EnumFormat ef;
+            ef.values = f.values;
+            return ef;
+        } else if constexpr (std::is_same_v<T, ir::Choice>) {
+            sta::ChoiceFormat chf;
+            chf.mode = f.mode;
+            for (auto const & step : f.path.steps) {
+                chf.path.emplace_back(step.name, step.range);
+            }
+            return chf;
+        } else {
+            // struct (vector<Field>) → record (no leaf format); handled by caller.
+            return std::monostate{};
         }
-        return cf;
-    }
-    // RecordFormat → record (no format)
-    return std::monostate{};
+    }, fmt);
 }
 
-// Resolve through single-field record wrappers (type aliases).
-// Records like `Age { is enum(...); }` or `Title { is Sentence<50>; }`
-// are transparent — their single child's format replaces the parent.
-// A type alias has child.name == record type name (stored in rf->refname).
-// Records with a distinct sub-field name (e.g. `{ y is text; }`) are NOT aliases.
-// Returns the leaf RecordFormat (multi-field) or nullptr (fully inlined).
-static ir::RecordFormat const * resolve_transparent(
-    ir::RecordFormat const * rf,
-    sta::FieldInfo & info
-) {
-    while (rf && rf->fields.size() == 1) {
-        auto const & child = *rf->fields[0];
-        // Only unwrap type aliases: child.name matches the original record type name
-        std::string type_name = rf->refname.value_or(rf->name);
-        if (child.name != type_name) {
-            // Real sub-field with its own name — preserve the record structure
-            break;
-        }
-        // Capture record name from the inner field (the record's own name)
-        if (!info.format_ref) {
-            info.format_ref = child.name;
-        }
-        // Capture format description from the record definition
-        if (info.format_desc.empty() && !rf->desc.empty()) {
-            info.format_desc = rf->desc;
-        }
-        // Inherit field desc from the record only if field has none
-        if (info.desc.empty() && !rf->desc.empty()) {
-            info.desc = rf->desc;
-        }
-        if (!child.format.has_value()) return nullptr;
-        auto const & child_fmt = child.format.value();
-        auto * inner_rf = dynamic_cast<ir::RecordFormat const *>(child_fmt.get());
-        if (inner_rf) {
-            rf = inner_rf;
-        } else {
-            info.format = extract_format(child_fmt.get());
-            return nullptr;
+// Convert resolved IR search policies to the STA SearchParams shape.
+static sta::SearchParams convert_policies(ir::SearchPolicies const & pol) {
+    sta::SearchParams out;
+    for (auto const & [category, params] : pol) {
+        for (auto const & [key, val] : params) {
+            std::visit([&](auto const & v) { out[category][key] = v; }, val);
         }
     }
-    // Multi-field or preserved single-field record: capture name
-    if (rf && !info.format_ref) {
-        info.format_ref = rf->name;
-    }
-    return rf;
+    return out;
 }
 
 static void collect_fields(
@@ -114,32 +81,22 @@ static void collect_fields(
         info.flat_index = static_cast<int>(flat.size());
         info.range = f.range;
         info.desc = f.desc;
+        info.format_ref = f.refname;       // collapsed self-form record name, if any
+        info.search = convert_policies(f.search);
 
-        if (f.format.has_value()) {
-            auto const & fmt = f.format.value();
-            info.format = extract_format(fmt.get());
-            // Capture format reference name
-            if (fmt->refname) info.format_ref = *fmt->refname;
-
-            if (auto * rf = dynamic_cast<ir::RecordFormat const *>(fmt.get())) {
-                // Check if this is a transparent single-field record
-                auto * real_rf = resolve_transparent(rf, info);
-                if (real_rf) {
-                    // Multi-field record: add as record node, recurse
-                    flat.push_back(&f);
-                    infos.push_back(std::move(info));
-                    collect_fields(flat, infos, real_rf->fields, infos.back().depth + 1);
-                } else {
-                    // Fully inlined: add as leaf field
-                    flat.push_back(&f);
-                    infos.push_back(std::move(info));
-                }
-                continue;
-            }
+        // Struct (container) field: monostate format, recurse into sub-fields.
+        // Leaf field: extract the leaf format. The IR already collapsed
+        // transparent/self-form records into leaves, so no resolve_transparent.
+        if (f.is_struct()) {
+            auto const & sub = std::get<std::vector<std::unique_ptr<ir::Field>>>(f.format);
+            flat.push_back(&f);
+            infos.push_back(std::move(info));
+            collect_fields(flat, infos, sub, infos.back().depth + 1);
+        } else {
+            info.format = extract_format(f.format);
+            flat.push_back(&f);
+            infos.push_back(std::move(info));
         }
-
-        flat.push_back(&f);
-        infos.push_back(std::move(info));
     }
 }
 

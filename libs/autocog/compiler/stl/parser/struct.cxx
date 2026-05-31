@@ -8,11 +8,16 @@ template <>
 void Parser::parse<ast::Tag::Struct>(ParserState & state, ast::Data<ast::Tag::Struct> & data) {
   state.expect(TokenType::LBRACE, " when starting to parse struct body.");
   while (!state.match(TokenType::RBRACE)) {
-    // An inline struct body holds fields plus the constructs that describe them:
-    // `search` (policy) and `annotate` (docs). Dispatch on the leading token;
-    // anything else is a field. (`define` and prompt-only constructs are not
-    // accepted here — an anonymous struct is not a named scope.)
-    if (state.current.type == TokenType::SEARCH) {
+    // An inline struct body holds EITHER a self-form format (`is <fmt>;`) or
+    // fields, plus the constructs that describe them: `search` (policy) and
+    // `annotate` (docs). Dispatch on the leading token; a bare `is` is the
+    // self-form, `name is ...` is a field. (`define` and prompt-only constructs
+    // are not accepted here — an anonymous struct is not a named scope.)
+    if (state.current.type == TokenType::IS) {
+      state.advance();  // consume `is`
+      data.selfform.emplace();
+      parse(state, data.selfform.value());
+    } else if (state.current.type == TokenType::SEARCH) {
       data.constructs.emplace_back(std::in_place_index<1>);
       auto & node = std::get<1>(data.constructs.back());
       parse(state, node);

@@ -27,7 +27,7 @@ static std::optional<int> eval_opt_int(
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
 
-// Lower an `ast::Search` block into ir::SearchParams. Each param's locator is a
+// Lower an `ast::Search` block into ir::SearchPolicies. Each param's locator is a
 // dotted path: the FIRST segment is the category (text/enum/branch/flow/queue,
 // or "" when no prefix), the remaining segments are joined with '.' as the
 // param key. The RHS expression is evaluated at compile time (constexpr-style)
@@ -42,7 +42,7 @@ static void lower_search(
     ir::VarMap & ctx,
     SearchScope structural_scope,
     Driver & driver,
-    ir::SearchParams & out
+    ir::SearchPolicies & out
 ) {
     for (auto const & param : search.data.params) {
         auto const & loc = param.data.locator;
@@ -75,6 +75,57 @@ static void lower_search(
         auto val = evaluator.evaluate_expression(scope, param.data.value, ctx);
         out[category][key] = val;
     }
+}
+
+// Merge search policy layers, innermost-wins, per-param. `base` is the outer
+// (enclosing) policy; `over` overrides it. Categories and params present only
+// in `base` are inherited; those in `over` replace the corresponding entry.
+static ir::SearchPolicies merge_search(
+    ir::SearchPolicies base, ir::SearchPolicies const & over
+) {
+    for (auto const & [category, params] : over) {
+        for (auto const & [key, val] : params) {
+            base[category][key] = val;
+        }
+    }
+    return base;
+}
+
+// Keep only the listed categories (drop the rest). Used to prune a merged
+// policy to what a given site consumes (leaf: text/enum + branch; container:
+// branch only; prompt: flow/queue).
+static ir::SearchPolicies prune_search(
+    ir::SearchPolicies const & in,
+    std::initializer_list<char const *> keep
+) {
+    ir::SearchPolicies out;
+    for (char const * cat : keep) {
+        auto it = in.find(cat);
+        if (it != in.end() && !it->second.empty()) out[cat] = it->second;
+    }
+    return out;
+}
+
+// Collect an inline struct's own `search { }` constructs into a SearchPolicies
+// (merged in document order). Constructs live on ast::Struct.constructs as a
+// variant of Annotate|Search; only Search contributes here.
+static ir::SearchPolicies collect_struct_search(
+    ast::Struct const & s,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    Driver & driver
+) {
+    ir::SearchPolicies out;
+    for (auto const & construct : s.data.constructs) {
+        std::visit([&](auto const & c) {
+            using T = std::decay_t<decltype(c)>;
+            if constexpr (std::is_same_v<T, ast::Search>) {
+                lower_search(c, evaluator, scope, ctx, SearchScope::Record, driver, out);
+            }
+        }, construct);
+    }
+    return out;
 }
 
 static std::vector<ir::PathStep> convert_path(
@@ -162,7 +213,18 @@ static std::optional<std::string> eval_alias(
 }
 
 // Forward declaration
-static std::unique_ptr<ir::Format> generate_format(
+// Result of lowering a field's type. Carries the structural format variant,
+// optional named-record provenance, and (for record refs) the record's own
+// search { } policy to fold into the cascade.
+struct FormatResult {
+    ir::Format format;
+    std::optional<std::string> refname;
+    ir::VarMap refargs;
+    ir::SearchPolicies own_search;   // the referenced record's own search { }
+    std::vector<std::string> desc;   // annotations from a referenced record
+};
+
+static FormatResult generate_format(
     std::string const & field_name,
     ast::FormatRef const & fref,
     Evaluator & evaluator,
@@ -182,8 +244,14 @@ static void generate_fields(
     InstantiationGraphBuilder & builder,
     Driver & driver,
     int depth,
-    std::vector<std::unique_ptr<ir::Field>> & out
+    std::vector<std::unique_ptr<ir::Field>> & out,
+    ir::SearchPolicies const & enclosing
 ) {
+    // The policy in scope for this struct's fields = enclosing (file/prompt/
+    // outer structs) merged with this struct's own search { } (innermost wins).
+    ir::SearchPolicies here = merge_search(enclosing,
+        collect_struct_search(s, evaluator, scope, ctx, driver));
+
     int index = 0;
     for (auto const & field_ptr : s.data.fields) {
         if (!field_ptr) continue;
@@ -201,14 +269,62 @@ static void generate_fields(
 
         std::visit([&](auto const & type) {
             using T = std::decay_t<decltype(type)>;
-            if constexpr (std::is_same_v<T, std::monostate>) {
-                // no format
-            } else if constexpr (std::is_same_v<T, ast::FormatRef>) {
-                f->format = generate_format(name, type, evaluator, scope, ctx, fileid, builder, driver);
+            if constexpr (std::is_same_v<T, ast::FormatRef>) {
+                auto res = generate_format(name, type, evaluator, scope, ctx, fileid, builder, driver);
+                f->format = std::move(res.format);
+                f->refname = res.refname;
+                f->refargs = res.refargs;
+                for (auto & d : res.desc) f->desc.push_back(d);
+                // The field's policy in scope, plus the referenced record's own
+                // search { } as the innermost layer (only meaningful for a
+                // collapsed self-form record; empty otherwise).
+                ir::SearchPolicies field_here = merge_search(here, res.own_search);
+                if (f->is_struct()) {
+                    f->search = prune_search(field_here, {"branch"});
+                } else {
+                    f->search = prune_search(field_here, {"text", "enum", "branch"});
+                }
             } else if constexpr (std::is_same_v<T, ast::Struct>) {
-                auto rf = std::make_unique<ir::RecordFormat>(name);
-                generate_fields(type, evaluator, scope, ctx, fileid, builder, driver, depth + 1, rf->fields);
-                f->format = std::move(rf);
+                // The inline struct's own search { } is the innermost policy
+                // layer for this field (and for its sub-fields if a container).
+                ir::SearchPolicies struct_here = merge_search(here,
+                    collect_struct_search(type, evaluator, scope, ctx, driver));
+                // Inline-struct annotations -> field desc.
+                for (auto const & construct : type.data.constructs) {
+                    std::visit([&](auto const & c) {
+                        using C = std::decay_t<decltype(c)>;
+                        if constexpr (std::is_same_v<C, ast::Annotate>) {
+                            for (auto const & ann : c.data.annotations) {
+                                if (!ann.data.path) {
+                                    auto val = evaluator.evaluate_expression(scope, ann.data.description, ctx);
+                                    if (auto * sv = std::get_if<std::string>(&val)) f->desc.push_back(*sv);
+                                }
+                            }
+                        }
+                    }, construct);
+                }
+                if (type.data.selfform) {
+                    // Self-form inline struct: a leaf. Collapse the format in.
+                    auto res = generate_format(name, type.data.selfform.value(), evaluator, scope, ctx, fileid, builder, driver);
+                    f->format = std::move(res.format);
+                    f->refname = res.refname;
+                    f->refargs = res.refargs;
+                    for (auto & d : res.desc) f->desc.push_back(d);
+                    ir::SearchPolicies field_here = merge_search(struct_here, res.own_search);
+                    if (f->is_struct()) {
+                        f->search = prune_search(field_here, {"branch"});
+                    } else {
+                        f->search = prune_search(field_here, {"text", "enum", "branch"});
+                    }
+                } else {
+                    // Field-list inline struct: a container. The recursive
+                    // generate_fields merges this struct's own search itself, so
+                    // pass `here` (not struct_here) to avoid double-counting.
+                    std::vector<std::unique_ptr<ir::Field>> sub;
+                    generate_fields(type, evaluator, scope, ctx, fileid, builder, driver, depth + 1, sub, here);
+                    f->format = std::move(sub);
+                    f->search = prune_search(struct_here, {"branch"});
+                }
             }
         }, field.data.type);
 
@@ -216,7 +332,7 @@ static void generate_fields(
     }
 }
 
-static std::unique_ptr<ir::Format> generate_format(
+static FormatResult generate_format(
     std::string const & field_name,
     ast::FormatRef const & fref,
     Evaluator & evaluator,
@@ -226,43 +342,51 @@ static std::unique_ptr<ir::Format> generate_format(
     InstantiationGraphBuilder & builder,
     Driver & driver
 ) {
-    return std::visit([&](auto const & type) -> std::unique_ptr<ir::Format> {
+    FormatResult result;
+    std::visit([&](auto const & type) {
         using T = std::decay_t<decltype(type)>;
 
-        if constexpr (std::is_same_v<T, std::monostate>) {
-            return nullptr;
-
-        } else if constexpr (std::is_same_v<T, ast::Text>) {
-            auto fmt = std::make_unique<ir::Completion>(field_name);
+        if constexpr (std::is_same_v<T, ast::Text>) {
+            ir::Completion fmt;
             for (auto const & assign : fref.data.kwargs) {
                 auto k = assign.data.argument.data.name;
                 auto v = evaluator.evaluate_expression(scope, assign.data.value, ctx);
-                if (k == "length" && std::holds_alternative<int>(v)) fmt->length = std::get<int>(v);
-                else if (k == "threshold" && std::holds_alternative<float>(v)) fmt->threshold = std::get<float>(v);
-                else if (k == "beams" && std::holds_alternative<int>(v)) fmt->beams = std::get<int>(v);
-                else if (k == "ahead" && std::holds_alternative<int>(v)) fmt->ahead = std::get<int>(v);
-                else if (k == "width" && std::holds_alternative<int>(v)) fmt->width = std::get<int>(v);
+                if (k == "length" && std::holds_alternative<int>(v)) {
+                    fmt.length = std::get<int>(v);
+                } else if (k == "within") {
+                    // `within` (vocabulary restriction) — structural, under-defined.
+                    if (auto * sv = std::get_if<std::string>(&v)) fmt.within = std::vector<std::string>{*sv};
+                } else {
+                    driver.emit_error(
+                        "'" + k + "' is not a structural parameter of text "
+                        "(only length, within). Search tuning belongs in a "
+                        "search { text." + k + " is ...; } block.",
+                        assign.location);
+                }
             }
-            return fmt;
+            result.format = std::move(fmt);
 
         } else if constexpr (std::is_same_v<T, ast::Enum>) {
-            auto fmt = std::make_unique<ir::Enum>(field_name);
+            ir::Enum fmt;
             for (auto const & s : type.data.enumerators) {
-                fmt->values.push_back(s.data.value);
+                fmt.values.push_back(s.data.value);
             }
-            return fmt;
+            result.format = std::move(fmt);
 
         } else if constexpr (std::is_same_v<T, ast::Choice>) {
-            std::string mode = (type.data.mode == ast::ChoiceKind::Select) ? "select" : "repeat";
-            auto fmt = std::make_unique<ir::Choice>(field_name, mode);
+            ir::Choice fmt;
+            fmt.mode = (type.data.mode == ast::ChoiceKind::Select) ? "select" : "repeat";
             auto steps = convert_path(type.data.source, evaluator, scope, ctx);
-            fmt->path = ir::DocPath(std::move(steps), false, std::nullopt);
+            fmt.path = ir::DocPath(std::move(steps), false, std::nullopt);
             for (auto const & assign : fref.data.kwargs) {
                 auto k = assign.data.argument.data.name;
-                auto v = evaluator.evaluate_expression(scope, assign.data.value, ctx);
-                if (k == "width" && std::holds_alternative<int>(v)) fmt->width = std::get<int>(v);
+                driver.emit_error(
+                    "'" + k + "' is not a structural parameter of "
+                    + fmt.mode + " (only path). Search tuning belongs in a "
+                    "search { } block.",
+                    assign.location);
             }
-            return fmt;
+            result.format = std::move(fmt);
 
         } else if constexpr (std::is_same_v<T, ast::Identifier>) {
             auto rec_name = type.data.name;
@@ -273,38 +397,32 @@ static std::unique_ptr<ir::Format> generate_format(
                 kwargs[k] = v;
             }
             auto resolved = builder.resolve(rec_name, fileid);
-            if (!resolved) return nullptr;
+            if (!resolved) { result.format = std::vector<std::unique_ptr<ir::Field>>{}; return; }
 
             auto target_ctx = builder.eval_context(*resolved, kwargs);
             auto target_scope = std::to_string(resolved->fileid) + "::" + resolved->name;
 
             auto const * rec_ref = std::get_if<std::reference_wrapper<const ast::Record>>(&resolved->decl);
-            if (!rec_ref) return nullptr;
+            if (!rec_ref) { result.format = std::vector<std::unique_ptr<ir::Field>>{}; return; }
 
             auto const & rec_decl = rec_ref->get();
-            auto rf = std::make_unique<ir::RecordFormat>(field_name);
-            rf->refname = rec_name;  // Original record type name
+            result.refname = rec_name;
+            result.refargs = kwargs;
 
-            std::visit([&](auto const & body) {
-                using B = std::decay_t<decltype(body)>;
-                if constexpr (std::is_same_v<B, ast::Struct>) {
-                    generate_fields(body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver, 1, rf->fields);
-                } else if constexpr (std::is_same_v<B, ast::FormatRef>) {
-                    auto f = std::make_unique<ir::Field>(resolved->name, 1, 0);
-                    f->format = generate_format(resolved->name, body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver);
-                    rf->fields.push_back(std::move(f));
-                }
-            }, rec_decl.data.record);
-
+            // The referenced record's own search { } (folds into the field's
+            // policy as an inner layer).
             for (auto const & construct : rec_decl.data.constructs) {
                 std::visit([&](auto const & c) {
                     using C = std::decay_t<decltype(c)>;
-                    if constexpr (std::is_same_v<C, ast::Annotate>) {
+                    if constexpr (std::is_same_v<C, ast::Search>) {
+                        lower_search(c, evaluator, target_scope, target_ctx,
+                                     SearchScope::Record, driver, result.own_search);
+                    } else if constexpr (std::is_same_v<C, ast::Annotate>) {
                         for (auto const & ann : c.data.annotations) {
                             if (!ann.data.path) {
                                 auto val = evaluator.evaluate_expression(target_scope, ann.data.description, target_ctx);
                                 if (auto * sv = std::get_if<std::string>(&val)) {
-                                    rf->desc.push_back(*sv);
+                                    result.desc.push_back(*sv);
                                 }
                             }
                         }
@@ -312,11 +430,29 @@ static std::unique_ptr<ir::Format> generate_format(
                 }, construct);
             }
 
-            return rf;
+            std::visit([&](auto const & body) {
+                using B = std::decay_t<decltype(body)>;
+                if constexpr (std::is_same_v<B, ast::Struct>) {
+                    // Multi-field record → struct (sub-fields). The record's own
+                    // search { } also flows down as enclosing for its fields.
+                    std::vector<std::unique_ptr<ir::Field>> sub;
+                    generate_fields(body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver, 1, sub, result.own_search);
+                    result.format = std::move(sub);
+                } else if constexpr (std::is_same_v<B, ast::FormatRef>) {
+                    // Self-form record → COLLAPSE into this field: take the
+                    // record's format directly. refname/own_search already set.
+                    auto inner = generate_format(field_name, body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver);
+                    result.format = std::move(inner.format);
+                    // A self-form record could itself reference another record;
+                    // merge nested provenance/policy conservatively.
+                    if (!inner.own_search.empty())
+                        result.own_search = merge_search(result.own_search, inner.own_search);
+                    for (auto & d : inner.desc) result.desc.push_back(d);
+                }
+            }, rec_decl.data.record);
         }
-
-        return nullptr;
     }, fref.data.type);
+    return result;
 }
 
 // ============================================================================
@@ -340,10 +476,14 @@ static void assemble_records(
         std::visit([&](auto const & body) {
             using T = std::decay_t<decltype(body)>;
             if constexpr (std::is_same_v<T, ast::Struct>) {
-                generate_fields(body, evaluator, scope, node.context, node.fileid, builder, driver, 1, rec->fields);
+                generate_fields(body, evaluator, scope, node.context, node.fileid, builder, driver, 1, rec->fields, ir::SearchPolicies{});
             } else if constexpr (std::is_same_v<T, ast::FormatRef>) {
                 auto f = std::make_unique<ir::Field>(node.base_name, 1, 0);
-                f->format = generate_format(node.base_name, body, evaluator, scope, node.context, node.fileid, builder, driver);
+                auto res = generate_format(node.base_name, body, evaluator, scope, node.context, node.fileid, builder, driver);
+                f->format = std::move(res.format);
+                f->refname = res.refname;
+                f->refargs = res.refargs;
+                for (auto & d : res.desc) f->desc.push_back(d);
                 rec->fields.push_back(std::move(f));
             }
         }, decl.data.record);
@@ -396,8 +536,24 @@ static void assemble_prompts(
         auto scope = std::to_string(node.fileid) + "::" + node.base_name;
         auto pmt = std::make_unique<ir::Prompt>(node.base_name, mangled, node.arguments);
 
+        // Collect the prompt's own search { } (all categories) up front. flow and
+        // queue stay on the prompt; text/enum/branch become the enclosing policy
+        // that cascades down onto the fields. (File-scope search { } is a further
+        // outer layer, not yet plumbed through the graph — TODO.)
+        ir::SearchPolicies prompt_policy;
+        for (auto const & construct : decl.data.constructs) {
+            std::visit([&](auto const & c) {
+                using T = std::decay_t<decltype(c)>;
+                if constexpr (std::is_same_v<T, ast::Search>) {
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, prompt_policy);
+                }
+            }, construct);
+        }
+        pmt->search = prune_search(prompt_policy, {"flow", "queue"});
+        ir::SearchPolicies field_enclosing = prune_search(prompt_policy, {"text", "enum", "branch"});
+
         if (decl.data.fields) {
-            generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields);
+            generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields, field_enclosing);
         }
 
         for (auto const & construct : decl.data.constructs) {
@@ -571,9 +727,9 @@ static void assemble_prompts(
                             }
                         }
                     }
-                } else if constexpr (std::is_same_v<T, ast::Search>) {
-                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, pmt->search);
                 }
+                // Search is handled up-front (prompt_policy) before field
+                // generation, so it is intentionally not processed here.
             }, construct);
         }
 

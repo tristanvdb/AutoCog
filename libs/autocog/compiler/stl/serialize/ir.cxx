@@ -71,42 +71,31 @@ static json clause_to_json(ir::Clause const & clause) {
 }
 
 static json field_to_json(ir::Field const & field);
+static json search_to_json(ir::SearchPolicies const & search);
 
-static json format_to_json(std::unique_ptr<ir::Format> const & format) {
-    if (!format) return nullptr;
-
+static json format_to_json(ir::Format const & format) {
     json j;
-    j["name"] = format->name;
-    j["desc"] = format->desc;
-    j["refname"] = format->refname.has_value() ? json(format->refname.value()) : json(nullptr);
-
-    if (auto * completion = dynamic_cast<ir::Completion const *>(format.get())) {
-        j["type"] = "completion";
-        if (completion->length.has_value()) j["length"] = completion->length.value();
-        if (completion->threshold.has_value()) j["threshold"] = completion->threshold.value();
-        if (completion->beams.has_value()) j["beams"] = completion->beams.value();
-        if (completion->ahead.has_value()) j["ahead"] = completion->ahead.value();
-        if (completion->width.has_value()) j["width"] = completion->width.value();
-        if (completion->within.has_value()) j["within"] = completion->within.value();
-    } else if (auto * enum_format = dynamic_cast<ir::Enum const *>(format.get())) {
-        j["type"] = "enum";
-        j["values"] = enum_format->values;
-        if (enum_format->width.has_value()) j["width"] = enum_format->width.value();
-    } else if (auto * choice = dynamic_cast<ir::Choice const *>(format.get())) {
-        j["type"] = "choice";
-        j["mode"] = choice->mode;
-        j["path"] = docpath_to_json(choice->path);
-        if (choice->width.has_value()) j["width"] = choice->width.value();
-    } else if (auto * record_format = dynamic_cast<ir::RecordFormat const *>(format.get())) {
-        j["type"] = "record";
-        j["fields"] = json::array();
-        for (auto const & field : record_format->fields) {
-            j["fields"].push_back(field_to_json(*field));
+    std::visit([&](auto const & fmt) {
+        using T = std::decay_t<decltype(fmt)>;
+        if constexpr (std::is_same_v<T, ir::Completion>) {
+            j["type"] = "completion";
+            if (fmt.length.has_value()) j["length"] = fmt.length.value();
+            if (fmt.within.has_value()) j["within"] = fmt.within.value();
+        } else if constexpr (std::is_same_v<T, ir::Enum>) {
+            j["type"] = "enum";
+            j["values"] = fmt.values;
+        } else if constexpr (std::is_same_v<T, ir::Choice>) {
+            j["type"] = "choice";
+            j["mode"] = fmt.mode;
+            j["path"] = docpath_to_json(fmt.path);
+        } else if constexpr (std::is_same_v<T, std::vector<std::unique_ptr<ir::Field>>>) {
+            j["type"] = "struct";
+            j["fields"] = json::array();
+            for (auto const & field : fmt) {
+                j["fields"].push_back(field_to_json(*field));
+            }
         }
-    } else {
-        j["type"] = "unknown";
-    }
-
+    }, format);
     return j;
 }
 
@@ -117,7 +106,10 @@ static json field_to_json(ir::Field const & field) {
     j["depth"] = field.depth;
     j["index"] = field.index;
     j["range"] = range_to_json(field.range);
-    j["format"] = field.format.has_value() ? format_to_json(field.format.value()) : json(nullptr);
+    j["format"] = format_to_json(field.format);
+    if (field.refname.has_value()) j["refname"] = field.refname.value();
+    if (!field.refargs.empty()) j["refargs"] = serialize::varmap_to_json(field.refargs);
+    if (!field.search.empty()) j["search"] = search_to_json(field.search);
     return j;
 }
 
@@ -215,7 +207,7 @@ static json return_to_json(ir::ReturnInfo const & ret) {
     return j;
 }
 
-static json search_to_json(ir::SearchParams const & search) {
+static json search_to_json(ir::SearchPolicies const & search) {
     // Emit only when non-empty; nested as { category: { param: value } }.
     json j = json::object();
     for (auto const & [category, params] : search) {

@@ -15,7 +15,7 @@ namespace autocog::compiler::stl::ir {
 using Value = std::variant<int, float, bool, std::string, std::nullptr_t>;
 using VarMap = std::unordered_map<std::string, Value>;
 
-// Search parameters carried from `search { <category>.<param> is <expr>; }`.
+// Search policies carried from `search { <category>.<param> is <expr>; }`.
 // Keyed by category (text/enum/branch/flow/queue), each holding an OPEN map of
 // param name -> compile-time-evaluated value. Intentionally not a fixed schema:
 // the param set is an experimentation surface, resolved/validated downstream
@@ -23,7 +23,7 @@ using VarMap = std::unordered_map<std::string, Value>;
 // A bare `param is value` with no category prefix lands under the "" category.
 // Category/scope rules (e.g. flow/queue are global+prompt only) are enforced
 // during graph->IR traversal, not at parse time.
-using SearchParams = std::map<std::string, VarMap>;
+using SearchPolicies = std::map<std::string, VarMap>;
 
 // Range for array indexing: [start:end] or [index]
 // None means no range, (n,n) means [n], (start,end) means [start:end]
@@ -76,134 +76,89 @@ struct Prompt;
 struct Record;
 using RecordPtr = std::unique_ptr<Record>;
 
-// Base class for field formats (types)
-struct Format : public Object {
-  std::optional<std::string> refname;  // For format aliases/references
+struct Field;
 
-  Format(std::string name_) :
-    Object(std::move(name_)),
-    refname(std::nullopt)
-  {}
+// ---------------------------------------------------------------------------
+// Field formats (types). These are plain value structs — no base class, no
+// virtuals. A field's format is a std::variant (see `Format` below) of the
+// concrete leaf formats plus a field-vector for the container/struct case.
+//
+// Formats carry ONLY structural/content attributes. The search-tuning
+// attributes that used to live here (threshold/beams/ahead/width) are now
+// search POLICIES on the Field (Field.search), with the field's own inline
+// kwargs folded in as the innermost policy layer during graph->IR.
+// ---------------------------------------------------------------------------
 
-  virtual ~Format() = default;
-  virtual std::unique_ptr<Format> clone() const = 0;  // Deep copy
-};
-
-// Text/Completion format: text<length=N, threshold=X, ...>
-struct Completion : public Format {
+// Text/Completion format: text<length=N, vocab=...>
+struct Completion {
   std::optional<int> length;
-  std::optional<float> threshold;
-  std::optional<int> beams;
-  std::optional<int> ahead;
-  std::optional<int> width;
-  std::optional<std::vector<std::string>> within;
-
-  Completion(std::string name_) :
-    Format(std::move(name_)),
-    length(std::nullopt),
-    threshold(std::nullopt),
-    beams(std::nullopt),
-    ahead(std::nullopt),
-    width(std::nullopt),
-    within(std::nullopt)
-  {}
-
-  std::unique_ptr<Format> clone() const override {
-    auto copy = std::make_unique<Completion>(name);
-    copy->desc = desc;
-    copy->refname = refname;
-    copy->length = length;
-    copy->threshold = threshold;
-    copy->beams = beams;
-    copy->ahead = ahead;
-    copy->width = width;
-    copy->within = within;
-    return copy;
-  }
+  std::optional<std::vector<std::string>> within;   // vocabulary restriction
 };
 
 // Enum format: enum("A", "B", "C")
-struct Enum : public Format {
+struct Enum {
   std::vector<std::string> values;
-  std::optional<int> width;
-
-  Enum(std::string name_) :
-    Format(std::move(name_)),
-    values(),
-    width(std::nullopt)
-  {}
-
-  std::unique_ptr<Format> clone() const override {
-    auto copy = std::make_unique<Enum>(name);
-    copy->desc = desc;
-    copy->refname = refname;
-    copy->values = values;
-    copy->width = width;
-    return copy;
-  }
 };
 
 // Choice format: select(source) or repeat(source)
-struct Choice : public Format {
+struct Choice {
   DocPath path;
-  std::string mode;  // "select" or "repeat"
-  std::optional<int> width;
-
-  Choice(std::string name_, std::string mode_) :
-    Format(std::move(name_)),
-    path(),
-    mode(std::move(mode_)),
-    width(std::nullopt)
-  {}
-
-  std::unique_ptr<Format> clone() const override {
-    auto copy = std::make_unique<Choice>(name, mode);
-    copy->desc = desc;
-    copy->refname = refname;
-    copy->path = path;
-    copy->width = width;
-    return copy;
-  }
+  std::string mode;   // "select" or "repeat"
 };
 
-// Forward declaration for RecordFormat
-struct Field;
+// A field's format: one of the leaf formats, or a vector of sub-fields (the
+// container / "real" struct case — no separate node needed). Type-safe
+// leaf-vs-container via the alternative held.
+using Format = std::variant<
+  Completion,
+  Enum,
+  Choice,
+  std::vector<std::unique_ptr<Field>>   // struct: sub-fields
+>;
 
-// Record format: embeds a full record structure as a field type
-struct RecordFormat : public Format {
-  std::vector<std::unique_ptr<Field>> fields;  // Embedded record fields
-
-  RecordFormat(std::string name_) :
-    Format(std::move(name_)),
-    fields()
-  {}
-
-  std::unique_ptr<Format> clone() const override;  // Defined after Field
-};
-
-// Field in a prompt or record
+// Field in a prompt or record — i.e. the "self-form record".
 struct Field : public Object {
   int depth;                              // Nesting depth (1 for top-level)
   int index;                              // Index within depth level (restarts at 0 per depth)
-  std::optional<std::unique_ptr<Format>> format;  // Owned format or embedded record
-  Range range;                            // For array fields like "field[10]"
+  Format format;                          // leaf format OR sub-fields (struct)
+  Range range;                            // For array fields like "field[lo:hi]"
+  SearchPolicies search;                  // Resolved search policy for this field's
+                                          // state(s): leaf -> text|enum + branch;
+                                          // struct -> branch only.
+  std::optional<std::string> refname;     // Original record name (e.g. "Thought"), if any
+  VarMap refargs;                         // Record instantiation args (empty if none)
 
   Field(std::string name_, int depth_, int index_) :
     Object(std::move(name_)),
     depth(depth_),
     index(index_),
-    format(std::nullopt),
-    range(std::nullopt)
+    format(),
+    range(std::nullopt),
+    refargs()
   {}
+
+  bool is_struct() const {
+    return std::holds_alternative<std::vector<std::unique_ptr<Field>>>(format);
+  }
 
   // Deep copy
   std::unique_ptr<Field> clone() const {
     auto copy = std::make_unique<Field>(name, depth, index);
     copy->desc = desc;
     copy->range = range;
-    if (format.has_value()) {
-      copy->format = (*format)->clone();
-    }
+    copy->search = search;
+    copy->refname = refname;
+    copy->refargs = refargs;
+    std::visit([&](auto const & f) {
+      using T = std::decay_t<decltype(f)>;
+      if constexpr (std::is_same_v<T, std::vector<std::unique_ptr<Field>>>) {
+        std::vector<std::unique_ptr<Field>> fields;
+        for (auto const & sub : f) fields.push_back(sub->clone());
+        copy->format = std::move(fields);
+      } else {
+        copy->format = f;
+      }
+    }, format);
     return copy;
   }
 };
@@ -211,7 +166,7 @@ struct Field : public Object {
 // Record: template for field groups
 struct Record : public Object {
   std::vector<std::unique_ptr<Field>> fields;
-  SearchParams search;                    // record-scope search { } params
+  SearchPolicies search;                  // record-scope search { } params
 
   Record(std::string name_) :
     Object(std::move(name_)),
@@ -363,7 +318,7 @@ struct Prompt : public Object {
   std::vector<Channel> channels;
   std::vector<FlowEdge> flows;
   std::optional<ReturnInfo> return_info;
-  SearchParams search;                    // prompt-scope search { } params
+  SearchPolicies search;                    // prompt-scope search { } params
 
   Prompt(std::string name_, std::string mangled_name_, VarMap context_) :
     Object(std::move(name_)),
@@ -393,16 +348,6 @@ struct Program {
   {}
 };
 
-// Implementation of RecordFormat::clone() - must be after Field definition
-inline std::unique_ptr<Format> RecordFormat::clone() const {
-  auto copy = std::make_unique<RecordFormat>(name);
-  copy->desc = desc;
-  copy->refname = refname;
-  for (auto const& field : fields) {
-    copy->fields.push_back(field->clone());
-  }
-  return copy;
-}
 
 }
 

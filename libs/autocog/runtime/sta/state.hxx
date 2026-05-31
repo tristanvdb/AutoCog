@@ -23,21 +23,16 @@ using SearchParams = std::map<std::string, std::map<std::string, SearchValue>>;
 
 struct CompletionFormat {
     std::optional<int> length;
-    std::optional<float> threshold;
-    std::optional<int> beams;
-    std::optional<int> ahead;
-    std::optional<int> width;
+    std::optional<std::vector<std::string>> within;   // vocabulary restriction
 };
 
 struct EnumFormat {
     std::vector<std::string> values;
-    std::optional<int> width;
 };
 
 struct ChoiceFormat {
     std::string mode;   // "select" or "repeat"
     std::vector<std::pair<std::string, std::optional<std::pair<int,int>>>> path;
-    std::optional<int> width;
 };
 
 using FieldFormat = std::variant<
@@ -61,6 +56,8 @@ struct FieldInfo {
     std::optional<std::string> format_ref;  // named format/record (e.g. "thought")
     std::vector<std::string> desc;           // field annotations (from prompt)
     std::vector<std::string> format_desc;    // format annotations (from record definition)
+    SearchParams search;                     // resolved search policy for this field's
+                                             // state (text|enum + branch), from the IR.
 
     bool is_list() const { return range.has_value(); }
     bool is_record() const { return std::holds_alternative<std::monostate>(format); }
