@@ -215,10 +215,20 @@ static json return_to_json(ir::ReturnInfo const & ret) {
     return j;
 }
 
+static json search_to_json(ir::SearchParams const & search) {
+    // Emit only when non-empty; nested as { category: { param: value } }.
+    json j = json::object();
+    for (auto const & [category, params] : search) {
+        j[category] = serialize::varmap_to_json(params);
+    }
+    return j;
+}
+
 static json record_to_json(ir::Record const & record) {
     json j;
     j["name"] = record.name;
     j["desc"] = record.desc;
+    if (!record.search.empty()) j["search"] = search_to_json(record.search);
     j["fields"] = json::array();
     for (auto const & field : record.fields) {
         j["fields"].push_back(field_to_json(*field));
@@ -232,6 +242,7 @@ static json prompt_to_json(ir::Prompt const & prompt) {
     j["desc"] = prompt.desc;
     j["mangled_name"] = prompt.mangled_name;
     j["context"] = serialize::varmap_to_json(prompt.context);
+    if (!prompt.search.empty()) j["search"] = search_to_json(prompt.search);
     j["fields"] = json::array();
     for (auto const & field : prompt.fields) {
         j["fields"].push_back(field_to_json(*field));

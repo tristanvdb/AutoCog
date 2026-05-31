@@ -5,10 +5,10 @@
   },
   "metadata": {
     "format": "ir",
-    "source_uid": "713207429ed5bd90",
-    "timestamp": "2026-05-29T02:08:17.262Z",
-    "uid": "7b9cf0733d983927",
-    "version": "0.5.3"
+    "source_uid": "d94ad1f37e3e63b0",
+    "timestamp": "2026-05-30T16:16:19.791Z",
+    "uid": "93feaea33eaad552",
+    "version": "0.5.4"
   },
   "prompts": {
     "main": {
@@ -149,6 +149,23 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "branch": {
+          "width": 2
+        },
+        "enum": {
+          "width": 3
+        },
+        "flow": {
+          "threshold": 0.05
+        },
+        "queue": {
+          "metric": "mean_logprob"
+        },
+        "text": {
+          "threshold": 0.2
+        }
       }
     }
   },
@@ -171,7 +188,13 @@
           "range": null
         }
       ],
-      "name": "Message"
+      "name": "Message",
+      "search": {
+        "text": {
+          "ahead": 2,
+          "beams": 4
+        }
+      }
     },
     "SpecialText": {
       "desc": [],
@@ -191,7 +214,15 @@
           "range": null
         }
       ],
-      "name": "SpecialText"
+      "name": "SpecialText",
+      "search": {
+        "branch": {
+          "threshold": 0.2
+        },
+        "text": {
+          "width": 1
+        }
+      }
     }
   }
 }

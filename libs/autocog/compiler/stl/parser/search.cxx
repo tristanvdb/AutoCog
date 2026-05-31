@@ -6,11 +6,26 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Param>(ParserState & state, ast::Data<ast::Tag::Param> & param) {
-  state.expect(TokenType::IDENTIFIER, "parameter locator starts with an identifier.");
-  param.locator.emplace_back(state.previous.text);
-  while (state.match(TokenType::DOT)) {
-    state.expect(TokenType::IDENTIFIER, "parameter locator needs identifier after '.'.");
+  // A locator segment may be any identifier OR keyword: category names like
+  // `text`, `enum`, `flow` collide with reserved type/statement tokens, but in
+  // a search locator they are plain path segments. Accept the current token's
+  // text whatever its kind, except structural delimiters that cannot be names.
+  auto take_segment = [&](char const * what) {
+    if (state.current.type == TokenType::DOT ||
+        state.current.type == TokenType::IS ||
+        state.current.type == TokenType::SEMICOLON ||
+        state.current.type == TokenType::LBRACE ||
+        state.current.type == TokenType::RBRACE ||
+        state.current.type == TokenType::END_OF_FILE) {
+      state.throw_error(std::string(what));
+      return;
+    }
+    state.advance();
     param.locator.emplace_back(state.previous.text);
+  };
+  take_segment("parameter locator starts with an identifier or keyword.");
+  while (state.match(TokenType::DOT)) {
+    take_segment("parameter locator needs an identifier or keyword after '.'.");
   }
   state.expect(TokenType::IS, " to set value of search parameter.");
   parse(state, param.value.data);

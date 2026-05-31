@@ -11,6 +11,12 @@
 
 namespace autocog::runtime::sta {
 
+// Scalar value carried in opaque search-param dicts (mirrors the compiler IR's
+// value variant). The search dicts are intentionally open; values are
+// resolved/validated downstream at instantiation.
+using SearchValue = std::variant<int, float, bool, std::string, std::nullptr_t>;
+using SearchParams = std::map<std::string, std::map<std::string, SearchValue>>;
+
 // ============================================================================
 // Field format descriptions (self-contained, no IR dependency)
 // ============================================================================
@@ -132,6 +138,12 @@ struct PromptSTA {
     std::vector<std::string> sequence;              // linear traversal order
     std::map<std::string, FlowEntry> flows;         // name -> target
     std::vector<Channel> channels;                  // data flow descriptions
+    // Prompt-scope search params from `search { }`, carried verbatim from the
+    // IR (category -> param -> value), OPEN by design. Per-field (completion/
+    // choice) and per-state (branch) resolution is applied at instantiation;
+    // queue.* is meaningful at this prompt scope. Not yet flattened onto fields/
+    // states — that scope cascade is a later step.
+    std::map<std::string, std::map<std::string, SearchValue>> search;
 };
 
 // ============================================================================

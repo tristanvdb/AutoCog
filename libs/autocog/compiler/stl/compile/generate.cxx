@@ -829,6 +829,17 @@ std::optional<int> Driver::run_generate() {
         pstas.name = pmt.mangled_name;
         pstas.desc = pmt.desc;
 
+        // Carry the prompt-scope search params verbatim (IR Value -> STA
+        // SearchValue; identical scalar shapes). Per-field/per-state resolution
+        // is applied later at instantiation.
+        for (auto const & [category, params] : pmt.search) {
+            for (auto const & [key, val] : params) {
+                std::visit([&](auto const & v) {
+                    pstas.search[category][key] = v;
+                }, val);
+            }
+        }
+
     SPDLOG_LOGGER_DEBUG(autocog::log(), "STA: building {} ({} IR fields)", mangled, pmt.fields.size());
 
         // Collect flat field list + compact info

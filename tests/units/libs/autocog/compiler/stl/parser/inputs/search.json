@@ -138,10 +138,10 @@
     "should_pass": false
   },
   {
-    "description": "Search with reserved keyword as parameter - fails",
+    "description": "Search with keyword as locator segment - allowed",
     "tag": "Search",
-    "code": "search { return is \"value\"; }",
-    "should_pass": false
+    "code": "search { flow.threshold is 0.1; }",
+    "should_pass": true
   },
   {
     "description": "Search with number starting parameter name - fails",

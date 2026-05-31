@@ -7,20 +7,32 @@
   "properties": {
     "metadata": {
       "allOf": [
-        { "$ref": "common/metadata.schema.json" },
-        { "properties": { "format": { "const": "sta" } } }
+        {
+          "$ref": "common/metadata.schema.json"
+        },
+        {
+          "properties": {
+            "format": {
+              "const": "sta"
+            }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
     "entry_points": {
       "type": "object",
       "description": "Named entry points into the program.",
-      "additionalProperties": { "$ref": "#/$defs/entry_point" }
+      "additionalProperties": {
+        "$ref": "#/$defs/entry_point"
+      }
     },
     "prompts": {
       "type": "object",
       "description": "All prompts in the program, keyed by name.",
-      "additionalProperties": { "$ref": "#/$defs/prompt" }
+      "additionalProperties": {
+        "$ref": "#/$defs/prompt"
+      }
     },
     "python_imports": {
       "type": "object",
@@ -31,9 +43,11 @@
       }
     }
   },
-  "required": ["entry_points", "prompts"],
+  "required": [
+    "entry_points",
+    "prompts"
+  ],
   "unevaluatedProperties": false,
-
   "$defs": {
     "entry_point": {
       "type": "object",
@@ -45,245 +59,541 @@
         "inputs": {
           "type": "object",
           "description": "Input parameter schemas, keyed by parameter name.",
-          "additionalProperties": { "$ref": "#/$defs/entry_param" }
+          "additionalProperties": {
+            "$ref": "#/$defs/entry_param"
+          }
         },
         "outputs": {
           "type": "object",
           "description": "Output schemas, keyed by alias.",
-          "additionalProperties": { "$ref": "#/$defs/entry_param" }
+          "additionalProperties": {
+            "$ref": "#/$defs/entry_param"
+          }
         }
       },
-      "required": ["prompt", "inputs", "outputs"],
+      "required": [
+        "prompt",
+        "inputs",
+        "outputs"
+      ],
       "additionalProperties": false
     },
-
     "entry_param": {
       "type": "object",
       "properties": {
-        "type":       { "type": "string" },
-        "required":   { "type": "boolean" },
-        "length":     { "type": "integer" },
-        "max_length": { "type": "integer" },
-        "items":      {
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "max_length": {
+          "type": "integer"
+        },
+        "items": {
           "oneOf": [
-            { "type": "string" },
-            { "$ref": "#/$defs/entry_param" }
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/entry_param"
+            }
           ]
         },
-        "min_items":  { "type": "integer" },
-        "max_items":  { "type": "integer" },
-        "enum":       { "type": "array", "items": { "type": "string" } }
+        "min_items": {
+          "type": "integer"
+        },
+        "max_items": {
+          "type": "integer"
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     },
-
     "prompt": {
       "type": "object",
       "properties": {
-        "name":     { "type": "string" },
-        "desc":     { "type": "array", "items": { "type": "string" } },
-        "fields":   { "type": "array", "items": { "$ref": "#/$defs/field" } },
-        "states":   {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/state" }
+        "name": {
+          "type": "string"
         },
-        "sequence": { "type": "array", "items": { "type": "string" } },
-        "flows":    {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/flow" }
+        "desc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
-        "channels": { "type": "array", "items": { "$ref": "#/$defs/channel" } }
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/state"
+          }
+        },
+        "sequence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "flows": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/flow"
+          }
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel"
+          }
+        },
+        "search": {
+          "type": "object",
+          "description": "Prompt-scope search params from `search { category.param is expr; }`. Intentionally OPEN (experimentation surface): categories (completion/choice/branch/queue or \"\") map to open param objects; resolved/validated downstream at instantiation, not here.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
       },
-      "required": ["name", "desc", "fields", "states", "sequence", "flows", "channels"],
+      "required": [
+        "name",
+        "desc",
+        "fields",
+        "states",
+        "sequence",
+        "flows",
+        "channels"
+      ],
       "additionalProperties": false
     },
-
     "field": {
       "type": "object",
       "properties": {
-        "name":        { "type": "string" },
-        "depth":       { "type": "integer", "minimum": 0 },
-        "index":       { "type": "integer", "minimum": 0 },
-        "flat_index":  { "type": "integer", "minimum": 0 },
-        "desc":        { "type": "array", "items": { "type": "string" } },
-        "format":      { "$ref": "#/$defs/field_format" },
-        "format_ref":  {
+        "name": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "flat_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "desc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "format": {
+          "$ref": "#/$defs/field_format"
+        },
+        "format_ref": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "null" }
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "format_desc": {
           "oneOf": [
-            { "type": "array", "items": { "type": "string" } },
-            { "type": "string" },
-            { "type": "null" }
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "range": {
           "oneOf": [
             {
               "type": "array",
-              "items": { "type": "integer" },
+              "items": {
+                "type": "integer"
+              },
               "minItems": 2,
               "maxItems": 2
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ]
         }
       },
-      "required": ["name", "depth", "index", "flat_index", "desc", "format", "range"],
+      "required": [
+        "name",
+        "depth",
+        "index",
+        "flat_index",
+        "desc",
+        "format",
+        "range"
+      ],
       "additionalProperties": false
     },
-
     "field_format": {
       "type": "object",
       "properties": {
-        "type":      { "type": "string", "enum": ["completion", "enum", "choice", "record"] },
-        "length":    { "type": "integer", "minimum": 0 },
-        "threshold": { "type": "number" },
-        "values":    { "type": "array", "items": { "type": "string" } },
-        "mode":      { "type": "string" },
-        "path":      {
+        "type": {
+          "type": "string",
+          "enum": [
+            "completion",
+            "enum",
+            "choice",
+            "record"
+          ]
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mode": {
+          "type": "string"
+        },
+        "path": {
           "type": "array",
           "items": {
             "oneOf": [
-              { "type": "string" },
+              {
+                "type": "string"
+              },
               {
                 "type": "object",
                 "properties": {
-                  "name":  { "type": "string" },
-                  "range": { "oneOf": [{ "type": "array" }, { "type": "null" }] }
+                  "name": {
+                    "type": "string"
+                  },
+                  "range": {
+                    "oneOf": [
+                      {
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
                 },
-                "required": ["name"],
+                "required": [
+                  "name"
+                ],
                 "additionalProperties": false
               }
             ]
           }
         }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     },
-
     "state": {
       "type": "object",
       "properties": {
-        "field":      { "type": "integer" },
-        "indices":    { "type": "array", "items": { "type": "integer" } },
-        "successors": { "type": "array", "items": { "type": "string" } }
+        "field": {
+          "type": "integer"
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "successors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "required": ["field", "indices", "successors"],
+      "required": [
+        "field",
+        "indices",
+        "successors"
+      ],
       "additionalProperties": false
     },
-
     "flow": {
       "oneOf": [
-        { "$ref": "#/$defs/flow_control" },
-        { "$ref": "#/$defs/flow_return" }
+        {
+          "$ref": "#/$defs/flow_control"
+        },
+        {
+          "$ref": "#/$defs/flow_return"
+        }
       ]
     },
-
     "flow_control": {
       "type": "object",
       "properties": {
-        "type":   { "const": "control" },
-        "prompt": { "type": "string" },
-        "limit":  { "type": "integer", "minimum": 1 }
+        "type": {
+          "const": "control"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
-      "required": ["type", "prompt"],
+      "required": [
+        "type",
+        "prompt"
+      ],
       "additionalProperties": false
     },
-
     "flow_return": {
       "type": "object",
       "properties": {
-        "type":   { "const": "return" },
+        "type": {
+          "const": "return"
+        },
         "fields": {
           "type": "array",
-          "items": { "$ref": "#/$defs/return_field" }
+          "items": {
+            "$ref": "#/$defs/return_field"
+          }
         }
       },
-      "required": ["type", "fields"],
+      "required": [
+        "type",
+        "fields"
+      ],
       "additionalProperties": false
     },
-
     "return_field": {
       "type": "object",
       "properties": {
-        "alias": { "type": "string" },
-        "path":  {
+        "alias": {
+          "type": "string"
+        },
+        "path": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name":  { "type": "string" },
-              "index": { "type": "integer" }
+              "name": {
+                "type": "string"
+              },
+              "index": {
+                "type": "integer"
+              }
             },
-            "required": ["name"],
+            "required": [
+              "name"
+            ],
             "additionalProperties": false
           }
         }
       },
-      "required": ["alias", "path"],
+      "required": [
+        "alias",
+        "path"
+      ],
       "additionalProperties": false
     },
-
     "channel": {
       "type": "object",
       "properties": {
-        "type":    { "type": "string", "enum": ["input", "dataflow", "call"] },
-        "target":  { "$ref": "#/$defs/path_steps" },
-        "source":  { "$ref": "#/$defs/path_steps" },
-        "prompt":  { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "entry":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "extern":  { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "kwargs":  { "type": "array", "items": { "$ref": "#/$defs/channel_kwarg" } },
-        "clauses": { "type": "array", "items": { "$ref": "#/$defs/channel_clause" } }
+        "type": {
+          "type": "string",
+          "enum": [
+            "input",
+            "dataflow",
+            "call"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "source": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "prompt": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extern": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kwargs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel_kwarg"
+          }
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel_clause"
+          }
+        }
       },
-      "required": ["type", "target"],
+      "required": [
+        "type",
+        "target"
+      ],
       "additionalProperties": false
     },
-
     "path_steps": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "name":  { "type": "string" },
+          "name": {
+            "type": "string"
+          },
           "index": {
-            "oneOf": [{ "type": "integer" }, { "type": "null" }]
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "additionalProperties": false
       }
     },
-
     "channel_kwarg": {
       "type": "object",
       "properties": {
-        "name":     { "type": "string" },
-        "is_input": { "type": "boolean" },
-        "path":     { "$ref": "#/$defs/path_steps" },
-        "prompt":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "value":    {},
-        "clauses":  { "type": "array", "items": { "$ref": "#/$defs/channel_clause" } }
+        "name": {
+          "type": "string"
+        },
+        "is_input": {
+          "type": "boolean"
+        },
+        "path": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "prompt": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {},
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel_clause"
+          }
+        }
       },
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false
     },
-
     "channel_clause": {
       "type": "object",
       "properties": {
-        "type":   { "type": "string", "enum": ["bind", "prune", "ravel", "wrap", "mapped"] },
-        "source": { "$ref": "#/$defs/path_steps" },
-        "target": { "$ref": "#/$defs/path_steps" },
-        "depth":  { "type": "integer" }
+        "type": {
+          "type": "string",
+          "enum": [
+            "bind",
+            "prune",
+            "ravel",
+            "wrap",
+            "mapped"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "target": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "depth": {
+          "type": "integer"
+        }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     }
   }

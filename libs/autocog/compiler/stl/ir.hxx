@@ -2,6 +2,7 @@
 #define AUTOCOG_COMPILER_STL_IR_HXX
 
 #include <unordered_map>
+#include <map>
 #include <string>
 #include <optional>
 #include <variant>
@@ -13,6 +14,16 @@ namespace autocog::compiler::stl::ir {
 
 using Value = std::variant<int, float, bool, std::string, std::nullptr_t>;
 using VarMap = std::unordered_map<std::string, Value>;
+
+// Search parameters carried from `search { <category>.<param> is <expr>; }`.
+// Keyed by category (text/enum/branch/flow/queue), each holding an OPEN map of
+// param name -> compile-time-evaluated value. Intentionally not a fixed schema:
+// the param set is an experimentation surface, resolved/validated downstream
+// (config defaults are merged and concrete values stamped at instantiation).
+// A bare `param is value` with no category prefix lands under the "" category.
+// Category/scope rules (e.g. flow/queue are global+prompt only) are enforced
+// during graph->IR traversal, not at parse time.
+using SearchParams = std::map<std::string, VarMap>;
 
 // Range for array indexing: [start:end] or [index]
 // None means no range, (n,n) means [n], (start,end) means [start:end]
@@ -200,6 +211,7 @@ struct Field : public Object {
 // Record: template for field groups
 struct Record : public Object {
   std::vector<std::unique_ptr<Field>> fields;
+  SearchParams search;                    // record-scope search { } params
 
   Record(std::string name_) :
     Object(std::move(name_)),
@@ -210,6 +222,7 @@ struct Record : public Object {
   std::unique_ptr<Record> clone() const {
     auto copy = std::make_unique<Record>(name);
     copy->desc = desc;
+    copy->search = search;
     for (auto const& field : fields) {
       copy->fields.push_back(field->clone());
     }
@@ -350,6 +363,7 @@ struct Prompt : public Object {
   std::vector<Channel> channels;
   std::vector<FlowEdge> flows;
   std::optional<ReturnInfo> return_info;
+  SearchParams search;                    // prompt-scope search { } params
 
   Prompt(std::string name_, std::string mangled_name_, VarMap context_) :
     Object(std::move(name_)),

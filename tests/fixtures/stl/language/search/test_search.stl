@@ -1,21 +1,22 @@
-// Test search (xFTA sampling parameters)
+// Test the search statement: categorized params carried into the IR.
+// Categories: text.* / enum.* / branch.* / flow.* / queue.*  (plus bare params
+// under the "" category). RHS are compile-time expressions. These are carried
+// opaquely into the IR/STA; defaults + resolution happen at instantiation.
 
-define default_temperature = 0.7;
-define default_top_p = 0.95;
+define base_threshold = 0.1;
 
-// File-level search parameters
+// File-level search defaults
 search {
-  temperature is 0.8;
-  top_p is 0.9;
+  text.threshold is base_threshold;
+  queue.metric is "perplexity";
 }
 
 record Message {
   is text<length=50>;
 
   search {
-    temperature is default_temperature;
-    top_p is default_top_p;
-    max_tokens is 100;
+    text.beams is 4;
+    text.ahead is 2;
   }
 }
 
@@ -23,8 +24,8 @@ record SpecialText {
   is text<length=50>;
 
   search {
-    temperature is 1.0;
-    top_k is 100;
+    text.width is 1;
+    branch.threshold is (base_threshold * 2);
   }
 }
 
@@ -35,9 +36,11 @@ prompt main {
   }
 
   search {
-    temperature is 0.9;
-    top_k is 50;
-    max_tokens is 200;
+    text.threshold is 0.2;
+    enum.width is 3;
+    branch.width is 2;
+    flow.threshold is 0.05;
+    queue.metric is "mean_logprob";
   }
 
   channel {

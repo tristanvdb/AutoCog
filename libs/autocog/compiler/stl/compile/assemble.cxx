@@ -24,6 +24,59 @@ static std::optional<int> eval_opt_int(
     return std::nullopt;
 }
 
+// Structural scope of a `search { }` block, for category-placement rules.
+enum class SearchScope { File, Prompt, Record };
+
+// Lower an `ast::Search` block into ir::SearchParams. Each param's locator is a
+// dotted path: the FIRST segment is the category (text/enum/branch/flow/queue,
+// or "" when no prefix), the remaining segments are joined with '.' as the
+// param key. The RHS expression is evaluated at compile time (constexpr-style)
+// in the current scope/context. The map is OPEN — unknown params are kept
+// verbatim and resolved/validated downstream. Category PLACEMENT is checked
+// here (graph->IR traversal), not at parse time: `flow` and `queue` configure
+// prompt-global behavior and are rejected at record scope.
+static void lower_search(
+    ast::Search const & search,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    SearchScope structural_scope,
+    Driver & driver,
+    ir::SearchParams & out
+) {
+    for (auto const & param : search.data.params) {
+        auto const & loc = param.data.locator;
+        if (loc.empty()) continue;
+        std::string category;
+        std::string key;
+        if (loc.size() == 1) {
+            // No category prefix → bare param under the "" category.
+            category = "";
+            key = loc.front().data.name;
+        } else {
+            auto it = loc.begin();
+            category = it->data.name;
+            ++it;
+            for (bool first = true; it != loc.end(); ++it) {
+                if (!first) key += ".";
+                key += it->data.name;
+                first = false;
+            }
+        }
+        // Scope rule: flow/queue are global (file) + prompt only.
+        if ((category == "flow" || category == "queue") &&
+            structural_scope == SearchScope::Record) {
+            driver.emit_error(
+                "search category '" + category + "' is only valid at file or "
+                "prompt scope, not inside a record",
+                param.location);
+            continue;
+        }
+        auto val = evaluator.evaluate_expression(scope, param.data.value, ctx);
+        out[category][key] = val;
+    }
+}
+
 static std::vector<ir::PathStep> convert_path(
     ast::Path const & path,
     Evaluator & evaluator,
@@ -307,6 +360,8 @@ static void assemble_records(
                             }
                         }
                     }
+                } else if constexpr (std::is_same_v<T, ast::Search>) {
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Record, driver, rec->search);
                 }
             }, construct);
         }
@@ -516,6 +571,8 @@ static void assemble_prompts(
                             }
                         }
                     }
+                } else if constexpr (std::is_same_v<T, ast::Search>) {
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, pmt->search);
                 }
             }, construct);
         }

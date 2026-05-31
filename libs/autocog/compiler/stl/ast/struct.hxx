@@ -30,8 +30,13 @@ TRAVERSE_CHILDREN(FormatRef, type, args, kwargs)
 
 DATA(Struct) {
   PNODES(Field) fields;
+  // An inline/anonymous struct may also carry the constructs that describe its
+  // fields: `search` (exploration policy) and `annotate` (documentation). It
+  // does NOT accept `define` (a named-scope-only declaration) or prompt-only
+  // constructs (channel/flow/return).
+  VARIANTS(Annotate, Search) constructs;
 };
-TRAVERSE_CHILDREN(Struct, fields)
+TRAVERSE_CHILDREN(Struct, fields, constructs)
 
 DATA(Field) {
   NODE(Identifier) name;

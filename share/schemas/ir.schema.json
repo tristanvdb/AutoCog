@@ -7,8 +7,16 @@
   "properties": {
     "metadata": {
       "allOf": [
-        { "$ref": "common/metadata.schema.json" },
-        { "properties": { "format": { "const": "ir" } } }
+        {
+          "$ref": "common/metadata.schema.json"
+        },
+        {
+          "properties": {
+            "format": {
+              "const": "ir"
+            }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -19,213 +27,573 @@
     "entry_points": {
       "type": "object",
       "description": "Entry point name to prompt name mapping.",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "prompts": {
       "type": "object",
       "description": "All prompts, keyed by mangled name.",
-      "additionalProperties": { "$ref": "#/$defs/prompt" }
+      "additionalProperties": {
+        "$ref": "#/$defs/prompt"
+      }
     },
     "records": {
       "type": "object",
       "description": "Named record type definitions."
     }
   },
-  "required": ["defines", "entry_points", "prompts", "records"],
+  "required": [
+    "defines",
+    "entry_points",
+    "prompts",
+    "records"
+  ],
   "unevaluatedProperties": false,
-
   "$defs": {
     "prompt": {
       "type": "object",
       "properties": {
-        "name":         { "type": "string" },
-        "mangled_name": { "type": "string" },
-        "desc":         { "type": "array", "items": { "type": "string" } },
-        "context":      { "description": "Parameterization context (arbitrary key-value)." },
-        "fields":       { "type": "array", "items": { "$ref": "#/$defs/field" } },
-        "flows":        { "type": "array", "items": { "$ref": "#/$defs/flow" } },
-        "channels":     { "type": "array", "items": { "$ref": "#/$defs/channel" } },
-        "return":       { "$ref": "#/$defs/return_def" }
+        "name": {
+          "type": "string"
+        },
+        "mangled_name": {
+          "type": "string"
+        },
+        "desc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context": {
+          "description": "Parameterization context (arbitrary key-value)."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/flow"
+          }
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel"
+          }
+        },
+        "return": {
+          "$ref": "#/$defs/return_def"
+        },
+        "search": {
+          "type": "object",
+          "description": "Search params from `search { category.param is expr; }`. Intentionally OPEN (an experimentation surface): categories map to open param objects; values resolved/validated downstream at instantiation.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "number",
+                "string",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
       },
-      "required": ["name", "mangled_name", "desc", "fields", "flows", "channels", "return"],
+      "required": [
+        "name",
+        "mangled_name",
+        "desc",
+        "fields",
+        "flows",
+        "channels",
+        "return"
+      ],
       "additionalProperties": false
     },
-
     "field": {
       "type": "object",
       "properties": {
-        "name":   { "type": "string" },
-        "depth":  { "type": "integer", "minimum": 0 },
-        "index":  { "type": "integer", "minimum": 0 },
-        "desc":   { "type": "array", "items": { "type": "string" } },
+        "name": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "desc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "range": {
           "oneOf": [
-            { "type": "array", "items": { "type": "integer" }, "minItems": 1, "maxItems": 2 },
-            { "type": "null" }
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 1,
+              "maxItems": 2
+            },
+            {
+              "type": "null"
+            }
           ]
         },
-        "format": { "$ref": "#/$defs/field_format" }
+        "format": {
+          "$ref": "#/$defs/field_format"
+        }
       },
-      "required": ["name", "depth", "index", "desc", "range", "format"],
+      "required": [
+        "name",
+        "depth",
+        "index",
+        "desc",
+        "range",
+        "format"
+      ],
       "additionalProperties": false
     },
-
     "field_format": {
       "type": "object",
       "properties": {
-        "type":      { "type": "string", "enum": ["completion", "enum", "choice", "record"] },
-        "name":      { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "refname":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "desc":      { "type": "array", "items": { "type": "string" } },
-        "length":    { "type": "integer" },
-        "threshold": { "type": "number" },
-        "values":    { "type": "array", "items": { "type": "string" } },
-        "mode":      { "type": "string" },
-        "path":      {
-          "oneOf": [
-            { "type": "array", "items": { "type": "string" } },
-            { "$ref": "#/$defs/data_ref" }
+        "type": {
+          "type": "string",
+          "enum": [
+            "completion",
+            "enum",
+            "choice",
+            "record"
           ]
         },
-        "fields":    { "type": "array", "items": { "$ref": "#/$defs/field" } }
+        "name": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refname": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "desc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "length": {
+          "type": "integer"
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mode": {
+          "type": "string"
+        },
+        "path": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "$ref": "#/$defs/data_ref"
+            }
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     },
-
     "flow": {
       "type": "object",
       "properties": {
-        "target": { "type": "string" },
-        "label":  { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "limit":  { "oneOf": [{ "type": "integer" }, { "type": "null" }] }
+        "target": {
+          "type": "string"
+        },
+        "label": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       },
-      "required": ["target", "label", "limit"],
+      "required": [
+        "target",
+        "label",
+        "limit"
+      ],
       "additionalProperties": false
     },
-
     "channel": {
       "type": "object",
       "properties": {
-        "type":         { "type": "string", "enum": ["input", "dataflow", "call"] },
-        "target":       { "$ref": "#/$defs/data_ref" },
-        "source":       { "$ref": "#/$defs/path_steps" },
-        "prompt":       { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "entry":        { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "extern":       { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "binds":        { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "clauses":      { "type": "array", "items": { "$ref": "#/$defs/clause" } },
-        "kwargs":       {
+        "type": {
+          "type": "string",
+          "enum": [
+            "input",
+            "dataflow",
+            "call"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/data_ref"
+        },
+        "source": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "prompt": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extern": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binds": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clause"
+          }
+        },
+        "kwargs": {
           "oneOf": [
             {
               "type": "object",
-              "additionalProperties": { "$ref": "#/$defs/kwarg" }
+              "additionalProperties": {
+                "$ref": "#/$defs/kwarg"
+              }
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ]
         },
-        "link_clauses": { "type": "array", "items": { "$ref": "#/$defs/link_clause" } }
+        "link_clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link_clause"
+          }
+        }
       },
-      "required": ["type", "target"],
+      "required": [
+        "type",
+        "target"
+      ],
       "additionalProperties": false
     },
-
     "data_ref": {
       "type": "object",
       "description": "Reference to a data location (field in a prompt frame).",
       "properties": {
-        "is_input": { "type": "boolean" },
-        "prompt":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "steps":    { "$ref": "#/$defs/path_steps" }
+        "is_input": {
+          "type": "boolean"
+        },
+        "prompt": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "steps": {
+          "$ref": "#/$defs/path_steps"
+        }
       },
-      "required": ["is_input", "steps"],
+      "required": [
+        "is_input",
+        "steps"
+      ],
       "additionalProperties": false
     },
-
     "path_steps": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "name":  { "type": "string" },
-          "range": { "oneOf": [{ "type": "array" }, { "type": "null" }] }
+          "name": {
+            "type": "string"
+          },
+          "range": {
+            "oneOf": [
+              {
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "additionalProperties": false
       }
     },
-
     "kwarg": {
       "type": "object",
       "properties": {
-        "is_input": { "type": "boolean" },
-        "prompt":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "path":     { "$ref": "#/$defs/path_steps" },
-        "clauses":  { "type": "array", "items": { "$ref": "#/$defs/clause" } }
+        "is_input": {
+          "type": "boolean"
+        },
+        "prompt": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clause"
+          }
+        }
       },
-      "required": ["is_input", "path", "clauses"],
+      "required": [
+        "is_input",
+        "path",
+        "clauses"
+      ],
       "additionalProperties": false
     },
-
     "clause": {
       "type": "object",
       "properties": {
-        "type":   { "type": "string" },
-        "target": { "$ref": "#/$defs/path_steps" },
-        "source": { "$ref": "#/$defs/path_steps" },
-        "depth":  { "oneOf": [{ "type": "integer" }, { "type": "null" }] }
+        "type": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "source": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "depth": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     },
-
     "link_clause": {
       "type": "object",
       "properties": {
-        "type":   { "type": "string" },
-        "source": { "$ref": "#/$defs/path_steps" },
-        "target": { "$ref": "#/$defs/path_steps" },
-        "depth":  { "oneOf": [{ "type": "integer" }, { "type": "null" }] }
+        "type": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "target": {
+          "$ref": "#/$defs/path_steps"
+        },
+        "depth": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
       },
-      "required": ["type", "target"],
+      "required": [
+        "type",
+        "target"
+      ],
       "additionalProperties": false
     },
-
     "return_def": {
       "oneOf": [
         {
           "type": "object",
           "properties": {
-            "label":  { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+            "label": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "fields": {
               "type": "array",
-              "items": { "$ref": "#/$defs/return_field" }
+              "items": {
+                "$ref": "#/$defs/return_field"
+              }
             }
           },
-          "required": ["label", "fields"],
+          "required": [
+            "label",
+            "fields"
+          ],
           "additionalProperties": false
         },
-        { "type": "null" }
+        {
+          "type": "null"
+        }
       ]
     },
-
     "return_field": {
       "type": "object",
       "properties": {
-        "alias":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-        "clauses": { "type": "array", "items": { "$ref": "#/$defs/clause" } },
-        "source":  {
+        "alias": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clause"
+          }
+        },
+        "source": {
           "type": "object",
           "properties": {
-            "is_input": { "type": "boolean" },
-            "prompt":   { "oneOf": [{ "type": "string" }, { "type": "null" }] },
-            "steps":    { "$ref": "#/$defs/path_steps" }
+            "is_input": {
+              "type": "boolean"
+            },
+            "prompt": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "steps": {
+              "$ref": "#/$defs/path_steps"
+            }
           },
-          "required": ["is_input", "prompt", "steps"],
+          "required": [
+            "is_input",
+            "prompt",
+            "steps"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["alias", "clauses", "source"],
+      "required": [
+        "alias",
+        "clauses",
+        "source"
+      ],
       "additionalProperties": false
     }
   }

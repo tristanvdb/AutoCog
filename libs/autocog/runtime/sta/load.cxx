@@ -1,6 +1,7 @@
 
 #include "autocog/runtime/sta/load.hxx"
 #include "autocog/utilities/metadata.hxx"
+#include <cmath>
 
 namespace autocog::runtime::sta {
 
@@ -174,6 +175,19 @@ PromptSTA load_prompt(json const & j) {
                 }
                 cc.clauses = load_clauses(cj["clauses"]);
                 p.channels.push_back(std::move(cc));
+            }
+        }
+    }
+
+    // Load prompt-scope search params (open dict: category -> param -> scalar).
+    if (j.contains("search")) {
+        for (auto const & [category, params] : j["search"].items()) {
+            for (auto const & [key, val] : params.items()) {
+                if (val.is_number_integer())      p.search[category][key] = val.get<int>();
+                else if (val.is_number_float())   p.search[category][key] = val.get<float>();
+                else if (val.is_boolean())        p.search[category][key] = val.get<bool>();
+                else if (val.is_string())         p.search[category][key] = val.get<std::string>();
+                else                              p.search[category][key] = nullptr;
             }
         }
     }
@@ -386,6 +400,24 @@ json serialize_prompt(PromptSTA const & p) {
     }
     j["channels"] = json::array();
     for (auto const & ch : p.channels) j["channels"].push_back(channel_to_json(ch));
+    if (!p.search.empty()) {
+        json sj = json::object();
+        for (auto const & [category, params] : p.search) {
+            json pj = json::object();
+            for (auto const & [key, val] : params) {
+                std::visit([&](auto const & v) {
+                    using V = std::decay_t<decltype(v)>;
+                    if constexpr (std::is_same_v<V, std::nullptr_t>) pj[key] = nullptr;
+                    else if constexpr (std::is_same_v<V, float>)
+                        // Canonical 3-decimal form (matches the IR serializer).
+                        pj[key] = std::round(static_cast<double>(v) * 1000.0) / 1000.0;
+                    else pj[key] = v;
+                }, val);
+            }
+            sj[category] = pj;
+        }
+        j["search"] = sj;
+    }
     return j;
 }
 
