@@ -104,34 +104,18 @@ static void collect_fields(
 // Build abstract states
 // ============================================================================
 
-struct AbstractState {
-    int field;  // index into fields, -1 for root
-    int flow;   // index into abstracts, -1 for none
-    int exit_;  // index into abstracts, -1 for none
-
-    AbstractState() : field(-1), flow(-1), exit_(-1) {}
-    explicit AbstractState(int f) : field(f), flow(-1), exit_(-1) {}
-
-    int depth(std::vector<sta::FieldInfo> const & fields) const {
-        return (field < 0) ? 0 : fields[field].depth;
-    }
-
-    std::string tag(std::vector<sta::FieldInfo> const & fields) const {
-        return (field < 0) ? "root" : fields[field].tag();
-    }
-};
-
 // Matches Python: stack of lists, flow from parent to first child,
 // exit from sibling to sibling, self-loop for lists.
-static std::vector<AbstractState> build_abstract(std::vector<sta::FieldInfo> const & fields) {
-    std::vector<AbstractState> abstracts;
-    abstracts.emplace_back(); // root at index 0
+static std::vector<sta::AbstractState> build_abstract(std::vector<sta::FieldInfo> const & fields) {
+    std::vector<sta::AbstractState> abstracts;
+    abstracts.emplace_back(); // root at index 0 (field = -1)
     std::vector<std::vector<int>> stack = {{0}};
 
     for (int f = 0; f < static_cast<int>(fields.size()); ++f) {
         auto const & fld = fields[f];
         int idx = static_cast<int>(abstracts.size());
-        abstracts.emplace_back(f);
+        sta::AbstractState st; st.field = f;
+        abstracts.push_back(st);
 
         if (fld.is_list()) {
             abstracts[idx].flow = idx; // self-loop
@@ -143,16 +127,14 @@ static std::vector<AbstractState> build_abstract(std::vector<sta::FieldInfo> con
             // First child at new depth: parent flows into us
             abstracts[prev_idx].flow = idx;
             stack.push_back({});
-        } else if (fld.depth < abstracts[prev_idx].depth(fields)) {
+        } else if (fld.depth < abs_depth(abstracts[prev_idx], fields)) {
             // Returning to shallower depth: wire intermediate exits, then pop
-            // Each dropped level's last element exits to the next shallower level's last
             for (int d = static_cast<int>(stack.size()) - 1; d > fld.depth; --d) {
                 int deeper_last = stack[d].back();
                 int shallower_last = stack[d - 1].back();
                 abstracts[deeper_last].exit_ = shallower_last;
             }
             stack.resize(fld.depth + 1);
-            // Last element at target depth exits to the new field
             abstracts[stack.back().back()].exit_ = idx;
         } else {
             // Same depth: prev exits to us
@@ -172,248 +154,6 @@ static std::vector<AbstractState> build_abstract(std::vector<sta::FieldInfo> con
     return abstracts;
 }
 
-// ============================================================================
-// Build concrete states
-// ============================================================================
-
-static std::string make_tag(AbstractState const & abs,
-                            std::vector<sta::FieldInfo> const & fields,
-                            std::vector<int> const & indices) {
-    std::string base = abs.tag(fields);
-    std::string idx_str;
-    for (int i = 1; i < static_cast<int>(indices.size()); ++i) {
-        if (i > 1) idx_str += "_";
-        idx_str += std::to_string(indices[i]);
-    }
-    return base + "@" + idx_str;
-}
-
-static std::string build_concrete_rec(
-    std::vector<AbstractState> const & abstracts,
-    std::vector<sta::FieldInfo> const & fields,
-    std::map<std::string, sta::ConcreteState> & states,
-    int abs_idx,
-    std::vector<int> indices
-) {
-    auto const & abs = abstracts[abs_idx];
-    int depth = abs.depth(fields);
-    int count = indices.back();
-    std::string ctag = make_tag(abs, fields, indices);
-
-    if (states.count(ctag)) return ctag;
-
-    bool is_list, is_record;
-    if (abs.field >= 0) {
-        is_list = fields[abs.field].is_list();
-        is_record = fields[abs.field].is_record();
-    } else {
-        is_list = false;
-        is_record = true;
-    }
-
-    bool can_flow, can_exit;
-    if (is_list) {
-        can_flow = count < fields[abs.field].range->second;
-        can_exit = count >= fields[abs.field].range->first;
-    } else if (is_record) {
-        can_flow = count == 0;
-        can_exit = count > 0;
-    } else {
-        can_flow = true;
-        can_exit = true;
-    }
-    can_flow = can_flow && (abs.flow >= 0);
-    can_exit = can_exit && (abs.exit_ >= 0);
-
-    sta::ConcreteState cs;
-    cs.tag = ctag;
-    cs.field = abs.field;
-    cs.indices = std::vector<int>(indices.begin() + 1, indices.end());
-    states[ctag] = cs;
-
-    if (can_flow) {
-        auto new_indices = indices;
-        auto const & flow_abs = abstracts[abs.flow];
-        if (depth < flow_abs.depth(fields)) {
-            new_indices.push_back(0);
-        } else {
-            new_indices.back() += 1;
-        }
-        auto next = build_concrete_rec(abstracts, fields, states, abs.flow, new_indices);
-        states[ctag].flows.push_back(next);
-    }
-
-    if (can_exit) {
-        auto new_indices = indices;
-        auto const & exit_abs = abstracts[abs.exit_];
-        int delta = depth - exit_abs.depth(fields);
-        if (delta > 0) {
-            new_indices.resize(new_indices.size() - delta);
-            new_indices.back() += 1;
-        } else {
-            new_indices.back() = 0;
-        }
-        auto next = build_concrete_rec(abstracts, fields, states, abs.exit_, new_indices);
-        states[ctag].exits.push_back(next);
-    }
-
-    return ctag;
-}
-
-// ============================================================================
-// Post-process concrete states (matches Python build_concrete)
-// ============================================================================
-
-static std::vector<std::string> get_sequence(std::map<std::string, sta::ConcreteState> const & states) {
-    std::vector<std::string> seq;
-    std::string cur = "root@";
-    while (true) {
-        seq.push_back(cur);
-        auto it = states.find(cur);
-        if (it == states.end() || it->second.successors.empty()) break;
-        cur = it->second.successors[0];
-        if (cur == "root@") break;
-    }
-    return seq;
-}
-
-static void post_process(
-    std::vector<sta::FieldInfo> const & fields,
-    std::map<std::string, sta::ConcreteState> & states
-) {
-    // Step 1: merge flows/exits into successors
-    for (auto & [tag, state] : states) {
-        if (!state.flows.empty()) {
-            state.successors.push_back(state.flows[0]);
-            state.flows.clear();  // exits intentionally kept for reversed_exits
-        } else if (!state.exits.empty()) {
-            if (state.exits[0] != "root@") {
-                state.successors.push_back(state.exits[0]);
-                state.exits.clear();
-            }
-            // exits to root@ intentionally kept for list tail pruning
-        }
-    }
-
-    auto sequence = get_sequence(states);
-
-    // Build reversed exits
-    std::map<std::string, std::vector<std::string>> reversed_exits;
-    for (auto const & stag : sequence) {
-        for (auto const & e : states[stag].exits) {
-            if (e == "root@") continue;
-            auto & vec = reversed_exits[e];
-            if (std::find(vec.begin(), vec.end(), stag) == vec.end()) {
-                vec.push_back(stag);
-            }
-        }
-    }
-
-    // Step 2: prune list tails
-    std::vector<std::string> delete_set;
-    bool prev_deleted = false;
-    std::string last_kept_tag;
-    for (size_t s = 0; s < sequence.size(); ++s) {
-        auto const & stag = sequence[s];
-        auto & state = states[stag];
-
-        bool is_list_tail = false;
-        if (state.field >= 0) {
-            auto const & fld = fields[state.field];
-            if (fld.is_list() && !state.indices.empty()) {
-                is_list_tail = state.indices.back() >= fld.range->second;
-            }
-        }
-
-        if (is_list_tail) {
-            delete_set.push_back(stag);
-            if (!state.exits.empty() && state.exits[0] == "root@") {
-                if (s > 0) {
-                    states[sequence[s - 1]].successors.clear();
-                }
-            } else if (reversed_exits.count(stag)) {
-                if (state.successors.size() != 1) {
-                    throw autocog::utilities::InternalError(
-                        "List tail '" + stag + "' is the target of exit edges but has "
-                        + std::to_string(state.successors.size()) + " successors. "
-                        "A variable-length list cannot be the last field in its enclosing scope.");
-                }
-                auto succ = state.successors[0];
-                for (auto const & e : reversed_exits[stag]) {
-                    auto & vec = reversed_exits[succ];
-                    if (std::find(vec.begin(), vec.end(), e) == vec.end()) {
-                        vec.push_back(e);
-                    }
-                }
-                reversed_exits.erase(stag);
-            }
-            prev_deleted = true;
-        } else {
-            if (prev_deleted && !last_kept_tag.empty()) {
-                states[last_kept_tag].successors = {stag};
-            }
-            last_kept_tag = stag;
-            prev_deleted = false;
-        }
-    }
-
-    for (auto const & tag : delete_set) {
-        states.erase(tag);
-    }
-
-    // Step 3: clear all exits, reassign from reversed_exits
-    for (auto & [tag, state] : states) {
-        state.exits.clear();
-    }
-    for (auto const & [sink, srcs] : reversed_exits) {
-        for (auto const & src : srcs) {
-            if (states.count(src)) {
-                states[src].exits.push_back(sink);
-            }
-        }
-    }
-
-    // Step 4: propagate exit edges — exit closure on predecessors
-    sequence = get_sequence(states);
-    for (size_t s = 1; s < sequence.size(); ++s) {
-        auto const & stag = sequence[s];
-        auto & state = states[stag];
-        if (state.exits.empty()) continue;
-
-        auto & pred = states[sequence[s - 1]];
-
-        // Exit closure
-        std::vector<std::string> closure;
-        std::vector<std::string> todo = state.exits;
-        while (!todo.empty()) {
-            std::vector<std::string> next;
-            for (auto const & t : todo) {
-                if (std::find(closure.begin(), closure.end(), t) == closure.end()) {
-                    closure.push_back(t);
-                    if (states.count(t)) {
-                        for (auto const & e : states[t].exits) {
-                            next.push_back(e);
-                        }
-                    }
-                }
-            }
-            todo = next;
-        }
-
-        for (auto const & e : closure) {
-            if (std::find(pred.successors.begin(), pred.successors.end(), e) == pred.successors.end()) {
-                pred.successors.push_back(e);
-            }
-        }
-        state.exits.clear();
-    }
-
-    // Clean up remaining flows/exits
-    for (auto & [tag, state] : states) {
-        state.flows.clear();
-        state.exits.clear();
-    }
-}
 
 // ============================================================================
 // Extract flow info from IR prompt
@@ -826,28 +566,12 @@ std::optional<int> Driver::run_generate() {
 
     SPDLOG_LOGGER_DEBUG(autocog::log(), "  flat: {} fields", pstas.fields.size());
 
-        // Build abstract states
-        auto abstracts = build_abstract(pstas.fields);
+        // Build abstract states (the serialized state graph). Concretization
+        // (index-expansion) is performed by ista at instantiation time, using
+        // the actual content — it is no longer done here.
+        pstas.abstracts = build_abstract(pstas.fields);
 
-    SPDLOG_LOGGER_DEBUG(autocog::log(), "  abstract: {} states", abstracts.size());
-
-        // Build concrete states
-        build_concrete_rec(abstracts, pstas.fields, pstas.states, 0, {0});
-
-        // Post-process
-        post_process(pstas.fields, pstas.states);
-
-        // Build sequence
-        {
-            std::string cur = "root@";
-            while (true) {
-                pstas.sequence.push_back(cur);
-                auto it = pstas.states.find(cur);
-                if (it == pstas.states.end() || it->second.successors.empty()) break;
-                cur = it->second.successors[0];
-                if (cur == "root@") break;
-            }
-        }
+    SPDLOG_LOGGER_DEBUG(autocog::log(), "  abstract: {} states", pstas.abstracts.size());
 
         // Extract flows
         pstas.flows = extract_flows(pmt);

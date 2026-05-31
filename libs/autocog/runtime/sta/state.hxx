@@ -127,19 +127,39 @@ struct EntryPoint {
 // Per-prompt STA
 // ============================================================================
 
+// Abstract state: the per-field state graph node, BEFORE index-expansion.
+// This is what the STA serializes. `flow`/`exit_` are indices into the prompt's
+// `abstracts` vector (-1 = none); `field` indexes `fields` (-1 = root). The
+// concrete (index-expanded) states are built at instantiation time by ista,
+// using the actual content — they are NOT serialized.
+struct AbstractState {
+    int field = -1;
+    int flow = -1;
+    int exit_ = -1;
+};
+
+// Depth/tag of an abstract state, derived from the field table (root = depth 0,
+// tag "root"). Free functions since AbstractState is a plain serializable POD.
+inline int abs_depth(AbstractState const & abs, std::vector<FieldInfo> const & fields) {
+    return (abs.field < 0) ? 0 : fields[abs.field].depth;
+}
+inline std::string abs_tag(AbstractState const & abs, std::vector<FieldInfo> const & fields) {
+    return (abs.field < 0) ? "root" : fields[abs.field].tag();
+}
+
 struct PromptSTA {
     std::string name;
     std::vector<std::string> desc;
     std::vector<FieldInfo> fields;
-    std::map<std::string, ConcreteState> states;    // tag -> state
-    std::vector<std::string> sequence;              // linear traversal order
+    std::vector<AbstractState> abstracts;           // serialized abstract state graph
+    std::map<std::string, ConcreteState> states;    // tag -> state (built by ista at runtime; NOT serialized)
+    std::vector<std::string> sequence;              // linear traversal order (built by ista at runtime)
     std::map<std::string, FlowEntry> flows;         // name -> target
     std::vector<Channel> channels;                  // data flow descriptions
     // Prompt-scope search params from `search { }`, carried verbatim from the
     // IR (category -> param -> value), OPEN by design. Per-field (completion/
     // choice) and per-state (branch) resolution is applied at instantiation;
-    // queue.* is meaningful at this prompt scope. Not yet flattened onto fields/
-    // states — that scope cascade is a later step.
+    // queue.* is meaningful at this prompt scope.
     std::map<std::string, std::map<std::string, SearchValue>> search;
 };
 

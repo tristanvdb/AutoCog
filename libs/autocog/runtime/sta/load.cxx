@@ -65,16 +65,16 @@ PromptSTA load_prompt(json const & j) {
         p.fields.push_back(std::move(fi));
     }
 
-    for (auto const & [tag, sj] : j["states"].items()) {
-        ConcreteState cs;
-        cs.tag = tag;
-        cs.field = sj["field"];
-        for (auto const & i : sj["indices"]) cs.indices.push_back(i);
-        for (auto const & s : sj["successors"]) cs.successors.push_back(s);
-        p.states[tag] = std::move(cs);
+    // Abstract state graph (concrete states are built by ista at runtime).
+    if (j.contains("abstracts")) {
+        for (auto const & aj : j["abstracts"]) {
+            AbstractState a;
+            a.field = aj.value("field", -1);
+            a.flow  = aj.value("flow", -1);
+            a.exit_ = aj.value("exit", -1);
+            p.abstracts.push_back(a);
+        }
     }
-
-    for (auto const & s : j["sequence"]) p.sequence.push_back(s);
 
     for (auto const & [name, fj] : j["flows"].items()) {
         auto type = fj["type"].get<std::string>();
@@ -363,11 +363,10 @@ json serialize_prompt(PromptSTA const & p) {
         if (!f.format_desc.empty()) fj["format_desc"] = f.format_desc;
         j["fields"].push_back(fj);
     }
-    j["states"] = json::object();
-    for (auto const & [tag, state] : p.states) {
-        j["states"][tag] = json{{"field", state.field}, {"indices", state.indices}, {"successors", state.successors}};
+    j["abstracts"] = json::array();
+    for (auto const & a : p.abstracts) {
+        j["abstracts"].push_back(json{{"field", a.field}, {"flow", a.flow}, {"exit", a.exit_}});
     }
-    j["sequence"] = p.sequence;
     j["flows"] = json::object();
     for (auto const & [name, entry] : p.flows) {
         std::visit([&](auto const & e) {

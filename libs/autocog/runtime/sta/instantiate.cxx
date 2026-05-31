@@ -1,6 +1,7 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/utilities/errors.hxx"
+#include "autocog/utilities/exception.hxx"
 
 #include <sstream>
 #include <set>
@@ -12,6 +13,273 @@ using json = nlohmann::json;
 // ============================================================================
 // Helpers
 // ============================================================================
+
+// ============================================================================
+// Build concrete states
+// ============================================================================
+
+static std::string make_tag(AbstractState const & abs,
+                            std::vector<FieldInfo> const & fields,
+                            std::vector<int> const & indices) {
+    std::string base = abs_tag(abs, fields);
+    std::string idx_str;
+    for (int i = 1; i < static_cast<int>(indices.size()); ++i) {
+        if (i > 1) idx_str += "_";
+        idx_str += std::to_string(indices[i]);
+    }
+    return base + "@" + idx_str;
+}
+
+static std::string build_concrete_rec(
+    std::vector<AbstractState> const & abstracts,
+    std::vector<FieldInfo> const & fields,
+    std::map<std::string, ConcreteState> & states,
+    int abs_idx,
+    std::vector<int> indices
+) {
+    auto const & abs = abstracts[abs_idx];
+    int depth = abs_depth(abs, fields);
+    int count = indices.back();
+    std::string ctag = make_tag(abs, fields, indices);
+
+    if (states.count(ctag)) return ctag;
+
+    bool is_list, is_record;
+    if (abs.field >= 0) {
+        is_list = fields[abs.field].is_list();
+        is_record = fields[abs.field].is_record();
+    } else {
+        is_list = false;
+        is_record = true;
+    }
+
+    bool can_flow, can_exit;
+    if (is_list) {
+        can_flow = count < fields[abs.field].range->second;
+        can_exit = count >= fields[abs.field].range->first;
+    } else if (is_record) {
+        can_flow = count == 0;
+        can_exit = count > 0;
+    } else {
+        can_flow = true;
+        can_exit = true;
+    }
+    can_flow = can_flow && (abs.flow >= 0);
+    can_exit = can_exit && (abs.exit_ >= 0);
+
+    ConcreteState cs;
+    cs.tag = ctag;
+    cs.field = abs.field;
+    cs.indices = std::vector<int>(indices.begin() + 1, indices.end());
+    states[ctag] = cs;
+
+    if (can_flow) {
+        auto new_indices = indices;
+        auto const & flow_abs = abstracts[abs.flow];
+        if (depth < abs_depth(flow_abs, fields)) {
+            new_indices.push_back(0);
+        } else {
+            new_indices.back() += 1;
+        }
+        auto next = build_concrete_rec(abstracts, fields, states, abs.flow, new_indices);
+        states[ctag].flows.push_back(next);
+    }
+
+    if (can_exit) {
+        auto new_indices = indices;
+        auto const & exit_abs = abstracts[abs.exit_];
+        int delta = depth - abs_depth(exit_abs, fields);
+        if (delta > 0) {
+            new_indices.resize(new_indices.size() - delta);
+            new_indices.back() += 1;
+        } else {
+            new_indices.back() = 0;
+        }
+        auto next = build_concrete_rec(abstracts, fields, states, abs.exit_, new_indices);
+        states[ctag].exits.push_back(next);
+    }
+
+    return ctag;
+}
+
+// ============================================================================
+// Post-process concrete states (matches Python build_concrete)
+// ============================================================================
+
+static std::vector<std::string> get_sequence(std::map<std::string, ConcreteState> const & states) {
+    std::vector<std::string> seq;
+    std::string cur = "root@";
+    while (true) {
+        seq.push_back(cur);
+        auto it = states.find(cur);
+        if (it == states.end() || it->second.successors.empty()) break;
+        cur = it->second.successors[0];
+        if (cur == "root@") break;
+    }
+    return seq;
+}
+
+static void post_process(
+    std::vector<FieldInfo> const & fields,
+    std::map<std::string, ConcreteState> & states
+) {
+    // Step 1: merge flows/exits into successors
+    for (auto & [tag, state] : states) {
+        if (!state.flows.empty()) {
+            state.successors.push_back(state.flows[0]);
+            state.flows.clear();  // exits intentionally kept for reversed_exits
+        } else if (!state.exits.empty()) {
+            if (state.exits[0] != "root@") {
+                state.successors.push_back(state.exits[0]);
+                state.exits.clear();
+            }
+            // exits to root@ intentionally kept for list tail pruning
+        }
+    }
+
+    auto sequence = get_sequence(states);
+
+    // Build reversed exits
+    std::map<std::string, std::vector<std::string>> reversed_exits;
+    for (auto const & stag : sequence) {
+        for (auto const & e : states[stag].exits) {
+            if (e == "root@") continue;
+            auto & vec = reversed_exits[e];
+            if (std::find(vec.begin(), vec.end(), stag) == vec.end()) {
+                vec.push_back(stag);
+            }
+        }
+    }
+
+    // Step 2: prune list tails
+    std::vector<std::string> delete_set;
+    bool prev_deleted = false;
+    std::string last_kept_tag;
+    for (size_t s = 0; s < sequence.size(); ++s) {
+        auto const & stag = sequence[s];
+        auto & state = states[stag];
+
+        bool is_list_tail = false;
+        if (state.field >= 0) {
+            auto const & fld = fields[state.field];
+            if (fld.is_list() && !state.indices.empty()) {
+                is_list_tail = state.indices.back() >= fld.range->second;
+            }
+        }
+
+        if (is_list_tail) {
+            delete_set.push_back(stag);
+            if (!state.exits.empty() && state.exits[0] == "root@") {
+                if (s > 0) {
+                    states[sequence[s - 1]].successors.clear();
+                }
+            } else if (reversed_exits.count(stag)) {
+                if (state.successors.size() != 1) {
+                    throw autocog::utilities::InternalError(
+                        "List tail '" + stag + "' is the target of exit edges but has "
+                        + std::to_string(state.successors.size()) + " successors. "
+                        "A variable-length list cannot be the last field in its enclosing scope.");
+                }
+                auto succ = state.successors[0];
+                for (auto const & e : reversed_exits[stag]) {
+                    auto & vec = reversed_exits[succ];
+                    if (std::find(vec.begin(), vec.end(), e) == vec.end()) {
+                        vec.push_back(e);
+                    }
+                }
+                reversed_exits.erase(stag);
+            }
+            prev_deleted = true;
+        } else {
+            if (prev_deleted && !last_kept_tag.empty()) {
+                states[last_kept_tag].successors = {stag};
+            }
+            last_kept_tag = stag;
+            prev_deleted = false;
+        }
+    }
+
+    for (auto const & tag : delete_set) {
+        states.erase(tag);
+    }
+
+    // Step 3: clear all exits, reassign from reversed_exits
+    for (auto & [tag, state] : states) {
+        state.exits.clear();
+    }
+    for (auto const & [sink, srcs] : reversed_exits) {
+        for (auto const & src : srcs) {
+            if (states.count(src)) {
+                states[src].exits.push_back(sink);
+            }
+        }
+    }
+
+    // Step 4: propagate exit edges — exit closure on predecessors
+    sequence = get_sequence(states);
+    for (size_t s = 1; s < sequence.size(); ++s) {
+        auto const & stag = sequence[s];
+        auto & state = states[stag];
+        if (state.exits.empty()) continue;
+
+        auto & pred = states[sequence[s - 1]];
+
+        // Exit closure
+        std::vector<std::string> closure;
+        std::vector<std::string> todo = state.exits;
+        while (!todo.empty()) {
+            std::vector<std::string> next;
+            for (auto const & t : todo) {
+                if (std::find(closure.begin(), closure.end(), t) == closure.end()) {
+                    closure.push_back(t);
+                    if (states.count(t)) {
+                        for (auto const & e : states[t].exits) {
+                            next.push_back(e);
+                        }
+                    }
+                }
+            }
+            todo = next;
+        }
+
+        for (auto const & e : closure) {
+            if (std::find(pred.successors.begin(), pred.successors.end(), e) == pred.successors.end()) {
+                pred.successors.push_back(e);
+            }
+        }
+        state.exits.clear();
+    }
+
+    // Clean up remaining flows/exits
+    for (auto & [tag, state] : states) {
+        state.flows.clear();
+        state.exits.clear();
+    }
+}
+
+// Build the concrete (index-expanded) state graph from the serialized abstract
+// states. This is the work that used to be done in stlc; it now runs here at
+// instantiation time. (Currently still max-range expansion — content-driven
+// expansion is a later step.) Returns the concrete states; fills `sequence`.
+static std::map<std::string, ConcreteState> concretize(
+    std::vector<AbstractState> const & abstracts,
+    std::vector<FieldInfo> const & fields,
+    std::vector<std::string> & sequence
+) {
+    std::map<std::string, ConcreteState> states;
+    if (abstracts.empty()) return states;
+    build_concrete_rec(abstracts, fields, states, 0, {0});
+    post_process(fields, states);
+    std::string cur = "root@";
+    while (true) {
+        sequence.push_back(cur);
+        auto it = states.find(cur);
+        if (it == states.end() || it->second.successors.empty()) break;
+        cur = it->second.successors[0];
+        if (cur == "root@") break;
+    }
+    return states;
+}
 
 static std::vector<int> build_parent_map(std::vector<FieldInfo> const & fields) {
     std::vector<int> parent(fields.size(), -1);
@@ -291,6 +559,7 @@ struct FTABuilder {
     int action_id = 0;
 
     PromptSTA const & prompt;
+    std::map<std::string, ConcreteState> const & states;  // built by concretize()
     json const & content;
     Syntax const & syntax;
     SearchConfig const & search;
@@ -305,7 +574,7 @@ struct FTABuilder {
         std::string const & parent_safe,
         std::string const & succ_tag
     ) {
-        auto const & succ = prompt.states.at(succ_tag);
+        auto const & succ = states.at(succ_tag);
         std::string succ_safe = safe(succ_tag);
         std::string uid_prefix = succ_safe + ".from." + parent_safe;
 
@@ -327,8 +596,9 @@ struct FTABuilder {
         return {prev == field_id ? field_id : prev, endl_id};
     }
 
-    FTABuilder(PromptSTA const & p, json const & c, Syntax const & s, SearchConfig const & sc)
-        : prompt(p), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
+    FTABuilder(PromptSTA const & p, std::map<std::string, ConcreteState> const & st,
+               json const & c, Syntax const & s, SearchConfig const & sc)
+        : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
 
     int add_text(std::string const & uid, std::string const & text) {
         int id = action_id++;
@@ -443,15 +713,15 @@ struct FTABuilder {
         auto memo_it = memo.find(state_tag);
         if (memo_it != memo.end()) return memo_it->second;
 
-        auto it = prompt.states.find(state_tag);
-        if (it == prompt.states.end()) { memo[state_tag] = -1; return -1; }
+        auto it = states.find(state_tag);
+        if (it == states.end()) { memo[state_tag] = -1; return -1; }
         auto const & state = it->second;
 
         // Filter valid successors
         std::vector<std::string> valid;
         for (auto const & succ_tag : state.successors) {
-            auto sit = prompt.states.find(succ_tag);
-            if (sit == prompt.states.end()) continue;
+            auto sit = states.find(succ_tag);
+            if (sit == states.end()) continue;
             if (!should_skip(sit->second, prompt, content, parent_map))
                 valid.push_back(succ_tag);
         }
@@ -462,7 +732,7 @@ struct FTABuilder {
 
         if (valid.size() == 1) {
             // Single successor: desc (optional) → branch (Text) → field → endl → recurse
-            auto const & succ = prompt.states.at(valid[0]);
+            auto const & succ = states.at(valid[0]);
             auto const & fld = prompt.fields[succ.field];
             std::string succ_safe = safe(valid[0]);
 
@@ -500,7 +770,7 @@ struct FTABuilder {
             // (content determines array length, not the model).
             int content_forced = -1;
             for (size_t i = 0; i < valid.size(); ++i) {
-                auto const & succ = prompt.states.at(valid[i]);
+                auto const & succ = states.at(valid[i]);
                 auto const * val = read_content(content, succ, prompt, parent_map);
                 if (val && !val->is_null()) {
                     content_forced = static_cast<int>(i);
@@ -510,7 +780,7 @@ struct FTABuilder {
 
             if (content_forced >= 0) {
                 // Content determines the path: use text node (forced label)
-                auto const & succ = prompt.states.at(valid[content_forced]);
+                auto const & succ = states.at(valid[content_forced]);
                 int branch_id = add_text("branch." + cur_safe,
                                          prompt_label(succ, prompt, syntax));
                 entry_id = branch_id;
@@ -524,7 +794,7 @@ struct FTABuilder {
                 // No content determines the choice: model decides (Choose node)
                 std::vector<std::string> choices;
                 for (auto const & succ_tag : valid) {
-                    auto const & succ = prompt.states.at(succ_tag);
+                    auto const & succ = states.at(succ_tag);
                     choices.push_back(prompt_label(succ, prompt, syntax));
                 }
                 int branch_id = add_choose("branch." + cur_safe, choices);
@@ -554,7 +824,11 @@ json instantiate(PromptSTA const & prompt, json const & content,
     auto parent_map = build_parent_map(prompt.fields);
     validate_content_ranges(prompt.fields, parent_map, content);
 
-    FTABuilder b(prompt, content, syntax, search);
+    // Concretize the abstract state graph here (was previously done in stlc).
+    std::vector<std::string> sequence;
+    auto states = concretize(prompt.abstracts, prompt.fields, sequence);
+
+    FTABuilder b(prompt, states, content, syntax, search);
 
     // Build header
     std::ostringstream hdr;
