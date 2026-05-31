@@ -1,0 +1,37 @@
+// Test: ranged dataflow slice is fully determined by inputs (no model sampling).
+//
+// producer.items is filled entirely from the `items` input (a get channel), so
+// its value is exactly what the caller passes. The consumer reads a SLICE of it
+// via `use producer.items[2:5]` into its own `slice` field and returns it.
+//
+// With items = ["a","b","c","d","e","f"], the slice items[2:5] selects indices
+// 2,3,4 = ["c","d","e"]. A correct dataflow returns exactly those three.
+//
+// This is deterministic: every value involved comes from the input, none from
+// the RNG model, so the returned slice is precise and assertable. It exists to
+// pin down the IR->STA->Python path-range behavior (the range must survive the
+// boundary and be sliced, not truncated to its start index).
+
+prompt producer {
+  is {
+    items[6] is text<length=4>;
+  }
+  channel {
+    items get items;
+  }
+  flow consumer;
+}
+
+prompt consumer {
+  is {
+    slice[3] is text<length=4>;
+  }
+  channel {
+    slice use producer.items[2:5];
+  }
+  return {
+    use slice;
+  }
+}
+
+export producer as main;

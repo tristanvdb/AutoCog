@@ -33,6 +33,46 @@ class TestNavigate:
         assert navigate(data, []) == data
 
 
+class TestNavigateRange:
+    """Ranged path steps: a path like items[2:5] must select a SLICE of the
+    array (elements 2,3,4), not just its first element.
+
+    The bridge JSON encodes a step selector with distinct keys so the scalar vs
+    list distinction is explicit (Python slice semantics):
+      {"name": "x"}                 -> whole field
+      {"name": "x", "index": i}     -> data[i]      (scalar element)
+      {"name": "x", "slice": [lo,hi]} -> data[lo:hi] (list; null = open bound)
+    These pin down the contract end-to-end (IR -> STA -> Python). They currently
+    FAIL: the IR collapses the selector and the IR->STA boundary truncates a
+    range to its start index, so a slice arrives as a single index.
+    """
+
+    def test_single_index(self):
+        data = {"items": ["a", "b", "c", "d", "e", "f"]}
+        assert navigate(data, [{"name": "items", "index": 3}]) == "d"
+
+    def test_slice(self):
+        data = {"items": ["a", "b", "c", "d", "e", "f"]}
+        assert navigate(data, [{"name": "items", "slice": [2, 5]}]) == ["c", "d", "e"]
+
+    def test_slice_empty(self):
+        data = {"items": ["a", "b", "c", "d"]}
+        # Python semantics: a[3:3] is the empty list
+        assert navigate(data, [{"name": "items", "slice": [3, 3]}]) == []
+
+    def test_slice_open_start(self):
+        data = {"items": ["a", "b", "c", "d"]}
+        assert navigate(data, [{"name": "items", "slice": [None, 2]}]) == ["a", "b"]
+
+    def test_slice_open_end(self):
+        data = {"items": ["a", "b", "c", "d"]}
+        assert navigate(data, [{"name": "items", "slice": [2, None]}]) == ["c", "d"]
+
+    def test_slice_full(self):
+        data = {"items": ["a", "b", "c", "d"]}
+        assert navigate(data, [{"name": "items", "slice": [None, None]}]) == ["a", "b", "c", "d"]
+
+
 class TestBind:
 
     def test_extract_field(self):
