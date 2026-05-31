@@ -24,8 +24,8 @@
   "metadata": {
     "format": "sta",
     "source_uid": "f1e7636fb011b944",
-    "timestamp": "2026-05-31T19:02:45.265Z",
-    "uid": "4af9801e7a50a580",
+    "timestamp": "2026-05-31T20:17:17.027Z",
+    "uid": "a4bcf7b09b832602",
     "version": "0.5.5"
   },
   "prompts": {
@@ -56,7 +56,6 @@
         {
           "clauses": [
             {
-              "depth": 1,
               "target": [],
               "type": "ravel"
             }

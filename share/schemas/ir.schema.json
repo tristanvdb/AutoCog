@@ -210,17 +210,7 @@
           "type": "string"
         },
         "path": {
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "$ref": "#/$defs/data_ref"
-            }
-          ]
+          "$ref": "#/$defs/path_steps"
         },
         "fields": {
           "type": "array",
@@ -310,16 +300,6 @@
           ]
         },
         "extern": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "binds": {
           "oneOf": [
             {
               "type": "string"
@@ -469,14 +449,8 @@
           "$ref": "#/$defs/path_steps"
         },
         "depth": {
-          "oneOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "type": "integer",
+          "description": "Ravel flatten depth (omitted = default 1)."
         }
       },
       "required": [
@@ -497,14 +471,8 @@
           "$ref": "#/$defs/path_steps"
         },
         "depth": {
-          "oneOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "type": "integer",
+          "description": "Ravel flatten depth (omitted = default 1)."
         }
       },
       "required": [

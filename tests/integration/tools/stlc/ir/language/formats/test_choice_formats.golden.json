@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "5a223176a90402e6",
-    "timestamp": "2026-05-31T19:03:59.255Z",
-    "uid": "8006d20600ff3763",
+    "timestamp": "2026-05-31T20:17:07.277Z",
+    "uid": "505b655e928cc6f6",
     "version": "0.5.5"
   },
   "prompts": {
@@ -34,15 +34,11 @@
           "desc": [],
           "format": {
             "mode": "select",
-            "path": {
-              "is_input": false,
-              "prompt": null,
-              "steps": [
-                {
-                  "name": "options"
-                }
-              ]
-            },
+            "path": [
+              {
+                "name": "options"
+              }
+            ],
             "type": "choice"
           },
           "index": 1,
@@ -54,15 +50,11 @@
           "desc": [],
           "format": {
             "mode": "select",
-            "path": {
-              "is_input": false,
-              "prompt": null,
-              "steps": [
-                {
-                  "name": "options"
-                }
-              ]
-            },
+            "path": [
+              {
+                "name": "options"
+              }
+            ],
             "type": "choice"
           },
           "index": 2,

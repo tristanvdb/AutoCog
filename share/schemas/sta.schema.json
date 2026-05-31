@@ -602,7 +602,8 @@
           "$ref": "#/$defs/path_steps"
         },
         "depth": {
-          "type": "integer"
+          "type": "integer",
+          "description": "Ravel flatten depth (omitted = default 1)."
         }
       },
       "required": [

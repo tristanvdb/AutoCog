@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "717d610785ec56ee",
-    "timestamp": "2026-05-31T19:03:51.166Z",
-    "uid": "0d429ec6ef367505",
+    "timestamp": "2026-05-31T20:16:59.625Z",
+    "uid": "04d5acb01024a557",
     "version": "0.5.5"
   },
   "prompts": {
@@ -31,7 +31,6 @@
           "type": "input"
         },
         {
-          "binds": null,
           "entry": "transform",
           "extern": "transform",
           "kwargs": {

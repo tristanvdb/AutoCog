@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "f403eddae57f4f29",
-    "timestamp": "2026-05-31T19:03:54.862Z",
-    "uid": "155851509d26375c",
+    "timestamp": "2026-05-31T20:17:03.142Z",
+    "uid": "3e84677c88e60410",
     "version": "0.5.5"
   },
   "prompts": {
@@ -84,14 +84,12 @@
     "main": {
       "channels": [
         {
-          "binds": null,
           "entry": "aggregator",
           "extern": null,
           "kwargs": {
             "all_items": {
               "clauses": [
                 {
-                  "depth": null,
                   "target": [],
                   "type": "ravel"
                 }

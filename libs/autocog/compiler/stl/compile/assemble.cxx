@@ -399,7 +399,7 @@ static FormatResult generate_format(
             ir::Choice fmt;
             fmt.mode = (type.data.mode == ast::ChoiceKind::Select) ? "select" : "repeat";
             auto steps = convert_path(type.data.source, evaluator, scope, ctx);
-            fmt.path = ir::DocPath(std::move(steps), false, std::nullopt);
+            fmt.path = std::move(steps);
             for (auto const & assign : fref.data.kwargs) {
                 auto k = assign.data.argument.data.name;
                 driver.emit_error(

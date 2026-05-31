@@ -6,15 +6,14 @@
   "metadata": {
     "format": "ir",
     "source_uid": "0107d97f1cc985c2",
-    "timestamp": "2026-05-31T19:03:51.480Z",
-    "uid": "ebfbc192e5a49df5",
+    "timestamp": "2026-05-31T20:16:59.914Z",
+    "uid": "7592e9e1adf90a1e",
     "version": "0.5.5"
   },
   "prompts": {
     "main": {
       "channels": [
         {
-          "binds": null,
           "entry": "processor",
           "extern": null,
           "kwargs": {

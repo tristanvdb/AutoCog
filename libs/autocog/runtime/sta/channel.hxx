@@ -21,7 +21,7 @@ struct BindClause {
 };
 
 struct RavelClause {
-    int depth = 1;
+    std::optional<int> depth;      // nullopt = default (1); resolved at point of use
     std::vector<PathStep> target;  // empty = apply to root
 };
 

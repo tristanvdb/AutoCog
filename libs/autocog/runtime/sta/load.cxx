@@ -182,7 +182,7 @@ PromptSTA load_prompt(json const & j) {
                         clauses.push_back(std::move(bc));
                     } else if (ct == "ravel") {
                         RavelClause rc;
-                        rc.depth = cl.value("depth", 1);
+                        if (cl.contains("depth") && !cl["depth"].is_null()) rc.depth = cl["depth"].get<int>();
                         rc.target = load_pathsteps(cl["target"]);
                         clauses.push_back(std::move(rc));
                     } else if (ct == "wrap") {
@@ -338,8 +338,10 @@ static json clause_to_json(Clause const & clause) {
         using T = std::decay_t<decltype(c)>;
         if constexpr (std::is_same_v<T, BindClause>)
             return json{{"type","bind"}, {"source", pathsteps_to_json(c.source)}, {"target", pathsteps_to_json(c.target)}};
-        else if constexpr (std::is_same_v<T, RavelClause>)
-            return json{{"type","ravel"}, {"depth", c.depth}, {"target", pathsteps_to_json(c.target)}};
+        else if constexpr (std::is_same_v<T, RavelClause>) {
+            if (c.depth) return json{{"type","ravel"}, {"depth", *c.depth}, {"target", pathsteps_to_json(c.target)}};
+            return json{{"type","ravel"}, {"target", pathsteps_to_json(c.target)}};
+        }
         else if constexpr (std::is_same_v<T, WrapClause>)
             return json{{"type","wrap"}, {"target", pathsteps_to_json(c.target)}};
         else if constexpr (std::is_same_v<T, PruneClause>)

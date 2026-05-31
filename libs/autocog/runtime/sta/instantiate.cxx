@@ -446,7 +446,8 @@ static std::string format_label(FieldInfo const & fld) {
             return s;
         } else if constexpr (std::is_same_v<F, ChoiceFormat>) {
             std::string path;
-            for (auto const & [name, _] : fmt.path) {
+            for (auto const & step : fmt.path) {
+                auto const & name = step.name;
                 if (!path.empty()) path += ".";
                 path += name;
             }
@@ -482,7 +483,8 @@ static std::string format_str(FieldInfo const & fld) {
             return s;
         } else if constexpr (std::is_same_v<F, ChoiceFormat>) {
             std::string path;
-            for (auto const & [name, _] : fmt.path) {
+            for (auto const & step : fmt.path) {
+                auto const & name = step.name;
                 if (!path.empty()) path += ".";
                 path += name;
             }

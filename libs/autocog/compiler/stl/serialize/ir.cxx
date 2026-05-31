@@ -66,7 +66,7 @@ static json clause_to_json(ir::Clause const & clause) {
             j["target"] = pathsteps_to_json(c.target);
         } else if constexpr (std::is_same_v<T, ir::RavelClause>) {
             j["type"] = "ravel";
-            j["depth"] = c.depth.has_value() ? json(c.depth.value()) : json(nullptr);
+            if (c.depth) j["depth"] = c.depth.value();
             j["target"] = pathsteps_to_json(c.target);
         } else if constexpr (std::is_same_v<T, ir::WrapClause>) {
             j["type"] = "wrap";
@@ -99,7 +99,9 @@ static json format_to_json(ir::Format const & format) {
         } else if constexpr (std::is_same_v<T, ir::Choice>) {
             j["type"] = "choice";
             j["mode"] = fmt.mode;
-            j["path"] = docpath_to_json(fmt.path);
+            json steps = json::array();
+            for (auto const & s : fmt.path) steps.push_back(pathstep_to_json(s));
+            j["path"] = steps;
         } else if constexpr (std::is_same_v<T, std::vector<std::unique_ptr<ir::Field>>>) {
             j["type"] = "struct";
             j["fields"] = json::array();
@@ -168,18 +170,6 @@ static json channel_to_json(ir::Channel const & channel) {
                     kj["clauses"].push_back(clause_to_json(clause));
                 }
                 j["kwargs"][name] = kj;
-            }
-            if (ch.binds.has_value()) {
-                j["binds"] = json::object();
-                for (auto const & [name, path] : ch.binds.value()) {
-                    json pj = json::array();
-                    for (auto const & step : path) {
-                        pj.push_back(pathstep_to_json(step));
-                    }
-                    j["binds"][name] = pj;
-                }
-            } else {
-                j["binds"] = nullptr;
             }
             j["link_clauses"] = json::array();
             for (auto const & clause : ch.link_clauses) {

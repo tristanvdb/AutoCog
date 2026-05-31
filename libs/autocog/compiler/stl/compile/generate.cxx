@@ -35,10 +35,7 @@ static sta::FieldFormat extract_format(ir::Format const & fmt) {
             ef.values = f.values;
             return ef;
         } else if constexpr (std::is_same_v<T, ir::Choice>) {
-            sta::ChoiceFormat chf;
-            chf.mode = f.mode;
-            chf.path = f.path.steps;   // shared PathStep; copy through
-            return chf;
+            return f;   // ir::Choice IS sta::ChoiceFormat now
         } else {
             // struct (vector<Field>) → record (no leaf format); handled by caller.
             return std::monostate{};
@@ -198,36 +195,8 @@ static std::vector<sta::PathStep> convert_docpath(ir::DocPath const & dp) {
 }
 
 static std::vector<sta::Clause> convert_clauses(std::vector<ir::Clause> const & clauses) {
-    std::vector<sta::Clause> result;
-    for (auto const & clause : clauses) {
-        std::visit([&](auto const & c) {
-            using T = std::decay_t<decltype(c)>;
-            if constexpr (std::is_same_v<T, ir::BindClause>) {
-                sta::BindClause bc;
-                bc.source = convert_steps(c.source);
-                bc.target = convert_steps(c.target);
-                result.push_back(std::move(bc));
-            } else if constexpr (std::is_same_v<T, ir::RavelClause>) {
-                sta::RavelClause rc;
-                rc.depth = c.depth.value_or(1);
-                rc.target = convert_steps(c.target);
-                result.push_back(std::move(rc));
-            } else if constexpr (std::is_same_v<T, ir::WrapClause>) {
-                sta::WrapClause wc;
-                wc.target = convert_steps(c.target);
-                result.push_back(std::move(wc));
-            } else if constexpr (std::is_same_v<T, ir::PruneClause>) {
-                sta::PruneClause pc;
-                pc.target = convert_steps(c.target);
-                result.push_back(std::move(pc));
-            } else if constexpr (std::is_same_v<T, ir::MappedClause>) {
-                sta::MappedClause mc;
-                mc.target = convert_steps(c.target);
-                result.push_back(std::move(mc));
-            }
-        }, clause);
-    }
-    return result;
+    // IR and STA clauses are the same shared type now; copy through unchanged.
+    return clauses;
 }
 
 static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
@@ -264,15 +233,6 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
                 }
                 // Link-level clauses
                 cc.clauses = convert_clauses(c.link_clauses);
-                // Also convert legacy binds to bind clauses
-                if (c.binds) {
-                    for (auto const & [target_name, source_path] : *c.binds) {
-                        sta::BindClause bc;
-                        bc.source = convert_steps(source_path);
-                        bc.target = {{target_name, std::nullopt}};
-                        cc.clauses.push_back(std::move(bc));
-                    }
-                }
                 channels.push_back(std::move(cc));
             }
         }, ch);

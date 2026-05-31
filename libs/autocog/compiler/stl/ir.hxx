@@ -13,10 +13,16 @@
 
 #include "autocog/runtime/fta/vocab.hxx"
 #include "autocog/runtime/sta/path.hxx"
+#include "autocog/runtime/sta/channel.hxx"
+#include "autocog/runtime/sta/state.hxx"
 
 namespace autocog::compiler::stl::ir {
 
-using Value = std::variant<int, float, bool, std::string, std::nullptr_t>;
+// A resolved STL scalar value. Identical to the runtime's SearchValue (all STL
+// expressions are constexpr, so values are concrete by IR time); shared so the
+// IR->STA carry needs no re-wrap. The distinct names mark role (compiler value
+// vs search param), not a distinct shape.
+using Value = ::autocog::runtime::sta::SearchValue;
 using VarMap = std::unordered_map<std::string, Value>;
 
 // Search policies carried from `search { <category>.<param> is <expr>; }`.
@@ -103,27 +109,19 @@ struct Field;
 // kwargs folded in as the innermost policy layer during graph->IR.
 // ---------------------------------------------------------------------------
 
-// Text/Completion format: text<length=N, vocab=...>
-struct Completion {
-  std::optional<int> length;
-  std::optional<std::string> vocab;   // reference into the prompt's vocab table
-                                       // ("vocab_<hash>"); empty = unrestricted
-};
+// The leaf format types are shared TA-layer types (runtime/sta/state.hxx):
+// Completion/Enum/Choice are identical across IR and STA. Only the format
+// VARIANT differs (the IR adds a recursive struct case; the STA flattens it to
+// monostate), so the variants stay separate but the leaves are shared. The
+// Choice path is a plain vector<PathStep> (a choice source is always a local
+// field reference, never an input or cross-prompt).
+using Completion = ::autocog::runtime::sta::CompletionFormat;
+using Enum       = ::autocog::runtime::sta::EnumFormat;
+using Choice     = ::autocog::runtime::sta::ChoiceFormat;
 
-// Enum format: enum("A", "B", "C")
-struct Enum {
-  std::vector<std::string> values;
-};
-
-// Choice format: select(source) or repeat(source)
-struct Choice {
-  DocPath path;
-  std::string mode;   // "select" or "repeat"
-};
-
-// A field's format: one of the leaf formats, or a vector of sub-fields (the
-// container / "real" struct case — no separate node needed). Type-safe
-// leaf-vs-container via the alternative held.
+// A field's format: one of the shared leaf formats, or a vector of sub-fields
+// (the container/struct case). The IR variant keeps the recursive struct case;
+// the STA variant (FieldFormat) flattens it to monostate.
 using Format = std::variant<
   Completion,
   Enum,
@@ -203,29 +201,15 @@ struct Record : public Object {
 };
 
 // Clause types for data transformation
-struct BindClause {
-  std::vector<PathStep> source;           // Source path (empty = implicit)
-  std::vector<PathStep> target;           // Target path (empty = implicit)
-};
-
-struct RavelClause {
-  std::optional<int> depth;               // Flatten depth (nullopt = 1)
-  std::vector<PathStep> target;           // Optional target path
-};
-
-struct WrapClause {
-  std::vector<PathStep> target;           // Optional target path
-};
-
-struct PruneClause {
-  std::vector<PathStep> target;           // Path to prune
-};
-
-struct MappedClause {
-  std::vector<PathStep> target;           // Optional target path
-};
-
-using Clause = std::variant<BindClause, RavelClause, WrapClause, PruneClause, MappedClause>;
+// Clauses are shared TA-layer types (runtime/sta/channel.hxx); the IR builds
+// them and the STA carries them unchanged. RavelClause.depth stays optional
+// (nullopt = default 1), resolved at point of use rather than at the boundary.
+using BindClause   = ::autocog::runtime::sta::BindClause;
+using RavelClause  = ::autocog::runtime::sta::RavelClause;
+using WrapClause   = ::autocog::runtime::sta::WrapClause;
+using PruneClause  = ::autocog::runtime::sta::PruneClause;
+using MappedClause = ::autocog::runtime::sta::MappedClause;
+using Clause       = ::autocog::runtime::sta::Clause;
 
 // Kwarg for function/prompt calls
 struct Kwarg {
@@ -274,7 +258,6 @@ struct CallChannel {
   std::optional<std::string> extern_func;  // "module.function" for Python calls
   std::optional<std::string> entry;        // For prompt calls
   std::unordered_map<std::string, Kwarg> kwargs;
-  std::optional<std::unordered_map<std::string, std::vector<PathStep>>> binds;
   std::vector<Clause> link_clauses;        // Clauses on the link itself (ravel, bind, etc.)
 
   CallChannel(DocPath target_) :
@@ -282,7 +265,6 @@ struct CallChannel {
     extern_func(std::nullopt),
     entry(std::nullopt),
     kwargs(),
-    binds(std::nullopt),
     link_clauses()
   {}
 };

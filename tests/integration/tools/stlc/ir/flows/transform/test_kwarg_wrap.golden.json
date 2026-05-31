@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "c14e04a8bd042f8d",
-    "timestamp": "2026-05-31T19:03:55.194Z",
-    "uid": "794cdca326fea6d1",
+    "timestamp": "2026-05-31T20:17:03.441Z",
+    "uid": "78d5c8ef1224fac4",
     "version": "0.5.5"
   },
   "prompts": {
@@ -84,7 +84,6 @@
     "main": {
       "channels": [
         {
-          "binds": null,
           "entry": "list_handler",
           "extern": null,
           "kwargs": {
