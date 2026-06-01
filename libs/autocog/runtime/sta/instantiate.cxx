@@ -675,6 +675,7 @@ struct FTABuilder {
         };
         if (ts.repetition) j["repetition"] = *ts.repetition;
         if (ts.diversity) j["diversity"] = *ts.diversity;
+        if (cf.vocab) j["vocab"] = *cf.vocab;
         actions.push_back(j);
         return id;
     }
@@ -951,7 +952,16 @@ json instantiate(PromptSTA const & prompt, json const & content,
             if (auto const * s = std::get_if<std::string>(&mit->second)) metric = *s;
     }
 
-    return json{{"actions", b.actions}, {"queue", json{{"metric", metric}}}};
+    json fta = json{{"actions", b.actions}, {"queue", json{{"metric", metric}}}};
+    // Vocab table: carried into the FTA so the backend (xfta) can build token
+    // masks from each vocab_<hash> -> STL expression. complete actions reference
+    // an entry by its key.
+    if (!prompt.vocabs.empty()) {
+        json vj = json::object();
+        for (auto const & [k, ve] : prompt.vocabs) vj[k] = ::autocog::runtime::fta::vocab_to_json(ve);
+        fta["vocabs"] = vj;
+    }
+    return fta;
 }
 
 // ============================================================================

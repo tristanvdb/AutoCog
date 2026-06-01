@@ -8,6 +8,7 @@ enum class OpKind {
     Not, Neg,                    // Unary
     Add, Sub, Mul, Div, Mod,     // Arithmetic
     And, Or,                     // Logical
+    BAnd, BOr,                   // Set/bitwise (vocab: intersection, union)
     Lt, Gt, Lte, Gte, Eq, Neq    // Comparison
 };
 std::string opKindToString(ast::OpKind op);
@@ -63,8 +64,21 @@ DATA(Parenthesis) {
 };
 TRAVERSE_CHILDREN(Parenthesis, expr)
 
+// Vocab leaves. `tokenize(s, ...)` is the union of the tokens produced by each
+// string; `regex(s)` is the set of tokens whose surface matches. Their string
+// arguments are String nodes (literals / f-strings), like enum enumerators.
+DATA(Tokenize) {
+  NODES(String) strings;
+};
+TRAVERSE_CHILDREN(Tokenize, strings)
+
+DATA(Regex) {
+  NODE(String) pattern;
+};
+TRAVERSE_CHILDREN(Regex, pattern)
+
 DATA(Expression) {
-  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis) expr;
+  VARIANT(Identifier, Integer, Float, Boolean, String, Unary, Binary, Conditional, Parenthesis, Tokenize, Regex) expr;
 };
 TRAVERSE_CHILDREN(Expression, expr)
 

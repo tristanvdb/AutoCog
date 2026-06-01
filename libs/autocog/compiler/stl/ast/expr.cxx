@@ -15,6 +15,8 @@ std::string opKindToString(ast::OpKind op) {
     case ast::OpKind::Mod: return "Mod";
     case ast::OpKind::And: return "And";
     case ast::OpKind::Or:  return "Or";
+    case ast::OpKind::BAnd: return "BAnd";
+    case ast::OpKind::BOr:  return "BOr";
     case ast::OpKind::Lt:  return "Lt";
     case ast::OpKind::Gt:  return "Gt";
     case ast::OpKind::Lte: return "Lte";

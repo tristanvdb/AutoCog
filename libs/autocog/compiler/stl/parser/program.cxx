@@ -26,7 +26,8 @@ void Parser::parse<ast::Tag::Program>(ParserState & state, ast::Data<ast::Tag::P
         break;
       }
       case TokenType::DEFINE:
-      case TokenType::ARGUMENT: {
+      case TokenType::ARGUMENT:
+      case TokenType::VOCAB: {
         data.statements.emplace_back(std::in_place_index<2>);
         auto & node = std::get<2>(data.statements.back());
         parse(state, node);

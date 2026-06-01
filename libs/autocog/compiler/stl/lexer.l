@@ -85,6 +85,9 @@ public:
 "select"                { update_location(); return (int)TokenType::SELECT; }
 "repeat"                { update_location(); return (int)TokenType::REPEAT; }
 "enum"                  { update_location(); return (int)TokenType::ENUM; }
+"vocab"                 { update_location(); return (int)TokenType::VOCAB; }
+"tokenize"              { update_location(); return (int)TokenType::TOKENIZE; }
+"regex"                 { update_location(); return (int)TokenType::REGEX; }
 "true"                  { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
 "false"                 { update_location(); return (int)TokenType::BOOLEAN_LITERAL; }
 
@@ -106,6 +109,8 @@ public:
 "!="                    { update_location(); return (int)TokenType::BANGEQ; }
 "&&"                    { update_location(); return (int)TokenType::AMPAMP; }
 "||"                    { update_location(); return (int)TokenType::PIPEPIPE; }
+"&"                     { update_location(); return (int)TokenType::AMP; }
+"|"                     { update_location(); return (int)TokenType::PIPE; }
 
 "{"                     { update_location(); return (int)TokenType::LBRACE; }
 "}"                     { update_location(); return (int)TokenType::RBRACE; }

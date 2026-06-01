@@ -1,0 +1,218 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "writer"
+  },
+  "metadata": {
+    "format": "ir",
+    "source_uid": "9ee4d98fdfef0c19",
+    "timestamp": "2026-05-31T16:37:42.508Z",
+    "uid": "4d49710e970ff23a",
+    "version": "0.5.5"
+  },
+  "prompts": {
+    "writer": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 8,
+            "type": "completion",
+            "vocab": "vocab_d298e3e292548dce"
+          },
+          "index": 0,
+          "name": "code",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 16,
+            "type": "completion",
+            "vocab": "vocab_d298e3e292548dce"
+          },
+          "index": 1,
+          "name": "label",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 64,
+            "type": "completion",
+            "vocab": "vocab_6b686ddddc9b9418"
+          },
+          "index": 2,
+          "name": "prose",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion",
+            "vocab": "vocab_e6edf1087597c9c2"
+          },
+          "index": 3,
+          "name": "pin",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "writer",
+      "name": "writer",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "code",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "label",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "prose",
+                  "range": null
+                }
+              ]
+            }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "pin",
+                  "range": null
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      },
+      "vocabs": {
+        "vocab_6b686ddddc9b9418": {
+          "kind": "diff",
+          "operands": [
+            {
+              "kind": "complement",
+              "operands": [
+                {
+                  "kind": "tokenize",
+                  "strings": []
+                }
+              ]
+            },
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9"
+              ]
+            }
+          ]
+        },
+        "vocab_d298e3e292548dce": {
+          "kind": "union",
+          "operands": [
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9"
+              ]
+            },
+            {
+              "kind": "regex",
+              "strings": [
+                "^[a-zA-Z]+$"
+              ]
+            }
+          ]
+        },
+        "vocab_e6edf1087597c9c2": {
+          "kind": "diff",
+          "operands": [
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9"
+              ]
+            },
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "records": {}
+}

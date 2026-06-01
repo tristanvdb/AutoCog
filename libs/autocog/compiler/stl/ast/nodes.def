@@ -44,6 +44,8 @@ X(Unary,"Unary")
 X(Binary,"Binary")
 X(Conditional,"Conditional")
 X(Parenthesis,"Parenthesis")
+X(Tokenize,"Tokenize")
+X(Regex,"Regex")
 X(Assign,"Assign")
 X(Alias,"Alias")
 

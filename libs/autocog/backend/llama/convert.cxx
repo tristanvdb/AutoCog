@@ -4,10 +4,12 @@
 
 #include "autocog/runtime/fta/fta.hxx"
 #include "autocog/runtime/fta/ftt.hxx"
+#include "autocog/runtime/fta/vocab.hxx"
 
 #include "autocog/backend/llama/manager.hxx"
 
 #include <map>
+#include <regex>
 
 namespace autocog::backend::llama {
 
@@ -18,6 +20,60 @@ static void require_field(nlohmann::json const & j, std::string const & uid, cha
         throw autocog::ConfigError("FTA action '" + uid + "' missing required field '" + std::string(field) + "'", uid);
 }
 
+// Build a token mask (one bool per vocab id) from a resolved vocab expression.
+//   tokenize(s, ...): the set of token ids that appear in the tokenization of
+//                     each string (union). With a character-level vocab,
+//                     tokenize("foo") = {'f','o'}.
+//   regex(p):         token ids whose surface (detokenized) matches the regex.
+//   union/intersect/diff/complement: set algebra over the masks.
+static std::vector<bool> build_vocab_mask(Model & model, VocabExpr const & ve) {
+    size_t const n = model.vocab_size();
+    switch (ve.kind) {
+        case VocabExpr::Kind::Tokenize: {
+            std::vector<bool> m(n, false);
+            for (auto const & s : ve.strings) {
+                for (TokenID t : model.tokenize(s, false, true)) {
+                    if (t >= 0 && static_cast<size_t>(t) < n) m[t] = true;
+                }
+            }
+            return m;
+        }
+        case VocabExpr::Kind::Regex: {
+            std::vector<bool> m(n, false);
+            std::regex re(ve.strings.empty() ? std::string{} : ve.strings[0]);
+            for (size_t t = 0; t < n; ++t) {
+                std::string surface = model.detokenize({static_cast<TokenID>(t)}, false, false);
+                if (std::regex_search(surface, re)) m[t] = true;
+            }
+            return m;
+        }
+        case VocabExpr::Kind::Union: {
+            auto a = build_vocab_mask(model, *ve.operands[0]);
+            auto b = build_vocab_mask(model, *ve.operands[1]);
+            for (size_t i = 0; i < n; ++i) a[i] = a[i] || b[i];
+            return a;
+        }
+        case VocabExpr::Kind::Intersect: {
+            auto a = build_vocab_mask(model, *ve.operands[0]);
+            auto b = build_vocab_mask(model, *ve.operands[1]);
+            for (size_t i = 0; i < n; ++i) a[i] = a[i] && b[i];
+            return a;
+        }
+        case VocabExpr::Kind::Diff: {
+            auto a = build_vocab_mask(model, *ve.operands[0]);
+            auto b = build_vocab_mask(model, *ve.operands[1]);
+            for (size_t i = 0; i < n; ++i) a[i] = a[i] && !b[i];
+            return a;
+        }
+        case VocabExpr::Kind::Complement: {
+            auto a = build_vocab_mask(model, *ve.operands[0]);
+            a.flip();
+            return a;
+        }
+    }
+    return std::vector<bool>(n, true);
+}
+
 FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     Model & model = Manager::get_model(id);
     FTA fta;
@@ -25,6 +81,24 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
     if (!jsondata.contains("actions")) {
         throw autocog::ConfigError("FTA JSON missing 'actions' field", "");
     }
+
+    // Vocab table (vocab_<hash> -> expression tree). Each referenced entry is
+    // turned into a token mask, built once and cached per (model, hash).
+    nlohmann::json const empty_vocabs = nlohmann::json::object();
+    nlohmann::json const & vocabs = jsondata.contains("vocabs") ? jsondata["vocabs"] : empty_vocabs;
+    std::map<std::string, std::vector<bool>> mask_cache;
+
+    auto vocab_mask = [&](std::string const & ref) -> std::vector<bool> {
+        auto cit = mask_cache.find(ref);
+        if (cit != mask_cache.end()) return cit->second;
+        if (!vocabs.contains(ref)) {
+            throw autocog::ConfigError("Completion references unknown vocab '" + ref + "'", ref);
+        }
+        auto ve = runtime::fta::vocab_from_json(vocabs[ref]);
+        std::vector<bool> m = build_vocab_mask(model, *ve);
+        mask_cache.emplace(ref, m);
+        return m;
+    };
     
     auto json_actions = jsondata["actions"];
     std::map<std::string, ActionID> uid_to_id;
@@ -35,25 +109,18 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             throw autocog::ConfigError("Action missing 'uid' field", "");
         }
         std::string uid = action_json["uid"];
-        
-        // Detect format: "type" (text-level from ista) vs "__type__" (tokenized)
-        std::string action_type;
-        bool text_level = false;
-        if (action_json.contains("type")) {
-            action_type = action_json["type"];
-            text_level = true;
-        } else if (action_json.contains("__type__")) {
-            action_type = action_json["__type__"];
-        } else {
-            throw autocog::ConfigError("Action missing 'type' or '__type__' field: " + uid, uid);
+
+        if (!action_json.contains("type")) {
+            throw autocog::ConfigError("Action missing 'type' field: " + uid, uid);
         }
+        std::string action_type = action_json["type"];
         
         ActionID node_id = fta.actions.size();
         uid_to_id[uid] = node_id;
         
         std::unique_ptr<Action> action;
         
-        if (action_type == "text" || action_type == "Text") {
+        if (action_type == "text") {
             bool evaluate = false;
             if (action_json.contains("evaluate")) {
                 evaluate = action_json["evaluate"];
@@ -62,43 +129,23 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             action = std::make_unique<Text>(node_id, uid, evaluate);
             Text* text_action = static_cast<Text*>(action.get());
             
-            if (text_level && action_json.contains("text")) {
-                // Text-level: tokenize the string
-                std::string text = action_json["text"];
-                text_action->tokens = model.tokenize(text, false, true);
-            } else if (action_json.contains("tokens")) {
-                // Tokenized: use directly
-                for (const auto& token : action_json["tokens"]) {
-                    text_action->tokens.push_back(token.get<TokenID>());
-                }
-            }
+            std::string text = action_json.value("text", std::string{});
+            if (!text.empty()) text_action->tokens = model.tokenize(text, false, true);
             
-        } else if (action_type == "complete" || action_type == "Complete") {
-            float threshold;
-            unsigned length, beams, ahead, width;
+        } else if (action_type == "complete") {
+            require_field(action_json, uid, "threshold");
+            require_field(action_json, uid, "length");
+            require_field(action_json, uid, "beams");
+            require_field(action_json, uid, "ahead");
+            require_field(action_json, uid, "width");
+            require_field(action_json, uid, "stop_text");
+            float threshold  = action_json["threshold"];
+            unsigned length  = action_json["length"];
+            unsigned beams   = action_json["beams"];
+            unsigned ahead   = action_json["ahead"];
+            unsigned width   = action_json["width"];
             std::optional<float> repetition = std::nullopt;
             std::optional<float> diversity = std::nullopt;
-
-            if (text_level) {
-                require_field(action_json, uid, "threshold");
-                require_field(action_json, uid, "length");
-                require_field(action_json, uid, "beams");
-                require_field(action_json, uid, "ahead");
-                require_field(action_json, uid, "width");
-                require_field(action_json, uid, "stop_text");
-                threshold = action_json["threshold"];
-                length    = action_json["length"];
-                beams     = action_json["beams"];
-                ahead     = action_json["ahead"];
-                width     = action_json["width"];
-            } else {
-                threshold = action_json["threshold"];
-                length    = action_json["length"];
-                beams     = action_json["beams"];
-                ahead     = action_json["ahead"];
-                width     = action_json["width"];
-            }
-
             if (action_json.contains("repetition") && !action_json["repetition"].is_null()) {
                 repetition = action_json["repetition"];
             }
@@ -110,39 +157,22 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
                                                   beams, ahead, width, repetition, diversity);
             Completion* completion_action = static_cast<Completion*>(action.get());
 
-            if (text_level) {
-                std::string stop_str = action_json["stop_text"];
-                completion_action->stop = model.tokenize(stop_str, false, true);
-                
-                // Full vocab mask (all tokens allowed)
-                completion_action->vocab.mask.assign(model.vocab_size(), true);
+            std::string stop_str = action_json["stop_text"];
+            completion_action->stop = model.tokenize(stop_str, false, true);
+
+            // Vocab: build the token mask from the referenced expression tree;
+            // absent reference means unrestricted (all tokens allowed).
+            if (action_json.contains("vocab") && !action_json["vocab"].is_null()) {
+                completion_action->vocab.mask = vocab_mask(action_json["vocab"].get<std::string>());
             } else {
-                if (!action_json.contains("stop")) {
-                    throw autocog::ConfigError("Completion missing 'stop' field: " + uid, uid);
-                }
-                for (const auto& token : action_json["stop"]) {
-                    completion_action->stop.push_back(token.get<TokenID>());
-                }
-                completion_action->vocab.mask.clear();
-                completion_action->vocab.mask.reserve(model.vocab_size());
-                for (const auto& tok_msk : action_json["vocab"]) {
-                    completion_action->vocab.mask.push_back(tok_msk.get<bool>());
-                }
+                completion_action->vocab.mask.assign(model.vocab_size(), true);
             }
             
-        } else if (action_type == "choose" || action_type == "Choose") {
-            float threshold;
-            unsigned width;
-
-            if (text_level) {
-                require_field(action_json, uid, "threshold");
-                require_field(action_json, uid, "width");
-                threshold = action_json["threshold"];
-                width     = action_json["width"];
-            } else {
-                threshold = action_json["threshold"];
-                width     = action_json["width"];
-            }
+        } else if (action_type == "choose") {
+            require_field(action_json, uid, "threshold");
+            require_field(action_json, uid, "width");
+            float threshold = action_json["threshold"];
+            unsigned width  = action_json["width"];
             
             action = std::make_unique<Choice>(node_id, uid, threshold, width);
             Choice* choice_action = static_cast<Choice*>(action.get());
@@ -150,21 +180,9 @@ FTA convert_json_to_fta(ModelID const id, nlohmann::json const & jsondata) {
             if (action_json.contains("choices")) {
                 choice_action->choices.clear();
                 choice_action->choices.reserve(action_json["choices"].size());
-                
                 for (const auto& choice_json : action_json["choices"]) {
-                    if (text_level && choice_json.is_string()) {
-                        // Text-level: tokenize choice string
-                        auto tokens = model.tokenize(choice_json.get<std::string>(), false, true);
-                        choice_action->choices.push_back(std::move(tokens));
-                    } else {
-                        // Tokenized: array of token IDs
-                        TokenSequence choice_tokens;
-                        choice_tokens.reserve(choice_json.size());
-                        for (const auto& token : choice_json) {
-                            choice_tokens.push_back(token.get<TokenID>());
-                        }
-                        choice_action->choices.push_back(std::move(choice_tokens));
-                    }
+                    auto tokens = model.tokenize(choice_json.get<std::string>(), false, true);
+                    choice_action->choices.push_back(std::move(tokens));
                 }
             }
             

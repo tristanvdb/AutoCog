@@ -263,8 +263,11 @@ ir::Value Evaluator::retrieve_value(
     if (std::holds_alternative<DefineSymbol>(sym)) {
       auto const & defn = std::get<DefineSymbol>(sym).node;
       
-      if (defn.data.is_argument) {
+      if (defn.data.kind == ast::DefineKind::Argument) {
         throw autocog::utilities::InternalError("Argument `" + varname + "` should have been found in the variable map.");
+      }
+      if (defn.data.kind == ast::DefineKind::Vocab) {
+        throw CompileError("Vocab `" + varname + "` cannot be used as a value.", loc);
       }
 
       if (!defn.data.init) {
@@ -297,6 +300,149 @@ ir::Value Evaluator::evaluate_expression(
   ir::VarMap & varmap
 ) {
   return evaluate(scope, expr, varmap);
+}
+
+// ---------------------------------------------------------------------------
+// Vocab translation
+// ---------------------------------------------------------------------------
+
+namespace {
+// A memoization key for a vocab resolution: the vocab's name plus a serialized
+// form of the context that affects its f-strings. Identical (name, ctx) -> same
+// key; different ctx -> different key (so context-dependent vocabs stay
+// distinct across instantiations). Need not byte-match the graph's mangling;
+// it is an internal memo namespace.
+std::string vocab_key(std::string const & name, ir::VarMap const & ctx) {
+  std::string k = name;
+  std::vector<std::string> keys;
+  for (auto const & [kk, _] : ctx) keys.push_back(kk);
+  std::sort(keys.begin(), keys.end());
+  for (auto const & kk : keys) {
+    k += "|" + kk + "=";
+    std::visit([&](auto const & v) {
+      using T = std::decay_t<decltype(v)>;
+      if constexpr (std::is_same_v<T, std::string>) k += v;
+      else if constexpr (std::is_same_v<T, std::nullptr_t>) k += "null";
+      else if constexpr (std::is_same_v<T, bool>) k += (v ? "true" : "false");
+      else k += std::to_string(v);
+    }, ctx.at(kk));
+  }
+  return k;
+}
+} // namespace
+
+std::unique_ptr<ir::VocabExpr> Evaluator::translate_vocab(
+  std::string const & scope, ast::Expression const & expr, ir::VarMap & ctx,
+  std::optional<SourceRange> const & loc
+) {
+  auto eval_str = [&](ast::String const & s) -> std::string {
+    ir::Value v = evaluate(scope, s, ctx);
+    if (auto const * sv = std::get_if<std::string>(&v)) return *sv;
+    throw CompileError("vocab string argument did not evaluate to a string.", loc);
+    return "";
+  };
+
+  return std::visit([&](auto const & node) -> std::unique_ptr<ir::VocabExpr> {
+    using N = std::decay_t<decltype(node)>;
+    if constexpr (std::is_same_v<N, std::monostate>) {
+      throw CompileError("empty vocab expression.", loc);
+      return nullptr;
+    } else {
+      constexpr ast::Tag tag = N::tag;
+      auto out = std::make_unique<ir::VocabExpr>();
+      if constexpr (tag == ast::Tag::Tokenize) {
+        out->kind = ir::VocabExpr::Kind::Tokenize;
+        for (auto const & s : node.data.strings) out->strings.push_back(eval_str(s));
+        return out;
+      } else if constexpr (tag == ast::Tag::Regex) {
+        out->kind = ir::VocabExpr::Kind::Regex;
+        out->strings.push_back(eval_str(node.data.pattern));
+        return out;
+      } else if constexpr (tag == ast::Tag::Identifier) {
+        return resolve_vocab(scope, node.data.name, ctx, loc);
+      } else if constexpr (tag == ast::Tag::Parenthesis) {
+        return translate_vocab(scope, *node.data.expr, ctx, loc);
+      } else if constexpr (tag == ast::Tag::Unary) {
+        if (node.data.kind != ast::OpKind::Not) {
+          throw CompileError("only `!` (complement) is valid as a unary vocab operator.", loc);
+          return nullptr;
+        }
+        out->kind = ir::VocabExpr::Kind::Complement;
+        out->operands.push_back(translate_vocab(scope, *node.data.operand, ctx, loc));
+        return out;
+      } else if constexpr (tag == ast::Tag::Binary) {
+        switch (node.data.kind) {
+          case ast::OpKind::BOr:  out->kind = ir::VocabExpr::Kind::Union; break;
+          case ast::OpKind::BAnd: out->kind = ir::VocabExpr::Kind::Intersect; break;
+          case ast::OpKind::Sub:  out->kind = ir::VocabExpr::Kind::Diff; break;
+          default:
+            throw CompileError("only `|`, `&`, `-` are valid binary vocab operators.", loc);
+            return nullptr;
+        }
+        out->operands.push_back(translate_vocab(scope, *node.data.lhs, ctx, loc));
+        out->operands.push_back(translate_vocab(scope, *node.data.rhs, ctx, loc));
+        return out;
+      } else {
+        throw CompileError("non-vocab expression in a vocab context (expected tokenize/"
+                   "regex/vocab reference or a set operation).", loc);
+        return nullptr;
+      }
+    }
+  }, expr.data.expr);
+}
+
+std::unique_ptr<ir::VocabExpr> Evaluator::resolve_vocab(
+  std::string const & scope, std::string const & name, ir::VarMap & ctx,
+  std::optional<SourceRange> const & loc
+) {
+  std::string key = vocab_key(name, ctx);
+  auto cit = vocab_cache.find(key);
+  if (cit != vocab_cache.end()) return cit->second->canonical();
+  if (vocab_in_progress.count(key)) {
+    throw CompileError("circular vocab reference involving `" + name + "`.", loc);
+    return nullptr;
+  }
+
+  // Scope-walk lookup (one level of parent-scope fallback), matching how value
+  // symbols are resolved.
+  auto sym_it = tables.symbols.find(scope + "::" + name);
+  std::string decl_scope = scope;
+  if (sym_it == tables.symbols.end()) {
+    std::string parent = scope;
+    auto sep = parent.rfind("::");
+    if (sep != std::string::npos) {
+      parent = parent.substr(0, sep);
+      sym_it = tables.symbols.find(parent + "::" + name);
+      decl_scope = parent;
+    }
+  }
+  if (sym_it == tables.symbols.end()) {
+    throw CompileError("undefined vocab `" + name + "`.", loc);
+    return nullptr;
+  }
+  if (!std::holds_alternative<DefineSymbol>(sym_it->second)) {
+    throw CompileError("`" + name + "` is not a vocab.", loc);
+    return nullptr;
+  }
+  auto const & defn = std::get<DefineSymbol>(sym_it->second).node;
+  if (defn.data.kind != ast::DefineKind::Vocab) {
+    throw CompileError("`" + name + "` is not a vocab (used in a vocab expression).", loc);
+    return nullptr;
+  }
+  if (!defn.data.init) {
+    throw CompileError("vocab `" + name + "` has no definition.", loc);
+    return nullptr;
+  }
+
+  vocab_in_progress.insert(key);
+  auto ve = translate_vocab(decl_scope, defn.data.init.value(), ctx, loc);
+  vocab_in_progress.erase(key);
+  if (ve) {
+    auto stored = ve->canonical();
+    vocab_cache[key] = std::move(ve);
+    return stored;
+  }
+  return nullptr;
 }
 
 

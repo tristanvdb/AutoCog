@@ -28,7 +28,7 @@ static sta::FieldFormat extract_format(ir::Format const & fmt) {
         if constexpr (std::is_same_v<T, ir::Completion>) {
             sta::CompletionFormat cf;
             cf.length = f.length;
-            cf.within = f.within;
+            cf.vocab = f.vocab;
             return cf;
         } else if constexpr (std::is_same_v<T, ir::Enum>) {
             sta::EnumFormat ef;
@@ -535,6 +535,11 @@ std::optional<int> Driver::run_generate() {
                     pstas.search[category][key] = v;
                 }, val);
             }
+        }
+
+        // Carry the vocab table: vocab_<hash> -> resolved expression tree.
+        for (auto const & [key, ve] : pmt.vocabs) {
+            pstas.vocabs[key] = std::move(*ve.canonical());
         }
 
     SPDLOG_LOGGER_DEBUG(autocog::log(), "STA: building {} ({} IR fields)", mangled, pmt.fields.size());

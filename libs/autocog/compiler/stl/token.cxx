@@ -34,6 +34,9 @@ const char * token_type_name(TokenType type) {
         case TokenType::SELECT: return "select";
         case TokenType::REPEAT: return "repeat";
         case TokenType::ENUM: return "enum";
+        case TokenType::VOCAB: return "vocab";
+        case TokenType::TOKENIZE: return "tokenize";
+        case TokenType::REGEX: return "regex";
         case TokenType::IDENTIFIER: return "identifier";
         case TokenType::STRING_LITERAL: return "string";
         case TokenType::INTEGER_LITERAL: return "integer literal";
@@ -55,6 +58,8 @@ const char * token_type_name(TokenType type) {
         case TokenType::SLASH: return "'/'";
         case TokenType::LT: return "'<'";
         case TokenType::GT: return "'>'";
+        case TokenType::AMP: return "'&'";
+        case TokenType::PIPE: return "'|'";
         case TokenType::ERROR: return "invalid token";
         case TokenType::END_OF_FILE: return "end of file";
         default: return "unknown";

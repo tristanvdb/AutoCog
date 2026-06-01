@@ -40,6 +40,9 @@ enum class TokenType : int {
     SELECT,
     REPEAT,
     ENUM,
+    VOCAB,
+    TOKENIZE,
+    REGEX,
     
     // Identifiers and literals
     IDENTIFIER,
@@ -76,6 +79,8 @@ enum class TokenType : int {
     // Logical operators
     AMPAMP,      // &&
     PIPEPIPE,    // ||
+    AMP,         // &
+    PIPE,        // |
     BANG,        // !
     
     // Other operators

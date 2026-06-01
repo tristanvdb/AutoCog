@@ -1,0 +1,10 @@
+{
+  "actions": [
+    {"uid":"p","type":"text","text":"PIN: ","evaluate":false,"successors":["c"]},
+    {"uid":"c","type":"complete","threshold":0.1,"length":8,"beams":1,"ahead":1,"width":1,"stop_text":"<|eot_id|>","vocab":"vocab_digits","successors":["e"]},
+    {"uid":"e","type":"text","text":"","evaluate":false,"successors":[]}
+  ],
+  "vocabs": {
+    "vocab_digits": {"kind":"tokenize","strings":["0","1","2","3","4","5","6","7","8","9"]}
+  }
+}

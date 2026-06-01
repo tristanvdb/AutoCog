@@ -171,6 +171,13 @@
           "items": {
             "$ref": "#/$defs/abstract_state"
           }
+        },
+        "vocabs": {
+          "type": "object",
+          "description": "Vocab table: vocab_<hash> -> vocab expression tree.",
+          "additionalProperties": {
+            "$ref": "#/$defs/vocab_expr"
+          }
         }
       },
       "required": [
@@ -323,11 +330,9 @@
             ]
           }
         },
-        "within": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "vocab": {
+          "type": "string",
+          "description": "Reference into the prompt vocab table (vocab_<hash>)."
         }
       },
       "required": [
@@ -627,6 +632,38 @@
         "field",
         "flow",
         "exit"
+      ],
+      "additionalProperties": false
+    },
+    "vocab_expr": {
+      "type": "object",
+      "description": "Vocab expression tree node.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "tokenize",
+            "regex",
+            "union",
+            "intersect",
+            "diff",
+            "complement"
+          ]
+        },
+        "strings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "operands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vocab_expr"
+          }
+        }
+      },
+      "required": [
+        "kind"
       ],
       "additionalProperties": false
     }

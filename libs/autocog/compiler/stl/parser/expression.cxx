@@ -15,6 +15,8 @@ static ast::OpKind token_to_operator_kind(TokenType type) {
     case TokenType::PERCENT:  return ast::OpKind::Mod;
     case TokenType::AMPAMP:   return ast::OpKind::And;
     case TokenType::PIPEPIPE: return ast::OpKind::Or;
+    case TokenType::AMP:      return ast::OpKind::BAnd;
+    case TokenType::PIPE:     return ast::OpKind::BOr;
     case TokenType::LT:       return ast::OpKind::Lt;
     case TokenType::GT:       return ast::OpKind::Gt;
     case TokenType::LTEQ:     return ast::OpKind::Lte;
@@ -74,7 +76,9 @@ static bool is_primary(TokenType tok) {
          tok == TokenType::INTEGER_LITERAL ||
          tok == TokenType::FLOAT_LITERAL   ||
          tok == TokenType::BOOLEAN_LITERAL ||
-         tok == TokenType::IDENTIFIER;
+         tok == TokenType::IDENTIFIER      ||
+         tok == TokenType::TOKENIZE        ||
+         tok == TokenType::REGEX;
 }
 
 [[maybe_unused]] static bool is_conditional(TokenType tok) {
@@ -128,7 +132,36 @@ void Parser::parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> 
       clean_raw_string(state.previous.text, data);
       break;
     }
-    
+
+    case TokenType::TOKENIZE: {
+      // tokenize(<str>, <str>, ...) — zero or more string args (empty = the
+      // empty set). Args are String nodes, like enum enumerators.
+      state.advance();
+      state.expect(TokenType::LPAREN, " after `tokenize`.");
+      expr.expr.emplace<10>();
+      auto & data = std::get<10>(expr.expr).data;
+      if (state.current.type != TokenType::RPAREN) {
+        do {
+          state.expect(TokenType::STRING_LITERAL, " in tokenize(...).");
+          clean_raw_string(state.previous.text, data.strings.emplace_back().data);
+        } while (state.match(TokenType::COMMA));
+      }
+      state.expect(TokenType::RPAREN, " to close tokenize(...).");
+      break;
+    }
+
+    case TokenType::REGEX: {
+      // regex(<str>) — exactly one string argument.
+      state.advance();
+      state.expect(TokenType::LPAREN, " after `regex`.");
+      expr.expr.emplace<11>();
+      auto & data = std::get<11>(expr.expr).data;
+      state.expect(TokenType::STRING_LITERAL, " in regex(...).");
+      clean_raw_string(state.previous.text, data.pattern.data);
+      state.expect(TokenType::RPAREN, " to close regex(...).");
+      break;
+    }
+
     default:
       state.throw_error("Expected literal or identifier in expression.");
       break;

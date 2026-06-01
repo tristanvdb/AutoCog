@@ -1,0 +1,31 @@
+// Vocab construct: declarations, set-algebra expressions, references that get
+// inlined, and field-level text<vocab=...> with table dedup.
+
+vocab digit = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+vocab alpha = regex("^[a-zA-Z]+$");
+vocab universe = (!tokenize());
+
+// References to other vocabs (inlined at translation) and set operations.
+vocab alnum = (digit | alpha);
+vocab no_digits = (universe - digit);
+
+prompt writer {
+  is {
+    // Two fields sharing the same vocab expression -> one table entry.
+    code is text<length=8, vocab=alnum>;
+    label is text<length=16, vocab=alnum>;
+    // A distinct expression -> its own entry.
+    prose is text<length=64, vocab=no_digits>;
+    // An inline composition referencing vocabs.
+    pin is text<length=4, vocab=(digit - tokenize("0"))>;
+  }
+
+  return {
+    use code;
+    use label;
+    use prose;
+    use pin;
+  }
+}
+
+export writer as main;

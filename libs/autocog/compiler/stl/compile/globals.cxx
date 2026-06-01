@@ -47,6 +47,9 @@ std::optional<int> Driver::run_globals() {
     for (auto const & [qname, symbol] : tables.symbols) {
         if (std::holds_alternative<DefineSymbol>(symbol)) {
             auto const & defn = std::get<DefineSymbol>(symbol);
+            // Vocab bindings are not value globals; they are resolved by the
+            // vocab translation pass, not value-evaluated here.
+            if (defn.node.data.kind == ast::DefineKind::Vocab) continue;
             auto [fid, obj, name] = parse_scope(qname);
             if (!obj) {
                 auto def_it = defines.find(name);

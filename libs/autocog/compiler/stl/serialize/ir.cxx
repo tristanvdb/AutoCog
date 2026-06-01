@@ -80,7 +80,7 @@ static json format_to_json(ir::Format const & format) {
         if constexpr (std::is_same_v<T, ir::Completion>) {
             j["type"] = "completion";
             if (fmt.length.has_value()) j["length"] = fmt.length.value();
-            if (fmt.within.has_value()) j["within"] = fmt.within.value();
+            if (fmt.vocab.has_value()) j["vocab"] = fmt.vocab.value();
         } else if constexpr (std::is_same_v<T, ir::Enum>) {
             j["type"] = "enum";
             j["values"] = fmt.values;
@@ -221,6 +221,11 @@ static json record_to_json(ir::Record const & record) {
     j["name"] = record.name;
     j["desc"] = record.desc;
     if (!record.search.empty()) j["search"] = search_to_json(record.search);
+    if (!record.vocabs.empty()) {
+        json vj = json::object();
+        for (auto const & [key, ve] : record.vocabs) vj[key] = ir::vocab_to_json(ve);
+        j["vocabs"] = vj;
+    }
     j["fields"] = json::array();
     for (auto const & field : record.fields) {
         j["fields"].push_back(field_to_json(*field));
@@ -235,6 +240,11 @@ static json prompt_to_json(ir::Prompt const & prompt) {
     j["mangled_name"] = prompt.mangled_name;
     j["context"] = serialize::varmap_to_json(prompt.context);
     if (!prompt.search.empty()) j["search"] = search_to_json(prompt.search);
+    if (!prompt.vocabs.empty()) {
+        json vj = json::object();
+        for (auto const & [key, ve] : prompt.vocabs) vj[key] = ir::vocab_to_json(ve);
+        j["vocabs"] = vj;
+    }
     j["fields"] = json::array();
     for (auto const & field : prompt.fields) {
         j["fields"].push_back(field_to_json(*field));

@@ -9,6 +9,9 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <cstdint>
+
+#include "autocog/runtime/fta/vocab.hxx"
 
 namespace autocog::compiler::stl::ir {
 
@@ -28,6 +31,19 @@ using SearchPolicies = std::map<std::string, VarMap>;
 // Range for array indexing: [start:end] or [index]
 // None means no range, (n,n) means [n], (start,end) means [start:end]
 using Range = std::optional<std::pair<int, int>>;
+
+// ---------------------------------------------------------------------------
+// Vocab expressions
+// ---------------------------------------------------------------------------
+// The resolved vocab expression is a shared TA-layer type (runtime/fta/vocab.hxx)
+// so the single representation flows IR -> STA -> FTA -> xfta with no parser
+// duplication. The IR builds it during translation; str() is used only for
+// hashing and STL* unparsing, the tree (vocab_to_json) is the machine carry.
+using VocabExpr = ::autocog::runtime::fta::VocabExpr;
+using ::autocog::runtime::fta::vocab_hash;
+using ::autocog::runtime::fta::vocab_to_json;
+using ::autocog::runtime::fta::vocab_from_json;
+
 
 // Path step: name with optional range like "field[3:6]"
 struct PathStep {
@@ -92,7 +108,8 @@ struct Field;
 // Text/Completion format: text<length=N, vocab=...>
 struct Completion {
   std::optional<int> length;
-  std::optional<std::vector<std::string>> within;   // vocabulary restriction
+  std::optional<std::string> vocab;   // reference into the prompt's vocab table
+                                       // ("vocab_<hash>"); empty = unrestricted
 };
 
 // Enum format: enum("A", "B", "C")
@@ -167,6 +184,7 @@ struct Field : public Object {
 struct Record : public Object {
   std::vector<std::unique_ptr<Field>> fields;
   SearchPolicies search;                  // record-scope search { } params
+  std::map<std::string, VocabExpr> vocabs; // vocab table: "vocab_<hash>" -> resolved expr
 
   Record(std::string name_) :
     Object(std::move(name_)),
@@ -178,6 +196,7 @@ struct Record : public Object {
     auto copy = std::make_unique<Record>(name);
     copy->desc = desc;
     copy->search = search;
+    for (auto const & [k, ve] : vocabs) copy->vocabs.emplace(k, std::move(*ve.canonical()));
     for (auto const& field : fields) {
       copy->fields.push_back(field->clone());
     }
@@ -319,6 +338,7 @@ struct Prompt : public Object {
   std::vector<FlowEdge> flows;
   std::optional<ReturnInfo> return_info;
   SearchPolicies search;                    // prompt-scope search { } params
+  std::map<std::string, VocabExpr> vocabs;  // vocab table: "vocab_<hash>" -> resolved expr
 
   Prompt(std::string name_, std::string mangled_name_, VarMap context_) :
     Object(std::move(name_)),

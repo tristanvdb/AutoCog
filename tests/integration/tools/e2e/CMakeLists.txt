@@ -161,3 +161,39 @@ set_tests_properties(e2e_search_full PROPERTIES
     LABELS "e2e;search"
     TIMEOUT 60
 )
+
+# STL* round-trip: compile a fixture to IR, unparse to STL* via ir2stl, recompile
+# to IR, and assert the vocab tables match. Guards that ir2stl emits the vocab
+# table as declarations + exports such that the program recompiles to the same
+# resolved vocab hashes.
+set(VOCAB_STL ${STL_FIXTURES}/language/vocab/test_vocab.stl)
+set(IR2STL ${PROJECT_SOURCE_DIR}/tools/ir2stl.py)
+add_test(
+    NAME e2e_vocab_stl_star_roundtrip
+    COMMAND ${CMAKE_COMMAND} -E env
+        bash -c "
+            set -e
+            IR1=$(mktemp) STAR=$(mktemp) IR2=$(mktemp)
+            $<TARGET_FILE:autocog_stlc> --emit ir ${VOCAB_STL} 2>/dev/null | grep -v libgcov > \$IR1
+            ${Python_EXECUTABLE} ${IR2STL} \$IR1 > \$STAR
+            $<TARGET_FILE:autocog_stlc> --emit ir \$STAR 2>/dev/null | grep -v libgcov > \$IR2
+            ${Python_EXECUTABLE} -c \"
+import json, sys
+a = json.load(open('\$IR1')); b = json.load(open('\$IR2'))
+pa = next(iter(a['prompts'].values())); pb = next(iter(b['prompts'].values()))
+va, vb = pa.get('vocabs', {}), pb.get('vocabs', {})
+if va != vb:
+    print('VOCAB TABLE MISMATCH'); print(' first:', sorted(va)); print(' round:', sorted(vb)); sys.exit(1)
+ra = [f.get('format',{}).get('vocab') for f in pa['fields']]
+rb = [f.get('format',{}).get('vocab') for f in pb['fields']]
+if ra != rb:
+    print('FIELD REF MISMATCH'); print(' first:', ra); print(' round:', rb); sys.exit(1)
+print('OK: vocab table and refs stable across STL* round-trip (', len(va), 'entries )')
+\"
+            rm -f \$IR1 \$STAR \$IR2
+        "
+)
+set_tests_properties(e2e_vocab_stl_star_roundtrip PROPERTIES
+    LABELS "e2e;vocab"
+    TIMEOUT 30
+)

@@ -22,6 +22,7 @@ add_ista_test(return_labeled      ${STA_GOLDEN}/flows/return/test_return_labeled
 add_ista_test(import              ${STA_GOLDEN}/language/symbols/test_import.golden.json)
 add_ista_test(parameterized       ${STA_GOLDEN}/language/expressions/test_parameterized_prompt.golden.json)
 add_ista_test(call_basic          ${STA_GOLDEN}/flows/calls/test_call_basic.golden.json)
+add_ista_test(vocab               ${STA_GOLDEN}/language/vocab/test_vocab.golden.json)
 
 # ============================================================================
 # CLI argument tests

@@ -8,8 +8,11 @@
 #include <vector>
 
 #include "autocog/runtime/sta/channel.hxx"
+#include "autocog/runtime/fta/vocab.hxx"
 
 namespace autocog::runtime::sta {
+
+using VocabExpr = ::autocog::runtime::fta::VocabExpr;
 
 // Scalar value carried in opaque search-param dicts (mirrors the compiler IR's
 // value variant). The search dicts are intentionally open; values are
@@ -23,7 +26,7 @@ using SearchParams = std::map<std::string, std::map<std::string, SearchValue>>;
 
 struct CompletionFormat {
     std::optional<int> length;
-    std::optional<std::vector<std::string>> within;   // vocabulary restriction
+    std::optional<std::string> vocab;   // reference into the prompt vocab table ("vocab_<hash>")
 };
 
 struct EnumFormat {
@@ -161,6 +164,10 @@ struct PromptSTA {
     // choice) and per-state (branch) resolution is applied at instantiation;
     // queue.* is meaningful at this prompt scope.
     std::map<std::string, std::map<std::string, SearchValue>> search;
+    // Vocab table: "vocab_<hash>" -> resolved vocab expression tree, transported
+    // from the IR. CompletionFormat.vocab references an entry. STA does not
+    // interpret it; the backend (xfta) walks the tree to build token masks.
+    std::map<std::string, VocabExpr> vocabs;
 };
 
 // ============================================================================

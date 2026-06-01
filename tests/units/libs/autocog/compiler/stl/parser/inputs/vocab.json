@@ -1,0 +1,110 @@
+[
+  {
+    "description": "Vocab decl with tokenize",
+    "tag": "Program",
+    "code": "vocab digit = tokenize(\"0\", \"1\", \"2\");",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl with empty tokenize",
+    "tag": "Program",
+    "code": "vocab none = tokenize();",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl with regex",
+    "tag": "Program",
+    "code": "vocab alpha = regex(\"^[a-z]+$\");",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl with reference",
+    "tag": "Program",
+    "code": "vocab x = digit;",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl union",
+    "tag": "Program",
+    "code": "vocab x = (a | b);",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl intersection",
+    "tag": "Program",
+    "code": "vocab x = (a & b);",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl difference",
+    "tag": "Program",
+    "code": "vocab x = (a - b);",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl complement",
+    "tag": "Program",
+    "code": "vocab x = (!a);",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl universe (complement of empty)",
+    "tag": "Program",
+    "code": "vocab universe = (!tokenize());",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl nested expression",
+    "tag": "Program",
+    "code": "vocab x = ((a | b) - regex(\"x\"));",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab decl requires initializer",
+    "tag": "Program",
+    "code": "vocab x;",
+    "should_pass": false
+  },
+  {
+    "description": "Tokenize with non-string arg fails",
+    "tag": "Program",
+    "code": "vocab x = tokenize(123);",
+    "should_pass": false
+  },
+  {
+    "description": "Regex with two args fails",
+    "tag": "Program",
+    "code": "vocab x = regex(\"a\", \"b\");",
+    "should_pass": false
+  },
+  {
+    "description": "Vocab expression as Expression fragment",
+    "tag": "Expression",
+    "code": "(tokenize(\"a\") | regex(\"b\"))",
+    "should_pass": true
+  },
+  {
+    "description": "Bare tokenize as Expression",
+    "tag": "Expression",
+    "code": "tokenize(\"a\", \"b\")",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab in prompt scope",
+    "tag": "Program",
+    "code": "vocab d = tokenize(\"0\"); prompt p { vocab e = (d | regex(\"x\")); is { f is text<vocab=e>; } } export p as main;",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab in record scope",
+    "tag": "Program",
+    "code": "record r { vocab v = tokenize(\"x\"); is text<vocab=v>; } export r as main;",
+    "should_pass": true
+  },
+  {
+    "description": "text<vocab=expr> field",
+    "tag": "Program",
+    "code": "vocab d = tokenize(\"0\"); record r { is text<length=4, vocab=(d - tokenize(\"0\"))>; } export r as main;",
+    "should_pass": true
+  }
+]

@@ -104,6 +104,9 @@
               ]
             }
           }
+        },
+        "vocabs": {
+          "$ref": "#/$defs/vocab_table"
         }
       },
       "required": [
@@ -225,11 +228,9 @@
             "$ref": "#/$defs/field"
           }
         },
-        "within": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "vocab": {
+          "type": "string",
+          "description": "Reference into the enclosing prompt/record vocab table (vocab_<hash>)."
         }
       },
       "required": [
@@ -604,6 +605,45 @@
           ]
         }
       }
+    },
+    "vocab_table": {
+      "type": "object",
+      "description": "Vocab table: vocab_<hash> -> vocab expression tree.",
+      "additionalProperties": {
+        "$ref": "#/$defs/vocab_expr"
+      }
+    },
+    "vocab_expr": {
+      "type": "object",
+      "description": "Vocab expression tree node.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "tokenize",
+            "regex",
+            "union",
+            "intersect",
+            "diff",
+            "complement"
+          ]
+        },
+        "strings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "operands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vocab_expr"
+          }
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
     }
   }
 }

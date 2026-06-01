@@ -7,10 +7,14 @@
   "properties": {
     "metadata": {
       "allOf": [
-        { "$ref": "common/metadata.schema.json" },
+        {
+          "$ref": "common/metadata.schema.json"
+        },
         {
           "properties": {
-            "format": { "const": "fta" },
+            "format": {
+              "const": "fta"
+            },
             "model_id": {
               "type": "string",
               "pattern": "^[a-z0-9_:-]+$",
@@ -23,65 +27,197 @@
     },
     "actions": {
       "type": "array",
-      "items": { "$ref": "#/$defs/action" }
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "vocabs": {
+      "type": "object",
+      "description": "Vocab table: vocab_<hash> -> vocab expression tree (xfta builds a token mask per entry).",
+      "additionalProperties": {
+        "$ref": "#/$defs/vocab_expr"
+      }
     }
   },
-  "required": ["actions"],
+  "required": [
+    "actions"
+  ],
   "unevaluatedProperties": false,
-
   "$defs": {
     "action": {
       "oneOf": [
-        { "$ref": "#/$defs/action_text" },
-        { "$ref": "#/$defs/action_choose" },
-        { "$ref": "#/$defs/action_complete" }
+        {
+          "$ref": "#/$defs/action_text"
+        },
+        {
+          "$ref": "#/$defs/action_choose"
+        },
+        {
+          "$ref": "#/$defs/action_complete"
+        }
       ]
     },
-
     "action_text": {
       "type": "object",
       "properties": {
-        "type":       { "const": "text" },
-        "uid":        { "type": "string" },
-        "text":       { "type": "string" },
-        "successors": { "type": "array", "items": { "type": "string" } }
+        "type": {
+          "const": "text"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "successors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "required": ["type", "uid", "text", "successors"],
+      "required": [
+        "type",
+        "uid",
+        "text",
+        "successors"
+      ],
       "additionalProperties": false
     },
-
     "action_choose": {
       "type": "object",
       "properties": {
-        "type":       { "const": "choose" },
-        "uid":        { "type": "string" },
-        "field":      { "type": "integer" },
-        "indices":    { "type": "array", "items": { "type": "integer" } },
-        "choices":    { "type": "array", "items": { "type": "string" } },
-        "threshold":  { "type": "number" },
-        "width":      { "type": "integer" },
-        "successors": { "type": "array", "items": { "type": "string" } }
+        "type": {
+          "const": "choose"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "field": {
+          "type": "integer"
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "successors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "required": ["type", "uid", "field", "indices", "choices", "successors"],
+      "required": [
+        "type",
+        "uid",
+        "field",
+        "indices",
+        "choices",
+        "successors"
+      ],
       "additionalProperties": false
     },
-
     "action_complete": {
       "type": "object",
       "properties": {
-        "type":       { "const": "complete" },
-        "uid":        { "type": "string" },
-        "field":      { "type": "integer" },
-        "indices":    { "type": "array", "items": { "type": "integer" } },
-        "length":     { "type": "integer" },
-        "beams":      { "type": "integer" },
-        "ahead":      { "type": "integer" },
-        "width":      { "type": "integer" },
-        "threshold":  { "type": "number" },
-        "stop_text":  { "type": "string" },
-        "successors": { "type": "array", "items": { "type": "string" } }
+        "type": {
+          "const": "complete"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "field": {
+          "type": "integer"
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "length": {
+          "type": "integer"
+        },
+        "beams": {
+          "type": "integer"
+        },
+        "ahead": {
+          "type": "integer"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "stop_text": {
+          "type": "string"
+        },
+        "successors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vocab": {
+          "type": "string",
+          "description": "Reference into the FTA vocab table (vocab_<hash>); selects the token mask."
+        }
       },
-      "required": ["type", "uid", "field", "indices", "length", "successors"],
+      "required": [
+        "type",
+        "uid",
+        "field",
+        "indices",
+        "length",
+        "successors"
+      ],
+      "additionalProperties": false
+    },
+    "vocab_expr": {
+      "type": "object",
+      "description": "Vocab expression tree node.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "tokenize",
+            "regex",
+            "union",
+            "intersect",
+            "diff",
+            "complement"
+          ]
+        },
+        "strings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "operands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vocab_expr"
+          }
+        }
+      },
+      "required": [
+        "kind"
+      ],
       "additionalProperties": false
     }
   }

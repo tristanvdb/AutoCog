@@ -46,10 +46,8 @@ static FieldFormat load_format(json const & j) {
     if (type == "completion") {
         CompletionFormat f;
         if (j.contains("length"))    f.length    = j["length"].get<int>();
-        if (j.contains("within") && !j["within"].is_null()) {
-            std::vector<std::string> w;
-            for (auto const & s : j["within"]) w.push_back(s.get<std::string>());
-            f.within = std::move(w);
+        if (j.contains("vocab") && !j["vocab"].is_null()) {
+            f.vocab = j["vocab"].get<std::string>();
         }
         return f;
     }
@@ -215,6 +213,13 @@ PromptSTA load_prompt(json const & j) {
     // Load prompt-scope search params (open dict: category -> param -> scalar).
     if (j.contains("search")) load_search(j["search"], p.search);
 
+    // Vocab table: vocab_<hash> -> vocab expression tree.
+    if (j.contains("vocabs")) {
+        for (auto it = j["vocabs"].begin(); it != j["vocabs"].end(); ++it) {
+            p.vocabs[it.key()] = std::move(*::autocog::runtime::fta::vocab_from_json(it.value()));
+        }
+    }
+
     return p;
 }
 
@@ -289,7 +294,7 @@ static json format_to_json(FieldFormat const & fmt) {
         else if constexpr (std::is_same_v<T, CompletionFormat>) {
             json j = {{"type","completion"}};
             if (f.length) j["length"] = *f.length;
-            if (f.within) j["within"] = *f.within;
+            if (f.vocab) j["vocab"] = *f.vocab;
             return j;
         }
         else if constexpr (std::is_same_v<T, EnumFormat>) {
@@ -419,6 +424,11 @@ json serialize_prompt(PromptSTA const & p) {
     j["channels"] = json::array();
     for (auto const & ch : p.channels) j["channels"].push_back(channel_to_json(ch));
     if (!p.search.empty()) j["search"] = search_to_json(p.search);
+    if (!p.vocabs.empty()) {
+        json vj = json::object();
+        for (auto const & [k, ve] : p.vocabs) vj[k] = ::autocog::runtime::fta::vocab_to_json(ve);
+        j["vocabs"] = vj;
+    }
     return j;
 }
 

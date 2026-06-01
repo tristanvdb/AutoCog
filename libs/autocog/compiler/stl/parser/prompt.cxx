@@ -12,7 +12,8 @@ void Parser::parse<ast::Tag::Prompt>(ParserState & state, ast::Data<ast::Tag::Pr
   while (!state.match(TokenType::RBRACE)) {
     switch (state.current.type) {
       case TokenType::DEFINE:
-      case TokenType::ARGUMENT: {
+      case TokenType::ARGUMENT:
+      case TokenType::VOCAB: {
         data.constructs.emplace_back(std::in_place_index<0>);
         auto & node = std::get<0>(data.constructs.back());
         parse(state, node);

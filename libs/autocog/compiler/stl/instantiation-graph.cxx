@@ -94,7 +94,12 @@ ir::VarMap InstantiationGraphBuilder::eval_context(
             std::visit([&](auto const & node) {
                 using T = std::decay_t<decltype(node)>;
                 if constexpr (std::is_same_v<T, ast::Define>) {
-                    if (node.data.is_argument != arguments_pass) return;
+                    // Vocab bindings are not value defines; they are handled by
+                    // the vocab translation pass, never evaluated into the value
+                    // context.
+                    if (node.data.kind == ast::DefineKind::Vocab) return;
+                    bool is_arg = (node.data.kind == ast::DefineKind::Argument);
+                    if (is_arg != arguments_pass) return;
                     auto name = node.data.name.data.name;
                     if (arguments_pass) {
                         if (ctx.find(name) != ctx.end()) return; // already provided
@@ -142,7 +147,7 @@ ir::VarMap InstantiationGraphBuilder::extract_arguments(
             std::visit([&](auto const & node) {
                 using T = std::decay_t<decltype(node)>;
                 if constexpr (std::is_same_v<T, ast::Define>) {
-                    if (node.data.is_argument) {
+                    if (node.data.kind == ast::DefineKind::Argument) {
                         auto name = node.data.name.data.name;
                         auto it = full_context.find(name);
                         if (it != full_context.end()) {

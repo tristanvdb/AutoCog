@@ -237,7 +237,8 @@ static FormatResult generate_format(
     ir::VarMap & ctx,
     int fileid,
     InstantiationGraphBuilder & builder,
-    Driver & driver
+    Driver & driver,
+    std::map<std::string, ir::VocabExpr> & prompt_vocabs
 );
 
 static void generate_fields(
@@ -250,7 +251,8 @@ static void generate_fields(
     Driver & driver,
     int depth,
     std::vector<std::unique_ptr<ir::Field>> & out,
-    ir::SearchPolicies const & enclosing
+    ir::SearchPolicies const & enclosing,
+    std::map<std::string, ir::VocabExpr> & prompt_vocabs
 ) {
     // The policy in scope for this struct's fields = enclosing (file/prompt/
     // outer structs) merged with this struct's own search { } (innermost wins).
@@ -275,7 +277,7 @@ static void generate_fields(
         std::visit([&](auto const & type) {
             using T = std::decay_t<decltype(type)>;
             if constexpr (std::is_same_v<T, ast::FormatRef>) {
-                auto res = generate_format(name, type, evaluator, scope, ctx, fileid, builder, driver);
+                auto res = generate_format(name, type, evaluator, scope, ctx, fileid, builder, driver, prompt_vocabs);
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
@@ -310,7 +312,7 @@ static void generate_fields(
                 }
                 if (type.data.selfform) {
                     // Self-form inline struct: a leaf. Collapse the format in.
-                    auto res = generate_format(name, type.data.selfform.value(), evaluator, scope, ctx, fileid, builder, driver);
+                    auto res = generate_format(name, type.data.selfform.value(), evaluator, scope, ctx, fileid, builder, driver, prompt_vocabs);
                     f->format = std::move(res.format);
                     f->refname = res.refname;
                     f->refargs = res.refargs;
@@ -326,7 +328,7 @@ static void generate_fields(
                     // generate_fields merges this struct's own search itself, so
                     // pass `here` (not struct_here) to avoid double-counting.
                     std::vector<std::unique_ptr<ir::Field>> sub;
-                    generate_fields(type, evaluator, scope, ctx, fileid, builder, driver, depth + 1, sub, here);
+                    generate_fields(type, evaluator, scope, ctx, fileid, builder, driver, depth + 1, sub, here, prompt_vocabs);
                     f->format = std::move(sub);
                     f->search = prune_search(struct_here, {"branch"});
                 }
@@ -345,7 +347,8 @@ static FormatResult generate_format(
     ir::VarMap & ctx,
     int fileid,
     InstantiationGraphBuilder & builder,
-    Driver & driver
+    Driver & driver,
+    std::map<std::string, ir::VocabExpr> & prompt_vocabs
 ) {
     FormatResult result;
     std::visit([&](auto const & type) {
@@ -355,16 +358,26 @@ static FormatResult generate_format(
             ir::Completion fmt;
             for (auto const & assign : fref.data.kwargs) {
                 auto k = assign.data.argument.data.name;
+                if (k == "vocab") {
+                    // The vocab kwarg's value is a vocab expression. Translate it
+                    // to a resolved, reference-free VocabExpr, register it in the
+                    // prompt's vocab table keyed by its hash, and make the field
+                    // reference that entry.
+                    auto ve = evaluator.translate_vocab(scope, assign.data.value, ctx, assign.location);
+                    if (ve) {
+                        std::string key = "vocab_" + ir::vocab_hash(*ve);
+                        fmt.vocab = key;
+                        prompt_vocabs.emplace(key, std::move(*ve));
+                    }
+                    continue;
+                }
                 auto v = evaluator.evaluate_expression(scope, assign.data.value, ctx);
                 if (k == "length" && std::holds_alternative<int>(v)) {
                     fmt.length = std::get<int>(v);
-                } else if (k == "within") {
-                    // `within` (vocabulary restriction) — structural, under-defined.
-                    if (auto * sv = std::get_if<std::string>(&v)) fmt.within = std::vector<std::string>{*sv};
                 } else {
                     driver.emit_error(
                         "'" + k + "' is not a structural parameter of text "
-                        "(only length, within). Search tuning belongs in a "
+                        "(only length, vocab). Search tuning belongs in a "
                         "search { text." + k + " is ...; } block.",
                         assign.location);
                 }
@@ -441,12 +454,12 @@ static FormatResult generate_format(
                     // Multi-field record → struct (sub-fields). The record's own
                     // search { } also flows down as enclosing for its fields.
                     std::vector<std::unique_ptr<ir::Field>> sub;
-                    generate_fields(body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver, 1, sub, result.own_search);
+                    generate_fields(body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver, 1, sub, result.own_search, prompt_vocabs);
                     result.format = std::move(sub);
                 } else if constexpr (std::is_same_v<B, ast::FormatRef>) {
                     // Self-form record → COLLAPSE into this field: take the
                     // record's format directly. refname/own_search already set.
-                    auto inner = generate_format(field_name, body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver);
+                    auto inner = generate_format(field_name, body, evaluator, target_scope, target_ctx, resolved->fileid, builder, driver, prompt_vocabs);
                     result.format = std::move(inner.format);
                     // A self-form record could itself reference another record;
                     // merge nested provenance/policy conservatively.
@@ -481,10 +494,10 @@ static void assemble_records(
         std::visit([&](auto const & body) {
             using T = std::decay_t<decltype(body)>;
             if constexpr (std::is_same_v<T, ast::Struct>) {
-                generate_fields(body, evaluator, scope, node.context, node.fileid, builder, driver, 1, rec->fields, ir::SearchPolicies{});
+                generate_fields(body, evaluator, scope, node.context, node.fileid, builder, driver, 1, rec->fields, ir::SearchPolicies{}, rec->vocabs);
             } else if constexpr (std::is_same_v<T, ast::FormatRef>) {
                 auto f = std::make_unique<ir::Field>(node.base_name, 1, 0);
-                auto res = generate_format(node.base_name, body, evaluator, scope, node.context, node.fileid, builder, driver);
+                auto res = generate_format(node.base_name, body, evaluator, scope, node.context, node.fileid, builder, driver, rec->vocabs);
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
@@ -578,7 +591,7 @@ static void assemble_prompts(
         ir::SearchPolicies field_enclosing = prune_search(prompt_policy, {"text", "enum", "branch"});
 
         if (decl.data.fields) {
-            generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields, field_enclosing);
+            generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields, field_enclosing, pmt->vocabs);
         }
 
         for (auto const & construct : decl.data.constructs) {

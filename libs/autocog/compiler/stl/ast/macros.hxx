@@ -9,10 +9,14 @@
 #define FOR_EACH_7(what, x, ...) what(x), EXPAND(FOR_EACH_6(what, __VA_ARGS__))
 #define FOR_EACH_8(what, x, ...) what(x), EXPAND(FOR_EACH_7(what, __VA_ARGS__))
 #define FOR_EACH_9(what, x, ...) what(x), EXPAND(FOR_EACH_8(what, __VA_ARGS__))
+#define FOR_EACH_10(what, x, ...) what(x), EXPAND(FOR_EACH_9(what, __VA_ARGS__))
+#define FOR_EACH_11(what, x, ...) what(x), EXPAND(FOR_EACH_10(what, __VA_ARGS__))
+#define FOR_EACH_12(what, x, ...) what(x), EXPAND(FOR_EACH_11(what, __VA_ARGS__))
 
-#define GET_MACRO(_1,_2,_3,_4,_5,_6,_7,_8,_9,NAME,...) NAME
+#define GET_MACRO(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,NAME,...) NAME
 #define FOR_EACH(action, ...) \
-  GET_MACRO(__VA_ARGS__, FOR_EACH_9, FOR_EACH_8, FOR_EACH_7, FOR_EACH_6, FOR_EACH_5, \
+  GET_MACRO(__VA_ARGS__, FOR_EACH_12, FOR_EACH_11, FOR_EACH_10, FOR_EACH_9, \
+            FOR_EACH_8, FOR_EACH_7, FOR_EACH_6, FOR_EACH_5, \
             FOR_EACH_4, FOR_EACH_3, FOR_EACH_2, FOR_EACH_1)(action, __VA_ARGS__)
 
 #define TAG_PREFIX(x) Tag::x

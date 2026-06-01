@@ -60,9 +60,8 @@ def unparse_format(fmt):
         args = []
         if fmt.get("length") is not None:
             args.append(f"length={fmt['length']}")
-        if fmt.get("within"):
-            vocab = ", ".join('"' + w + '"' for w in fmt["within"])
-            args.append(f"within=[{vocab}]")
+        if fmt.get("vocab"):
+            args.append(f"vocab={fmt['vocab']}")
         return "text" + (f"<{', '.join(args)}>" if args else "")
     if t == "enum":
         vals = ", ".join('"' + v + '"' for v in fmt.get("values", []))
@@ -113,8 +112,35 @@ def unparse_field(field, level):
     return lines
 
 
+def _vocab_tree_to_str(node):
+    """Render a vocab expression tree (the IR's structured form) back to its
+    STL* string: full operators and parentheses (mirrors VocabExpr::str())."""
+    kind = node.get("kind")
+    if kind == "tokenize":
+        inner = ", ".join('"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+                          for s in node.get("strings", []))
+        return f"tokenize({inner})"
+    if kind == "regex":
+        ss = node.get("strings", [])
+        p = ss[0] if ss else ""
+        p = p.replace("\\", "\\\\").replace('"', '\\"')
+        return f'regex("{p}")'
+    ops = node.get("operands", [])
+    if kind == "union":      return f"({_vocab_tree_to_str(ops[0])} | {_vocab_tree_to_str(ops[1])})"
+    if kind == "intersect":  return f"({_vocab_tree_to_str(ops[0])} & {_vocab_tree_to_str(ops[1])})"
+    if kind == "diff":       return f"({_vocab_tree_to_str(ops[0])} - {_vocab_tree_to_str(ops[1])})"
+    if kind == "complement": return f"(!{_vocab_tree_to_str(ops[0])})"
+    return ""
+
+
 def unparse_prompt(name, prompt):
-    lines = [f"prompt {name} {{", _indent(1) + "is {"]
+    lines = [f"prompt {name} {{"]
+    # Vocab table: emit each entry as a prompt-scope `vocab vocab_<hash> = <expr>;`
+    # declaration; fields reference these by name. Sorted for stable output.
+    vocabs = prompt.get("vocabs") or {}
+    for vkey in sorted(vocabs):
+        lines.append(f"{_indent(1)}vocab {vkey} = {_vocab_tree_to_str(vocabs[vkey])};")
+    lines.append(_indent(1) + "is {")
     for field in prompt.get("fields", []):
         lines.extend(unparse_field(field, 2))
     lines.append(_indent(1) + "}")
@@ -135,12 +161,27 @@ def main():
 
     prompts = ir.get("prompts", {})
     out = []
-    for key, prompt in prompts.items():
-        pname = prompt.get("name", key)
-        if want and pname != want:
+    for mangled, prompt in prompts.items():
+        # STL* identifies prompts by their mangled name (the post-instantiation
+        # identity). Records in the IR are debug/instantiation-result carriers
+        # and are intentionally not unparsed.
+        name = prompt.get("mangled_name", mangled)
+        if want and name != want:
             continue
-        out.append(unparse_prompt(pname, prompt))
-    print("\n\n".join(out))
+        out.append(unparse_prompt(name, prompt))
+
+    # Entry points: emit `export <mangled> as <entry>;` only when the names
+    # differ. A prompt whose name already equals the entry is its own implicit
+    # entry, so an explicit export would redeclare it.
+    exports = []
+    for entry, mangled in (ir.get("entry_points") or {}).items():
+        if mangled != entry:
+            exports.append(f"export {mangled} as {entry};")
+
+    body = "\n\n".join(out)
+    if exports:
+        body += ("\n\n" if body else "") + "\n".join(sorted(exports))
+    print(body)
 
 
 if __name__ == "__main__":

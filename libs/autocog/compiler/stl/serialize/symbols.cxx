@@ -15,7 +15,11 @@ void serialize_symbols(Driver const & driver, std::ostream & out) {
         std::visit([&](auto const & s) {
             using T = std::decay_t<decltype(s)>;
             if constexpr (std::is_same_v<T, DefineSymbol>) {
-                entry["type"] = "define";
+                switch (s.node.data.kind) {
+                    case ast::DefineKind::Define:   entry["type"] = "define"; break;
+                    case ast::DefineKind::Argument: entry["type"] = "argument"; break;
+                    case ast::DefineKind::Vocab:    entry["type"] = "vocab"; break;
+                }
             } else if constexpr (std::is_same_v<T, RecordSymbol>) {
                 entry["type"] = "record";
             } else if constexpr (std::is_same_v<T, PromptSymbol>) {
