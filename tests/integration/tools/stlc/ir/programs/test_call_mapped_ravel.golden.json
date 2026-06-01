@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "6d2b22253ecc28dd",
-    "timestamp": "2026-05-31T00:52:56.317Z",
-    "uid": "11ab81a51954ad39",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:04.259Z",
+    "uid": "ba493b65a8fe8bf4",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -28,8 +28,7 @@
               "is_input": true,
               "path": [
                 {
-                  "name": "sections",
-                  "range": null
+                  "name": "sections"
                 }
               ],
               "prompt": null
@@ -47,8 +46,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "all_pages",
-                "range": null
+                "name": "all_pages"
               }
             ]
           },
@@ -96,8 +94,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "summary",
-                  "range": null
+                  "name": "summary"
                 }
               ]
             }
@@ -111,8 +108,7 @@
         {
           "source": [
             {
-              "name": "section",
-              "range": null
+              "name": "section"
             }
           ],
           "target": {
@@ -120,8 +116,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "section",
-                "range": null
+                "name": "section"
               }
             ]
           },
@@ -169,8 +164,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "pages",
-                  "range": null
+                  "name": "pages"
                 }
               ]
             }

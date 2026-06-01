@@ -396,15 +396,25 @@
           "name": {
             "type": "string"
           },
-          "range": {
-            "oneOf": [
-              {
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "index": {
+            "type": "integer",
+            "description": "Index selector -> scalar element."
+          },
+          "slice": {
+            "type": "array",
+            "description": "Slice selector -> list. [lower, upper]; null = open bound.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "minItems": 2,
+            "maxItems": 2
           }
         },
         "required": [

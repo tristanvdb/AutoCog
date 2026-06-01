@@ -20,9 +20,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "6d2b22253ecc28dd",
-    "timestamp": "2026-05-31T00:53:35.231Z",
-    "uid": "a46e1de11f05c481",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:54.014Z",
+    "uid": "c680787738eff4e4",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -71,7 +71,6 @@
               "name": "section",
               "path": [
                 {
-                  "index": null,
                   "name": "sections"
                 }
               ],
@@ -81,7 +80,6 @@
           ],
           "target": [
             {
-              "index": null,
               "name": "all_pages"
             }
           ],
@@ -178,13 +176,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "section"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "section"
             }
           ],

@@ -25,9 +25,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "62ef930944f5a0be",
-    "timestamp": "2026-05-31T00:53:25.128Z",
-    "uid": "b3b79836a1b3a4ff",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:45.600Z",
+    "uid": "cb0c0982bcfbe2c3",
+    "version": "0.5.5"
   },
   "prompts": {
     "consumer": {
@@ -59,13 +59,15 @@
           "prompt": "producer",
           "source": [
             {
-              "index": 2,
-              "name": "items"
+              "name": "items",
+              "slice": [
+                2,
+                5
+              ]
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "subset"
             }
           ],
@@ -157,13 +159,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "items"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "items"
             }
           ],

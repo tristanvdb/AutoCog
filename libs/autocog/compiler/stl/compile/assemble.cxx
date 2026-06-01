@@ -141,16 +141,20 @@ static std::vector<ir::PathStep> convert_path(
 ) {
     std::vector<ir::PathStep> steps;
     for (auto const & step : path.data.steps) {
-        auto name = step.data.field.data.name;
-        ir::Range range = std::nullopt;
+        ir::PathStep ps;
+        ps.name = step.data.field.data.name;
         auto lower = eval_opt_int(step.data.lower, evaluator, scope, ctx);
         auto upper = eval_opt_int(step.data.upper, evaluator, scope, ctx);
-        if (lower && upper) {
-            range = std::make_pair(*lower, *upper);
+        // Mirror the grammar faithfully (Python slice semantics):
+        //   no bracket            -> nullopt selector (whole field, may be scalar)
+        //   [i]   (!is_range)     -> index i (scalar element)
+        //   [lo:hi] (is_range)    -> slice with optional open bounds (list)
+        if (step.data.is_range) {
+            ps.selector = ir::StepRange{lower, upper};
         } else if (lower) {
-            range = std::make_pair(*lower, *lower);
-        }
-        steps.emplace_back(name, range);
+            ps.selector = *lower;          // index -> scalar
+        }   // else: bare field, selector stays nullopt
+        steps.push_back(std::move(ps));
     }
     return steps;
 }

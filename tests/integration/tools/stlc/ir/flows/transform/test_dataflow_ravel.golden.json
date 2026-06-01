@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "c837044263ee6a73",
-    "timestamp": "2026-05-31T00:52:44.268Z",
-    "uid": "adaae13cc1981936",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:54.232Z",
+    "uid": "d0937ae0c6609b93",
+    "version": "0.5.5"
   },
   "prompts": {
     "producer": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "items_a",
-              "range": null
+              "name": "items_a"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "items_a",
-                "range": null
+                "name": "items_a"
               }
             ]
           },
@@ -35,8 +33,7 @@
         {
           "source": [
             {
-              "name": "items_b",
-              "range": null
+              "name": "items_b"
             }
           ],
           "target": {
@@ -44,8 +41,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "items_b",
-                "range": null
+                "name": "items_b"
               }
             ]
           },
@@ -95,8 +91,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "items_a",
-                  "range": null
+                  "name": "items_a"
                 }
               ]
             }

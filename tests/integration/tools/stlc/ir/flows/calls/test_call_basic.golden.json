@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "bb1a4ce396403fb1",
-    "timestamp": "2026-05-31T00:52:39.556Z",
-    "uid": "b437288ae5621637",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:50.526Z",
+    "uid": "b61856c7aaa41b47",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "topic",
-              "range": null
+              "name": "topic"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "topic",
-                "range": null
+                "name": "topic"
               }
             ]
           },
@@ -42,8 +40,7 @@
               "is_input": true,
               "path": [
                 {
-                  "name": "topic",
-                  "range": null
+                  "name": "topic"
                 }
               ],
               "prompt": null
@@ -55,8 +52,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "answer",
-                "range": null
+                "name": "answer"
               }
             ]
           },
@@ -102,8 +98,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "answer",
-                  "range": null
+                  "name": "answer"
                 }
               ]
             }
@@ -117,8 +112,7 @@
         {
           "source": [
             {
-              "name": "topic",
-              "range": null
+              "name": "topic"
             }
           ],
           "target": {
@@ -126,8 +120,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "topic",
-                "range": null
+                "name": "topic"
               }
             ]
           },
@@ -173,8 +166,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ]
             }

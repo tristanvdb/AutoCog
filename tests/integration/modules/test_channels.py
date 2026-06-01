@@ -19,6 +19,20 @@ class TestDataflowChannels:
         result = engine.run(prog, name="Alice", age="25")
         assert isinstance(result, str)
 
+    def test_ranged_slice_dataflow(self, engine, repo_root):
+        """Ranged dataflow path: consumer reads producer.items[2:5].
+
+        Fully determined by the input (the producer array is filled from input,
+        the consumer slices and returns it), so the result is exact and
+        independent of token sampling. items[2:5] selects indices 2,3,4.
+        """
+        import autocog
+        prog = autocog.compile(
+            str(repo_root / "tests/fixtures/stl/flows/transform/test_ranged_slice.stl")
+        )
+        result = engine.run(prog, items=["aa", "bb", "cc", "dd", "ee", "ff"])
+        assert result == ["cc", "dd", "ee"]
+
     def test_self_dataflow(self, engine, repo_root):
         """Flow loop with self-referencing dataflow."""
         import autocog

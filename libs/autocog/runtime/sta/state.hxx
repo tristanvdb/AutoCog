@@ -35,7 +35,7 @@ struct EnumFormat {
 
 struct ChoiceFormat {
     std::string mode;   // "select" or "repeat"
-    std::vector<std::pair<std::string, std::optional<std::pair<int,int>>>> path;
+    std::vector<PathStep> path;
 };
 
 using FieldFormat = std::variant<
@@ -94,7 +94,7 @@ struct FlowTarget {
 
 struct ReturnField {
     std::string alias;
-    std::vector<std::pair<std::string, std::optional<int>>> path;
+    std::vector<PathStep> path;
 };
 
 struct ReturnTarget {

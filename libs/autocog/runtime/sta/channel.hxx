@@ -7,13 +7,9 @@
 #include <variant>
 #include <vector>
 
-namespace autocog::runtime::sta {
+#include "autocog/runtime/sta/path.hxx"
 
-// Path step: field name + optional index
-struct PathStep {
-    std::string name;
-    std::optional<int> index;
-};
+namespace autocog::runtime::sta {
 
 // ============================================================================
 // Clauses — transformation pipeline applied in parse order

@@ -5,29 +5,24 @@
   },
   "metadata": {
     "format": "ir",
-    "source_uid": "f1e7636fb011b944",
-    "timestamp": "2026-05-31T19:03:55.538Z",
-    "uid": "ffe3de7cb96e5383",
+    "source_uid": "75c900b741460d8d",
+    "timestamp": "2026-05-31T19:03:56.162Z",
+    "uid": "7609eeaba53e2d7c",
     "version": "0.5.5"
   },
   "prompts": {
     "consumer": {
       "channels": [
         {
-          "clauses": [
-            {
-              "depth": null,
-              "target": [],
-              "type": "ravel"
-            }
-          ],
+          "clauses": [],
           "prompt": "producer",
           "source": [
             {
-              "name": "items"
-            },
-            {
-              "name": "tags"
+              "name": "items",
+              "slice": [
+                2,
+                5
+              ]
             }
           ],
           "target": {
@@ -35,7 +30,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "all_tags"
+                "name": "slice"
               }
             ]
           },
@@ -49,25 +44,14 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "length": 5,
+            "length": 4,
             "type": "completion"
           },
           "index": 0,
-          "name": "all_tags",
+          "name": "slice",
           "range": [
-            15
+            3
           ]
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "format": {
-            "length": 20,
-            "type": "completion"
-          },
-          "index": 1,
-          "name": "summary",
-          "range": null
         }
       ],
       "flows": [],
@@ -83,7 +67,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "summary"
+                  "name": "slice"
                 }
               ]
             }
@@ -119,38 +103,13 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "fields": [
-              {
-                "depth": 2,
-                "desc": [],
-                "format": {
-                  "length": 10,
-                  "type": "completion"
-                },
-                "index": 0,
-                "name": "label",
-                "range": null
-              },
-              {
-                "depth": 2,
-                "desc": [],
-                "format": {
-                  "length": 5,
-                  "type": "completion"
-                },
-                "index": 1,
-                "name": "tags",
-                "range": [
-                  3
-                ]
-              }
-            ],
-            "type": "struct"
+            "length": 4,
+            "type": "completion"
           },
           "index": 0,
           "name": "items",
           "range": [
-            5
+            6
           ]
         }
       ],

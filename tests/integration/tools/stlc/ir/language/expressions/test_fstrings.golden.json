@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "41cd94d1fcd976fb",
-    "timestamp": "2026-05-31T00:52:48.562Z",
-    "uid": "3542897e3eebc17a",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:58.026Z",
+    "uid": "aaf7a6c7367110ce",
+    "version": "0.5.5"
   },
   "prompts": {
     "test__12909789474868431288_4": {
@@ -61,8 +61,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "answer",
-                  "range": null
+                  "name": "answer"
                 }
               ]
             }

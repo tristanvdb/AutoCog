@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "b00a05d75ed3ae03",
-    "timestamp": "2026-05-31T00:52:55.915Z",
-    "uid": "c44b86e37f5f94af",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:03.948Z",
+    "uid": "506490f1f8f08f6b",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -28,8 +28,7 @@
               "is_input": true,
               "path": [
                 {
-                  "name": "steps",
-                  "range": null
+                  "name": "steps"
                 }
               ],
               "prompt": null
@@ -39,14 +38,12 @@
             {
               "source": [
                 {
-                  "name": "_",
-                  "range": null
+                  "name": "_"
                 }
               ],
               "target": [
                 {
-                  "name": "response",
-                  "range": null
+                  "name": "response"
                 }
               ],
               "type": "bind"
@@ -62,8 +59,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "responses",
-                "range": null
+                "name": "responses"
               }
             ]
           },
@@ -111,8 +107,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "conclusion",
-                  "range": null
+                  "name": "conclusion"
                 }
               ]
             }
@@ -126,8 +121,7 @@
         {
           "source": [
             {
-              "name": "task",
-              "range": null
+              "name": "task"
             }
           ],
           "target": {
@@ -135,8 +129,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "task",
-                "range": null
+                "name": "task"
               }
             ]
           },
@@ -182,8 +175,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "response",
-                  "range": null
+                  "name": "response"
                 }
               ]
             }

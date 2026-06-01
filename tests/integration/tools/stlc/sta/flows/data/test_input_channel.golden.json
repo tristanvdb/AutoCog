@@ -19,9 +19,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "f50acd270f4098b9",
-    "timestamp": "2026-05-31T00:53:21.112Z",
-    "uid": "282a308abcdf575e",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:42.206Z",
+    "uid": "e5774a17c0875797",
+    "version": "0.5.5"
   },
   "prompts": {
     "quiz": {
@@ -51,13 +51,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "question"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "question"
             }
           ],

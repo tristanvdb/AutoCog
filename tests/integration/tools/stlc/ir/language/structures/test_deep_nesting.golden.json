@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "f5cd820ef7f32543",
-    "timestamp": "2026-05-31T00:52:52.592Z",
-    "uid": "bcd713913b68b84c",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:01.131Z",
+    "uid": "013c294f3ef65b37",
+    "version": "0.5.5"
   },
   "prompts": {
     "test": {
@@ -324,8 +324,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "config",
-                  "range": null
+                  "name": "config"
                 }
               ]
             }

@@ -24,9 +24,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "ed7b1969c65ad7b5",
-    "timestamp": "2026-05-31T00:53:34.449Z",
-    "uid": "1e8136a1491306ee",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:53.068Z",
+    "uid": "dc02de9d3a984629",
+    "version": "0.5.5"
   },
   "prompts": {
     "LibPrompt": {
@@ -51,13 +51,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "data"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "data"
             }
           ],
@@ -147,13 +145,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "container"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "container"
             }
           ],

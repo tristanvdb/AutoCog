@@ -19,9 +19,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "6343bc97f7a3c448",
-    "timestamp": "2026-05-31T00:53:19.887Z",
-    "uid": "6afe185be90142fd",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:41.211Z",
+    "uid": "c13e6b83b17d9737",
+    "version": "0.5.5"
   },
   "prompts": {
     "solver": {
@@ -56,13 +56,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "problem"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "problem"
             }
           ],

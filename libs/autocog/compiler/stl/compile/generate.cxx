@@ -37,9 +37,7 @@ static sta::FieldFormat extract_format(ir::Format const & fmt) {
         } else if constexpr (std::is_same_v<T, ir::Choice>) {
             sta::ChoiceFormat chf;
             chf.mode = f.mode;
-            for (auto const & step : f.path.steps) {
-                chf.path.emplace_back(step.name, step.range);
-            }
+            chf.path = f.path.steps;   // shared PathStep; copy through
             return chf;
         } else {
             // struct (vector<Field>) → record (no leaf format); handled by caller.
@@ -172,10 +170,7 @@ static std::map<std::string, sta::FlowEntry> extract_flows(ir::Prompt const & pm
         for (auto const & rf : ri.fields) {
             sta::ReturnField srf;
             srf.alias = rf.alias.value_or("_");
-            for (auto const & step : rf.source.steps) {
-                srf.path.emplace_back(step.name, step.range.has_value()
-                    ? std::optional<int>(step.range->first) : std::nullopt);
-            }
+            srf.path = rf.source.steps;   // shared PathStep; copy through
             rt.fields.push_back(std::move(srf));
         }
         flows[label] = std::move(rt);
@@ -188,10 +183,8 @@ static std::map<std::string, sta::FlowEntry> extract_flows(ir::Prompt const & pm
 // ============================================================================
 
 static sta::PathStep convert_step(ir::PathStep const & step) {
-    sta::PathStep ps;
-    ps.name = step.name;
-    if (step.range) ps.index = step.range->first;
-    return ps;
+    // IR and STA PathStep are the same shared type now; copy through faithfully.
+    return step;
 }
 
 static std::vector<sta::PathStep> convert_steps(std::vector<ir::PathStep> const & steps) {
@@ -461,7 +454,7 @@ static void collect_outputs(
                 sta::SchemaField schema;
                 schema.type = "text";
                 if (!rf.path.empty()) {
-                    std::string field_name = rf.path.back().first;
+                    std::string field_name = rf.path.back().name;
                     for (auto const & f : prompt.fields) {
                         if (f.name == field_name) {
                             schema = format_to_schema(f.format);

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "e258f706a52920eb",
-    "timestamp": "2026-05-31T00:52:53.812Z",
-    "uid": "72fad04a187c4907",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:02.048Z",
+    "uid": "65591b4901280c7e",
+    "version": "0.5.5"
   },
   "prompts": {
     "calculator": {
@@ -115,8 +115,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ]
             }

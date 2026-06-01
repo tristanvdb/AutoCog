@@ -20,9 +20,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "b00a05d75ed3ae03",
-    "timestamp": "2026-05-31T00:53:34.841Z",
-    "uid": "cb6d7365224a65ac",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:53.710Z",
+    "uid": "9fe2033f9a63858e",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -54,13 +54,11 @@
             {
               "source": [
                 {
-                  "index": null,
                   "name": "_"
                 }
               ],
               "target": [
                 {
-                  "index": null,
                   "name": "response"
                 }
               ],
@@ -86,7 +84,6 @@
               "name": "task",
               "path": [
                 {
-                  "index": null,
                   "name": "steps"
                 }
               ],
@@ -96,7 +93,6 @@
           ],
           "target": [
             {
-              "index": null,
               "name": "responses"
             }
           ],
@@ -193,13 +189,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "task"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "task"
             }
           ],

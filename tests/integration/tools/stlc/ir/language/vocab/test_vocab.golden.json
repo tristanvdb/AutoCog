@@ -6,8 +6,8 @@
   "metadata": {
     "format": "ir",
     "source_uid": "9ee4d98fdfef0c19",
-    "timestamp": "2026-05-31T16:37:42.508Z",
-    "uid": "4d49710e970ff23a",
+    "timestamp": "2026-05-31T19:04:03.636Z",
+    "uid": "34dbcb260ce14e87",
     "version": "0.5.5"
   },
   "prompts": {
@@ -78,8 +78,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "code",
-                  "range": null
+                  "name": "code"
                 }
               ]
             }
@@ -92,8 +91,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "label",
-                  "range": null
+                  "name": "label"
                 }
               ]
             }
@@ -106,8 +104,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "prose",
-                  "range": null
+                  "name": "prose"
                 }
               ]
             }
@@ -120,8 +117,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "pin",
-                  "range": null
+                  "name": "pin"
                 }
               ]
             }

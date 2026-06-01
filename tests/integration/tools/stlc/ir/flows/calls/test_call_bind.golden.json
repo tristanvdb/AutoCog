@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "402dd14afd526e96",
-    "timestamp": "2026-05-31T00:52:39.945Z",
-    "uid": "bd560611d3752ee9",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:50.858Z",
+    "uid": "631e26eae9388227",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "query",
-              "range": null
+              "name": "query"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "query",
-                "range": null
+                "name": "query"
               }
             ]
           },
@@ -42,8 +40,7 @@
               "is_input": true,
               "path": [
                 {
-                  "name": "query",
-                  "range": null
+                  "name": "query"
                 }
               ],
               "prompt": null
@@ -53,14 +50,12 @@
             {
               "source": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ],
               "target": [
                 {
-                  "name": "answer",
-                  "range": null
+                  "name": "answer"
                 }
               ],
               "type": "bind"
@@ -71,8 +66,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "answer",
-                "range": null
+                "name": "answer"
               }
             ]
           },
@@ -118,8 +112,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "answer",
-                  "range": null
+                  "name": "answer"
                 }
               ]
             }
@@ -133,8 +126,7 @@
         {
           "source": [
             {
-              "name": "query",
-              "range": null
+              "name": "query"
             }
           ],
           "target": {
@@ -142,8 +134,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "query",
-                "range": null
+                "name": "query"
               }
             ]
           },
@@ -189,8 +180,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ]
             }

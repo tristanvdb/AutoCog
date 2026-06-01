@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "6343bc97f7a3c448",
-    "timestamp": "2026-05-31T00:52:41.117Z",
-    "uid": "bb8290eca6a1fcee",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:51.788Z",
+    "uid": "de877e2c95ad654e",
+    "version": "0.5.5"
   },
   "prompts": {
     "solver": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "problem",
-              "range": null
+              "name": "problem"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "problem",
-                "range": null
+                "name": "problem"
               }
             ]
           },
@@ -91,8 +89,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "attempt",
-                  "range": null
+                  "name": "attempt"
                 }
               ]
             }

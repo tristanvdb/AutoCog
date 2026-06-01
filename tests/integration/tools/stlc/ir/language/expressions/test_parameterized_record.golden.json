@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "c74c39e83c66d581",
-    "timestamp": "2026-05-31T00:52:49.742Z",
-    "uid": "bb60b133faa08147",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:58.947Z",
+    "uid": "de43a1746ad08b71",
+    "version": "0.5.5"
   },
   "prompts": {
     "storage": {
@@ -72,8 +72,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "small",
-                  "range": null
+                  "name": "small"
                 }
               ]
             }

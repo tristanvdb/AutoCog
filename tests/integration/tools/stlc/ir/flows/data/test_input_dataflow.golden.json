@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "97971d51f837f265",
-    "timestamp": "2026-05-31T00:52:42.670Z",
-    "uid": "3dad4d466ca293e0",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:53.020Z",
+    "uid": "1e65ef854f7efaaa",
+    "version": "0.5.5"
   },
   "prompts": {
     "greeter": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "name",
-              "range": null
+              "name": "name"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "name",
-                "range": null
+                "name": "name"
               }
             ]
           },
@@ -77,8 +75,7 @@
           "prompt": "greeter",
           "source": [
             {
-              "name": "greeting",
-              "range": null
+              "name": "greeting"
             }
           ],
           "target": {
@@ -86,8 +83,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "greeting",
-                "range": null
+                "name": "greeting"
               }
             ]
           },
@@ -96,8 +92,7 @@
         {
           "source": [
             {
-              "name": "age",
-              "range": null
+              "name": "age"
             }
           ],
           "target": {
@@ -105,8 +100,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "age",
-                "range": null
+                "name": "age"
               }
             ]
           },
@@ -163,8 +157,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "summary",
-                  "range": null
+                  "name": "summary"
                 }
               ]
             }

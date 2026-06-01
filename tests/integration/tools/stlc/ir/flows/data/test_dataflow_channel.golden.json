@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "d627d3f737cf829b",
-    "timestamp": "2026-05-31T00:52:41.889Z",
-    "uid": "656cc1785d7c399a",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:52.405Z",
+    "uid": "c8411153fe325a87",
+    "version": "0.5.5"
   },
   "prompts": {
     "thinker": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "problem",
-              "range": null
+              "name": "problem"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "problem",
-                "range": null
+                "name": "problem"
               }
             ]
           },
@@ -35,8 +33,7 @@
         {
           "source": [
             {
-              "name": "reflection",
-              "range": null
+              "name": "reflection"
             }
           ],
           "target": {
@@ -44,8 +41,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "hint",
-                "range": null
+                "name": "hint"
               }
             ]
           },
@@ -111,8 +107,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "solution",
-                  "range": null
+                  "name": "solution"
                 }
               ]
             }

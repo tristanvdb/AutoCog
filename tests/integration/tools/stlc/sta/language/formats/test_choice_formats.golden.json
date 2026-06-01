@@ -14,9 +14,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "5a223176a90402e6",
-    "timestamp": "2026-05-31T00:53:29.170Z",
-    "uid": "0ea86db04c94febb",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:49.031Z",
+    "uid": "99a587d3a4325c4b",
+    "version": "0.5.5"
   },
   "prompts": {
     "chooser": {
@@ -73,8 +73,7 @@
             "mode": "select",
             "path": [
               {
-                "name": "options",
-                "range": null
+                "name": "options"
               }
             ],
             "type": "choice"
@@ -91,8 +90,7 @@
             "mode": "select",
             "path": [
               {
-                "name": "options",
-                "range": null
+                "name": "options"
               }
             ],
             "type": "choice"

@@ -21,9 +21,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "08fa93bbf9f8a7dd",
-    "timestamp": "2026-05-31T00:53:22.708Z",
-    "uid": "887d61c1391ecff2",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:43.548Z",
+    "uid": "959d22049dd48017",
+    "version": "0.5.5"
   },
   "prompts": {
     "consumer": {
@@ -65,7 +65,6 @@
             {
               "target": [
                 {
-                  "index": null,
                   "name": "secret"
                 }
               ],
@@ -75,13 +74,11 @@
           "prompt": "source",
           "source": [
             {
-              "index": null,
               "name": "result"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "data"
             }
           ],
@@ -213,13 +210,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "query"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "query"
             }
           ],

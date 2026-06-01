@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "fdc2cfcea2c2341e",
-    "timestamp": "2026-05-31T00:52:43.051Z",
-    "uid": "52058d53cf28dcd7",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:53.324Z",
+    "uid": "e21dd5c6cdb565f8",
+    "version": "0.5.5"
   },
   "prompts": {
     "solver": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "topic",
-              "range": null
+              "name": "topic"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "topic",
-                "range": null
+                "name": "topic"
               }
             ]
           },
@@ -37,8 +35,7 @@
           "prompt": null,
           "source": [
             {
-              "name": "attempt",
-              "range": null
+              "name": "attempt"
             }
           ],
           "target": {
@@ -46,8 +43,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "hint",
-                "range": null
+                "name": "hint"
               }
             ]
           },
@@ -113,8 +109,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "attempt",
-                  "range": null
+                  "name": "attempt"
                 }
               ]
             }

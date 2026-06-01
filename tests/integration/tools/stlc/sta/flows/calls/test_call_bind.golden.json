@@ -21,9 +21,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "402dd14afd526e96",
-    "timestamp": "2026-05-31T00:53:18.684Z",
-    "uid": "cc21b96613468a89",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:40.221Z",
+    "uid": "a29d1cbbfb139fc8",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -53,13 +53,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "query"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "query"
             }
           ],
@@ -70,13 +68,11 @@
             {
               "source": [
                 {
-                  "index": null,
                   "name": "result"
                 }
               ],
               "target": [
                 {
-                  "index": null,
                   "name": "answer"
                 }
               ],
@@ -92,7 +88,6 @@
               "name": "query",
               "path": [
                 {
-                  "index": null,
                   "name": "query"
                 }
               ],
@@ -102,7 +97,6 @@
           ],
           "target": [
             {
-              "index": null,
               "name": "answer"
             }
           ],
@@ -196,13 +190,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "query"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "query"
             }
           ],

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "fda273b190ca6903",
-    "timestamp": "2026-05-31T00:52:50.550Z",
-    "uid": "c6076ed5d5fa1764",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:59.570Z",
+    "uid": "d3937c42e522760f",
+    "version": "0.5.5"
   },
   "prompts": {
     "writer": {
@@ -70,8 +70,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "summary",
-                  "range": null
+                  "name": "summary"
                 }
               ]
             }

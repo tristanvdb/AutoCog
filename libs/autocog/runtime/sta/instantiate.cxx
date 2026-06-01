@@ -518,7 +518,8 @@ static std::vector<std::string> ravel_choices(
     Syntax const & syntax
 ) {
     std::vector<json const *> current = {&content};
-    for (auto const & [name, range] : cf.path) {
+    for (auto const & step : cf.path) {
+        auto const & name = step.name;
         std::vector<json const *> next;
         for (auto const * ptr : current) {
             if (ptr->is_object() && ptr->contains(name)) {

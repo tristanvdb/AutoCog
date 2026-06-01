@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "autocog/runtime/fta/vocab.hxx"
+#include "autocog/runtime/sta/path.hxx"
 
 namespace autocog::compiler::stl::ir {
 
@@ -28,8 +29,10 @@ using VarMap = std::unordered_map<std::string, Value>;
 // during graph->IR traversal, not at parse time.
 using SearchPolicies = std::map<std::string, VarMap>;
 
-// Range for array indexing: [start:end] or [index]
-// None means no range, (n,n) means [n], (start,end) means [start:end]
+// Range for FIELD ARITY only: the repeat count of an array field, like
+// items[10] (exactly 10) or hint[0:1] (0 to 1). This is NOT a path selector —
+// path-step selection (b[4], c[:4], d[2:5]) uses the shared PathStep below.
+// None = scalar field; (n,n) = exactly n; (lo,hi) = lo..hi.
 using Range = std::optional<std::pair<int, int>>;
 
 // ---------------------------------------------------------------------------
@@ -45,16 +48,11 @@ using ::autocog::runtime::fta::vocab_to_json;
 using ::autocog::runtime::fta::vocab_from_json;
 
 
-// Path step: name with optional range like "field[3:6]"
-struct PathStep {
-  std::string name;
-  Range range;
-
-  PathStep(std::string name_, Range range_ = std::nullopt) :
-    name(std::move(name_)),
-    range(range_)
-  {}
-};
+// Path step (b[4], c[:4], d[2:5], ...) is the shared TA-layer selector type
+// (runtime/sta/path.hxx): name + optional index-or-slice selector. Shared so the
+// faithful selector flows IR -> STA -> bridge -> Python with no lossy collapse.
+using PathStep = ::autocog::runtime::sta::PathStep;
+using StepRange = ::autocog::runtime::sta::StepRange;
 
 // Document path: represents paths like "?input", "other.field[2]", ".result"
 struct DocPath {

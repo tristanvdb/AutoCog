@@ -24,9 +24,9 @@
   "metadata": {
     "format": "sta",
     "source_uid": "2e5d0bcfe0202b2a",
-    "timestamp": "2026-05-31T00:53:25.535Z",
-    "uid": "5cabe24c572b4d83",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:02:46.240Z",
+    "uid": "4910fd112f21594c",
+    "version": "0.5.5"
   },
   "prompts": {
     "questioner": {
@@ -61,13 +61,11 @@
         {
           "source": [
             {
-              "index": null,
               "name": "topic"
             }
           ],
           "target": [
             {
-              "index": null,
               "name": "topic"
             }
           ],

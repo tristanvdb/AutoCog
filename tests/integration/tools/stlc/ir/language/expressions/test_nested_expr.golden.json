@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "8994c941a5977e15",
-    "timestamp": "2026-05-31T00:52:48.963Z",
-    "uid": "1c3483a0c67e3231",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:58.337Z",
+    "uid": "25e612f76107d5b2",
+    "version": "0.5.5"
   },
   "prompts": {
     "grid__2": {
@@ -67,8 +67,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "total",
-                  "range": null
+                  "name": "total"
                 }
               ]
             }

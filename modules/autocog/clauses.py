@@ -6,24 +6,40 @@ Clause transformations — applied in parse order to channel data.
 import copy
 
 
+def _apply_selector(data, step):
+    """Apply a path step's selector to `data` after the name lookup.
+
+    Selector forms (Python slice semantics):
+      no index/slice key -> whole field (data unchanged)
+      "index": i         -> data[i]      (scalar element)
+      "slice": [lo, hi]  -> data[lo:hi]  (list; null bound = open)
+    """
+    if "index" in step and step["index"] is not None:
+        if not isinstance(data, list):
+            return None
+        idx = step["index"]
+        return data[idx] if -len(data) <= idx < len(data) else None
+    if "slice" in step and step["slice"] is not None:
+        if not isinstance(data, list):
+            return None
+        lo, hi = step["slice"]
+        return data[lo:hi]   # open bounds (None) behave as Python slice defaults
+    return data
+
+
 def navigate(data, path):
-    """Navigate a nested dict/list by path steps."""
+    """Navigate a nested dict/list by path steps (name + optional selector)."""
     for step in path:
         name = step["name"]
-        idx = step.get("index")
         if isinstance(data, dict):
             data = data.get(name)
-        elif isinstance(data, list) and idx is not None:
-            data = data[idx] if idx < len(data) else None
         else:
             return None
         if data is None:
             return None
-        # Apply index after name lookup (name selects the array, index selects element)
-        if idx is not None and isinstance(data, list):
-            data = data[idx] if idx < len(data) else None
-            if data is None:
-                return None
+        data = _apply_selector(data, step)
+        if data is None:
+            return None
     return data
 
 
@@ -44,10 +60,13 @@ def set_at_path(data, path, value):
     last = path[-1]
     name = last["name"]
     idx = last.get("index")
+    sl = last.get("slice")
     if isinstance(current, dict):
         current[name] = value
     elif isinstance(current, list) and idx is not None:
         current[idx] = value
+    elif isinstance(current, list) and sl is not None:
+        current[sl[0]:sl[1]] = value
     return data
 
 

@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "ab3a8df0b4f031d2",
-    "timestamp": "2026-05-31T00:52:54.655Z",
-    "uid": "1b31057edebb7aa8",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:02.688Z",
+    "uid": "d4e90cb78c7f3d6d",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "simple",
-              "range": null
+              "name": "simple"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "simple",
-                "range": null
+                "name": "simple"
               }
             ]
           },
@@ -35,8 +33,7 @@
         {
           "source": [
             {
-              "name": "long",
-              "range": null
+              "name": "long"
             }
           ],
           "target": {
@@ -44,8 +41,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "long",
-                "range": null
+                "name": "long"
               }
             ]
           },
@@ -54,8 +50,7 @@
         {
           "source": [
             {
-              "name": "tech",
-              "range": null
+              "name": "tech"
             }
           ],
           "target": {
@@ -63,8 +58,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "tech",
-                "range": null
+                "name": "tech"
               }
             ]
           },
@@ -133,8 +127,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "simple",
-                  "range": null
+                  "name": "simple"
                 }
               ]
             }
@@ -147,8 +140,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "long",
-                  "range": null
+                  "name": "long"
                 }
               ]
             }
@@ -161,8 +153,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "tech",
-                  "range": null
+                  "name": "tech"
                 }
               ]
             }

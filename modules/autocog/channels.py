@@ -9,25 +9,12 @@ from .clauses import navigate, apply_clauses, get_mapped_clauses, apply_mapped
 
 
 def resolve_path(source, path):
-    """Navigate a dict/list by STA path steps."""
-    data = source
-    for step in path:
-        name = step["name"]
-        idx = step.get("index")
-        if isinstance(data, dict):
-            data = data.get(name)
-        elif isinstance(data, list) and idx is not None:
-            data = data[idx] if idx < len(data) else None
-        else:
-            return None
-        if data is None:
-            return None
-        # Apply index after name lookup
-        if idx is not None and isinstance(data, list):
-            data = data[idx] if idx < len(data) else None
-            if data is None:
-                return None
-    return data
+    """Navigate a dict/list by STA path steps.
+
+    Thin alias over clauses.navigate so the index/slice selector semantics live
+    in one place (previously this was a second, single-index-only copy).
+    """
+    return navigate(source, path)
 
 
 def insert_at_target(content, target_path, value):

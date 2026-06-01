@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "8e03af46cd9a85f6",
-    "timestamp": "2026-05-31T02:49:25.486Z",
-    "uid": "2849a4ceb2746606",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:59.885Z",
+    "uid": "f9a8cd62a6c667d9",
+    "version": "0.5.5"
   },
   "prompts": {
     "main": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "greeting",
-              "range": null
+              "name": "greeting"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "greeting",
-                "range": null
+                "name": "greeting"
               }
             ]
           },
@@ -35,8 +33,7 @@
         {
           "source": [
             {
-              "name": "creative",
-              "range": null
+              "name": "creative"
             }
           ],
           "target": {
@@ -44,8 +41,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "creative",
-                "range": null
+                "name": "creative"
               }
             ]
           },
@@ -183,8 +179,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "greeting",
-                  "range": null
+                  "name": "greeting"
                 }
               ]
             }
@@ -197,8 +192,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "creative",
-                  "range": null
+                  "name": "creative"
                 }
               ]
             }

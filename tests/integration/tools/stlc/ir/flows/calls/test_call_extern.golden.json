@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "717d610785ec56ee",
-    "timestamp": "2026-05-31T00:52:40.337Z",
-    "uid": "5b4b843f3dc6ecd2",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:51.166Z",
+    "uid": "0d429ec6ef367505",
+    "version": "0.5.5"
   },
   "prompts": {
     "main_prompt": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "input",
-              "range": null
+              "name": "input"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "input",
-                "range": null
+                "name": "input"
               }
             ]
           },
@@ -42,8 +40,7 @@
               "is_input": false,
               "path": [
                 {
-                  "name": "input",
-                  "range": null
+                  "name": "input"
                 }
               ],
               "prompt": null
@@ -55,8 +52,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "processed",
-                "range": null
+                "name": "processed"
               }
             ]
           },
@@ -113,8 +109,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ]
             }

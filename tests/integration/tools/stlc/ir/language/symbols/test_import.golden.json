@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "ed7b1969c65ad7b5",
-    "timestamp": "2026-05-31T00:52:55.507Z",
-    "uid": "ab40c8ce267bbcde",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:04:03.318Z",
+    "uid": "91ac9401ee8c62f7",
+    "version": "0.5.5"
   },
   "prompts": {
     "LibPrompt": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "data",
-              "range": null
+              "name": "data"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "data",
-                "range": null
+                "name": "data"
               }
             ]
           },
@@ -64,8 +62,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "data",
-                  "range": null
+                  "name": "data"
                 }
               ]
             }
@@ -79,8 +76,7 @@
         {
           "source": [
             {
-              "name": "container",
-              "range": null
+              "name": "container"
             }
           ],
           "target": {
@@ -88,8 +84,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "container",
-                "range": null
+                "name": "container"
               }
             ]
           },
@@ -158,8 +153,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "container",
-                  "range": null
+                  "name": "container"
                 }
               ]
             }

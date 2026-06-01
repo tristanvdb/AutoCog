@@ -7,6 +7,54 @@ namespace autocog::runtime::sta {
 
 using json = nlohmann::json;
 
+// Path-step selector (de)serialization — the single shape for every path in the
+// STA (clauses, channels, choice, return). Mirrors the IR serializer:
+//   {name}                  -> whole field (selector absent)
+//   {name, index: i}        -> index (scalar)
+//   {name, slice: [lo, hi]} -> slice (list); null bound = open
+static json pathstep_to_json(PathStep const & s) {
+    json j = {{"name", s.name}};
+    if (s.selector.has_value()) {
+        if (std::holds_alternative<int>(*s.selector)) {
+            j["index"] = std::get<int>(*s.selector);
+        } else {
+            auto const & r = std::get<StepRange>(*s.selector);
+            j["slice"] = json::array({
+                r.lower ? json(*r.lower) : json(nullptr),
+                r.upper ? json(*r.upper) : json(nullptr)
+            });
+        }
+    }
+    return j;
+}
+
+static json pathsteps_to_json(std::vector<PathStep> const & steps) {
+    json arr = json::array();
+    for (auto const & s : steps) arr.push_back(pathstep_to_json(s));
+    return arr;
+}
+
+static PathStep load_pathstep(json const & s) {
+    PathStep ps;
+    ps.name = s["name"];
+    if (s.contains("index") && !s["index"].is_null()) {
+        ps.selector = s["index"].get<int>();
+    } else if (s.contains("slice") && !s["slice"].is_null()) {
+        StepRange r;
+        auto const & sl = s["slice"];
+        if (!sl.at(0).is_null()) r.lower = sl.at(0).get<int>();
+        if (!sl.at(1).is_null()) r.upper = sl.at(1).get<int>();
+        ps.selector = r;
+    }   // else: whole field, selector stays nullopt
+    return ps;
+}
+
+static std::vector<PathStep> load_pathsteps(json const & arr) {
+    std::vector<PathStep> steps;
+    for (auto const & s : arr) steps.push_back(load_pathstep(s));
+    return steps;
+}
+
 // Search params (open dict: category -> param -> scalar). Shared by the
 // prompt-scope policy and per-field resolved policies.
 static void load_search(json const & sj, SearchParams & out) {
@@ -59,15 +107,7 @@ static FieldFormat load_format(json const & j) {
     if (type == "choice") {
         ChoiceFormat f;
         f.mode = j["mode"].get<std::string>();
-        for (auto const & step : j["path"]) {
-            std::string name = step["name"];
-            std::optional<std::pair<int,int>> range;
-            if (!step["range"].is_null()) {
-                auto r = step["range"];
-                range = std::make_pair(r[0].get<int>(), r[1].get<int>());
-            }
-            f.path.emplace_back(name, range);
-        }
+        f.path = load_pathsteps(j["path"]);
         return f;
     }
     return std::monostate{};
@@ -119,11 +159,7 @@ PromptSTA load_prompt(json const & j) {
             for (auto const & rf : fj["fields"]) {
                 ReturnField srf;
                 srf.alias = rf["alias"];
-                for (auto const & step : rf["path"]) {
-                    std::optional<int> idx;
-                    if (step.contains("index")) idx = step["index"].get<int>();
-                    srf.path.emplace_back(step["name"].get<std::string>(), idx);
-                }
+                srf.path = load_pathsteps(rf["path"]);
                 rt.fields.push_back(std::move(srf));
             }
             p.flows[name] = std::move(rt);
@@ -134,17 +170,6 @@ PromptSTA load_prompt(json const & j) {
     if (j.contains("channels")) {
         for (auto const & cj : j["channels"]) {
             auto type = cj["type"].get<std::string>();
-
-            auto load_pathsteps = [](json const & arr) -> std::vector<PathStep> {
-                std::vector<PathStep> steps;
-                for (auto const & s : arr) {
-                    PathStep ps;
-                    ps.name = s["name"];
-                    if (s.contains("index") && !s["index"].is_null()) ps.index = s["index"].get<int>();
-                    steps.push_back(std::move(ps));
-                }
-                return steps;
-            };
 
             auto load_clauses = [&](json const & arr) -> std::vector<Clause> {
                 std::vector<Clause> clauses;
@@ -302,28 +327,10 @@ static json format_to_json(FieldFormat const & fmt) {
             return j;
         }
         else if constexpr (std::is_same_v<T, ChoiceFormat>) {
-            json path = json::array();
-            for (auto const & [name, range] : f.path) {
-                json step = {{"name", name}};
-                if (range) step["range"] = json::array({range->first, range->second});
-                else step["range"] = nullptr;
-                path.push_back(step);
-            }
-            json j = {{"type","choice"}, {"mode", f.mode}, {"path", path}};
-            return j;
+            return json{{"type","choice"}, {"mode", f.mode}, {"path", pathsteps_to_json(f.path)}};
         }
         return json{{"type","unknown"}};
     }, fmt);
-}
-
-static json pathsteps_to_json(std::vector<PathStep> const & steps) {
-    json arr = json::array();
-    for (auto const & s : steps) {
-        json j = {{"name", s.name}};
-        j["index"] = s.index ? json(*s.index) : json(nullptr);
-        arr.push_back(j);
-    }
-    return arr;
 }
 
 static json clause_to_json(Clause const & clause) {
@@ -409,13 +416,7 @@ json serialize_prompt(PromptSTA const & p) {
             else if constexpr (std::is_same_v<T, ReturnTarget>) {
                 json fields = json::array();
                 for (auto const & rf : e.fields) {
-                    json path = json::array();
-                    for (auto const & [n, idx] : rf.path) {
-                        json step = {{"name", n}};
-                        if (idx) step["index"] = *idx;
-                        path.push_back(step);
-                    }
-                    fields.push_back(json{{"alias", rf.alias}, {"path", path}});
+                    fields.push_back(json{{"alias", rf.alias}, {"path", pathsteps_to_json(rf.path)}});
                 }
                 j["flows"][name] = json{{"type","return"}, {"fields", fields}};
             }

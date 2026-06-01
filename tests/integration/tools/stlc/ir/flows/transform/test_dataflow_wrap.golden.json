@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "4cc50bf3085a2aec",
-    "timestamp": "2026-05-31T00:52:44.667Z",
-    "uid": "45582ccbc76cfa4c",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:54.545Z",
+    "uid": "52c02ad416eef26e",
+    "version": "0.5.5"
   },
   "prompts": {
     "consumer": {
@@ -23,8 +23,7 @@
           "prompt": "producer",
           "source": [
             {
-              "name": "title",
-              "range": null
+              "name": "title"
             }
           ],
           "target": {
@@ -32,8 +31,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "titles",
-                "range": null
+                "name": "titles"
               }
             ]
           },
@@ -81,8 +79,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result",
-                  "range": null
+                  "name": "result"
                 }
               ]
             }
@@ -96,8 +93,7 @@
         {
           "source": [
             {
-              "name": "topic",
-              "range": null
+              "name": "topic"
             }
           ],
           "target": {
@@ -105,8 +101,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "topic",
-                "range": null
+                "name": "topic"
               }
             ]
           },
@@ -115,8 +110,7 @@
         {
           "source": [
             {
-              "name": "title",
-              "range": null
+              "name": "title"
             }
           ],
           "target": {
@@ -124,8 +118,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "title",
-                "range": null
+                "name": "title"
               }
             ]
           },

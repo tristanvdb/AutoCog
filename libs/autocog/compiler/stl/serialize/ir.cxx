@@ -21,7 +21,19 @@ static json range_to_json(ir::Range const & range) {
 static json pathstep_to_json(ir::PathStep const & step) {
     json j;
     j["name"] = step.name;
-    j["range"] = range_to_json(step.range);
+    // Selector: absent -> whole field; int -> index (scalar); StepRange -> slice
+    // (list), with null for open bounds.
+    if (step.selector.has_value()) {
+        if (std::holds_alternative<int>(*step.selector)) {
+            j["index"] = std::get<int>(*step.selector);
+        } else {
+            auto const & r = std::get<ir::StepRange>(*step.selector);
+            j["slice"] = json::array({
+                r.lower.has_value() ? json(*r.lower) : json(nullptr),
+                r.upper.has_value() ? json(*r.upper) : json(nullptr)
+            });
+        }
+    }
     return j;
 }
 

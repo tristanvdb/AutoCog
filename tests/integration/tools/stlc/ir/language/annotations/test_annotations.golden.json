@@ -6,9 +6,9 @@
   "metadata": {
     "format": "ir",
     "source_uid": "2e5d0bcfe0202b2a",
-    "timestamp": "2026-05-31T00:52:46.640Z",
-    "uid": "1fcc9b5196824c1a",
-    "version": "0.5.4"
+    "timestamp": "2026-05-31T19:03:56.475Z",
+    "uid": "0d78e8eef5c8c6e5",
+    "version": "0.5.5"
   },
   "prompts": {
     "questioner": {
@@ -16,8 +16,7 @@
         {
           "source": [
             {
-              "name": "topic",
-              "range": null
+              "name": "topic"
             }
           ],
           "target": {
@@ -25,8 +24,7 @@
             "prompt": null,
             "steps": [
               {
-                "name": "topic",
-                "range": null
+                "name": "topic"
               }
             ]
           },
@@ -94,8 +92,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "answer",
-                  "range": null
+                  "name": "answer"
                 }
               ]
             }
