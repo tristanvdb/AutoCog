@@ -91,9 +91,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA=$(git rev-list -n1 "$GITHUB_REF")
-          # Both CI jobs must have succeeded for this commit. The check-run
-          # names are the job ids from ci.yaml ("test-coverage", "test-release").
-          REQUIRED="test-coverage test-release"
+          # All CI jobs must have succeeded for this commit. The check-run names
+          # are the job ids from ci.yaml.
+          REQUIRED="check-deps check-release tests-release tests-coverage"
           # Wait up to 5 min for CI to complete.
           for i in $(seq 1 30); do
             CONCLUSIONS=$(gh api repos/${{ github.repository }}/commits/$SHA/check-runs \
@@ -148,34 +148,29 @@ jobs:
           # Download the coverage artifact
           gh run download "$RUN_ID" -n coverage -D coverage-artifact
 
-      - name: Check coverage thresholds
+      - name: Check coverage gate
         run: |
           python3 << 'PYEOF'
           import json, sys
 
-          with open("coverage-artifact/coverage_summary.json") as f:
-            summary = json.load(f)
+          with open("coverage-artifact/coverage.json") as f:
+            s = json.load(f)
 
-          print(f"C++ coverage:    {summary['cxx_coverage']}%")
-          print(f"Python coverage: {summary['py_coverage']}%")
-          print(f"ctest:           {summary['ctest']} passed")
-          print(f"pytest:          {summary['pytest']} passed")
+          # Thresholds live in tests/scripts/coverage_report.py and are enforced
+          # upstream: a threshold miss fails the CI test-coverage job, so no
+          # successful CI run exists and this release never gets here. This is a
+          # defense-in-depth re-check of the `pass` already computed in the
+          # artifact -- not a second copy of the thresholds.
+          print(f"total (excl templates): {s.get('total')}%")
+          for name in ("cxx", "cxx_templates", "python"):
+            n = s.get(name, {})
+            print(f"{name}: {n.get('measured')}% (threshold {n.get('threshold')}%) "
+                  f"pass={n.get('pass')}")
+          print(f"ctest: {s.get('ctest')} | pytest: {s.get('pytest')}")
 
-          # Thresholds, set just under CI-measured actuals (C++ ~82%, Py ~87%).
-          # The Python margin is thin; raise both as coverage improves, and add
-          # tests rather than lowering further if a drop trips the gate.
-          MIN_CXX = 80
-          MIN_PY = 87
-
-          failed = False
-          if summary["cxx_coverage"] < MIN_CXX:
-            print(f"::error::C++ coverage {summary['cxx_coverage']}% below threshold {MIN_CXX}%")
-            failed = True
-          if summary["py_coverage"] < MIN_PY:
-            print(f"::error::Python coverage {summary['py_coverage']}% below threshold {MIN_PY}%")
-            failed = True
-
-          sys.exit(1 if failed else 0)
+          if not s.get("pass", False):
+            print("::error::coverage.json reports pass=false (should have failed CI)")
+            sys.exit(1)
           PYEOF
 
       - name: Upload coverage for release
@@ -371,3 +366,100 @@ jobs:
             artifacts/sdist/*.tar.gz
             artifacts/demo-stapp/*.stapp
             artifacts/coverage-report/coverage.md
+
+  # ===========================================================================
+  # publish-badges — stamp the "latest release" badges, only after the whole
+  # release has succeeded. Runs last (needs: release) so a green release badge
+  # always corresponds to a fully published release. Reuses the CI coverage
+  # artifact (it carries coverage.json) for the numbers.
+  # ===========================================================================
+  publish-badges:
+    needs: release
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download CI coverage artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA=$(git rev-list -n1 "$GITHUB_REF")
+          RUN_ID=$(gh api repos/${{ github.repository }}/actions/workflows/ci.yaml/runs \
+            --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .conclusion == \"success\") | .id" \
+            | head -1)
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful CI run found for $SHA"
+            exit 1
+          fi
+          gh run download "$RUN_ID" -n coverage -D coverage-artifact
+
+      - name: Read release stats
+        id: stats
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          with open("coverage-artifact/coverage.json") as f:
+            s = json.load(f)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"ctest={s['ctest']}\n")
+            f.write(f"pytest={s['pytest']}\n")
+            f.write(f"cxx={s['cxx']['measured']}\n")
+            f.write(f"cxx_templates={s['cxx_templates']['measured']}\n")
+            f.write(f"python={s['python']['measured']}\n")
+          print(f"release stats: ctest={s['ctest']} pytest={s['pytest']} "
+                f"C++={s['cxx']['measured']}% templates={s['cxx_templates']['measured']}% "
+                f"Python={s['python']['measured']}%")
+          PYEOF
+
+      - name: Release ctest badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-ctest.json
+          label: ctest
+          message: "${{ steps.stats.outputs.ctest }} passed"
+          color: brightgreen
+
+      - name: Release pytest badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-pytest.json
+          label: pytest
+          message: "${{ steps.stats.outputs.pytest }} passed"
+          color: brightgreen
+
+      - name: Release C++ coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-cxx-coverage.json
+          label: C++ coverage
+          message: "${{ steps.stats.outputs.cxx }}%"
+          color: brightgreen
+
+      - name: Release C++ templates badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-cxx-templates.json
+          label: C++ templates
+          message: "${{ steps.stats.outputs.cxx_templates }}%"
+          color: brightgreen
+
+      - name: Release Python coverage badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-py-coverage.json
+          label: Python coverage
+          message: "${{ steps.stats.outputs.python }}%"
+          color: brightgreen

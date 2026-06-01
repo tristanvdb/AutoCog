@@ -11,207 +11,24 @@ permissions:
 
 jobs:
   # ===========================================================================
-  # Job 1: Debug + Coverage (ctest + pytest)
+  # Job 1: check-deps — dependency-group / extras drift (no build)
   # ===========================================================================
-  test-coverage:
+  check-deps:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ccache gcovr
-
-      - name: Install Python dependencies
-        run: pip install pytest pytest-cov deepdiff jsonschema referencing pybind11 scikit-build-core
-
-      - name: Restore ccache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/ccache
-          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
-          restore-keys: ccache-debug-${{ runner.os }}-
-
-      - name: Install autocog (debug + coverage)
-        run: |
-          pip install ".[server]" --no-build-isolation \
-            --config-settings="build-dir=build" \
-            --config-settings="cmake.define.CMAKE_BUILD_TYPE=Debug" \
-            --config-settings="cmake.define.COVERAGE=ON" \
-            --config-settings="cmake.define.AUTOCOG_TUNED=OFF" \
-            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
-            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
-
-      - name: Run ctest
-        working-directory: build
-        run: |
-          set -o pipefail
-          find . -name "*.gcda" -delete
-          ctest -j$(nproc) --timeout 120 --output-on-failure 2>&1 | tee ctest.log
-
-      - name: Run pytest
-        run: |
-          set -o pipefail
-          python -m pytest tests/integration/modules tests/units/modules \
-            --cov=autocog \
-            --cov-report=json:coverage_py.json \
-            -q 2>&1 | tee pytest.log
-
-      - name: Assert no pytest skips
-        run: |
-          # Skips are how missing prerequisites (e.g. the real model) quietly
-          # drop coverage. Fail if pytest reported any. Checking for skips —
-          # rather than an exact pass count — stays correct as tests are added.
-          if grep -qE '[0-9]+ skipped' pytest.log; then
-            echo "::error::pytest reported skipped tests; CI requires zero skips"
-            grep -E '[0-9]+ skipped' pytest.log
-            exit 1
-          fi
-          echo "No skipped tests."
-
-      - name: Generate C++ coverage
-        working-directory: build
-        run: |
-          gcovr -r "${{ github.workspace }}" . \
-            --filter "${{ github.workspace }}/libs/" \
-            --filter "${{ github.workspace }}/tools/" \
-            --filter "${{ github.workspace }}/bindings/" \
-            --gcov-ignore-errors=no_working_dir_found \
-            --json coverage_cxx.json \
-            2>/dev/null
-
-      - name: Generate coverage report
-        run: |
-          python tests/scripts/coverage_report.py \
-            build/coverage_cxx.json coverage_py.json \
-            -o coverage.md
-
-      - name: Extract summary
-        id: coverage
-        run: |
-          python3 << 'PYEOF'
-          import json, re, os
-
-          with open("build/coverage_cxx.json") as f:
-            cxx = json.load(f)
-          cxx_total = sum(len(e["lines"]) for e in cxx.get("files", []))
-          cxx_covered = sum(sum(1 for l in e["lines"] if l["count"] > 0) for e in cxx.get("files", []))
-          cxx_pct = round(100 * cxx_covered / cxx_total, 1) if cxx_total else 0
-
-          with open("coverage_py.json") as f:
-            py = json.load(f)
-          py_pct = round(py.get("totals", {}).get("percent_covered", 0), 1)
-
-          with open("build/ctest.log") as f:
-            ctest_text = f.read()
-            m = re.search(r"(\d+) tests failed out of (\d+)", ctest_text)
-            if m:
-              ctest_count = int(m.group(2)) - int(m.group(1))
-            else:
-              m = re.search(r"(\d+) tests passed", ctest_text)
-              ctest_count = int(m.group(1)) if m else 0
-          with open("pytest.log") as f:
-            m = re.search(r"(\d+) passed", f.read())
-            pytest_count = int(m.group(1)) if m else 0
-
-          summary = {
-            "ctest": ctest_count, "pytest": pytest_count,
-            "cxx_coverage": cxx_pct, "py_coverage": py_pct,
-          }
-          with open("coverage_summary.json", "w") as f:
-            json.dump(summary, f, indent=2)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            for k, v in summary.items():
-              f.write(f"{k}={v}\n")
-
-          print(f"ctest={ctest_count} pytest={pytest_count} C++={cxx_pct}% Python={py_pct}%")
-          PYEOF
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: |
-            coverage.md
-            coverage_summary.json
-
-      - name: Job summary
-        run: |
-          echo "### Coverage Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| ctest | ${{ steps.coverage.outputs.ctest }} passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| pytest | ${{ steps.coverage.outputs.pytest }} passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| C++ coverage | ${{ steps.coverage.outputs.cxx_coverage }}% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python coverage | ${{ steps.coverage.outputs.py_coverage }}% |" >> $GITHUB_STEP_SUMMARY
-
-      - name: Update ctest badge
-        if: github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-ctest.json
-          label: ctest
-          message: "${{ steps.coverage.outputs.ctest }} passed"
-          color: brightgreen
-
-      - name: Update pytest badge
-        if: github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-pytest.json
-          label: pytest
-          message: "${{ steps.coverage.outputs.pytest }} passed"
-          color: brightgreen
-
-      - name: Update C++ coverage badge
-        if: github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-cxx-coverage.json
-          label: C++ coverage
-          message: "${{ steps.coverage.outputs.cxx_coverage }}%"
-          valColorRange: ${{ steps.coverage.outputs.cxx_coverage }}
-          minColorRange: 40
-          maxColorRange: 80
-
-      - name: Update Python coverage badge
-        if: github.ref == 'refs/heads/master'
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-py-coverage.json
-          label: Python coverage
-          message: "${{ steps.coverage.outputs.py_coverage }}%"
-          valColorRange: ${{ steps.coverage.outputs.py_coverage }}
-          minColorRange: 30
-          maxColorRange: 80
-
-      - name: Save ccache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.cache/ccache
-          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+      - name: Check dependency-group drift
+        run: python tests/scripts/check_dep_group_drift.py
 
   # ===========================================================================
-  # Job 2: Release (ctest + pytest, validates portable build)
+  # Job 2: check-release — user-POV install of .[server,validate] + smoke
   # ===========================================================================
-  test-release:
+  check-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -227,8 +44,59 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ccache
 
-      - name: Install Python dependencies
-        run: pip install pytest deepdiff jsonschema referencing pybind11 scikit-build-core
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          restore-keys: ccache-release-${{ runner.os }}-
+
+      # Mimic a user install: resolve runtime deps via the extras (no test
+      # group), build the wheel. ccache + --no-build-isolation are CI-speed
+      # concessions; the .[server,validate] dep path is what mirrors the user.
+      - name: Upgrade pip / build backend
+        run: pip install --upgrade pip scikit-build-core pybind11
+
+      - name: Install autocog[server,validate] (user path)
+        run: |
+          pip install ".[server,validate]" --no-build-isolation \
+            --config-settings="build-dir=build" \
+            --config-settings="cmake.define.AUTOCOG_TUNED=OFF" \
+            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
+            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
+
+      - name: Smoke test
+        run: tests/scripts/smoke.sh
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+
+  # ===========================================================================
+  # Job 3: tests-release — Release build, ctest + pytest (no coverage)
+  # ===========================================================================
+  tests-release:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: build
+      BUILD_TYPE: Release
+      COVERAGE: OFF
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ccache
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
@@ -237,54 +105,30 @@ jobs:
           key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
           restore-keys: ccache-release-${{ runner.os }}-
 
-      - name: Install autocog (release, portable)
+      # Seed the test group (pytest, golden-compare deps, server deps) into the
+      # system interpreter; steps/build.sh installs autocog with --no-deps.
+      - name: Install test dependencies
         run: |
-          pip install ".[server]" --no-build-isolation \
-            --config-settings="build-dir=build" \
-            --config-settings="cmake.define.AUTOCOG_TUNED=OFF" \
-            --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
-            --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
+          pip install --upgrade pip
+          pip install --group pyproject.toml:test scikit-build-core pybind11
 
-      - name: Run ctest
-        working-directory: build
-        run: |
-          set -o pipefail
-          ctest -j$(nproc) --timeout 120 --output-on-failure 2>&1 | tee ctest.log
+      - name: Build (release)
+        run: tests/scripts/steps/build.sh
 
-      - name: Run pytest
-        run: |
-          set -o pipefail
-          python -m pytest tests/integration/modules tests/units/modules \
-            -q 2>&1 | tee pytest.log
+      - name: ctest
+        run: tests/scripts/steps/ctest.sh
+
+      - name: pytest
+        run: tests/scripts/steps/pytest.sh
 
       - name: Assert no pytest skips
         run: |
-          if grep -qE '[0-9]+ skipped' pytest.log; then
+          if grep -qE '[0-9]+ skipped' build/pytest.log; then
             echo "::error::pytest reported skipped tests; CI requires zero skips"
-            grep -E '[0-9]+ skipped' pytest.log
+            grep -E '[0-9]+ skipped' build/pytest.log
             exit 1
           fi
           echo "No skipped tests."
-
-      - name: Job summary
-        run: |
-          python3 << 'PYEOF'
-          import re, os
-
-          with open("build/ctest.log") as f:
-            m = re.search(r"(\d+) tests passed", f.read())
-            ctest = m.group(1) if m else "?"
-          with open("pytest.log") as f:
-            m = re.search(r"(\d+) passed", f.read())
-            pytest = m.group(1) if m else "?"
-
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
-            f.write("### Release Build Results\n")
-            f.write("| Metric | Value |\n")
-            f.write("|--------|-------|\n")
-            f.write(f"| ctest | {ctest} passed |\n")
-            f.write(f"| pytest | {pytest} passed |\n")
-          PYEOF
 
       - name: Save ccache
         if: always()
@@ -292,3 +136,188 @@ jobs:
         with:
           path: ~/.cache/ccache
           key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+
+  # ===========================================================================
+  # Job 4: tests-coverage — Debug + coverage, ctest + pytest, report + badges
+  # ===========================================================================
+  tests-coverage:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: build
+      BUILD_TYPE: Debug
+      COVERAGE: ON
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ccache gcovr
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+          restore-keys: ccache-debug-${{ runner.os }}-
+
+      - name: Install test dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --group pyproject.toml:test scikit-build-core pybind11
+
+      - name: Build (debug + coverage)
+        run: tests/scripts/steps/build.sh
+
+      - name: ctest
+        run: tests/scripts/steps/ctest.sh
+
+      - name: pytest (with coverage)
+        run: COV=1 tests/scripts/steps/pytest.sh
+
+      - name: Assert no pytest skips
+        run: |
+          # Skips are how missing prerequisites (e.g. the real model) quietly
+          # drop coverage. Fail if pytest reported any.
+          if grep -qE '[0-9]+ skipped' build/pytest.log; then
+            echo "::error::pytest reported skipped tests; CI requires zero skips"
+            grep -E '[0-9]+ skipped' build/pytest.log
+            exit 1
+          fi
+          echo "No skipped tests."
+
+      - name: C++ coverage (gcovr)
+        run: tests/scripts/steps/cxx-report.sh
+
+      - name: Coverage report
+        run: tests/scripts/steps/report.sh
+
+      # report.sh (above) wrote tests/coverage.{md,json} and exited nonzero if a
+      # gating category missed threshold (failing the job). This step runs
+      # regardless (if: always()) to surface the numbers and per-metric badge
+      # colors. Missing/unparseable JSON -> grey "unknown" badges.
+      - name: Read coverage summary
+        id: coverage
+        if: always()
+        run: |
+          python3 << 'PYEOF'
+          import json, os
+          out = open(os.environ["GITHUB_OUTPUT"], "a")
+          def emit(k, v): out.write(f"{k}={v}\n")
+          try:
+            with open("tests/coverage.json") as f:
+              s = json.load(f)
+          except Exception as e:
+            print(f"no coverage.json ({e}); badges -> grey")
+            for k in ("ctest","pytest","cxx","cxx_templates","python"):
+              emit(f"{k}_msg", "unknown"); emit(f"{k}_color", "lightgrey")
+            raise SystemExit(0)
+          def cov(name):
+            n = s.get(name)
+            if not n:
+              return ("unknown", "lightgrey")
+            return (f"{n['measured']}%", "brightgreen" if n["pass"] else "red")
+          for name in ("cxx","cxx_templates","python"):
+            msg, color = cov(name)
+            emit(f"{name}_msg", msg); emit(f"{name}_color", color)
+          for name in ("ctest","pytest"):
+            v = s.get(name)
+            emit(f"{name}_msg", f"{v} passed" if v is not None else "unknown")
+            emit(f"{name}_color", "brightgreen" if v is not None else "lightgrey")
+          print(f"pass={s.get('pass')} total={s.get('total')}% "
+                f"cxx={s['cxx']['measured']} templates={s['cxx_templates']['measured']} "
+                f"python={s['python']['measured']} ctest={s.get('ctest')} pytest={s.get('pytest')}")
+          PYEOF
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            tests/coverage.md
+            tests/coverage.json
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "### Coverage Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ctest | ${{ steps.coverage.outputs.ctest_msg }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| pytest | ${{ steps.coverage.outputs.pytest_msg }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| C++ coverage | ${{ steps.coverage.outputs.cxx_msg }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| C++ templates | ${{ steps.coverage.outputs.cxx_templates_msg }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python coverage | ${{ steps.coverage.outputs.python_msg }} |" >> $GITHUB_STEP_SUMMARY
+
+      # --- master badges: live data; grey when stats were not produced --------
+      # if: always() so a failure earlier in the job still publishes a (grey)
+      # badge rather than leaving a stale green one. The outputs are empty unless
+      # the Extract summary step ran, which yields the grey/unknown fallback.
+      - name: Master ctest badge
+        if: always() && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-master-ctest.json
+          label: ctest
+          message: ${{ steps.coverage.outputs.ctest_msg }}
+          color: ${{ steps.coverage.outputs.ctest_color }}
+
+      - name: Master pytest badge
+        if: always() && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-master-pytest.json
+          label: pytest
+          message: ${{ steps.coverage.outputs.pytest_msg }}
+          color: ${{ steps.coverage.outputs.pytest_color }}
+
+      - name: Master C++ coverage badge
+        if: always() && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-master-cxx-coverage.json
+          label: C++ coverage
+          message: ${{ steps.coverage.outputs.cxx_msg }}
+          color: ${{ steps.coverage.outputs.cxx_color }}
+
+      - name: Master C++ templates badge
+        if: always() && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-master-cxx-templates.json
+          label: C++ templates
+          message: ${{ steps.coverage.outputs.cxx_templates_msg }}
+          color: ${{ steps.coverage.outputs.cxx_templates_color }}
+
+      - name: Master Python coverage badge
+        if: always() && github.ref == 'refs/heads/master'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-master-py-coverage.json
+          label: Python coverage
+          message: ${{ steps.coverage.outputs.python_msg }}
+          color: ${{ steps.coverage.outputs.python_color }}
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}

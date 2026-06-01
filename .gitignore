@@ -18,6 +18,7 @@ modules/autocog.egg-info/
 .coverage
 .pytest_cache/
 tests/coverage*.md
+tests/coverage*.json
 
 # Planning / scratch docs — never tracked
 docs/_planning/

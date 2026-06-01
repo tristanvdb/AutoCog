@@ -31,6 +31,34 @@ dependencies = [
 validate = ["jsonschema>=4.18", "referencing"]
 server = ["fastapi>=0.100", "uvicorn>=0.20", "jsonschema>=4.18", "referencing"]
 
+# Test/coverage harness dependencies (PEP 735). Installed deps-only via
+# `pip install --group test`, which builds nothing and needs no build backend;
+# the coverage/release scripts then install autocog itself with --no-deps
+# against this venv.
+#
+# This is the single source of truth for the test environment. It cannot
+# reference the `server`/`validate` extras directly: PEP 735 groups and PEP 508
+# extras are separate namespaces (a group cannot include-group an extra), and
+# pulling the extras in via a self-referential `autocog[server,validate]` would
+# require the scikit-build-core backend (hence cmake) just to resolve metadata —
+# which defeats the point of a deps-only, backend-free seed. So the runtime
+# packages the suite exercises are mirrored here. Keep in sync with the
+# `server`/`validate` extras above; the extras serve end users, this group the tests.
+[dependency-groups]
+test = [
+    # harness tooling (not autocog runtime deps)
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-timeout",
+    "gcovr>=7.0",
+    "deepdiff>=6.0",
+    # runtime extras the suite imports (mirror of [server] ∪ [validate])
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "jsonschema>=4.18",
+    "referencing",
+]
+
 [project.urls]
 Homepage = "https://github.com/LLNL/autocog/"
 

@@ -121,40 +121,75 @@ Each category builds on the previous:
 Tests in a category should NOT use features from a later category unless
 specifically testing that interaction.
 
-## Coverage Analysis
+## Test Pipelines
 
-### Prerequisites
+Each pipeline that builds AutoCog has a top-level script under `tests/scripts/`
+so it can be run locally with one command. The actual work lives in shared,
+parameterized step scripts under `tests/scripts/steps/`. CI runs the same steps,
+but calls them one per workflow step (so GitHub's UI shows where a failure
+occurred) rather than going through the top script — so the orchestration (which
+steps, in what order, with what options) is intentionally expressed in both
+places. The logic itself is not duplicated; only the short call sequence is.
+
+### Shared steps (`tests/scripts/steps/`)
+
+Parameterized by environment (`BUILD_DIR`, `BUILD_TYPE`, `COVERAGE`, `COV`) and
+venv-agnostic — they resolve `pip`/`python`/`gcovr` from `PATH`. Top scripts put
+a venv's `bin` on `PATH`; CI uses the system interpreter.
+
+- `build.sh` — install AutoCog (`--no-deps`) for the given `BUILD_TYPE`/`COVERAGE`
+- `ctest.sh` — C++ tests, accumulating `.gcda`
+- `pytest.sh` — Python tests; `COV=1` enables `pytest-cov`
+- `cxx-report.sh` — `gcovr` → `coverage_cxx.json` (coverage builds)
+- `report.sh` — combine into `tests/coverage.md` (coverage builds)
+
+### Top scripts
 
 ```bash
-pip install -r tests/requirements.txt
+tests/scripts/tests-coverage.sh [BUILD_DIR] [VENV_DIR]   # Debug + coverage → coverage.md
+tests/scripts/tests-release.sh  [BUILD_DIR] [VENV_DIR]   # Release, ctest + pytest, no coverage
+tests/scripts/check-release.sh  [BUILD_DIR] [VENV_DIR]   # user install .[server,validate] + smoke
 ```
 
-### Running Coverage
+Argument semantics (all optional):
+- `BUILD_DIR` — cmake build dir. If supplied, reused across runs (ccache stays
+  hot) and wiped at the start of each run; if omitted, a temp dir removed on exit.
+- `VENV_DIR` — a venv you manage (reused, not removed). If omitted, a temp venv
+  is created and removed on exit. The test scripts seed it from the `test`
+  dependency-group; `check-release.sh` leaves it bare and installs via the extras.
+
+### Install smoke test
+
+`tests/scripts/smoke.sh` verifies an installation without any test framework
+(imports the package, runs `autocog --version` and `stlc --version`). Users can
+run it to confirm their own install:
 
 ```bash
-tests/scripts/coverage.sh [BUILD_DIR] [VENV_DIR]
+pip install "autocog[server,validate]"
+tests/scripts/smoke.sh
 ```
 
-Both arguments are optional:
-- `BUILD_DIR` — cmake build directory. If supplied, it is reused across runs
-  (ccache stays hot) and wiped at the start of each run. If omitted, a temporary
-  directory is used and removed on exit.
-- `VENV_DIR` — a Python venv you manage (not cleaned, not refreshed). If omitted,
-  a temporary venv is created from `tests/requirements.txt` and removed on exit.
+### Dependencies
 
-This runs five discrete steps (each independently invocable via
-`BUILD_DIR=… VENV_DIR=… tests/scripts/coverage/<step>.sh`):
-1. `build.sh` — coverage-instrumented install into the venv (`-DCOVERAGE=ON`, Debug)
-2. `ctest.sh` — C++ tests, accumulating `.gcda`
-3. `pytest.sh` — Python tests with `pytest-cov`, accumulating `.gcda`
-4. `cxx-report.sh` — `gcovr` → `coverage_cxx.json`
-5. `report.sh` — combine into `tests/coverage.md`
+The `test` dependency-group in `pyproject.toml` is the single source of truth
+for the test environment. To set up a venv by hand (deps only, no build):
 
-A parallel `tests/scripts/release.sh [BUILD_DIR] [VENV_DIR]` runs the suite
-against a Release-mode build (no coverage instrumentation).
+```bash
+pip install --group test          # from the repo root (pip >= 25.1)
+```
 
-### Coverage Targets
+It carries the harness tooling (pytest, gcovr, deepdiff, …) plus the runtime
+extras the suite exercises (fastapi/uvicorn, jsonschema). A drift check,
+`tests/scripts/check_dep_group_drift.py`, fails if the group stops mirroring the
+`server`/`validate` extras.
 
-Coverage data guides test development. Priority targets are modules
-below 70% coverage. The `clauses.py` module (data transformation
-pipeline) and the Python orchestration path are the primary gaps.
+### CI jobs (`.github/workflows/ci.yaml`)
+
+1. `check-deps` — dependency-group drift check (no build)
+2. `check-release` — user-POV install of `.[server,validate]` + smoke
+3. `tests-release` — Release build, ctest + pytest
+4. `tests-coverage` — Debug + coverage, ctest + pytest, report; publishes the
+   live `master` badges (grey when stats could not be produced)
+
+The "latest release" badges are stamped separately by `release.yaml`, only after
+a release fully succeeds.

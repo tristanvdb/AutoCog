@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
+#
+# Shared C++ coverage step (coverage builds only). Runs gcovr over the .gcda
+# accumulated by ctest and pytest, emitting BUILD_DIR/coverage_cxx.json.
+#
+# Environment:
+#   BUILD_DIR   (required)  cmake build directory (holds .gcda + output json)
+#
+# gcovr is resolved from PATH (it comes from the test group).
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 : "${BUILD_DIR:?BUILD_DIR must be set}"
-: "${VENV_DIR:?VENV_DIR must be set}"
+# Normalize to absolute: the script cd's into BUILD_DIR below, so relative
+# BUILD_DIR (e.g. "build" in CI) must be resolved first or output paths break.
+BUILD_DIR="$(cd "$BUILD_DIR" && pwd)"
 
 echo "=== Generating C++ coverage ==="
 cd "$BUILD_DIR"
 
-# gcovr reads .gcda accumulated by both ctest and pytest runs.
-# Capture stderr to a log so warnings are preserved but don't pollute output.
-"$VENV_DIR/bin/gcovr" -r "$REPO_ROOT" . \
+gcovr -r "$REPO_ROOT" . \
     --filter "$REPO_ROOT/libs/" \
     --filter "$REPO_ROOT/tools/" \
     --filter "$REPO_ROOT/bindings/" \

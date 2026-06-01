@@ -97,8 +97,11 @@ ctest -j4 --timeout 30
 # Python tests (pip install required)
 pytest tests/integration/modules tests/units/modules -v
 
-# Coverage analysis
-tests/scripts/coverage.sh [BUILD_DIR]
+# Coverage analysis (Debug + coverage → tests/coverage.md)
+tests/scripts/tests-coverage.sh [BUILD_DIR] [VENV_DIR]
+# Release-mode suite, or user-install smoke check:
+tests/scripts/tests-release.sh [BUILD_DIR] [VENV_DIR]
+tests/scripts/check-release.sh [BUILD_DIR] [VENV_DIR]
 ```
 
 ## Getting Models
