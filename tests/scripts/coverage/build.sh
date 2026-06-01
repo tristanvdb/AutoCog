@@ -17,7 +17,7 @@ done
 # --no-build-isolation: use the venv's scikit-build-core/pybind11.
 # --no-deps: only autocog itself; deps came from requirements.txt.
 PIP_ARGS=(
-    "$REPO_ROOT"
+    "$REPO_ROOT"[server]
     --no-build-isolation
     --no-deps
     --config-settings="build-dir=$BUILD_DIR"

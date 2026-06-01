@@ -212,12 +212,10 @@ add_compile_definitions(AUTOCOG_SYCL=$<BOOL:${AUTOCOG_SYCL}>)
 enable_testing()
 
 # Strict flags (after vendor subdirectories to avoid polluting them)
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_compile_options(-Werror)
-  # GCC 12 false positive: -Wmaybe-uninitialized on std::variant with
-  # std::optional<std::string> members at -O3. Fixed in GCC 13+.
-  add_compile_options(-Wno-error=maybe-uninitialized)
-endif()
+add_compile_options(-Werror)
+# GCC 12 false positive: -Wmaybe-uninitialized on std::variant with
+# std::optional<std::string> members at -O3. Fixed in GCC 13+.
+add_compile_options(-Wno-error=maybe-uninitialized)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_link_options(-Wl,--wrap=__cxa_throw)
 endif()

@@ -5,6 +5,7 @@
 /modules/autocog/*.so
 /build/
 ftt.svg
+venv/
 .venv/
 modules/autocog.egg-info/
 **/__build
@@ -16,7 +17,7 @@ modules/autocog.egg-info/
 /NOTES.md
 .coverage
 .pytest_cache/
-tests/coverage.md
+tests/coverage*.md
 
 # Planning / scratch docs — never tracked
 docs/_planning/

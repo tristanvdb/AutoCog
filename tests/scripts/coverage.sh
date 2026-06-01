@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#
+###########################
+#
 # Coverage analysis for AutoCog: build, ctest, pytest, generate report.
 #
 # Usage:
@@ -11,6 +14,20 @@
 # If omitted: temporary, removed on exit.
 #
 # Output: tests/coverage.md
+#
+###########################
+#
+# Claude Agent: for stable builds that leverage ccache always use the following commands:
+#
+#   export BUILD_DIR="/home/claude/AutoCog/build" VENV_DIR="/home/claude/AutoCog/.venv" && cd /home/claude/AutoCog && timeout 290s tests/scripts/coverage.sh $BUILD_DIR $VENV_DIR && echo "Done" || ccache -s
+#
+# Reusing the same BUILD_DIR/VENV_DIR on every invocation keeps
+# the cache warm: a cold full build is slow and may not finish in one pass, but
+# the compiled objects persist in ccache, so each repeated identical run resumes
+# via cache hits and advances until it prints "Done" (and writes coverage.md).
+# On a timeout/failure the `|| ccache -s` shows the cache warming across runs.
+#
+###########################
 
 set -euo pipefail
 
