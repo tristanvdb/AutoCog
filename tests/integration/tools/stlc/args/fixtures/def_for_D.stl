@@ -1,0 +1,4 @@
+// a file-scoped define; supplying it via -D should WARN (define is not a param)
+define width = 8;
+prompt test { is { out is text<length=(width)>; } return { use out; } }
+export test as main;

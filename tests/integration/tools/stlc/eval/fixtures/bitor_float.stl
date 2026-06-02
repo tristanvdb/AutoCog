@@ -1,0 +1,6 @@
+// bitwise OR on floats -> should be a proper diagnostic
+define a = 1.5;
+define b = 2.5;
+define x = (a | b);
+prompt test { is { out is text<length=4>; } return { use out; } }
+export test as main;

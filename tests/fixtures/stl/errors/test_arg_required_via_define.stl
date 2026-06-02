@@ -1,0 +1,7 @@
+// Error: a required argument (no default, not supplied) referenced by another
+// global's initializer must produce a proper diagnostic, not an internal error.
+// expect-error: Required argument `w` was not supplied
+argument w;
+define x = (w + 1);
+prompt p { is { f is text<length=(x)>; } return { use f; } }
+export p as main;

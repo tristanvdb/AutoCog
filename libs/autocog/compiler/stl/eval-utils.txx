@@ -69,6 +69,29 @@ ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const & rhs_va
   }, lhs_val, rhs_val);
 }
 
+// Static helper for bitwise operations (|, &). Integer operands only; any other
+// operand type (float, string, bool) is a type error. Bool is excluded on
+// purpose: logical and/or is spelled && / || -- there must be one way to say it.
+template<ast::OpKind Op>
+ir::Value evaluateBitwise(ir::Value const & lhs_val, ir::Value const & rhs_val,
+                                 std::optional<SourceRange> const & loc = std::nullopt) {
+  return std::visit([&loc](auto const & l, auto const & r) -> ir::Value {
+    using L = std::decay_t<decltype(l)>;
+    using R = std::decay_t<decltype(r)>;
+    if constexpr (std::is_same_v<L, int> && std::is_same_v<R, int>) {
+      if constexpr (Op == ast::OpKind::BOr) return l | r;
+      else if constexpr (Op == ast::OpKind::BAnd) return l & r;
+      else throw autocog::utilities::InternalError("Invalid bitwise operator: " + ast::opKindToString(Op));
+    } else {
+      if constexpr (Op == ast::OpKind::BOr) {
+        throw CompileError("Operator `|` requires integer operands", loc);
+      } else {
+        throw CompileError("Operator `&` requires integer operands", loc);
+      }
+    }
+  }, lhs_val, rhs_val);
+}
+
 // Static helper function for comparison operations
 template<ast::OpKind Op>
 ir::Value evaluateComparison(ir::Value const & lhs_val, ir::Value const & rhs_val,

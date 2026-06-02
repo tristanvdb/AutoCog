@@ -1,0 +1,4 @@
+// tokenize() is vocab-only; using it as a value should be a proper diagnostic
+define x = tokenize("a", "b");
+prompt test { is { out is text<length=4>; } return { use out; } }
+export test as main;

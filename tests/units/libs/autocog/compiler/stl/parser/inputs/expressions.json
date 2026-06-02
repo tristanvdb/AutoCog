@@ -236,5 +236,29 @@
     "tag": "Expression",
     "code": "-(a + b)",
     "should_pass": true
+  },
+  {
+    "description": "Bitwise OR (parenthesized)",
+    "tag": "Expression",
+    "code": "(a | b)",
+    "should_pass": true
+  },
+  {
+    "description": "Bitwise AND (parenthesized)",
+    "tag": "Expression",
+    "code": "(a & b)",
+    "should_pass": true
+  },
+  {
+    "description": "Bitwise OR without parentheses - fails",
+    "tag": "Expression",
+    "code": "a | b",
+    "should_pass": false
+  },
+  {
+    "description": "Bitwise AND without parentheses - fails",
+    "tag": "Expression",
+    "code": "a & b",
+    "should_pass": false
   }
 ]

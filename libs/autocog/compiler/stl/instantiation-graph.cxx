@@ -79,8 +79,20 @@ ir::VarMap InstantiationGraphBuilder::eval_context(
     ResolvedSymbol const & sym,
     ir::VarMap const & caller_kwargs
 ) {
-    // Merge: partial kwargs from import/alias, then caller overrides
-    ir::VarMap ctx = sym.partial_kwargs;
+    // Start from the file-scope global context (file-scope defines and
+    // arguments, including values supplied via -D, evaluated during the globals
+    // stage). Without this, file-scope arguments supplied only via -D would not
+    // be visible at instantiation. Then layer import/alias partial kwargs, then
+    // caller overrides.
+    ir::VarMap ctx;
+    auto file_scope = std::to_string(sym.fileid);
+    auto file_ctx_it = driver.tables.contexts.find(file_scope);
+    if (file_ctx_it != driver.tables.contexts.end()) {
+        ctx = file_ctx_it->second;
+    }
+    for (auto const & [k, v] : sym.partial_kwargs) {
+        ctx[k] = v;
+    }
     for (auto const & [k, v] : caller_kwargs) {
         ctx[k] = v;
     }

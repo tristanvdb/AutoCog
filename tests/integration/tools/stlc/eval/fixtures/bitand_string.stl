@@ -1,0 +1,6 @@
+// bitwise AND on strings -> should be a proper diagnostic
+define a = "x";
+define b = "y";
+define x = (a & b);
+prompt test { is { out is text<length=4>; } return { use out; } }
+export test as main;

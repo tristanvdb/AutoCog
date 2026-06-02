@@ -1,0 +1,4 @@
+// file-scoped argument with NO default, not supplied via -D -> should ERROR
+argument width;
+prompt test { is { out is text<length=(width)>; } return { use out; } }
+export test as main;

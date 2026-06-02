@@ -1,0 +1,6 @@
+// bitwise OR on bools -> diagnostic (use && / || for logical)
+define a = true;
+define b = false;
+define x = (a | b);
+prompt test { is { out is text<length=4>; } return { use out; } }
+export test as main;

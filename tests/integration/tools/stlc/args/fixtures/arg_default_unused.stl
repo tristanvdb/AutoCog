@@ -1,0 +1,4 @@
+// file-scoped argument with a default, not referenced -> should work
+argument width = 8;
+prompt test { is { out is text<length=4>; } return { use out; } }
+export test as main;

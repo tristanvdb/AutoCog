@@ -1,0 +1,6 @@
+// integer bitwise AND -> should evaluate to a value
+define a = 12;
+define b = 10;
+define x = (a & b);
+prompt test { is { out is text<length=(x)>; } return { use out; } }
+export test as main;

@@ -82,7 +82,13 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::Binary const & op,
       return eval_utils::evaluateLogical<ast::OpKind::And>(lhs_val, rhs_val, op.location);
     case ast::OpKind::Or:
       return eval_utils::evaluateLogical<ast::OpKind::Or>(lhs_val, rhs_val, op.location);
-      
+
+    // Bitwise operators (integer operands only)
+    case ast::OpKind::BOr:
+      return eval_utils::evaluateBitwise<ast::OpKind::BOr>(lhs_val, rhs_val, op.location);
+    case ast::OpKind::BAnd:
+      return eval_utils::evaluateBitwise<ast::OpKind::BAnd>(lhs_val, rhs_val, op.location);
+
     default:
       throw autocog::utilities::InternalError("Invalid binary operator kind");
   }
@@ -224,6 +230,10 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::Expression const &
       return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Parenthesis>) {
       return evaluate(scope, *(e.data.expr), varmap);
+    } else if constexpr (std::is_same_v<T, ast::Tokenize>) {
+      throw CompileError("`tokenize(...)` is only valid in a vocabulary definition, not as a value", e.location);
+    } else if constexpr (std::is_same_v<T, ast::Regex>) {
+      throw CompileError("`regex(...)` is only valid in a vocabulary definition, not as a value", e.location);
     } else {
       throw autocog::utilities::InternalError("Unknown expression variant type");
     }
@@ -264,9 +274,19 @@ ir::Value Evaluator::retrieve_value(
       auto const & defn = std::get<DefineSymbol>(sym).node;
       
       if (defn.data.kind == ast::DefineKind::Argument) {
-        throw autocog::utilities::InternalError("Argument `" + varname + "` should have been found in the variable map.");
-      }
-      if (defn.data.kind == ast::DefineKind::Vocab) {
+        // An argument's value is normally bound in the varmap (from -D or its
+        // default, set up during the globals stage). If we reach here it was
+        // not pre-bound: an argument with a default falls through to evaluate
+        // that default (like a define); an argument with no default is a
+        // required argument that was not supplied. The globals stage reports
+        // that for top-level references, but a reference from another global's
+        // initializer reaches here first -- emit the same diagnostic and return
+        // an error value rather than failing internally.
+        if (!defn.data.init) {
+          throw CompileError("Required argument `" + varname +
+                     "` was not supplied (use -D" + varname + "=<value>).", loc);
+        }
+      } else if (defn.data.kind == ast::DefineKind::Vocab) {
         throw CompileError("Vocab `" + varname + "` cannot be used as a value.", loc);
       }
 

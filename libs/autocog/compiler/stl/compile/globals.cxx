@@ -50,14 +50,32 @@ std::optional<int> Driver::run_globals() {
             // Vocab bindings are not value globals; they are resolved by the
             // vocab translation pass, not value-evaluated here.
             if (defn.node.data.kind == ast::DefineKind::Vocab) continue;
+            bool const is_argument = (defn.node.data.kind == ast::DefineKind::Argument);
+            bool const has_default = defn.node.data.init.has_value();
             auto [fid, obj, name] = parse_scope(qname);
             if (!obj) {
+                auto sfid = std::to_string(fid);
+                auto & context = tables.contexts[sfid];
                 auto def_it = defines.find(name);
                 if (def_it != defines.end()) {
-                    auto sfid = std::to_string(fid);
-                    auto & context = tables.contexts[sfid];
-                    context[name] = def_it->second;
+                    // A -D value was supplied for this name.
+                    if (is_argument) {
+                        context[name] = def_it->second;          // arguments take -D
+                    } else {
+                        // -D targets program arguments, not defines. Ignore it
+                        // (warn) and evaluate the define's own initializer.
+                        emit_warning("-D for `" + name + "` is ignored: `" + name +
+                                     "` is a define, not an argument.",
+                                     defn.node.location);
+                        need_evaluation.emplace_back(fid, name, defn.node.location);
+                    }
+                } else if (is_argument && !has_default) {
+                    // A required argument (no default) was not supplied.
+                    emit_error("Required argument `" + name +
+                               "` was not supplied (use -D" + name + "=<value>).",
+                               defn.node.location);
                 } else {
+                    // define with initializer, or argument with a default.
                     need_evaluation.emplace_back(fid, name, defn.node.location);
                 }
             }
