@@ -2,14 +2,42 @@ name: CI
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches: [develop, candidate, '*-dev']
 
 permissions:
   contents: read
 
 jobs:
+  # ===========================================================================
+  # Job 0: git-guard — enforce linear history off master (no merge commits, and
+  # HEAD must descend from master). Runs on every branch and fails the run if
+  # tripped. On develop a red run just means "rebase before promoting"; on
+  # candidate it is in the release's required-jobs list, so it blocks releases.
+  # ===========================================================================
+  git-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # need full history + master for merge-base
+
+      - name: Check linear history descending from master
+        run: |
+          git fetch origin master --quiet
+          # HEAD must descend from master (master is an ancestor).
+          if ! git merge-base --is-ancestor origin/master HEAD; then
+            echo "::error::HEAD does not descend from origin/master — rebase onto master."
+            exit 1
+          fi
+          # No merge commits in the commits this branch adds over master.
+          merges=$(git rev-list --merges origin/master..HEAD)
+          if [ -n "$merges" ]; then
+            echo "::error::merge commits found in origin/master..HEAD (linear history required):"
+            git log --oneline --merges origin/master..HEAD
+            exit 1
+          fi
+          echo "Linear history OK (descends from master, no merge commits)."
+
   # ===========================================================================
   # Job 1: check-deps — dependency-group / extras drift (no build)
   # ===========================================================================
@@ -76,9 +104,11 @@ jobs:
           key: ccache-release-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
 
   # ===========================================================================
-  # Job 3: tests-release — Release build, ctest + pytest (no coverage)
+  # Job 3: tests-release — Release build, ctest + pytest (no coverage).
+  # Full pipeline only: runs on candidate, not on develop/*-dev.
   # ===========================================================================
   tests-release:
+    if: github.ref == 'refs/heads/candidate'
     runs-on: ubuntu-latest
     env:
       BUILD_DIR: build
@@ -260,57 +290,57 @@ jobs:
       # if: always() so a failure earlier in the job still publishes a (grey)
       # badge rather than leaving a stale green one. The outputs are empty unless
       # the Extract summary step ran, which yields the grey/unknown fallback.
-      - name: Master ctest badge
-        if: always() && github.ref == 'refs/heads/master'
+      - name: Candidate ctest badge
+        if: always() && github.ref == 'refs/heads/candidate'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-master-ctest.json
+          filename: autocog-candidate-ctest.json
           label: ctest
           message: ${{ steps.coverage.outputs.ctest_msg }}
           color: ${{ steps.coverage.outputs.ctest_color }}
 
-      - name: Master pytest badge
-        if: always() && github.ref == 'refs/heads/master'
+      - name: Candidate pytest badge
+        if: always() && github.ref == 'refs/heads/candidate'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-master-pytest.json
+          filename: autocog-candidate-pytest.json
           label: pytest
           message: ${{ steps.coverage.outputs.pytest_msg }}
           color: ${{ steps.coverage.outputs.pytest_color }}
 
-      - name: Master C++ coverage badge
-        if: always() && github.ref == 'refs/heads/master'
+      - name: Candidate C++ coverage badge
+        if: always() && github.ref == 'refs/heads/candidate'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-master-cxx-coverage.json
+          filename: autocog-candidate-cxx-coverage.json
           label: C++ coverage
           message: ${{ steps.coverage.outputs.cxx_msg }}
           color: ${{ steps.coverage.outputs.cxx_color }}
 
-      - name: Master C++ templates badge
-        if: always() && github.ref == 'refs/heads/master'
+      - name: Candidate C++ templates badge
+        if: always() && github.ref == 'refs/heads/candidate'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-master-cxx-templates.json
+          filename: autocog-candidate-cxx-templates.json
           label: C++ templates
           message: ${{ steps.coverage.outputs.cxx_templates_msg }}
           color: ${{ steps.coverage.outputs.cxx_templates_color }}
 
-      - name: Master Python coverage badge
-        if: always() && github.ref == 'refs/heads/master'
+      - name: Candidate Python coverage badge
+        if: always() && github.ref == 'refs/heads/candidate'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
-          filename: autocog-master-py-coverage.json
+          filename: autocog-candidate-py-coverage.json
           label: Python coverage
           message: ${{ steps.coverage.outputs.python_msg }}
           color: ${{ steps.coverage.outputs.python_color }}
@@ -321,3 +351,40 @@ jobs:
         with:
           path: ~/.cache/ccache
           key: ccache-debug-${{ runner.os }}-${{ hashFiles('libs/**', 'bindings/**', 'vendors/**') }}
+
+  # ===========================================================================
+  # ci-status — single source of CI truth for the candidate status badge.
+  # Needs all CI jobs; runs always so it can report red on any failure. The
+  # badge carries the short commit hash, colored green only if every needed job
+  # succeeded (a skipped job — e.g. tests-release off-candidate — is not a
+  # failure). Replaces the native CI workflow badge so it can show the hash.
+  # ===========================================================================
+  ci-status:
+    needs: [git-guard, check-deps, check-release, tests-release, tests-coverage]
+    if: always() && github.ref == 'refs/heads/candidate'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute status
+        id: s
+        run: |
+          short="${GITHUB_SHA:0:7}"
+          echo "short_sha=$short" >> "$GITHUB_OUTPUT"
+          # Green only if no needed job failed or was cancelled. results is a
+          # space-separated list of each needed job's result.
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "needed results: $results"
+          ok=true
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then ok=false; fi
+          done
+          echo "color=$([ "$ok" = true ] && echo brightgreen || echo red)" >> "$GITHUB_OUTPUT"
+
+      - name: Candidate CI status badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-candidate-status.json
+          label: candidate
+          message: ${{ steps.s.outputs.short_sha }}
+          color: ${{ steps.s.outputs.color }}

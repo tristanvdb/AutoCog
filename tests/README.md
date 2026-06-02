@@ -183,13 +183,36 @@ extras the suite exercises (fastapi/uvicorn, jsonschema). A drift check,
 `tests/scripts/check_dep_group_drift.py`, fails if the group stops mirroring the
 `server`/`validate` extras.
 
+### Branching model
+
+Work flows `develop` → `candidate` → `master` (via release tag):
+
+- **`develop` / `*-dev`** — push here for iteration. CI runs a *basic* subset
+  (git-guard, check-deps, check-release, tests-coverage) and uploads
+  `coverage.md` as an artifact. A red run (e.g. the guard) just means rebase
+  before promoting; nothing depends on develop.
+- **`candidate`** — push here to validate a release candidate. CI runs the
+  *full* set (adds tests-release) and publishes the live `candidate` badges.
+- **`master`** — never pushed to directly in normal flow. A release tag, on
+  success, fast-forwards `master` to the tagged commit (so master == latest
+  release). Tags are cut from `candidate`.
+
+`git-guard` enforces linear history: every branch must descend from `master`
+with no merge commits in `master..HEAD`.
+
 ### CI jobs (`.github/workflows/ci.yaml`)
 
-1. `check-deps` — dependency-group drift check (no build)
-2. `check-release` — user-POV install of `.[server,validate]` + smoke
-3. `tests-release` — Release build, ctest + pytest
-4. `tests-coverage` — Debug + coverage, ctest + pytest, report; publishes the
-   live `master` badges (grey when stats could not be produced)
+Triggered on push to `develop`, `*-dev`, and `candidate` (no PR triggers).
 
-The "latest release" badges are stamped separately by `release.yaml`, only after
-a release fully succeeds.
+1. `git-guard` — linear-history check (descends from master, no merge commits)
+2. `check-deps` — dependency-group drift check (no build)
+3. `check-release` — user-POV install of `.[server,validate]` + smoke
+4. `tests-coverage` — Debug + coverage, ctest + pytest, report + artifact;
+   on `candidate`, publishes the live `candidate` badges (green/red by
+   threshold, grey when stats could not be produced)
+5. `tests-release` — Release build, ctest + pytest (**candidate only**)
+6. `ci-status` — writes the `candidate` status badge (short hash; green only
+   if every job succeeded)
+
+The `latest release` badges (and the master fast-forward) are handled by
+`release.yaml`, only after a release fully succeeds.

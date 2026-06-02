@@ -1,24 +1,21 @@
 # ⚙️ AutoCog - Automaton & Cognition
 
-[![Latest release](https://img.shields.io/github/v/release/tristanvdb/AutoCog)](https://github.com/tristanvdb/AutoCog/releases/latest)
-![Release date](https://img.shields.io/github/release-date/tristanvdb/AutoCog)
-[![Downloads](https://img.shields.io/github/downloads/tristanvdb/AutoCog/total)](https://github.com/tristanvdb/AutoCog/releases)
-![License](https://img.shields.io/github/license/tristanvdb/AutoCog)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-
-[![CI](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml)
-![ctest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-master-ctest.json)
-![pytest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-master-pytest.json)
-![C++ coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-master-cxx-coverage.json)
-![C++ templates](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-master-cxx-templates.json)
-![Python coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-master-py-coverage.json)
-
-[![Release](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml/badge.svg)](https://github.com/tristanvdb/AutoCog/actions/workflows/release.yaml)
+[![release](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-status.json)](https://github.com/tristanvdb/AutoCog/releases/latest)
 ![ctest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-ctest.json)
 ![pytest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-pytest.json)
 ![C++ coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-cxx-coverage.json)
 ![C++ templates](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-cxx-templates.json)
 ![Python coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-release-py-coverage.json)
+
+[![candidate](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-status.json)](https://github.com/tristanvdb/AutoCog/actions/workflows/ci.yaml)
+![ctest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-ctest.json)
+![pytest](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-pytest.json)
+![C++ coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-cxx-coverage.json)
+![C++ templates](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-cxx-templates.json)
+![Python coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tristanvdb/2b5d528fd69eb7528731a4ca2b5ca3ae/raw/autocog-candidate-py-coverage.json)
+
+![License](https://img.shields.io/github/license/tristanvdb/AutoCog)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 **AutoCog** explores mechanisms to build automata that control applications driven by auto-regressive language models. We define a programming model called **Structured Thoughts**, with a language (STL) that compiles to executable automata.
 

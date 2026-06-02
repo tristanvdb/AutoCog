@@ -26,13 +26,21 @@ jobs:
             exit 1
           fi
 
-      - name: Verify tag is on master
+      - name: Verify tag is on candidate
         run: |
+          # Releases are cut from `candidate` (the branch that ran full CI and
+          # passed git-guard). Assert the tagged commit is contained in
+          # candidate. Master is the *destination* (push-master fast-forwards it
+          # after a successful release), so the tag is intentionally ahead of
+          # master here -- do not check against master. Linear-history is
+          # git-guard's job (a required candidate CI job), not re-checked here.
+          git fetch origin candidate --quiet
           TAG_SHA=$(git rev-list -n1 "$GITHUB_REF")
-          if ! git merge-base --is-ancestor "$TAG_SHA" origin/master; then
-            echo "::error::Tag must point to a commit on master"
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/candidate; then
+            echo "::error::Tag is not on candidate; releases must be tagged from candidate"
             exit 1
           fi
+          echo "Tag is on candidate."
 
       - name: Schema-version coupling (informational)
         run: |
@@ -93,7 +101,7 @@ jobs:
           SHA=$(git rev-list -n1 "$GITHUB_REF")
           # All CI jobs must have succeeded for this commit. The check-run names
           # are the job ids from ci.yaml.
-          REQUIRED="check-deps check-release tests-release tests-coverage"
+          REQUIRED="git-guard check-deps check-release tests-release tests-coverage"
           # Wait up to 5 min for CI to complete.
           for i in $(seq 1 30); do
             CONCLUSIONS=$(gh api repos/${{ github.repository }}/commits/$SHA/check-runs \
@@ -197,7 +205,12 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
           CIBW_BEFORE_BUILD: "pip install scikit-build-core pybind11"
-          CIBW_CONFIG_SETTINGS: "cmake.define.GGML_NATIVE=OFF"
+          # Portable wheels: AUTOCOG_TUNED=OFF disables -march=native for both
+          # AutoCog and (via the AUTOCOG_NATIVE->GGML_NATIVE mapping) ggml.
+          # Setting only GGML_NATIVE=OFF is insufficient: TUNED=ON (the default)
+          # force-overrides GGML_NATIVE back ON and still tunes AutoCog's own
+          # code, producing wheels that SIGILL on narrower-microarch runners.
+          CIBW_CONFIG_SETTINGS: "cmake.define.AUTOCOG_TUNED=OFF"
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
           CIBW_TEST_COMMAND: >
             python -c "import autocog; print(autocog.__version__)"
@@ -463,3 +476,64 @@ jobs:
           label: Python coverage
           message: "${{ steps.stats.outputs.python }}%"
           color: brightgreen
+
+  # ===========================================================================
+  # push-master — advance master to the released tag, fast-forward only.
+  # Parallel to publish-badges (both are post-release signals, both manually
+  # fixable). NOTE: GITHUB_TOKEN cannot push commits that touch
+  # .github/workflows/**; a release that changes workflows will FAIL here on
+  # purpose, reminding the admin to fast-forward master manually.
+  # ===========================================================================
+  push-master:
+    needs: release
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+      - name: Fast-forward master to tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          git fetch origin --tags --quiet
+          # Fast-forward only: master must be an ancestor of the tag. Never force.
+          if ! git merge-base --is-ancestor origin/master "$TAG"; then
+            echo "::error::master is not an ancestor of $TAG; refusing non-fast-forward push"
+            exit 1
+          fi
+          git push origin "${TAG}^{commit}:refs/heads/master"
+          echo "master advanced to $TAG"
+
+  # ===========================================================================
+  # release-status — single source of truth for the release status badge.
+  # Needs the whole release to have produced its artifacts; the badge carries
+  # the version, green only if every needed release job succeeded.
+  # ===========================================================================
+  release-status:
+    needs: [coverage-gate, wheels, sdist, demo, containers, release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute status
+        id: s
+        run: |
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "needed results: $results"
+          ok=true
+          for r in $results; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then ok=false; fi
+          done
+          echo "color=$([ "$ok" = true ] && echo brightgreen || echo red)" >> "$GITHUB_OUTPUT"
+      - name: Release status badge
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: 2b5d528fd69eb7528731a4ca2b5ca3ae
+          filename: autocog-release-status.json
+          label: release
+          message: ${{ steps.s.outputs.version }}
+          color: ${{ steps.s.outputs.color }}
