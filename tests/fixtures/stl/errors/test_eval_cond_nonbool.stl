@@ -1,0 +1,6 @@
+// Error: conditional requires a boolean condition
+// expect-error: Conditional expression requires boolean condition
+define a = 1;
+define x = (42 ? a : a);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

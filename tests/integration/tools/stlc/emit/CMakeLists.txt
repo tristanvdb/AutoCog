@@ -28,6 +28,17 @@ add_test(NAME stlc_emit_ast_nodes
          ")
 set_tests_properties(stlc_emit_ast_nodes PROPERTIES LABELS "stlc;emit")
 
+# Emit symbols over a fixture containing every symbol kind the serializer
+# distinguishes, so serialize_symbols' per-type arms are covered.
+add_test(NAME stlc_emit_symbol_kinds
+         COMMAND ${CMAKE_COMMAND} -E env bash -c "
+             out=$($<TARGET_FILE:autocog_stlc> --emit symbols ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/all_symbol_kinds.stl) || exit 1
+             for t in define argument vocab record prompt python alias; do
+                 echo \"\$out\" | grep -q \"\\\"type\\\": \\\"\$t\\\"\" || { echo \"missing symbol type: \$t\"; exit 1; }
+             done
+         ")
+set_tests_properties(stlc_emit_symbol_kinds PROPERTIES LABELS "stlc;emit")
+
 # Also test with imports
 add_test(NAME stlc_emit_sta_import
          COMMAND $<TARGET_FILE:autocog_stlc> --emit sta -I ${FIXTURES}/language/symbols ${FIXTURES}/language/symbols/test_import.stl)

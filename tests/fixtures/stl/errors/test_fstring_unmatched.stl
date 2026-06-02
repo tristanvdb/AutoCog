@@ -1,0 +1,4 @@
+// Error: unmatched } in a format string
+// expect-error: Unmatched '}' in format string
+prompt p { is { f is text<length=4>; } return { use f; } annotate { f as f"hello }"; } }
+export p as main;

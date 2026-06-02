@@ -260,5 +260,19 @@
     "tag": "Expression",
     "code": "a & b",
     "should_pass": false
+  },
+  {
+    "description": "Negation with missing operand - fails",
+    "tag": "Expression",
+    "code": "(-)",
+    "should_pass": false,
+    "error_contains": "Unary operator expects primary or parenthesized operand"
+  },
+  {
+    "description": "Not with missing operand - fails",
+    "tag": "Expression",
+    "code": "(!)",
+    "should_pass": false,
+    "error_contains": "Unary operator expects primary or parenthesized operand"
   }
 ]

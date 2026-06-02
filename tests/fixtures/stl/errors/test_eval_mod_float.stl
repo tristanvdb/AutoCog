@@ -1,0 +1,5 @@
+// Error: modulo requires integer operands
+// expect-error: Modulo requires integer operands
+define x = (1.5 % 2.0);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

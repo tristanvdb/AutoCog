@@ -1,0 +1,5 @@
+// Error: a define with no initializer, referenced for its value
+// expect-error: Define `x` has no initializer to evaluate.
+define x;
+prompt p { is { f is text<length=(x)>; } return { use f; } }
+export p as main;

@@ -1,0 +1,17 @@
+// f-string substitution across value types, plus escaped braces.
+// Covers the int/float/bool/string value-to-string arms and the {{ }} escapes
+// in format-string evaluation.
+define iv = 42;
+define fv = 3.14;
+define bv = true;
+define sv = "hi";
+
+prompt test {
+  is { out is text<length=4>; }
+  return { use out; }
+  annotate {
+    _ as f"int={iv} float={fv} bool={bv} str={sv} literal={{braces}}";
+  }
+}
+
+export test as main;

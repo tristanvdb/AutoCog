@@ -1,0 +1,8 @@
+// Error: flow/queue search category is not valid inside a record
+// expect-error: is only valid at file or prompt scope, not inside a record
+record R {
+  is { x is text<length=4>; }
+  search { flow.x is 3; }
+}
+prompt p { is { y is R; } return { use y; } }
+export p as main;

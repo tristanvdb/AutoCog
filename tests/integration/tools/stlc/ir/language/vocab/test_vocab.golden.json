@@ -56,6 +56,18 @@
           "index": 3,
           "name": "pin",
           "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion",
+            "vocab": "vocab_6adb898ec3abd92a"
+          },
+          "index": 4,
+          "name": "shared_field",
+          "range": null
         }
       ],
       "flows": [],
@@ -114,11 +126,70 @@
                 }
               ]
             }
+          },
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "shared_field"
+                }
+              ]
+            }
           }
         ],
         "label": null
       },
       "vocabs": {
+        "vocab_6adb898ec3abd92a": {
+          "kind": "intersect",
+          "operands": [
+            {
+              "kind": "union",
+              "operands": [
+                {
+                  "kind": "tokenize",
+                  "strings": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9"
+                  ]
+                },
+                {
+                  "kind": "regex",
+                  "strings": [
+                    "^[a-zA-Z]+$"
+                  ]
+                }
+              ]
+            },
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9"
+              ]
+            }
+          ]
+        },
         "vocab_6b686ddddc9b9418": {
           "kind": "diff",
           "operands": [

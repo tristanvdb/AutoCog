@@ -1,0 +1,5 @@
+// Error: cannot negate a non-numeric value
+// expect-error: Cannot negate non-numeric value
+define x = (-true);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

@@ -239,6 +239,7 @@ add_subdirectory(tools/psta)
 add_subdirectory(bindings/backend-llama)
 
 add_subdirectory(tests/units/libs/autocog/compiler/stl/parser)
+add_subdirectory(tests/units/libs/autocog/utilities)
 add_subdirectory(tests/integration/tools/stlc/ir)
 add_subdirectory(tests/integration/tools/stlc/sta)
 add_subdirectory(tests/integration/tools/stlc/emit)

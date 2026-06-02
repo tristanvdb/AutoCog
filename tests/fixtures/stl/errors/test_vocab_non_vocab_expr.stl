@@ -1,0 +1,5 @@
+// Error: a value expression where a vocab expression is required
+// expect-error: non-vocab expression in a vocab context
+vocab c = (42 | tokenize("x"));
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

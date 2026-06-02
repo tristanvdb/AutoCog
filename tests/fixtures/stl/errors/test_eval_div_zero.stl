@@ -1,0 +1,6 @@
+// Error: division by zero
+// expect-error: Division by zero
+define a = 5;
+define x = (a / 0);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

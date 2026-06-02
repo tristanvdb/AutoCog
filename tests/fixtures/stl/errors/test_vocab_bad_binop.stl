@@ -1,0 +1,6 @@
+// Error: + is not a valid vocab set operator
+// expect-error: only `|`, `&`, `-` are valid binary vocab operators.
+vocab a = tokenize("x");
+vocab c = (a + a);
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

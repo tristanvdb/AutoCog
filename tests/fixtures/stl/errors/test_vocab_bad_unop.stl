@@ -1,0 +1,6 @@
+// Error: only ! is a valid unary vocab operator
+// expect-error: only `!` (complement) is valid as a unary vocab operator.
+vocab a = tokenize("x");
+vocab c = (-a);
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

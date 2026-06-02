@@ -1,0 +1,5 @@
+// Error: reference to an undefined symbol in an evaluated expression
+// expect-error: Undefined symbol: undefined_name
+define x = (undefined_name + 1);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

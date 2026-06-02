@@ -1,0 +1,7 @@
+// Error: a non-structural parameter on a text field
+// expect-error: is not a structural parameter of text
+prompt p {
+  is { x is text<length=4, badparam=5>; }
+  return { use x; }
+}
+export p as main;

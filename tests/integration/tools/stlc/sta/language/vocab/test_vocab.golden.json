@@ -41,8 +41,13 @@
           "flow": -1
         },
         {
-          "exit": 0,
+          "exit": 6,
           "field": 4,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 5,
           "flow": -1
         }
       ],
@@ -103,17 +108,30 @@
         },
         {
           "depth": 1,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 4,
+            "type": "completion",
+            "vocab": "vocab_6adb898ec3abd92a"
+          },
+          "index": 4,
+          "name": "shared_field",
+          "range": null
+        },
+        {
+          "depth": 1,
           "desc": [
             "the next step"
           ],
-          "flat_index": 4,
+          "flat_index": 5,
           "format": {
             "type": "enum",
             "values": [
               "return"
             ]
           },
-          "index": 4,
+          "index": 5,
           "name": "next",
           "range": null
         }
@@ -152,6 +170,14 @@
                   "name": "pin"
                 }
               ]
+            },
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "shared_field"
+                }
+              ]
             }
           ],
           "type": "return"
@@ -159,6 +185,52 @@
       },
       "name": "writer",
       "vocabs": {
+        "vocab_6adb898ec3abd92a": {
+          "kind": "intersect",
+          "operands": [
+            {
+              "kind": "union",
+              "operands": [
+                {
+                  "kind": "tokenize",
+                  "strings": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7",
+                    "8",
+                    "9"
+                  ]
+                },
+                {
+                  "kind": "regex",
+                  "strings": [
+                    "^[a-zA-Z]+$"
+                  ]
+                }
+              ]
+            },
+            {
+              "kind": "tokenize",
+              "strings": [
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9"
+              ]
+            }
+          ]
+        },
         "vocab_6b686ddddc9b9418": {
           "kind": "diff",
           "operands": [

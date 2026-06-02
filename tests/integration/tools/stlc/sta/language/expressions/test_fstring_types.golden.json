@@ -1,0 +1,87 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "test"
+    }
+  },
+  "prompts": {
+    "test": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 1,
+          "flow": -1
+        }
+      ],
+      "channels": [],
+      "desc": [
+        "int=42 float=3.14 bool=true str=hi literal={braces}"
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "out",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "out"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "test"
+    }
+  },
+  "python_imports": {}
+}

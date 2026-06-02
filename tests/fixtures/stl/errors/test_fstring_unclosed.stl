@@ -1,0 +1,5 @@
+// Error: unclosed { in a format string
+// expect-error: Unclosed '{' in format string
+define n = "x";
+prompt p { is { f is text<length=4>; } return { use f; } annotate { f as f"hello {n"; } }
+export p as main;

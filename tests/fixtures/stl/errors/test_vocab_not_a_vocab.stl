@@ -1,0 +1,6 @@
+// Error: a non-vocab symbol used in a vocab expression
+// expect-error: `d` is not a vocab (used in a vocab expression).
+define d = 5;
+vocab c = (d | tokenize("x"));
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

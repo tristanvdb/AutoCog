@@ -1,0 +1,5 @@
+// Error: circular vocab reference
+// expect-error: circular vocab reference involving `c`.
+vocab c = (c | tokenize("x"));
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

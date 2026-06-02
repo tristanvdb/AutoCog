@@ -1,0 +1,5 @@
+// Error: an invalid clause keyword in a call-channel argument
+// expect-error: clauses can only be `bind`, `ravel`, `wrap`, `prune`, or `mapped`
+prompt w { is { s is text<length=4>; } channel { s get s; } return { use s; } }
+prompt main { is { o[2] is text<length=4>; } channel { o call w { s get s } export; } return { use o; } }
+export main as main;

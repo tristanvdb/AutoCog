@@ -1,0 +1,4 @@
+// Error: invalid variable name in a format string
+// expect-error: Invalid variable name in format string: 1x
+prompt p { is { f is text<length=4>; } return { use f; } annotate { f as f"hi {1x}"; } }
+export p as main;

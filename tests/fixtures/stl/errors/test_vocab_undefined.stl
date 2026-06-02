@@ -1,0 +1,5 @@
+// Error: reference to an undefined vocab
+// expect-error: undefined vocab `nope`.
+vocab c = (nope | tokenize("x"));
+prompt p { is { f is text<length=4, vocab=c>; } return { use f; } }
+export p as main;

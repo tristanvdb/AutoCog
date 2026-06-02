@@ -1,0 +1,50 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "test"
+  },
+  "prompts": {
+    "test": {
+      "channels": [],
+      "context": {},
+      "desc": [
+        "int=42 float=3.14 bool=true str=hi literal={braces}"
+      ],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "out",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "test",
+      "name": "test",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "out"
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    }
+  },
+  "records": {}
+}

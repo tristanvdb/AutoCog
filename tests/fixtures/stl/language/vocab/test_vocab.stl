@@ -8,6 +8,8 @@ vocab universe = (!tokenize());
 // References to other vocabs (inlined at translation) and set operations.
 vocab alnum = (digit | alpha);
 vocab no_digits = (universe - digit);
+// Intersection of two character sets.
+vocab shared = (alnum & digit);
 
 prompt writer {
   is {
@@ -18,6 +20,8 @@ prompt writer {
     prose is text<length=64, vocab=no_digits>;
     // An inline composition referencing vocabs.
     pin is text<length=4, vocab=(digit - tokenize("0"))>;
+    // A field using the intersection vocab, so it is translated.
+    shared_field is text<length=4, vocab=shared>;
   }
 
   return {
@@ -25,6 +29,7 @@ prompt writer {
     use label;
     use prose;
     use pin;
+    use shared_field;
   }
 }
 

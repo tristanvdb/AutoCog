@@ -1,0 +1,5 @@
+// Error: cannot apply ! to a non-boolean value
+// expect-error: Cannot apply 'not' to non-boolean value
+define x = (!42);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

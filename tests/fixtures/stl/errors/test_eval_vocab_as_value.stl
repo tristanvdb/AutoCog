@@ -1,0 +1,6 @@
+// Error: a vocab used where a value is expected
+// expect-error: Vocab `v` cannot be used as a value.
+vocab v = tokenize("a");
+define x = (v + 1);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

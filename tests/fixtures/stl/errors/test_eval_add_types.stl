@@ -1,0 +1,5 @@
+// Error: invalid operand types for addition
+// expect-error: Invalid types for addition
+define x = ("a" + 5);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;
