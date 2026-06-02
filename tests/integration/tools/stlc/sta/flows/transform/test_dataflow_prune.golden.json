@@ -18,13 +18,6 @@
       "prompt": "source"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "08fa93bbf9f8a7dd",
-    "timestamp": "2026-05-31T19:02:43.548Z",
-    "uid": "959d22049dd48017",
-    "version": "0.5.5"
-  },
   "prompts": {
     "consumer": {
       "abstracts": [

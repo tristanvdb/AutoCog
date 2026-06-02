@@ -20,13 +20,6 @@
       "prompt": "processor"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "a82db44d5e643e5d",
-    "timestamp": "2026-05-31T19:02:43.212Z",
-    "uid": "21f93f80dca1c8a1",
-    "version": "0.5.5"
-  },
   "prompts": {
     "processor": {
       "abstracts": [

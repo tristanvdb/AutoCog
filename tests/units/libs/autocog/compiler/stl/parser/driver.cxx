@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
+#include <cctype>
 
 using json = nlohmann::json;
 
@@ -38,7 +40,10 @@ struct ParseDriver {
             std::string tag = test["tag"];
             std::string code = test["code"];
             bool should_pass = test.value("should_pass", true);
-            
+            // Optional: when failing is expected, assert the diagnostic message
+            // contains this substring (a proper diagnostic, not just any failure).
+            std::string error_contains = test.value("error_contains", "");
+
             bool parse_succeeded = false;
             std::string error_message;
 
@@ -49,9 +54,28 @@ struct ParseDriver {
                 parse_succeeded = false;
                 error_message = e.message;
             }
-            
+
             bool test_passed = (parse_succeeded == should_pass);
-            
+            std::string failure_detail;
+
+            // An internal error is never an acceptable diagnostic.
+            auto lower = error_message;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            if (lower.find("internal error") != std::string::npos) {
+                test_passed = false;
+                failure_detail = "diagnostic is an 'internal error' (never acceptable)";
+            }
+            // When a specific diagnostic is expected, require it.
+            else if (!error_contains.empty()) {
+                if (parse_succeeded) {
+                    test_passed = false;
+                    failure_detail = "expected failure with diagnostic, but parse succeeded";
+                } else if (error_message.find(error_contains) == std::string::npos) {
+                    test_passed = false;
+                    failure_detail = "diagnostic did not contain expected substring: " + error_contains;
+                }
+            }
+
             if (test_passed) {
                 tests_passed++;
                 std::cout << "✓ Test #" << tests_run << ": " << description << "\n";
@@ -65,7 +89,10 @@ struct ParseDriver {
                 std::cout << "❌ Test #" << tests_run << ": " << description << "\n";
                 std::cout << "  Tag: " << tag << "\n";
                 std::cout << "  Code: " << code << "\n";
-                if (should_pass) {
+                if (!failure_detail.empty()) {
+                    std::cout << "  " << failure_detail << "\n";
+                    std::cout << "  Error: " << error_message << "\n";
+                } else if (should_pass) {
                     std::cout << "  Expected: PASS, Got: FAIL\n";
                     std::cout << "  Error: " << error_message << "\n";
                 } else {

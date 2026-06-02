@@ -123,54 +123,63 @@
     "description": "Missing alias - fails",
     "tag": "Alias",
     "code": "main as",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing identifier."
   },
   {
     "description": "Missing alias - fails",
     "tag": "Alias",
     "code": "entry_prompt as",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing identifier."
   },
   {
     "description": "Reserved keyword as alias - fails",
     "tag": "Alias",
     "code": "prompt as return",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Number starting alias - fails",
     "tag": "Alias",
     "code": "prompt as 123main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Number starting target - fails",
     "tag": "Alias",
     "code": "123prompt as main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   },
   {
     "description": "Invalid parameter syntax - fails",
     "tag": "Alias",
     "code": "prompt(mode=\"fast\") as main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Missing equals in parameter - fails",
     "tag": "Alias",
     "code": "prompt<mode \"fast\"> as main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Unclosed configuration - fails",
     "tag": "Alias",
     "code": "prompt<mode=\"fast\" as main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Trailing comma in parameters - fails",
     "tag": "Alias",
     "code": "prompt<a=1, b=2,> as main",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   }
 ]

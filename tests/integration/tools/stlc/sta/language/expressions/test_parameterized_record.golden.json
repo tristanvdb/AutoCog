@@ -12,13 +12,6 @@
       "prompt": "storage"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "c74c39e83c66d581",
-    "timestamp": "2026-05-31T00:53:28.772Z",
-    "uid": "5e60b64a90fe4b4e",
-    "version": "0.5.4"
-  },
   "prompts": {
     "storage": {
       "abstracts": [

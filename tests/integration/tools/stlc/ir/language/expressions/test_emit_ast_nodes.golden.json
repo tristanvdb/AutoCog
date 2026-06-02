@@ -1,43 +1,29 @@
 {
   "defines": {},
   "entry_points": {
-    "main": "worker__10_6390854715352638587"
+    "main": "test"
   },
   "prompts": {
-    "worker__10_6390854715352638587": {
+    "test": {
       "channels": [],
-      "context": {
-        "count": 10,
-        "mode": "strict"
-      },
+      "context": {},
       "desc": [],
       "fields": [
         {
           "depth": 1,
           "desc": [],
           "format": {
+            "length": 4,
             "type": "completion"
           },
           "index": 0,
-          "name": "items",
-          "range": [
-            10
-          ]
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "format": {
-            "type": "completion"
-          },
-          "index": 1,
-          "name": "result",
+          "name": "out",
           "range": null
         }
       ],
       "flows": [],
-      "mangled_name": "worker__10_6390854715352638587",
-      "name": "worker",
+      "mangled_name": "test",
+      "name": "test",
       "return": {
         "fields": [
           {
@@ -48,7 +34,7 @@
               "prompt": null,
               "steps": [
                 {
-                  "name": "result"
+                  "name": "out"
                 }
               ]
             }

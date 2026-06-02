@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "questioner"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "2e5d0bcfe0202b2a",
-    "timestamp": "2026-05-31T19:03:56.475Z",
-    "uid": "0d78e8eef5c8c6e5",
-    "version": "0.5.5"
-  },
   "prompts": {
     "questioner": {
       "channels": [

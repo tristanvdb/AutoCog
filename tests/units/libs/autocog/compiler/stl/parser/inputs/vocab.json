@@ -63,19 +63,22 @@
     "description": "Vocab decl requires initializer",
     "tag": "Program",
     "code": "vocab x;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expect `=` and a vocab expression for a vocab."
   },
   {
     "description": "Tokenize with non-string arg fails",
     "tag": "Program",
     "code": "vocab x = tokenize(123);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `integer literal`  in tokenize(...)."
   },
   {
     "description": "Regex with two args fails",
     "tag": "Program",
     "code": "vocab x = regex(\"a\", \"b\");",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `')'` but found `','`  to close regex(...)."
   },
   {
     "description": "Vocab expression as Expression fragment",

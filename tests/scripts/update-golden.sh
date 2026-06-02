@@ -90,7 +90,16 @@ regenerate_one() {
             echo "WOULD UPDATE: $rel (target=$target)"
         fi
     else
-        cp "$tmpfile" "$golden"
+        # Strip the metadata block before storing. golden_compare.py already
+        # excludes metadata from comparison (it changes every run -- timestamp,
+        # producing version), so persisting it only causes spurious churn. The
+        # stored golden is the metadata-free canonical payload; schema
+        # validation above ran on the full emit, so nothing is lost.
+        python3 -c "import json,sys
+d=json.load(open(sys.argv[1]))
+d.pop('metadata', None)
+json.dump(d, open(sys.argv[2],'w'), indent=2)
+open(sys.argv[2],'a').write('\n')" "$tmpfile" "$golden"
     fi
     pass=$((pass + 1))
 }

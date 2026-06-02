@@ -1,4 +1,5 @@
 // Error: unexpected token in field definition
+// expect-error: Unexpected token `unknown` while parsing top level statements of a Record
 prompt broken {
   is {
     name is ??? ;

@@ -93,73 +93,85 @@
     "description": "Reserved keyword 'define' - fails as identifier",
     "tag": "Expression",
     "code": "define",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `define`"
   },
   {
     "description": "Reserved keyword 'prompt' - fails as identifier",
     "tag": "Expression",
     "code": "prompt",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `prompt`"
   },
   {
     "description": "Reserved keyword 'record' - fails as identifier",
     "tag": "Expression",
     "code": "record",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `record`"
   },
   {
     "description": "Reserved keyword 'channel' - fails as identifier",
     "tag": "Expression",
     "code": "channel",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `channel`"
   },
   {
     "description": "Reserved keyword 'flow' - fails as identifier",
     "tag": "Expression",
     "code": "flow",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `flow`"
   },
   {
     "description": "Reserved keyword 'return' - fails as identifier",
     "tag": "Expression",
     "code": "return",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `return`"
   },
   {
     "description": "Reserved keyword 'is' - fails as identifier",
     "tag": "Expression",
     "code": "is",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `is`"
   },
   {
     "description": "Reserved keyword 'use' - fails as identifier",
     "tag": "Expression",
     "code": "use",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `use`"
   },
   {
     "description": "Reserved keyword 'get' - fails as identifier",
     "tag": "Expression",
     "code": "get",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `get`"
   },
   {
     "description": "Reserved keyword 'call' - fails as identifier",
     "tag": "Expression",
     "code": "call",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `call`"
   },
   {
     "description": "Reserved keyword 'text' - fails as identifier",
     "tag": "Expression",
     "code": "text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `text`"
   },
   {
     "description": "Reserved keyword 'enum' - fails as identifier",
     "tag": "Expression",
     "code": "enum",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `enum`"
   },
   {
     "description": "Identifier starting with number - fails",

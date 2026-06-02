@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "processor"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "bdbde206acab2268",
-    "timestamp": "2026-05-31T00:52:55.079Z",
-    "uid": "86985260eb32efc3",
-    "version": "0.5.4"
-  },
   "prompts": {
     "processor": {
       "channels": [],

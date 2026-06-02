@@ -201,13 +201,15 @@
     "description": "Missing right operand",
     "tag": "Expression",
     "code": "(a +)",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `')'`"
   },
   {
     "description": "Unmatched left parenthesis",
     "tag": "Expression",
     "code": "(a + b",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `')'` but found `end of file`  to end parenthesized expression."
   },
   {
     "description": "Unmatched right parenthesis",
@@ -219,13 +221,15 @@
     "description": "Incomplete conditional",
     "tag": "Expression",
     "code": "((x > 0) ?)",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `')'`"
   },
   {
     "description": "Conditional missing colon",
     "tag": "Expression",
     "code": "((x > 0) ? yes no)",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `':'` but found `identifier`  within conditional expression."
   },
   {
     "description": "Unary with non-primary operand",

@@ -105,42 +105,49 @@
     "description": "Record missing 'is' - fails",
     "tag": "Program",
     "code": "record Message { text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `text` while parsing top level statements of a Record."
   },
   {
     "description": "Record missing type - fails",
     "tag": "Program",
     "code": "record Message { is; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `';'` while parsing top level statements of a Record."
   },
   {
     "description": "Record missing name - fails",
     "tag": "Program",
     "code": "record { is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'{'`  when parsing identifier."
   },
   {
     "description": "Record with reserved keyword name - fails",
     "tag": "Program",
     "code": "record return { is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Record missing braces - fails",
     "tag": "Program",
     "code": "record Message is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'{'` but found `is` when defining a Record."
   },
   {
     "description": "Record with unclosed brace - fails",
     "tag": "Program",
     "code": "record Message { is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `end of file` while parsing top level statements of a Record."
   },
   {
     "description": "Record with number starting name - fails",
     "tag": "Program",
     "code": "record 123Data { is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   }
 ]

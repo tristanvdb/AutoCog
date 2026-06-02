@@ -21,7 +21,7 @@ add_library(autocog_compiler_stl_lib STATIC
     parser/prompt.cxx parser/objectref.cxx parser/record.cxx
     parser/return.cxx parser/search.cxx parser/clauses.cxx
     parser/struct.cxx parser/assign.cxx
-    symbols.cxx symbol-table.cxx symbol-scanner.cxx
+    symbols.cxx symbol-scanner.cxx
     evaluate.cxx
     instantiation-graph.cxx
     compile/parse.cxx

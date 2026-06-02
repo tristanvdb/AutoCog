@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "greeter"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "97971d51f837f265",
-    "timestamp": "2026-05-31T19:03:53.020Z",
-    "uid": "1e65ef854f7efaaa",
-    "version": "0.5.5"
-  },
   "prompts": {
     "greeter": {
       "channels": [

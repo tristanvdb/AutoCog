@@ -129,24 +129,28 @@
     "description": "Bind without parentheses - fails",
     "tag": "Bind",
     "code": "bind",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'('` but found `end of file` for bind clause mandatory source argument."
   },
   {
     "description": "Bind with three arguments - fails",
     "tag": "Bind",
     "code": "bind(a, b, c)",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `')'` but found `','` to end bind clause arguments."
   },
   {
     "description": "Wrap with two arguments - fails",
     "tag": "Wrap",
     "code": "wrap(source, target)",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `')'` but found `','` to end wrap clause arguments."
   },
   {
     "description": "Prune without argument - fails",
     "tag": "Prune",
     "code": "prune",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'('` but found `end of file` for prune clause mandatory source argument."
   }
 ]

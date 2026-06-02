@@ -21,13 +21,6 @@
       "prompt": "producer"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "f1e7636fb011b944",
-    "timestamp": "2026-05-31T20:17:17.027Z",
-    "uid": "a4bcf7b09b832602",
-    "version": "0.5.5"
-  },
   "prompts": {
     "consumer": {
       "abstracts": [

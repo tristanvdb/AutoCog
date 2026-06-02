@@ -18,13 +18,6 @@
       "prompt": "solver"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "fdc2cfcea2c2341e",
-    "timestamp": "2026-05-31T19:02:42.874Z",
-    "uid": "c95a31242f82e006",
-    "version": "0.5.5"
-  },
   "prompts": {
     "solver": {
       "abstracts": [

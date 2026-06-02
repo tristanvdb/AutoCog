@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "test__1_true"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "024dec6d4dac60e5",
-    "timestamp": "2026-05-31T19:03:57.400Z",
-    "uid": "86d13bff4df1f327",
-    "version": "0.5.5"
-  },
   "prompts": {
     "test__1_true": {
       "channels": [],

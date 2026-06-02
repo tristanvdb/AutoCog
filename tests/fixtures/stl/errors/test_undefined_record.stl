@@ -1,4 +1,5 @@
 // Error: reference to undefined record
+// expect-error: Cannot resolve reference to 'NonExistentRecord'
 prompt broken {
   is {
     item is NonExistentRecord;

@@ -105,60 +105,70 @@
     "description": "Missing 'from' keyword - fails",
     "tag": "Import",
     "code": "\"utils.stl\" import helper;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `from` but found `string` when parsing Import statement."
   },
   {
     "description": "Missing 'import' keyword - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" helper;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `import` but found `identifier`  after file path in import statement."
   },
   {
     "description": "Missing file path - fails",
     "tag": "Import",
     "code": "from import helper;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `import` when parsing import file path."
   },
   {
     "description": "Unquoted file path - fails",
     "tag": "Import",
     "code": "from utils.stl import helper;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `identifier` when parsing import file path."
   },
   {
     "description": "Missing import targets - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" import;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `';'`  when parsing identifier."
   },
   {
     "description": "Invalid alias syntax - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" import helper = h;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `'='`  to end import statement."
   },
   {
     "description": "Reserved keyword as import name - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" import return;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Reserved keyword as alias - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" import helper as return;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Number starting import name - fails",
     "tag": "Import",
     "code": "from \"utils.stl\" import 123func;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   },
   {
     "description": "Trailing comma - may fail depending on parser",
     "tag": "Import",
     "code": "from \"utils.stl\" import helper, process,;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `';'`  when parsing identifier."
   }
 ]

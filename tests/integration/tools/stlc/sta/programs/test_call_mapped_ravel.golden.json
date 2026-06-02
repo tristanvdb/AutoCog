@@ -17,13 +17,6 @@
       "prompt": "main"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "6d2b22253ecc28dd",
-    "timestamp": "2026-05-31T20:17:25.169Z",
-    "uid": "bbfb811a9d2836f3",
-    "version": "0.5.5"
-  },
   "prompts": {
     "main": {
       "abstracts": [

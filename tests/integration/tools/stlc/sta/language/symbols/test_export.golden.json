@@ -11,13 +11,6 @@
       "prompt": "processor"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "bdbde206acab2268",
-    "timestamp": "2026-05-31T00:53:34.059Z",
-    "uid": "395f8b2a14e17f7b",
-    "version": "0.5.4"
-  },
   "prompts": {
     "processor": {
       "abstracts": [

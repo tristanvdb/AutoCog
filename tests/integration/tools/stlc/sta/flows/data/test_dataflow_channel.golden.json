@@ -20,13 +20,6 @@
       "prompt": "thinker"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "d627d3f737cf829b",
-    "timestamp": "2026-05-31T19:02:41.873Z",
-    "uid": "e471c45cf8f538bc",
-    "version": "0.5.5"
-  },
   "prompts": {
     "thinker": {
       "abstracts": [

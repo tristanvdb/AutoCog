@@ -21,13 +21,6 @@
       "prompt": "questioner"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "2e5d0bcfe0202b2a",
-    "timestamp": "2026-05-31T19:02:46.240Z",
-    "uid": "4910fd112f21594c",
-    "version": "0.5.5"
-  },
   "prompts": {
     "questioner": {
       "abstracts": [

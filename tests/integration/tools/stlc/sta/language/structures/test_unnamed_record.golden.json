@@ -11,13 +11,6 @@
       "prompt": "calculator"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "e258f706a52920eb",
-    "timestamp": "2026-05-31T00:53:32.869Z",
-    "uid": "1afb77db0e0b153e",
-    "version": "0.5.4"
-  },
   "prompts": {
     "calculator": {
       "abstracts": [

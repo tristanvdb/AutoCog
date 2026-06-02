@@ -28,13 +28,6 @@
       "prompt": "main"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "ab3a8df0b4f031d2",
-    "timestamp": "2026-05-31T19:02:52.427Z",
-    "uid": "3f04063f161a85d8",
-    "version": "0.5.5"
-  },
   "prompts": {
     "main": {
       "abstracts": [

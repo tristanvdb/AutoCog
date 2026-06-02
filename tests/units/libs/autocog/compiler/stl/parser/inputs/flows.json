@@ -123,54 +123,63 @@
     "description": "Flow without prompt name - fails",
     "tag": "Flow",
     "code": "flow;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `';'`  when parsing identifier."
   },
   {
     "description": "Flow with invalid limit syntax - fails",
     "tag": "Flow",
     "code": "flow prompt(5);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow with empty brackets - fails",
     "tag": "Flow",
     "code": "flow prompt[];",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow with missing 'as' keyword - fails",
     "tag": "Flow",
     "code": "flow prompt \"label\";",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow with unclosed bracket - fails",
     "tag": "Flow",
     "code": "flow prompt[5;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow with unclosed configuration - fails",
     "tag": "Flow",
     "code": "flow prompt<mode=\"strict\";",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow block with unclosed brace - fails",
     "tag": "Flow",
     "code": "flow { prompt;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `prompt`  when parsing identifier."
   },
   {
     "description": "Flow with reserved keyword as prompt name - fails",
     "tag": "Flow",
     "code": "flow return;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Flow with number starting prompt name - fails",
     "tag": "Flow",
     "code": "flow 123prompt;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   }
 ]

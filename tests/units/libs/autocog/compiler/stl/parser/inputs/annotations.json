@@ -94,55 +94,64 @@
     "description": "Annotation without string - fails",
     "tag": "Annotate",
     "code": "annotate",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `end of file`"
   },
   {
     "description": "Annotation with unquoted text - fails",
     "tag": "Annotate",
     "code": "annotate This is not quoted",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `is`  when ending single statement annotation."
   },
   {
     "description": "Annotation block missing 'as' keyword - fails",
     "tag": "Annotate",
     "code": "annotate { field \"Description\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `as` but found `string`  in annotation."
   },
   {
     "description": "Annotation block with reversed order - fails",
     "tag": "Annotate",
     "code": "annotate { \"Description\" as field; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `string`  when parsing path field."
   },
   {
     "description": "Annotation with identifier instead of string - fails",
     "tag": "Annotate",
     "code": "annotate description",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `end of file`  when ending single statement annotation."
   },
   {
     "description": "Annotation with number - fails",
     "tag": "Annotate",
     "code": "annotate 42",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `end of file`  when ending single statement annotation."
   },
   {
     "description": "Annotation block with missing semicolon - fails",
     "tag": "Annotate",
     "code": "annotate { field as \"First\" field2 as \"Second\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `identifier`  to end annotation."
   },
   {
     "description": "Annotation with unclosed block - fails",
     "tag": "Annotate",
     "code": "annotate { field as \"Description\";",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing path field."
   },
   {
     "description": "Annotation with path but no string - fails",
     "tag": "Annotate",
     "code": "annotate { field as; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `';'`"
   },
   {
     "description": "Annotation with array index in path - should parse but semantically incorrect",
@@ -162,18 +171,21 @@
     "description": "Annotation with path starting with dot - fails",
     "tag": "Annotate",
     "code": "annotate { .field as \"Description\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'.'`  when parsing path field."
   },
   {
     "description": "Annotation with path ending with dot - fails",
     "tag": "Annotate",
     "code": "annotate { field. as \"Description\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `as`  when parsing path field."
   },
   {
     "description": "Annotation with reserved keyword in path - fails",
     "tag": "Annotate",
     "code": "annotate { return as \"Description\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing path field."
   }
 ]

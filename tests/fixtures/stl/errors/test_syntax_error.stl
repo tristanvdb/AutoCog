@@ -1,4 +1,5 @@
 // Error: missing closing brace
+// expect-error: Expected token `identifier` but found `export`
 prompt broken {
   is {
     name is text<length=10>;

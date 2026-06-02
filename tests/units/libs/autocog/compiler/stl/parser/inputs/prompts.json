@@ -123,43 +123,50 @@
     "description": "Prompt missing 'is' keyword - fails",
     "tag": "Program",
     "code": "prompt Bad { { field is text; } }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `'{'` while parsing top level statements of a Prompt."
   },
   {
     "description": "Prompt missing struct - fails",
     "tag": "Program",
     "code": "prompt NoStruct { is; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'{'` but found `';'`  when starting to parse struct body."
   },
   {
     "description": "Prompt missing name - fails",
     "tag": "Program",
     "code": "prompt { is { } }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'{'`  when parsing identifier."
   },
   {
     "description": "Prompt with reserved keyword name - fails",
     "tag": "Program",
     "code": "prompt return { is { } }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Prompt missing braces - fails",
     "tag": "Program",
     "code": "prompt Simple is { }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'{'` but found `is` when defining a Prompt."
   },
   {
     "description": "Prompt with unclosed brace - fails",
     "tag": "Program",
     "code": "prompt Unclosed { is { }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `end of file` while parsing top level statements of a Prompt."
   },
   {
     "description": "Prompt with number starting name - fails",
     "tag": "Program",
     "code": "prompt 123step { is { } }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   },
   {
     "description": "Prompt with invalid section order - should parse",

@@ -123,37 +123,43 @@
     "description": "Empty path - fails",
     "tag": "Path",
     "code": "",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing path field."
   },
   {
     "description": "Path starting with dot - fails",
     "tag": "Path",
     "code": ".field",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'.'`  when parsing path field."
   },
   {
     "description": "Path ending with dot - fails",
     "tag": "Path",
     "code": "field.",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing path field."
   },
   {
     "description": "Path with double dot - fails",
     "tag": "Path",
     "code": "field..subfield",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'.'`  when parsing path field."
   },
   {
     "description": "Path with empty brackets - fails",
     "tag": "Path",
     "code": "array[]",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `']'`"
   },
   {
     "description": "Path with unclosed bracket - fails",
     "tag": "Path",
     "code": "array[0",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `end of file`  to close array access."
   },
   {
     "description": "Path with missing bracket - fails",
@@ -165,18 +171,21 @@
     "description": "Path with invalid range separator - fails",
     "tag": "Path",
     "code": "array[1-5]",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `'-'`  to close array access."
   },
   {
     "description": "Path with multiple colons in range - fails",
     "tag": "Path",
     "code": "array[1:5:2]",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `':'`  to close array access."
   },
   {
     "description": "Path starting with index - fails",
     "tag": "Path",
     "code": "[0].field",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'['`  when parsing path field."
   }
 ]

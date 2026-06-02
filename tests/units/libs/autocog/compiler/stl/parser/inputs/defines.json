@@ -135,48 +135,56 @@
     "description": "Define missing equals - fails",
     "tag": "Program",
     "code": "define max_length 100;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `integer literal`  to end define/argument/vocab statement."
   },
   {
     "description": "Define with reserved keyword as name - fails",
     "tag": "Program",
     "code": "define return = 5;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Define with number starting name - fails",
     "tag": "Program",
     "code": "define 123value = 10;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   },
   {
     "description": "Argument missing equals - fails",
     "tag": "Program",
     "code": "argument count 5;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `integer literal`  to end define/argument/vocab statement."
   },
   {
     "description": "Define with missing value after equals - fails",
     "tag": "Program",
     "code": "define value =;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `';'`"
   },
   {
     "description": "Define with multiple equals - fails",
     "tag": "Program",
     "code": "define x = y = z;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `'='`  to end define/argument/vocab statement."
   },
   {
     "description": "Using define keyword without name - fails",
     "tag": "Program",
     "code": "define = 5;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'='`  when parsing identifier."
   },
   {
     "description": "Using argument keyword without name - fails",
     "tag": "Program",
     "code": "argument = \"value\";",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `'='`  when parsing identifier."
   }
 ]

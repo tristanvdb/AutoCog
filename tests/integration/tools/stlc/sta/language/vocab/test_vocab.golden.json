@@ -12,13 +12,6 @@
       "prompt": "writer"
     }
   },
-  "metadata": {
-    "format": "sta",
-    "source_uid": "9ee4d98fdfef0c19",
-    "timestamp": "2026-05-31T16:38:01.248Z",
-    "uid": "74f4f9877d37390f",
-    "version": "0.5.5"
-  },
   "prompts": {
     "writer": {
       "abstracts": [

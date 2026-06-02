@@ -111,31 +111,36 @@
     "description": "Search missing 'is' keyword - fails",
     "tag": "Search",
     "code": "search { custom_field 0.7; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `float literal`  to set value of search parameter."
   },
   {
     "description": "Search missing value - fails",
     "tag": "Search",
     "code": "search { custom_field is; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `';'`"
   },
   {
     "description": "Search missing semicolon - fails",
     "tag": "Search",
     "code": "search { custom_a is 0.7 custom_b is 100; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `identifier`  to finish search parameter assignment."
   },
   {
     "description": "Search with unclosed block - fails",
     "tag": "Search",
     "code": "search { custom_field is 0.7;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "parameter locator starts with an identifier or keyword."
   },
   {
     "description": "Search without block - fails",
     "tag": "Search",
     "code": "search custom_field is 0.7",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'{'` but found `identifier`  when starting to parse a block of search parameters."
   },
   {
     "description": "Search with keyword as locator segment - allowed",
@@ -147,18 +152,21 @@
     "description": "Search with number starting parameter name - fails",
     "tag": "Search",
     "code": "search { 123param is \"value\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `identifier`  to set value of search parameter."
   },
   {
     "description": "Search with array index in path - fails",
     "tag": "Search",
     "code": "search { items[0] is \"first\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `'['`  to set value of search parameter."
   },
   {
     "description": "Search with range in path - fails",
     "tag": "Search",
     "code": "search { data[1:5] is \"subset\"; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `'['`  to set value of search parameter."
   }
 ]

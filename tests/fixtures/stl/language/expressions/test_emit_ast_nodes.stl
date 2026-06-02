@@ -1,0 +1,24 @@
+// Fixture for `stlc --emit ast`: exercises expression node kinds in the AST
+// JSON serializer (serialize/ast.cxx expr_to_json) that survive a full compile.
+// Each define initializer emits a distinct node; binary/conditional forms are
+// parenthesized as the grammar requires in a define initializer.
+// (Tokenize/Regex nodes are covered via the vocab fixture, where tokenize()/
+//  regex() are valid; as bare define initializers they don't lower to sta.)
+
+define lit_int   = 42;
+define lit_float = 3.14159;       // Float -> serialize::round3 path
+define lit_bool  = true;
+define lit_str   = "hello";
+define ref_id    = lit_int;       // Identifier
+define un_neg    = -lit_int;      // Unary (-)
+define un_not    = !lit_bool;     // Unary (!)
+define bin_add   = (lit_int + 7); // Binary
+define cond_tern = (lit_bool ? lit_int : 7);   // Conditional
+define paren     = (lit_int);     // Parenthesis
+
+prompt test {
+  is { out is text<length=4>; }
+  return { use out; }
+}
+
+export test as main;

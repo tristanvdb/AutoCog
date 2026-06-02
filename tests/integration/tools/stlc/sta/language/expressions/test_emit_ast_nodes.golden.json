@@ -4,16 +4,16 @@
       "inputs": {},
       "outputs": {
         "_": {
-          "max_length": 50,
+          "max_length": 4,
           "required": true,
           "type": "text"
         }
       },
-      "prompt": "writer"
+      "prompt": "test"
     }
   },
   "prompts": {
-    "writer": {
+    "test": {
       "abstracts": [
         {
           "exit": -1,
@@ -26,18 +26,8 @@
           "flow": -1
         },
         {
-          "exit": 3,
-          "field": 1,
-          "flow": -1
-        },
-        {
-          "exit": 4,
-          "field": 2,
-          "flow": -1
-        },
-        {
           "exit": 0,
-          "field": 3,
+          "field": 1,
           "flow": -1
         }
       ],
@@ -49,42 +39,11 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "length": 20,
+            "length": 4,
             "type": "completion"
           },
-          "format_ref": "ShortText",
           "index": 0,
-          "name": "title",
-          "range": null
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 1,
-          "format": {
-            "length": 100,
-            "type": "completion"
-          },
-          "format_ref": "LongText",
-          "index": 1,
-          "name": "content",
-          "range": null,
-          "search": {
-            "text": {
-              "threshold": 0.95
-            }
-          }
-        },
-        {
-          "depth": 1,
-          "desc": [],
-          "flat_index": 2,
-          "format": {
-            "length": 50,
-            "type": "completion"
-          },
-          "index": 2,
-          "name": "summary",
+          "name": "out",
           "range": null
         },
         {
@@ -92,14 +51,14 @@
           "desc": [
             "the next step"
           ],
-          "flat_index": 3,
+          "flat_index": 1,
           "format": {
             "type": "enum",
             "values": [
               "return"
             ]
           },
-          "index": 3,
+          "index": 1,
           "name": "next",
           "range": null
         }
@@ -111,7 +70,7 @@
               "alias": "_",
               "path": [
                 {
-                  "name": "summary"
+                  "name": "out"
                 }
               ]
             }
@@ -119,7 +78,7 @@
           "type": "return"
         }
       },
-      "name": "writer"
+      "name": "test"
     }
   },
   "python_imports": {}

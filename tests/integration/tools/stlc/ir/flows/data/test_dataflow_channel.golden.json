@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "thinker"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "d627d3f737cf829b",
-    "timestamp": "2026-05-31T19:03:52.405Z",
-    "uid": "c8411153fe325a87",
-    "version": "0.5.5"
-  },
   "prompts": {
     "thinker": {
       "channels": [

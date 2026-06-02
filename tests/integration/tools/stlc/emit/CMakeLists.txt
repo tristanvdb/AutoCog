@@ -9,6 +9,25 @@ foreach(target ast symbols globals graph ir sta)
     set_tests_properties(stlc_emit_${target} PROPERTIES LABELS "stlc;emit")
 endforeach()
 
+# Emit AST over a fixture exercising the expression node kinds that survive a
+# full compile (Identifier, Integer, Float, Boolean, String, Unary, Binary,
+# Conditional, Parenthesis), so serialize/ast.cxx's expr_to_json is covered --
+# including the Float/round3 path. Tokenize/Regex are checked via the vocab
+# fixture (where they are valid expressions).
+add_test(NAME stlc_emit_ast_nodes
+         COMMAND ${CMAKE_COMMAND} -E env bash -c "
+             out=$($<TARGET_FILE:autocog_stlc> --emit ast ${FIXTURES}/language/expressions/test_emit_ast_nodes.stl) || exit 1
+             for n in Identifier Integer Float Boolean String Unary Binary Conditional Parenthesis; do
+                 echo \"\$out\" | grep -q \"\\\"node\\\": \\\"\$n\\\"\" || { echo \"missing node: \$n\"; exit 1; }
+             done
+             echo \"\$out\" | grep -A1 '\\\"Float\\\"' | grep -q '3.142' || { echo 'Float round3 not applied'; exit 1; }
+             voc=$($<TARGET_FILE:autocog_stlc> --emit ast ${FIXTURES}/language/vocab/test_vocab.stl) || exit 1
+             for n in Tokenize Regex; do
+                 echo \"\$voc\" | grep -q \"\\\"node\\\": \\\"\$n\\\"\" || { echo \"missing node: \$n\"; exit 1; }
+             done
+         ")
+set_tests_properties(stlc_emit_ast_nodes PROPERTIES LABELS "stlc;emit")
+
 # Also test with imports
 add_test(NAME stlc_emit_sta_import
          COMMAND $<TARGET_FILE:autocog_stlc> --emit sta -I ${FIXTURES}/language/symbols ${FIXTURES}/language/symbols/test_import.stl)

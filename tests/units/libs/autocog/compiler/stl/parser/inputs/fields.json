@@ -69,19 +69,22 @@
     "description": "Array with only lower bound",
     "tag": "Field",
     "code": "items[3:] is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `']'`"
   },
   {
     "description": "Array with only upper bound",
     "tag": "Field",
     "code": "items[:5] is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `':'`"
   },
   {
     "description": "Unbounded array (both sides open)",
     "tag": "Field",
     "code": "items[:] is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `':'`"
   },
   {
     "description": "Field with identifier bounds",
@@ -135,60 +138,70 @@
     "description": "Field missing type - fails",
     "tag": "Field",
     "code": "name is",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `end of file` while parsing top level statements of a Record."
   },
   {
     "description": "Field missing 'is' keyword - fails",
     "tag": "Field",
     "code": "name text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `text`  between field name and type."
   },
   {
     "description": "Field with empty name - fails",
     "tag": "Field",
     "code": "is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `is`  when parsing identifier."
   },
   {
     "description": "Field with reserved keyword as name - fails",
     "tag": "Field",
     "code": "return is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Field with number starting name - fails",
     "tag": "Field",
     "code": "123field is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
   },
   {
     "description": "Field with empty bounds - fails",
     "tag": "Field",
     "code": "items[] is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `']'`"
   },
   {
     "description": "Field with invalid bounds separator - fails",
     "tag": "Field",
     "code": "items[1-10] is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `'-'`  to close array dimension."
   },
   {
     "description": "Field with three bounds values - fails",
     "tag": "Field",
     "code": "items[1:5:2] is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `':'`  to close array dimension."
   },
   {
     "description": "Field with unclosed bracket - fails",
     "tag": "Field",
     "code": "items[1:10 is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `is`  to close array dimension."
   },
   {
     "description": "Field with unmatched bracket - fails",
     "tag": "Field",
     "code": "items1:10] is text",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `':'`  between field name and type."
   }
 ]

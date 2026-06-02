@@ -123,60 +123,70 @@
     "description": "Empty enum - fails",
     "tag": "FormatRef",
     "code": "enum();",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `')'`  when parsing enumerators."
   },
   {
     "description": "Enum without parentheses - fails",
     "tag": "FormatRef",
     "code": "enum\"value\";",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'('` but found `string`"
   },
   {
     "description": "Enum with non-string value - fails",
     "tag": "FormatRef",
     "code": "enum(42);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `integer literal`  when parsing enumerators."
   },
   {
     "description": "Enum with identifier instead of string - fails",
     "tag": "FormatRef",
     "code": "enum(value);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `identifier`  when parsing enumerators."
   },
   {
     "description": "Repeat without parentheses - fails",
     "tag": "FormatRef",
     "code": "repeat items;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'('` but found `identifier`  when parsing a choice format."
   },
   {
     "description": "Select without path - fails",
     "tag": "FormatRef",
     "code": "select();",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `')'`  when parsing path field."
   },
   {
     "description": "Text with unclosed angle bracket - fails",
     "tag": "FormatRef",
     "code": "text<length=50;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'>'` but found `';'`  to close format arguments."
   },
   {
     "description": "Text with missing angle bracket - fails",
     "tag": "FormatRef",
     "code": "text length=50>;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `identifier`  to finish format statement"
   },
   {
     "description": "Invalid choice keyword - fails",
     "tag": "FormatRef",
     "code": "choose(items);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `'('`  to finish format statement"
   },
   {
     "description": "Mixed enum value types - fails",
     "tag": "FormatRef",
     "code": "enum(\"string\", 42);",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `string` but found `integer literal`  when parsing enumerators."
   }
 ]

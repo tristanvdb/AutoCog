@@ -1,4 +1,5 @@
 // Error: missing semicolon after field
+// expect-error: Expected token `';'` but found `identifier`
 prompt broken {
   is {
     name is text<length=10>

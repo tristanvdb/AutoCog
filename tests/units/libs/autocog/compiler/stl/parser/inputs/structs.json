@@ -57,7 +57,8 @@
     "description": "Struct with unbounded array",
     "tag": "Struct",
     "code": "{ items[1:] is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expression must be primary, unary, or parenthesized (for binary and conditional)! `']'`"
   },
   {
     "description": "Struct with nested struct",
@@ -117,43 +118,50 @@
     "description": "Format field without semicolon - fails",
     "tag": "Struct",
     "code": "{ name is text }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `'}'`  to finish format statement"
   },
   {
     "description": "Struct field missing type - fails",
     "tag": "Struct",
     "code": "{ name is; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Unexpected token `';'` while parsing top level statements of a Record."
   },
   {
     "description": "Struct field missing 'is' - fails",
     "tag": "Struct",
     "code": "{ name text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `is` but found `text`  between field name and type."
   },
   {
     "description": "Struct with trailing comma instead of semicolon - fails",
     "tag": "Struct",
     "code": "{ name is text, age is integer; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `';'` but found `','`  to finish format statement"
   },
   {
     "description": "Struct with unclosed brace - fails",
     "tag": "Struct",
     "code": "{ name is text;",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `end of file`  when parsing identifier."
   },
   {
     "description": "Struct with unmatched closing brace - fails",
     "tag": "Struct",
     "code": "name is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'{'` but found `identifier`  when starting to parse struct body."
   },
   {
     "description": "Struct with invalid bounds syntax - fails",
     "tag": "Struct",
     "code": "{ items[1-10] is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `']'` but found `'-'`  to close array dimension."
   },
   {
     "description": "Self-form struct (is <fmt>) - parses",
@@ -165,12 +173,14 @@
     "description": "Struct with reserved keyword as field name - fails",
     "tag": "Struct",
     "code": "{ return is text; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `return`  when parsing identifier."
   },
   {
     "description": "Struct with trailing semicolon",
     "tag": "Struct",
     "code": "{ person is { name is text; age is integer; }; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `';'`  when parsing identifier."
   }
 ]

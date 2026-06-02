@@ -153,42 +153,49 @@
     "description": "Channel with missing source - fails",
     "tag": "Channel",
     "code": "channel { result use; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `';'`  when parsing identifier."
   },
   {
     "description": "Channel use whole prompt - fails",
     "tag": "Channel",
     "code": "channel { field use source; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'.'` but found `';'`  after prompt in field reference."
   },
   {
     "description": "Channel with missing target - fails",
     "tag": "Channel",
     "code": "channel { use source.data; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `identifier` but found `use`  when parsing path field."
   },
   {
     "description": "Channel with invalid verb - fails",
     "tag": "Channel",
     "code": "channel { result take data; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected 'use', 'get', 'is' or 'call' to define channel's source."
   },
   {
     "description": "Channel with missing semicolon - fails",
     "tag": "Channel",
     "code": "channel { x get input y get output; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Channel clauses can only be `bind`, `ravel`, `prune`, or `wrap`"
   },
   {
     "description": "Channel with unclosed call block - fails",
     "tag": "Channel",
     "code": "channel { result call process { input use data; }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'.'` but found `';'`  after prompt in field reference."
   },
   {
     "description": "Channel with invalid clause order - fails",
     "tag": "Channel",
     "code": "channel { result use data mapped bind(_, target); }",
-    "should_pass": false
+    "should_pass": false,
+    "error_contains": "Expected token `'.'` but found `mapped`  after prompt in field reference."
   }
 ]

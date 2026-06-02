@@ -3,13 +3,6 @@
   "entry_points": {
     "main": "producer"
   },
-  "metadata": {
-    "format": "ir",
-    "source_uid": "62ef930944f5a0be",
-    "timestamp": "2026-05-31T19:03:55.850Z",
-    "uid": "cf4dd627b26d65b3",
-    "version": "0.5.5"
-  },
   "prompts": {
     "consumer": {
       "channels": [
