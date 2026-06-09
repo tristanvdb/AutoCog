@@ -1,0 +1,14 @@
+// Two aliases that point at each other form a name-resolution cycle with no
+// terminal declaration; following it must report a diagnostic instead of
+// recursing until the stack overflows.
+// expect-error: Cyclic import/alias reference
+alias B as A;
+alias A as B;
+
+prompt test {
+  is {
+    x is A;
+  }
+}
+
+export test as main;

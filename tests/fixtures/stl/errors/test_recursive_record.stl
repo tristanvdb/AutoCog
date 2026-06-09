@@ -1,0 +1,18 @@
+// A record that references itself is inlined forever (records are expanded
+// structurally), so it must be rejected with a diagnostic rather than crashing
+// the compiler with unbounded recursion.
+// expect-error: Recursive record definition
+record R {
+  is {
+    label is text<length=5>;
+    child is R;
+  }
+}
+
+prompt test {
+  is {
+    node is R;
+  }
+}
+
+export test as main;

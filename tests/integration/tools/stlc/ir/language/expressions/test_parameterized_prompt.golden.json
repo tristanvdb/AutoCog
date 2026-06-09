@@ -1,10 +1,10 @@
 {
   "defines": {},
   "entry_points": {
-    "main": "worker__10_6390854715352638587"
+    "main": "worker__10_3a3127f5ea0269b5"
   },
   "prompts": {
-    "worker__10_6390854715352638587": {
+    "worker__10_3a3127f5ea0269b5": {
       "channels": [],
       "context": {
         "count": 10,
@@ -36,7 +36,7 @@
         }
       ],
       "flows": [],
-      "mangled_name": "worker__10_6390854715352638587",
+      "mangled_name": "worker__10_3a3127f5ea0269b5",
       "name": "worker",
       "return": {
         "fields": [

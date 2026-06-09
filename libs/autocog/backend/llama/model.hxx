@@ -47,6 +47,17 @@ class Model {
     Model(ModelID const id, std::string const & model_path, int n_ctx);
     ~Model();
 
+    // Move-only: a Model owns raw llama_model*/llama_context* handles, so a copy
+    // would alias them and double-free at teardown. The noexcept move ctor lets
+    // the Manager's std::vector<Model> relocate on growth by transferring
+    // ownership (and nulling the source) instead of copying; the copy operations
+    // are deleted so an accidental shallow copy can never compile. (Move
+    // assignment is implicitly deleted by the const `id` member and is not needed
+    // for vector growth, which relocates via move construction.)
+    Model(Model const &) = delete;
+    Model & operator=(Model const &) = delete;
+    Model(Model && other) noexcept;
+
     void set_seed(unsigned seed) { rng.seed(seed); }
 
     TokenSequence tokenize(std::string const & text, bool add_bos, bool special);

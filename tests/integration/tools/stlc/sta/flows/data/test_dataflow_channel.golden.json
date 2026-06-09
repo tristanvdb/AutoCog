@@ -24,7 +24,7 @@
     "format": "sta",
     "hash": "df1868f6617bd91670fa094b0fef42f4a389606fa975e6e8f47a38306f01883c",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
     "thinker": {

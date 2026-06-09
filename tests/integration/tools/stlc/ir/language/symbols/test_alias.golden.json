@@ -157,7 +157,7 @@
     }
   },
   "records": {
-    "Message__10_3362459460170534380": {
+    "Message__10_b92231fc15698337": {
       "desc": [
         "A formal message."
       ],
@@ -176,7 +176,7 @@
       ],
       "name": "Message"
     },
-    "Message__20_8117829562458841584": {
+    "Message__20_83e3b78f14e08cc5": {
       "desc": [
         "A technical message."
       ],
@@ -195,7 +195,7 @@
       ],
       "name": "Message"
     },
-    "Message__50_877253011754596158": {
+    "Message__50_c633eb52f63cec1d": {
       "desc": [
         "A casual message."
       ],

@@ -4,6 +4,8 @@
 #include "autocog/compiler/stl/instantiation-graph.hxx"
 #include "autocog/logging.hxx"
 
+#include <algorithm>
+
 namespace autocog::compiler::stl {
 
 // ============================================================================
@@ -452,6 +454,24 @@ static FormatResult generate_format(
                 }, construct);
             }
 
+            // Recursive-record detection: records are inlined structurally, so a
+            // record that (transitively) references itself expands forever. The
+            // builder carries the stack of records currently being inlined.
+            if (std::find(builder.expanding_records.begin(),
+                          builder.expanding_records.end(), target_scope)
+                != builder.expanding_records.end()) {
+                std::string path;
+                for (auto const & k : builder.expanding_records) {
+                    auto p = k.find("::");
+                    path += (p == std::string::npos ? k : k.substr(p + 2)) + " -> ";
+                }
+                path += rec_name;
+                driver.emit_error("Recursive record definition: " + path + ".", fref.location);
+                result.format = std::vector<std::unique_ptr<ir::Field>>{};
+                return;
+            }
+            builder.expanding_records.push_back(target_scope);
+
             std::visit([&](auto const & body) {
                 using B = std::decay_t<decltype(body)>;
                 if constexpr (std::is_same_v<B, ast::Struct>) {
@@ -472,6 +492,8 @@ static FormatResult generate_format(
                     for (auto & d : inner.desc) result.desc.push_back(d);
                 }
             }, rec_decl.data.record);
+
+            builder.expanding_records.pop_back();
         }
     }, fref.data.type);
     return result;

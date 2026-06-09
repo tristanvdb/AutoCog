@@ -15,7 +15,7 @@
     "format": "sta",
     "hash": "6985b11b971dd7d7deb0a3bc7ac4da60c4b0eefea57c07e758a8e3e55b7d99df",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
     "test": {

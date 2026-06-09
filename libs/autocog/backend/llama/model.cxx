@@ -61,10 +61,28 @@ Model::~Model() {
   if (this->id == 0) {
     // NOP
   } else {
-    // for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
+    for (auto* ctx : this->contexts) if (ctx) llama_free(ctx);
     contexts.clear();
     if (this->model) llama_model_free(model);
   }
+}
+
+Model::Model(Model && o) noexcept
+  : id(o.id),
+    model(o.model),
+    contexts(std::move(o.contexts)),
+    tokens(std::move(o.tokens)),
+    rng(std::move(o.rng)),
+    source_(std::move(o.source_)),
+    sha_cache_(std::move(o.sha_cache_)),
+    vocab_mask_cache_(std::move(o.vocab_mask_cache_)),
+    full_vocab_mask_(std::move(o.full_vocab_mask_))
+{
+  // Transfer ownership: leave the moved-from object owning nothing, so its
+  // destructor frees neither the model nor any context. (std::move on a vector
+  // leaves it empty in practice, but clear() makes the no-op teardown explicit.)
+  o.model = nullptr;
+  o.contexts.clear();
 }
 
 void Model::check_context_id(ContextID const id) const {
@@ -111,11 +129,26 @@ TokenSequence Model::tokenize(std::string const & text, bool add_bos, bool speci
       add_bos,
       special
   );
-   
+
+  // A negative return is the required token count (the upper-bound buffer was
+  // too small, e.g. special-token expansion). Grow to fit and retry once.
+  if (n_tokens < 0) {
+    tokens.resize(static_cast<size_t>(-n_tokens));
+    n_tokens = llama_tokenize(
+        this->get_vocab(),
+        text.c_str(),
+        text.length(),
+        tokens.data(),
+        tokens.size(),
+        add_bos,
+        special
+    );
+  }
+
   if (n_tokens < 0) {
     throw autocog::ModelError("Tokenization failed for text: " + text, id, "tokenize");
   }
-   
+
   TokenSequence result(tokens.begin(), tokens.begin() + n_tokens);
   return result;
 }
@@ -151,10 +184,25 @@ std::string Model::detokenize(TokenSequence const & tokens, bool spec_rm, bool s
       spec_unp
   );
 
+  // A negative return is the required buffer size (the estimate was too small,
+  // e.g. long multi-byte tokens). Grow to fit and retry once.
+  if (n_chars < 0) {
+    result.resize(static_cast<size_t>(-n_chars));
+    n_chars = llama_detokenize(
+        this->get_vocab(),
+        tokens.data(),
+        tokens.size(),
+        &result[0],
+        result.size(),
+        spec_rm,
+        spec_unp
+    );
+  }
+
   if (n_chars < 0) {
     throw autocog::ModelError("Detokenization failed", id, "detokenize");
   }
-   
+
   result.resize(n_chars);
   return result;
 }

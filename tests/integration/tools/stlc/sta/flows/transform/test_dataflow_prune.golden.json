@@ -22,7 +22,7 @@
     "format": "sta",
     "hash": "a9e0fc1ac00d628cc03a6150a13e734324c09f46df5565f038904b6baf6bdcb5",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
     "consumer": {

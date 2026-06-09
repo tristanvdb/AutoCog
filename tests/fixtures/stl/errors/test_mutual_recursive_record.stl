@@ -1,0 +1,22 @@
+// Mutually recursive records (A references B references A) expand forever once
+// inlined, just like direct self-reference; the diagnostic should name the cycle.
+// expect-error: Recursive record definition
+record A {
+  is {
+    b is B;
+  }
+}
+
+record B {
+  is {
+    a is A;
+  }
+}
+
+prompt test {
+  is {
+    node is A;
+  }
+}
+
+export test as main;

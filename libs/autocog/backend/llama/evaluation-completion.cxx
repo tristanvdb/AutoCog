@@ -20,7 +20,7 @@ struct BeamState {
   float lookahead_bonus = 0.0f;
   bool stopped{false};
 
-  float proba() const { return std::exp(-logprob / logprobs.size()); }
+  float proba() const { return logprobs.empty() ? 0.0f : std::exp(-logprob / logprobs.size()); }
   float score() const { return (this->proba() + lookahead_bonus + diversity_bonus) / repetition_penalty; }
 };
 

@@ -37,7 +37,7 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
 
     float proba = 0.;
     for (float lpb : logprobs) proba += lpb;
-    proba = std::exp(-proba / logprobs.size());
+    proba = logprobs.empty() ? 0.0f : std::exp(-proba / logprobs.size());
 
     results.emplace_back(idx, logprobs, proba);
     state.context.reset(); // TODO remove once context saving/restore/rewind is implemented

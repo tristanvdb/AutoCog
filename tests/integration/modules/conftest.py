@@ -29,7 +29,7 @@ def search_path(share_dir):
     return str(share_dir / "search" / "default.json")
 
 
-LLAMA3_TEST_MODEL_URL = "https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf"
+LLAMA3_TEST_MODEL_URL = "https://huggingface.co/TensorBlock/tiny-llama3-test-GGUF/resolve/main/tiny-llama3-test-Q2_K.gguf"
 LLAMA3_TEST_MODEL_MIN_SIZE = 1_000_000  # ~21MB expected
 
 

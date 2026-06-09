@@ -1,8 +1,8 @@
 #ifndef AUTOCOG_UTILITIES_TYPES_HXX
 #define AUTOCOG_UTILITIES_TYPES_HXX
 
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -19,12 +19,17 @@ using Value = std::variant<int, float, bool, std::string, std::monostate>;
 /// runtime libs trade in; JSON / Python conversion lives in autocog::codec and
 /// is applied only at the tool / binding boundary.
 ///
-/// A Document is a scalar leaf, an ordered list, or a name-keyed object. Keys
-/// are unordered: a Document is transient (never hashed) and the canonical
-/// field order lives in the STA's field table, so the map need not carry it.
+/// A Document is a scalar leaf, an ordered list, or a name-keyed object. Key
+/// order is not semantically meaningful: a Document is transient (never hashed)
+/// and the canonical field order lives in the STA's field table, so the map need
+/// not carry it. `std::map` (not `unordered_map`) is deliberate: it is the only
+/// associative container libstdc++ instantiates with an incomplete value type,
+/// which the recursive `Object`/`Array` definitions require (GCC 11 evaluates
+/// `std::variant`'s copy-ctor trait eagerly; `unordered_map` then forces the
+/// incomplete `Document` to complete and fails to compile).
 struct Document {
   using Array  = std::vector<Document>;
-  using Object = std::unordered_map<std::string, Document>;
+  using Object = std::map<std::string, Document>;
 
   std::variant<Value, Array, Object> value;
 };

@@ -1,5 +1,6 @@
 
 #include "autocog/compiler/stl/driver.hxx"
+#include "autocog/data/utility.hxx"
 
 #include <algorithm>
 #include <vector>
@@ -42,8 +43,11 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
             } else if constexpr (std::is_same_v<T, bool>) {
                 result += val ? "true" : "false";
             } else if constexpr (std::is_same_v<T, std::string>) {
-                auto hash = std::hash<std::string>{}(val);
-                result += std::to_string(hash);
+                // Stable, portable content hash (not std::hash, which is
+                // implementation-defined and per-run-salted). A 16-hex prefix
+                // (64 bits) keeps mangled names readable while remaining
+                // collision-safe for distinct string arguments in one program.
+                result += autocog::data::digest(val).substr(0, 16);
             } else if constexpr (std::is_same_v<T, std::monostate>) {
                 result += "null";
             }

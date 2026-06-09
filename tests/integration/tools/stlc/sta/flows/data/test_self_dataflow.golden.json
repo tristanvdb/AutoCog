@@ -22,7 +22,7 @@
     "format": "sta",
     "hash": "57ab3b8ad4c79b19ccd7fe71de5c3b85e6bd3c16e600c7cd1e42d8a0294e6b88",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
     "solver": {

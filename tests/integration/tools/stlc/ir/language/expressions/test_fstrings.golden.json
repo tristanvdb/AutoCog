@@ -1,10 +1,10 @@
 {
   "defines": {},
   "entry_points": {
-    "main": "test__12909789474868431288_4"
+    "main": "test__1011cba3a2059b75_4"
   },
   "prompts": {
-    "test__12909789474868431288_4": {
+    "test__1011cba3a2059b75_4": {
       "channels": [],
       "context": {
         "goal": "answer questions",
@@ -42,7 +42,7 @@
         }
       ],
       "flows": [],
-      "mangled_name": "test__12909789474868431288_4",
+      "mangled_name": "test__1011cba3a2059b75_4",
       "name": "test",
       "return": {
         "fields": [

@@ -209,7 +209,22 @@ add_compile_definitions(AUTOCOG_VULKAN=$<BOOL:${AUTOCOG_VULKAN}>)
 add_compile_definitions(AUTOCOG_METAL=$<BOOL:${AUTOCOG_METAL}>)
 add_compile_definitions(AUTOCOG_SYCL=$<BOOL:${AUTOCOG_SYCL}>)
 
-enable_testing()
+# Tests configure by default for a direct CMake build (developer workflow), but
+# NOT inside a scikit-build (pip/wheel) build: the manylinux wheel's Python has
+# only Development.Module, not Development.Embed (the data smoke test embeds the
+# interpreter via Python::Python), and an end-user `pip install .` should not
+# build the test suite either. The test harness re-enables it explicitly by
+# passing -DAUTOCOG_BUILD_TESTS=ON (see tests/scripts/steps/build.sh).
+if(DEFINED SKBUILD)
+  set(_autocog_tests_default OFF)
+else()
+  set(_autocog_tests_default ON)
+endif()
+option(AUTOCOG_BUILD_TESTS "Configure the test suite" ${_autocog_tests_default})
+
+if(AUTOCOG_BUILD_TESTS)
+  enable_testing()
+endif()
 
 # Strict flags (after vendor subdirectories to avoid polluting them)
 add_compile_options(-Werror)
@@ -237,6 +252,7 @@ add_subdirectory(tools/ista)
 add_subdirectory(tools/psta)
 add_subdirectory(bindings/backend-llama)
 
+if(AUTOCOG_BUILD_TESTS)
 add_subdirectory(tests/units/libs/autocog/compiler/stl/parser)
 add_subdirectory(tests/units/libs/autocog/utilities)
 add_subdirectory(tests/units/libs/autocog/data)
@@ -252,6 +268,7 @@ add_subdirectory(tests/integration/tools/psta)
 add_subdirectory(tests/integration/tools/xfta)
 add_subdirectory(tests/integration/tools/e2e)
 add_subdirectory(tests/integration/bindings)
+endif()
 
 add_subdirectory(share/demos)
 
@@ -269,5 +286,11 @@ install(DIRECTORY share/syntax/
 # Install search configs
 install(DIRECTORY share/search/
         DESTINATION autocog/search
+        FILES_MATCHING PATTERN "*.json")
+
+# Install JSON schemas so _schema.py can resolve SCHEMA_ROOT in pip installs
+# (otherwise artifact validation silently no-ops for installed users).
+install(DIRECTORY share/schemas/
+        DESTINATION autocog/schemas
         FILES_MATCHING PATTERN "*.json")
 

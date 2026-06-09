@@ -69,6 +69,11 @@ nlohmann::json diagnostics_to_json(autocog::compiler::stl::Driver const & driver
 PYBIND11_MODULE(compiler_stl_cxx, module) {
     module.doc() = "AutoCog STL compiler";
 
+    // Self-guarded: registers process-wide on the first module to load, so the
+    // typed AutoCog error hierarchy survives this module being imported in
+    // isolation (not only behind runtime_sta_cxx).
+    autocog::binding::register_exception_translator();
+
     module.def("compile",
         [](std::string const & filepath,
            std::vector<std::string> includes,

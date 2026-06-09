@@ -120,7 +120,7 @@ development). To pre-fetch it manually:
 
 ```bash
 mkdir -p models && cd models
-wget https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf
+wget https://huggingface.co/TensorBlock/tiny-llama3-test-GGUF/resolve/main/tiny-llama3-test-Q2_K.gguf
 cd ..
 ```
 

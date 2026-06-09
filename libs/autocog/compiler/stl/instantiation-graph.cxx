@@ -2,10 +2,19 @@
 #include "autocog/compiler/stl/instantiation-graph.hxx"
 #include "autocog/compiler/stl/driver.hxx"
 
+#include <algorithm>
 #include <stdexcept>
 
 
 namespace autocog::compiler::stl {
+
+namespace {
+// A symbol key is "fileid::name"; recover the bare name for diagnostics.
+std::string symbol_name_of(std::string const & key) {
+    auto pos = key.find("::");
+    return pos == std::string::npos ? key : key.substr(pos + 2);
+}
+}
 
 // ============================================================================
 // InstantiationGraphBuilder
@@ -23,10 +32,30 @@ std::optional<ResolvedSymbol> InstantiationGraphBuilder::resolve(
     std::string const & name, int fileid
 ) {
     std::string key = std::to_string(fileid) + "::" + name;
+
+    // Cycle detection: an import/alias chain that loops back on itself would
+    // otherwise recurse until the stack overflows.
+    auto cyc = std::find(resolving.begin(), resolving.end(), key);
+    if (cyc != resolving.end()) {
+        std::string path;
+        for (auto it = cyc; it != resolving.end(); ++it) path += symbol_name_of(*it) + " -> ";
+        path += name;
+        driver.emit_error("Cyclic import/alias reference: " + path + ".", std::nullopt);
+        return std::nullopt;
+    }
+
     auto it = driver.tables.symbols.find(key);
     if (it == driver.tables.symbols.end()) {
         return std::nullopt;
     }
+
+    // Mark this symbol in-progress for the duration of the (possibly recursive,
+    // import/alias-following) resolution below; pop on every return path.
+    resolving.push_back(key);
+    struct PopGuard {
+        std::vector<std::string> & stack;
+        ~PopGuard() { stack.pop_back(); }
+    } pop_guard{resolving};
 
     auto const & sym = it->second;
 
@@ -200,6 +229,17 @@ bool InstantiationGraphBuilder::is_python_symbol(
     std::string const & name, int fileid
 ) {
     std::string key = std::to_string(fileid) + "::" + name;
+
+    // Cycle guard: a cyclic import/alias chain would recurse forever. We only
+    // need to stop here (the cycle is reported by resolve()); a symbol caught in
+    // a cycle is, for our purposes, not a Python symbol.
+    if (!py_checking.insert(key).second) return false;
+    struct EraseGuard {
+        std::set<std::string> & set;
+        std::string const & key;
+        ~EraseGuard() { set.erase(key); }
+    } erase_guard{py_checking, key};
+
     auto it = driver.tables.symbols.find(key);
     if (it == driver.tables.symbols.end()) return false;
 

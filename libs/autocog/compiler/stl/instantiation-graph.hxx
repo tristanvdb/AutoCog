@@ -9,6 +9,9 @@
 #include <deque>
 #include <functional>
 #include <optional>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace autocog::compiler::stl {
 
@@ -74,6 +77,13 @@ class InstantiationGraphBuilder {
     ir::VarMap extract_arguments(DeclRef const & decl, ir::VarMap const & full_context);
     bool is_python_symbol(std::string const & name, int fileid);
 
+    // Stack of record identities ("fileid::name") currently being inlined by
+    // assemble.cxx's generate_format. Records are inlined structurally, so a
+    // record that (transitively) references itself expands forever; generate_format
+    // checks this stack to report a recursive definition instead of overflowing.
+    // Public because the IR-assembly free functions drive it through `builder`.
+    std::vector<std::string> expanding_records;
+
   private:
     ir::VarMap eval_assigns(
         std::list<ast::Assign> const & assigns,
@@ -96,6 +106,12 @@ class InstantiationGraphBuilder {
     Driver & driver;
     Evaluator & evaluator;
     std::deque<std::string> queue;
+
+    // Cycle guards for the import/alias-following recursions. resolve() pushes a
+    // "fileid::name" stack (ordered, so the cycle path can be reported);
+    // is_python_symbol() uses a plain set (it only needs to stop, not report).
+    std::vector<std::string> resolving;
+    std::set<std::string>    py_checking;
 
     static constexpr size_t MAX_INSTANTIATIONS = 10000;
 };

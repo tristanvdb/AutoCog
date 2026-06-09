@@ -9,17 +9,17 @@
           "type": "text"
         }
       },
-      "prompt": "test__12909789474868431288_4"
+      "prompt": "test__1011cba3a2059b75_4"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "17c65aa17314d2e1c7b9acb5e68dcc5c6c3a29c9d6c501cb3d7e08560ec72ab2",
+    "hash": "0e717ed3da807d8dec889f8c2cf4b018f7559d846c5d01bc6396f194310fa15c",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
-    "test__12909789474868431288_4": {
+    "test__1011cba3a2059b75_4": {
       "abstracts": [
         {
           "exit": -1,
@@ -107,7 +107,7 @@
           "type": "return"
         }
       },
-      "name": "test__12909789474868431288_4"
+      "name": "test__1011cba3a2059b75_4"
     }
   },
   "provenance": {},

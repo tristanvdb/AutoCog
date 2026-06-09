@@ -32,7 +32,7 @@
     "format": "sta",
     "hash": "c66f013203980acf783af9c78db8966e2e77e68d6138921c37672778a00f966a",
     "timestamp": "1970-01-01T00:00:00Z",
-    "version": "0.6.0"
+    "version": "0.0.0"
   },
   "prompts": {
     "main": {

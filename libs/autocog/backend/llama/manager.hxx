@@ -5,6 +5,7 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/backend/llama/evaluation.hxx"
 
+#include <deque>
 #include <unordered_map>
 #include <optional>
 #include <string>
@@ -15,8 +16,12 @@ class Manager {
   public:
     static bool initialized;
   private:
-    std::vector<Model> models;
-    
+    // std::deque, not std::vector: get_model() hands out Model& by id (the
+    // index), and deque keeps element references valid across growth (it never
+    // relocates existing elements), so a reference stays good after a later
+    // add_model. With vector, growth would relocate and dangle those references.
+    std::deque<Model> models;
+
     EvalID next_eval_id = 0;
     std::unordered_map<EvalID, Evaluation> evaluations;
 

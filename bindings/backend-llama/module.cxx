@@ -29,6 +29,11 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
 
     module.doc() = "AutoCog llama.cpp backend";
 
+    // Self-guarded: registers process-wide on the first module to load, so the
+    // typed AutoCog error hierarchy survives this module being imported in
+    // isolation (not only behind runtime_sta_cxx).
+    autocog::binding::register_exception_translator();
+
     module.def("build_info", &autocog::build_info, "Build configuration info");
 
     module.def("create",

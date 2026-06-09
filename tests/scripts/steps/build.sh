@@ -5,9 +5,11 @@
 # directly by the matching CI jobs.
 #
 # Environment:
-#   BUILD_DIR   (required)  cmake build directory (config-settings build-dir)
-#   BUILD_TYPE  (optional)  CMAKE_BUILD_TYPE; default "Debug"
-#   COVERAGE    (optional)  "ON"/"OFF"; default "OFF"
+#   BUILD_DIR       (required)  cmake build directory (config-settings build-dir)
+#   BUILD_TYPE      (optional)  CMAKE_BUILD_TYPE; default "Debug"
+#   COVERAGE        (optional)  "ON"/"OFF"; default "OFF"
+#   AUTOCOG_TUNED   (optional)  "ON"/"OFF"; default "OFF". OFF = portable build
+#                               (GGML_NATIVE off); ON = host-tuned native build.
 #
 # Tooling (pip/python) is resolved from PATH. Top scripts put a venv's bin on
 # PATH; CI uses the system interpreter. Either way, the venv/system must already
@@ -26,6 +28,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 : "${BUILD_DIR:?BUILD_DIR must be set}"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 COVERAGE="${COVERAGE:-OFF}"
+AUTOCOG_TUNED="${AUTOCOG_TUNED:-OFF}"
 
 # Vendor dependency fast-path (use a prebuilt prefix if present).
 PREFIX_PATH=""
@@ -40,11 +43,12 @@ PIP_ARGS=(
     --config-settings="build-dir=$BUILD_DIR"
     --config-settings="cmake.define.CMAKE_BUILD_TYPE=$BUILD_TYPE"
     --config-settings="cmake.define.COVERAGE=$COVERAGE"
-    --config-settings="cmake.define.AUTOCOG_TUNED=OFF"
+    --config-settings="cmake.define.AUTOCOG_TUNED=$AUTOCOG_TUNED"
+    --config-settings="cmake.define.AUTOCOG_BUILD_TESTS=ON"
     --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache"
     --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache"
 )
 [ -n "$PREFIX_PATH" ] && PIP_ARGS+=(--config-settings="cmake.define.CMAKE_PREFIX_PATH=$PREFIX_PATH")
 
-echo "=== Building (BUILD_TYPE=$BUILD_TYPE COVERAGE=$COVERAGE) ==="
+echo "=== Building (BUILD_TYPE=$BUILD_TYPE COVERAGE=$COVERAGE AUTOCOG_TUNED=$AUTOCOG_TUNED) ==="
 pip install "${PIP_ARGS[@]}"
