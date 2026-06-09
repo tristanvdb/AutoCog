@@ -1,4 +1,4 @@
-# End-to-end pipeline tests: stlc → ista → xfta --rng → psta
+# End-to-end pipeline tests: stlc -> ista -> xfta --rng -> psta
 # Each test compiles an STL fixture, instantiates a prompt, evaluates with RNG,
 # parses the FTT, and compares against a golden output.
 
@@ -7,6 +7,7 @@ set(STL_FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
 set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
+set(COMPARE ${PROJECT_SOURCE_DIR}/tests/scripts/golden_compare.py)
 
 # Find all golden files
 file(GLOB_RECURSE GOLDEN_FILES "${E2E_GOLDEN}/*.golden.json")
@@ -36,12 +37,12 @@ foreach(golden_path ${GOLDEN_FILES})
         COMMAND ${CMAKE_COMMAND} -E env
             bash -c "
                 set -e
-                STA=$(mktemp) FTA_OUT=$(mktemp) RESULT=$(mktemp)
+                STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
                 STL_DIR=$(dirname ${stl_path})
-                $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} -I \$STL_DIR ${stl_path} > \$STA 2>/dev/null
-                $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -p ${prompt_name} \$STA 2>/dev/null | \
-                    $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
-                    $<TARGET_FILE:autocog_psta> -p ${prompt_name} \$STA > \$RESULT 2>/dev/null
+                $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} -I \$STL_DIR ${stl_path} 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${prompt_name} --syntax ${SYNTAX} --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+                $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
+                $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt ${prompt_name} --frame \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
 import json, sys
 with open('\$RESULT') as f: got = json.load(f)
@@ -52,7 +53,7 @@ if got != want:
     print('want:', json.dumps(want, indent=2)[:200])
     sys.exit(1)
 \"
-                rm -f \$STA \$FTA_OUT \$RESULT
+                rm -f \$STA \$FTA \$FTT \$RESULT
             "
     )
     set_tests_properties("e2e_${test_label}" PROPERTIES
@@ -61,7 +62,8 @@ if got != want:
     )
 endforeach()
 
-# Pre-filled content round-trip test: all fields provided via -d, output must match exactly
+# Pre-filled content round-trip test: all fields provided via --content, output
+# must match exactly.
 set(DN_STL ${STL_FIXTURES}/language/structures/test_deep_nesting.stl)
 set(DN_CONTENT ${CMAKE_CURRENT_SOURCE_DIR}/test_deep_nesting_content.json)
 set(DN_GOLDEN ${CMAKE_CURRENT_SOURCE_DIR}/prefilled/test_deep_nesting.golden.json)
@@ -71,11 +73,11 @@ add_test(
     COMMAND ${CMAKE_COMMAND} -E env
         bash -c "
             set -e
-            STA=$(mktemp) RESULT=$(mktemp)
-            $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${DN_STL} > \$STA 2>/dev/null
-            $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -d ${DN_CONTENT} -p test \$STA 2>/dev/null | \
-                $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
-                $<TARGET_FILE:autocog_psta> -p test \$STA > \$RESULT 2>/dev/null
+            STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
+            $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${DN_STL} 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --content ${DN_CONTENT} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
+            $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt test --frame \$RESULT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
 with open('\$RESULT') as f: got = json.load(f)
@@ -88,7 +90,7 @@ if got != want:
             print(f'  {k}: want={json.dumps(want.get(k))[:80]}')
     sys.exit(1)
 \"
-            rm -f \$STA \$RESULT
+            rm -f \$STA \$FTA \$FTT \$RESULT
         "
 )
 set_tests_properties(e2e_deep_nesting_prefilled PROPERTIES
@@ -109,11 +111,11 @@ foreach(variant min max mid mixed asym)
         COMMAND ${CMAKE_COMMAND} -E env
             bash -c "
                 set -e
-                STA=$(mktemp) RESULT=$(mktemp)
-                $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${VA_STL} > \$STA 2>/dev/null
-                $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH} -d ${VA_CONTENT} -p test \$STA 2>/dev/null | \
-                    $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
-                    $<TARGET_FILE:autocog_psta> -p test \$STA > \$RESULT 2>/dev/null
+                STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
+                $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${VA_STL} 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --content ${VA_CONTENT} --fta \$FTA 2>/dev/null
+                $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
+                $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt test --frame \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
 import json, sys
 with open('\$RESULT') as f: got = json.load(f)
@@ -126,7 +128,7 @@ if got != want:
             print(f'  {k}: want={json.dumps(want.get(k))[:80]}')
     sys.exit(1)
 \"
-                rm -f \$STA \$RESULT
+                rm -f \$STA \$FTA \$FTT \$RESULT
             "
     )
     set_tests_properties("e2e_variable_arrays_${variant}" PROPERTIES
@@ -143,18 +145,18 @@ add_test(
     COMMAND ${CMAKE_COMMAND} -E env
         bash -c "
             set -e
-            STA=$(mktemp) RESULT=$(mktemp)
-            $<TARGET_FILE:autocog_stlc> --emit sta -I ${STLIB} ${STL_FIXTURES}/language/structures/test_prompt_with_fields.stl > \$STA 2>/dev/null
-            $<TARGET_FILE:autocog_ista> -s ${SYNTAX} --search ${SEARCH_FULL} -p person \$STA 2>/dev/null | \
-                $<TARGET_FILE:autocog_xfta> --rng --seed 42 /dev/stdin 2>/dev/null | \
-                $<TARGET_FILE:autocog_psta> -p person \$STA > \$RESULT 2>/dev/null
+            STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
+            $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${STL_FIXTURES}/language/structures/test_prompt_with_fields.stl 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt person --syntax ${SYNTAX} --search ${SEARCH_FULL} --content {} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
+            $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt person --frame \$RESULT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
 with open('\$RESULT') as f: r = json.load(f)
 assert isinstance(r, dict), f'expected dict, got {type(r)}'
 assert 'name' in r, f'missing name field'
 \"
-            rm -f \$STA \$RESULT
+            rm -f \$STA \$FTA \$FTT \$RESULT
         "
 )
 set_tests_properties(e2e_search_full PROPERTIES
@@ -174,9 +176,9 @@ add_test(
         bash -c "
             set -e
             IR1=$(mktemp) STAR=$(mktemp) IR2=$(mktemp)
-            $<TARGET_FILE:autocog_stlc> --emit ir ${VOCAB_STL} 2>/dev/null | grep -v libgcov > \$IR1
+            $<TARGET_FILE:autocog_stlc> --ir /dev/stdout ${VOCAB_STL} 2>/dev/null | grep -v libgcov > \$IR1
             ${Python_EXECUTABLE} ${IR2STL} \$IR1 > \$STAR
-            $<TARGET_FILE:autocog_stlc> --emit ir \$STAR 2>/dev/null | grep -v libgcov > \$IR2
+            $<TARGET_FILE:autocog_stlc> --ir /dev/stdout \$STAR 2>/dev/null | grep -v libgcov > \$IR2
             ${Python_EXECUTABLE} -c \"
 import json, sys
 a = json.load(open('\$IR1')); b = json.load(open('\$IR2'))
@@ -197,3 +199,35 @@ set_tests_properties(e2e_vocab_stl_star_roundtrip PROPERTIES
     LABELS "e2e;vocab"
     TIMEOUT 30
 )
+
+# Artifact schema validation: for representative prompts, validate the FTA that
+# ista emits and the FTT that xfta produces against their JSON schemas
+# (share/schemas/{fta,ftt}.schema.json). This is the only place the fta/ftt
+# schemas are exercised on real tool output. golden_compare auto-detects the
+# FTA's format from its metadata block; xfta's FTT carries no metadata, so its
+# format is supplied explicitly with --format ftt.
+foreach(case "test_prompt_with_fields.person" "test_basic_record.test")
+    string(REGEX MATCH "^(.+)\\.([^.]+)$" _ "${case}")
+    set(sv_name "${CMAKE_MATCH_1}")
+    set(sv_prompt "${CMAKE_MATCH_2}")
+    add_test(
+        NAME "e2e_schema_validate_${sv_name}_${sv_prompt}"
+        COMMAND ${CMAKE_COMMAND} -E env
+            bash -c "
+                set -e
+                STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp)
+                $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} \
+                    ${STL_FIXTURES}/language/structures/${sv_name}.stl 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${sv_prompt} \
+                    --syntax ${SYNTAX} --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+                ${Python_EXECUTABLE} ${COMPARE} --force-validate --validate-only \$FTA
+                $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
+                ${Python_EXECUTABLE} ${COMPARE} --force-validate --format ftt --validate-only \$FTT
+                rm -f \$STA \$FTA \$FTT
+            "
+    )
+    set_tests_properties("e2e_schema_validate_${sv_name}_${sv_prompt}" PROPERTIES
+        LABELS "e2e;schema"
+        TIMEOUT 30
+    )
+endforeach()

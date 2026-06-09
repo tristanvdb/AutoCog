@@ -1,7 +1,6 @@
 
 #include "autocog/compiler/stl/serialize.hxx"
 #include "autocog/compiler/stl/driver.hxx"
-#include "autocog/utilities/metadata.hxx"
 #include "helpers.hxx"
 
 #include <fstream>
@@ -283,14 +282,8 @@ void serialize_ir(Driver const & driver, std::ostream & out) {
         output["prompts"][mangled_name] = prompt_to_json(*prompt);
     }
 
-    // Attach metadata
-    if (!driver.inputs.empty()) {
-        std::ifstream ifs(driver.inputs.front());
-        std::ostringstream ss;
-        ss << ifs.rdbuf();
-        autocog::attach_metadata(output, "ir", autocog::compute_source_uid(ss.str()));
-    }
-
+    // IR is the compiler's internal representation, not a traceable artifact
+    // (the provenance chain starts at STA), so it carries no metadata block.
     out << output.dump(2) << std::endl;
 }
 

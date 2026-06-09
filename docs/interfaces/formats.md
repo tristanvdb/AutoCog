@@ -6,7 +6,7 @@ The compiled output of `stlc` or `autocog compile`. JSON format containing promp
 
 **Extension:** `.sta.json`
 
-**Produced by:** `stlc --emit sta`, `autocog compile`
+**Produced by:** `stlc --sta`, `autocog compile`
 
 **Consumed by:** `ista`, `psta`, `autocog run --sta`, `autocog rpc`, `autocog serve`
 
@@ -14,7 +14,13 @@ The compiled output of `stlc` or `autocog compile`. JSON format containing promp
 
 ```json
 {
-  "abi_version": "0.4.4",
+  "metadata": {
+    "format": "sta",
+    "version": "0.5.5",
+    "hash": "<64-hex SHA-256>",
+    "timestamp": "2026-06-07T12:00:00Z"
+  },
+  "provenance": {},
   "entry_points": {
     "main": {
       "prompt": "init_idea",
@@ -33,16 +39,21 @@ The compiled output of `stlc` or `autocog compile`. JSON format containing promp
   "prompts": {
     "init_idea": {
       "name": "init_idea",
-      "desc": "",
+      "desc": [...],
       "fields": [...],
-      "states": {...},
-      "sequence": [...],
+      "abstracts": [...],
       "flows": {...},
-      "channels": [...]
+      "channels": [...],
+      "search": {...},
+      "vocabs": {...}
     }
   }
 }
 ```
+
+The exact shape is fixed by `share/schemas/sta.schema.json`. `abstracts` is the
+abstract state graph the runtime unrolls into an FTA; `vocabs` is the prompt's
+vocab table.
 
 ### Schema Types
 
@@ -57,13 +68,18 @@ Input and output schemas use these types:
 
 Author-provided fields (via schema override): `description`, `default`.
 
-### ABI Version
+### Metadata & versioning
 
-The `abi_version` field records the autocog version that compiled the STA. At load time, a major version mismatch causes an error; a minor version mismatch causes a warning.
+Every STA carries a `metadata` block (`format`, `version`, `hash`, `timestamp`)
+and a `provenance` map. `version` records the autocog version that compiled the
+STA, and `hash` is its content-addressed identity. The STA is a root artifact, so
+its `provenance` is empty and its `hash` is a pure function of its content. See the
+[data layer](../compiler/data-codec.md) for the artifact model.
 
-## FTA — Formal Text Automaton
+## FTA — Finite Thought Automaton
 
-The instantiated automaton ready for model evaluation. Produced by combining an STA prompt with content data and syntax formatting.
+The instantiated automaton ready for model evaluation. Produced by combining an STA
+prompt with resolved channel content and syntax/search configuration.
 
 **Extension:** `.fta.json`
 
@@ -71,7 +87,11 @@ The instantiated automaton ready for model evaluation. Produced by combining an 
 
 **Consumed by:** `xfta`, `backend_llama_cxx.evaluate()`
 
-The FTA contains the text-level automaton with states, transitions, and token constraints. Its structure is internal to the runtime.
+The FTA is a DAG of actions (text, completion, choice) with token constraints and
+embedded search parameters; it carries the source STA's hash in its provenance. Its
+structure is fixed by `share/schemas/fta.schema.json`. Evaluating an FTA produces an
+**FTT** (Finite Thought Tree), the model's evaluation tree, which the runtime walks
+back into a frame of field values (see [Runtime Semantics](../compiler/runtime-semantics.md)).
 
 ## .stapp — Structured Thought App
 
@@ -109,7 +129,7 @@ At least one of `program.sta.json` or the source STL must be present.
 {
   "name": "story-writer",
   "version": "1.0",
-  "abi_version": "0.4.4",
+  "abi_version": "0.5.5",
   "entry_points": {
     "main": {
       "prompt": "init_idea",

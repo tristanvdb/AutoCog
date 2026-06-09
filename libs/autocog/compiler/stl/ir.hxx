@@ -11,10 +11,11 @@
 #include <memory>
 #include <cstdint>
 
-#include "autocog/runtime/fta/vocab.hxx"
-#include "autocog/runtime/sta/path.hxx"
-#include "autocog/runtime/sta/channel.hxx"
-#include "autocog/runtime/sta/state.hxx"
+#include "autocog/runtime/fta/vocab.hxx"   // VocabExpr (still the runtime rep; unified later)
+#include "autocog/utilities/types.hxx"     // Value
+#include "autocog/data/path.hxx"           // PathStep, StepRange
+#include "autocog/data/channel.hxx"        // clause leaf structs
+#include "autocog/data/sta.hxx"            // CompletionFormat, EnumFormat, ChoiceFormat
 
 namespace autocog::compiler::stl::ir {
 
@@ -22,7 +23,7 @@ namespace autocog::compiler::stl::ir {
 // expressions are constexpr, so values are concrete by IR time); shared so the
 // IR->STA carry needs no re-wrap. The distinct names mark role (compiler value
 // vs search param), not a distinct shape.
-using Value = ::autocog::runtime::sta::SearchValue;
+using Value = ::autocog::types::Value;
 using VarMap = std::unordered_map<std::string, Value>;
 
 // Search policies carried from `search { <category>.<param> is <expr>; }`.
@@ -57,8 +58,8 @@ using ::autocog::runtime::fta::vocab_from_json;
 // Path step (b[4], c[:4], d[2:5], ...) is the shared TA-layer selector type
 // (runtime/sta/path.hxx): name + optional index-or-slice selector. Shared so the
 // faithful selector flows IR -> STA -> bridge -> Python with no lossy collapse.
-using PathStep = ::autocog::runtime::sta::PathStep;
-using StepRange = ::autocog::runtime::sta::StepRange;
+using PathStep  = ::autocog::data::PathStep;
+using StepRange = ::autocog::data::StepRange;
 
 // Document path: represents paths like "?input", "other.field[2]", ".result"
 struct DocPath {
@@ -115,9 +116,9 @@ struct Field;
 // monostate), so the variants stay separate but the leaves are shared. The
 // Choice path is a plain vector<PathStep> (a choice source is always a local
 // field reference, never an input or cross-prompt).
-using Completion = ::autocog::runtime::sta::CompletionFormat;
-using Enum       = ::autocog::runtime::sta::EnumFormat;
-using Choice     = ::autocog::runtime::sta::ChoiceFormat;
+using Completion = ::autocog::data::CompletionFormat;
+using Enum       = ::autocog::data::EnumFormat;
+using Choice     = ::autocog::data::ChoiceFormat;
 
 // A field's format: one of the shared leaf formats, or a vector of sub-fields
 // (the container/struct case). The IR variant keeps the recursive struct case;
@@ -204,12 +205,14 @@ struct Record : public Object {
 // Clauses are shared TA-layer types (runtime/sta/channel.hxx); the IR builds
 // them and the STA carries them unchanged. RavelClause.depth stays optional
 // (nullopt = default 1), resolved at point of use rather than at the boundary.
-using BindClause   = ::autocog::runtime::sta::BindClause;
-using RavelClause  = ::autocog::runtime::sta::RavelClause;
-using WrapClause   = ::autocog::runtime::sta::WrapClause;
-using PruneClause  = ::autocog::runtime::sta::PruneClause;
-using MappedClause = ::autocog::runtime::sta::MappedClause;
-using Clause       = ::autocog::runtime::sta::Clause;
+using BindClause   = ::autocog::data::BindClause;
+using RavelClause  = ::autocog::data::RavelClause;
+using WrapClause   = ::autocog::data::WrapClause;
+using PruneClause  = ::autocog::data::PruneClause;
+using MappedClause = ::autocog::data::MappedClause;
+// IR keeps a BARE clause variant (of the shared data leaves); generate wraps it
+// into data::Clause at the IR->STA boundary.
+using Clause       = std::variant<BindClause, RavelClause, WrapClause, PruneClause, MappedClause>;
 
 // Kwarg for function/prompt calls
 struct Kwarg {

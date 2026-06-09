@@ -18,6 +18,12 @@
       "prompt": "main"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "3eda0d3cf61bafc22d021cee0fa3c109e91daf80035f932d7433203253083223",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "main": {
       "abstracts": [
@@ -241,5 +247,6 @@
       "name": "worker"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

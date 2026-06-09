@@ -32,11 +32,11 @@ autocog compile --stl share/demos/mcq/select.stl
 autocog run --stl share/demos/mcq/select.stl --rng \
     --input '{"topic":"Science","question":"What is H2O?","choices":["Water","Fire","Air","Earth"]}'
 
-# With stlc directly
-stlc --emit sta share/demos/mcq/select.stl
+# With stlc directly (--sta writes the STA; /dev/stdout for stdout)
+stlc --sta /dev/stdout share/demos/mcq/select.stl
 
 # Demos using stdlib need the include path (stlc only, autocog adds it automatically)
-stlc --emit sta -I share/library/stlib share/demos/mcq/select-iter.stl
+stlc --sta /dev/stdout -I share/library/stlib share/demos/mcq/select-iter.stl
 ```
 
 ## select() vs repeat()

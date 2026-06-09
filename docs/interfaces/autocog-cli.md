@@ -5,9 +5,13 @@ The `autocog` command is installed via `pip install autocog`. It provides subcom
 ## Global Options
 
 ```
-autocog --version       Show version
-autocog --build-info    Show build configuration (compiler, CUDA, etc.)
+autocog --version              Show version
+autocog --build-info           Show build configuration (compiler, CUDA, etc.)
+autocog --json                 Emit log records as NDJSON (ECS-flavored) on stderr
+autocog --json-log-file PATH   With --json: write log records to PATH instead of stderr
 ```
+
+`--json` / `--json-log-file` are global flags placed before the subcommand.
 
 ## autocog compile
 
@@ -69,8 +73,9 @@ Run a program to completion.
 ```
 autocog run (--stl <file> | --sta <file> | --app <file>)
             [-I <path>]... [--recompile]
-            (--model <file> | --rng) [--syntax <file>] [--ctx N]
-            [--input <json>] [--entry <name>] [--max-steps N]
+            (--model <file> | --rng) [--syntax <file>] [--search <file>] [--ctx N]
+            [--input <json>] [--entry <name>] [--max-steps N] [--seed N]
+            [--record KINDS] [--record-path DIR] [--no-schema-check]
             [-o <output>] [-v]
 ```
 
@@ -89,9 +94,11 @@ autocog run (--stl <file> | --sta <file> | --app <file>)
 | `--input JSON` | Input data — inline JSON string or path to a JSON file |
 | `--entry NAME` | Entry point name (default: `main`) |
 | `--max-steps N` | Maximum prompt steps (default: 100) |
+| `--seed N` | RNG seed (default: 42) |
 | `-o, --output FILE` | Output file (default: stdout) |
-| `--record KINDS` | Record artifacts: comma-separated subset of `input,frame,text,fta,ftt` |
+| `--record KINDS` | Record artifacts: comma-separated subset of `input,frame,fta,ftt` |
 | `--record-path DIR` | Directory for recorded artifacts (default: temp dir) |
+| `--no-schema-check` | Disable schema validation of compiled artifacts |
 | `-v, --verbose` | Show step-by-step progress |
 
 One of `--stl`, `--sta`, or `--app` is required. One of `--model` or `--rng` is required.
@@ -173,7 +180,7 @@ autocog rpc --sta program.sta.json --model model.gguf --port 8080
 Start an inference server (FTA evaluation).
 
 ```
-autocog backend [--model <file>] [--rng] [--search <file>] [--ctx N] [--host HOST] [--port PORT]
+autocog backend [--model <file>] [--rng] [--ctx N] [--host HOST] [--port PORT]
 ```
 
 | Flag | Description |
@@ -183,6 +190,9 @@ autocog backend [--model <file>] [--rng] [--search <file>] [--ctx N] [--host HOS
 | `--ctx N` | Model context size (default: 4096) |
 | `--host HOST` | Bind address (default: `0.0.0.0`) |
 | `--port PORT` | Bind port (default: `8080`) |
+
+The backend takes no `--search` flag — search parameters are embedded in each FTA
+it receives.
 
 The server provides:
 - `POST /evaluate` — submit `{fta: {...}}`, returns `{request_id}`

@@ -12,6 +12,7 @@ target_include_directories(autocog_ista PRIVATE
 )
 target_link_libraries(autocog_ista PUBLIC
   autocog_runtime_sta_lib
+  autocog_codec_json
   autocog_utilities_lib
 )
 set_target_properties(autocog_ista PROPERTIES

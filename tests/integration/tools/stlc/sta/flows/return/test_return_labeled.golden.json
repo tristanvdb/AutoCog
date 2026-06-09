@@ -20,6 +20,12 @@
       "prompt": "processor"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "f9590d9dde59b212a2c3b9ac2f19d1426b2771a3b5aaf1aa7709f206fd695bc2",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "processor": {
       "abstracts": [
@@ -143,5 +149,6 @@
       "name": "processor"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

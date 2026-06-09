@@ -37,7 +37,7 @@ prompt summarize {
 
 ### Automata for Structured Output
 
-Each prompt compiles to a state machine (STA — Structured Thought Automaton). At runtime, the STA is instantiated with input data and formatting rules into an FTA (Formal Text Automaton) — a token-level automaton that the model executes.
+Each prompt compiles to a state machine (STA — Structured Thought Automaton). At runtime, the STA is instantiated with input data and formatting rules into an FTA (Finite Thought Automaton) — a token-level automaton that the model executes.
 
 The FTA constrains the model at each step: for a `text<length=20>` field, exactly 20 tokens of free text are generated. For an `enum("yes", "no")`, only those two tokens are valid. For `select(choices)`, the model picks an index from the available options.
 
@@ -99,16 +99,16 @@ prompt reason {
 ## Compilation Pipeline
 
 ```
-STL source → Parse → Symbols → Instantiate → Assemble → Generate → STA
-                                                                     ↓
+STL source → Parse → Symbols → Globals → Instantiate → Assemble → Generate → STA
+                                                                               ↓
                                                               Runtime: STA + inputs → FTA
-                                                                     ↓
-                                                              Model: FTA → text
-                                                                     ↓
-                                                              Parse: text → structured data
+                                                                               ↓
+                                                              Model: FTA → FTT
+                                                                               ↓
+                                                              Walk: FTT → structured frame
 ```
 
-The STL compiler (`stlc` or `autocog compile`) produces an STA — a JSON representation of the program. At runtime, the STA is combined with input data and formatting syntax to produce an FTA that the model evaluates. The model's output is parsed back into structured fields using the same automaton that generated it.
+The STL compiler (`stlc` or `autocog compile`) runs six stages to produce an STA — a content-addressed JSON artifact representing the program (see [Compiler Architecture](../compiler/architecture.md)). At runtime, the STA is combined with input data and formatting syntax to produce an FTA the model evaluates into an FTT (Finite Thought Tree); the FTT is walked back into structured fields using the same automaton that generated it (see [Runtime Semantics](../compiler/runtime-semantics.md)).
 
 ## Comparison
 

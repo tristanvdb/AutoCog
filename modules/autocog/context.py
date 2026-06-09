@@ -65,7 +65,6 @@ class Context:
                 self.ctx_id, self.prompt, self._step_count,
                 input=content if "input" in self.recorder.kinds else None,
                 frame=artifacts.get("frame"),
-                text=artifacts.get("text"),
                 fta=artifacts.get("fta"),
                 ftt=artifacts.get("ftt"),
             )

@@ -19,7 +19,7 @@ function(add_arg_ok name fixture)
     add_test(
         NAME stlc_arg_${name}
         COMMAND ${CMAKE_COMMAND} -E env bash -c "
-            OUT=$($<TARGET_FILE:autocog_stlc> --emit sta ${FIX}/${fixture} 2>&1) ;
+            OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout ${FIX}/${fixture} 2>&1) ;
             RC=\$? ;
             echo \"\$OUT\" | python3 ${CHECK} \$RC ok
         "
@@ -38,7 +38,7 @@ add_arg_ok(default_unused    arg_default_unused.stl)
 # argument with default, overridden by -D -> works (ok)
 add_test(NAME stlc_arg_default_overridden
          COMMAND ${CMAKE_COMMAND} -E env bash -c "
-             OUT=$($<TARGET_FILE:autocog_stlc> --emit sta -Dwidth=12 ${FIX}/arg_default_used.stl 2>&1) ;
+             OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout -Dwidth=12 ${FIX}/arg_default_used.stl 2>&1) ;
              RC=\$? ;
              echo \"\$OUT\" | python3 ${CHECK} \$RC ok
          ")
@@ -47,7 +47,7 @@ set_tests_properties(stlc_arg_default_overridden PROPERTIES LABELS "stlc;args")
 # argument without default, not supplied -> error (required, not supplied)
 add_test(NAME stlc_arg_required_missing
          COMMAND ${CMAKE_COMMAND} -E env bash -c "
-             OUT=$($<TARGET_FILE:autocog_stlc> --emit sta ${FIX}/arg_required_missing.stl 2>&1) ;
+             OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout ${FIX}/arg_required_missing.stl 2>&1) ;
              RC=\$? ;
              echo \"\$OUT\" | python3 ${CHECK} \$RC error 'width'
          ")
@@ -56,7 +56,7 @@ set_tests_properties(stlc_arg_required_missing PROPERTIES LABELS "stlc;args")
 # argument without default, supplied via -D -> works (ok)
 add_test(NAME stlc_arg_required_supplied
          COMMAND ${CMAKE_COMMAND} -E env bash -c "
-             OUT=$($<TARGET_FILE:autocog_stlc> --emit sta -Dwidth=10 ${FIX}/arg_required_missing.stl 2>&1) ;
+             OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout -Dwidth=10 ${FIX}/arg_required_missing.stl 2>&1) ;
              RC=\$? ;
              echo \"\$OUT\" | python3 ${CHECK} \$RC ok
          ")
@@ -65,7 +65,7 @@ set_tests_properties(stlc_arg_required_supplied PROPERTIES LABELS "stlc;args")
 # -D targeting a define -> warning (-D ignored)
 add_test(NAME stlc_arg_define_D_warns
          COMMAND ${CMAKE_COMMAND} -E env bash -c "
-             OUT=$($<TARGET_FILE:autocog_stlc> --emit sta -Dwidth=12 ${FIX}/def_for_D.stl 2>&1) ;
+             OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout -Dwidth=12 ${FIX}/def_for_D.stl 2>&1) ;
              RC=\$? ;
              echo \"\$OUT\" | python3 ${CHECK} \$RC warning 'width'
          ")

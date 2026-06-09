@@ -1,9 +1,11 @@
 #ifndef AUTOCOG_COMPILER_STL_PARSER_HXX
 #define AUTOCOG_COMPILER_STL_PARSER_HXX
 
+#include "autocog/utilities/exception.hxx"
+#include "autocog/utilities/location.hxx"
 #include "autocog/compiler/stl/token.hxx"
 #include "autocog/compiler/stl/ast.hxx"
-#include "autocog/compiler/stl/diagnostic.hxx"
+#include "autocog/data/diagnostic.hxx"
 
 #include "autocog_compiler_stl_lexer.hxx" //< Generated file
 
@@ -16,13 +18,12 @@
 namespace autocog::compiler::stl {
 
 struct ParseError : CompileError {
-  SourceLocation parse_location;
+  autocog::location::SourceLocation parse_location;
   
-  ParseError(std::string msg, SourceLocation loc);
+  ParseError(std::string msg, autocog::location::SourceLocation loc);
 };
 
 class Lexer;
-struct Diagnostic;
 
 struct ParserState {
   std::istringstream stream;
@@ -49,11 +50,11 @@ class Parser {
     // it in (nullopt for the top-level inputs, which have no importing site).
     struct QueueEntry {
       std::string filepath;
-      std::optional<SourceRange> import_location;
+      std::optional<autocog::location::SourceRange> import_location;
     };
 
     std::list<std::string> const & search_paths;
-    std::list<Diagnostic> & diagnostics;
+    std::list<autocog::data::Diagnostic> & diagnostics;
     std::unordered_map<std::string, int> & fileids;
     std::list<ast::Program> & programs;
     std::queue<QueueEntry> queue;
@@ -75,17 +76,17 @@ class Parser {
     static void parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> & expr);
 
     template <ast::Tag tag> // TODO remove
-    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
-      SourceLocation start_loc{start?start.value():state.current.location};
+    static void parse_with_location(ParserState & state, ast::Node<tag> & node, std::optional<autocog::location::SourceLocation> start = std::nullopt) {
+      autocog::location::SourceLocation start_loc{start?start.value():state.current.location};
       parse(state, node.data);
-      node.location.emplace(SourceRange{start_loc, state.current.location});
+      node.location.emplace(autocog::location::SourceRange{start_loc, state.current.location});
     }
 
     template <ast::Tag tag>
-    static void parse(ParserState & state, ast::Node<tag> & node, std::optional<SourceLocation> start = std::nullopt) {
-      SourceLocation start_loc{start?start.value():state.current.location};
+    static void parse(ParserState & state, ast::Node<tag> & node, std::optional<autocog::location::SourceLocation> start = std::nullopt) {
+      autocog::location::SourceLocation start_loc{start?start.value():state.current.location};
       parse(state, node.data);
-      node.location.emplace(SourceRange{start_loc, state.current.location});
+      node.location.emplace(autocog::location::SourceRange{start_loc, state.current.location});
     }
 
     /// For testing purpose
@@ -94,7 +95,7 @@ class Parser {
 
   public:
     Parser(
-      std::list<Diagnostic> &,
+      std::list<autocog::data::Diagnostic> &,
       std::unordered_map<std::string, int> &,
       std::list<std::string> const &,
       std::list<ast::Program> &,

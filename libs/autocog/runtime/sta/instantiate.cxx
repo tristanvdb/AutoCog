@@ -3,12 +3,64 @@
 #include "autocog/utilities/errors.hxx"
 #include "autocog/utilities/exception.hxx"
 
-#include <sstream>
+#include <map>
+#include <optional>
 #include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
 
 namespace autocog::runtime::sta {
 
-using json = nlohmann::json;
+using Doc = autocog::types::Document;
+using Val = autocog::types::Value;
+
+namespace {
+
+// --- Document accessors -----------------------------------------------------
+// The runtime libs are JSON-free; these replace the dynamic nlohmann object/
+// array surface this file used to lean on.
+inline bool is_obj(Doc const & d) { return std::holds_alternative<Doc::Object>(d.value); }
+inline bool is_arr(Doc const & d) { return std::holds_alternative<Doc::Array>(d.value); }
+inline bool doc_is_null(Doc const & d) {
+    auto const * v = std::get_if<Val>(&d.value);
+    return v && std::holds_alternative<std::monostate>(*v);
+}
+// Object child by key, or nullptr if `d` is not an object / the key is absent.
+inline Doc const * obj_get(Doc const & d, std::string const & key) {
+    if (!is_obj(d)) return nullptr;
+    auto const & o = std::get<Doc::Object>(d.value);
+    auto it = o.find(key);
+    return (it == o.end()) ? nullptr : &it->second;
+}
+// Render a scalar content value to its text form. Permissive: the pre-filled
+// value of a field is fundamentally a string (it is what the LLM emits), but a
+// non-string scalar may arrive as input (e.g. a Python call result). A composite
+// at a scalar leaf is a content/schema mismatch. Conformance/casting against
+// enum/choice/select is deferred (see TODO.md, CastError).
+inline std::string value_to_text(Doc const & d, std::string const & field_path) {
+    if (auto const * v = std::get_if<Val>(&d.value)) {
+        if (auto const * s = std::get_if<std::string>(v)) return *s;
+        if (auto const * b = std::get_if<bool>(v))        return *b ? "True" : "False";
+        if (auto const * i = std::get_if<int>(v))         return std::to_string(*i);
+        if (auto const * f = std::get_if<float>(v))       return std::to_string(*f);
+        return "";  // monostate; callers guard with doc_is_null first
+    }
+    throw autocog::OrchestrationError(
+        "Content value for '" + field_path + "' is a composite where a scalar was expected",
+        /*prompt=*/"", /*field=*/field_path);
+}
+
+} // namespace
+
+// Config structures now live in the configs library; pull the names used
+// throughout this translation unit into scope so call sites read unqualified.
+using autocog::data::Syntax;
+using autocog::data::SearchConfig;
+using autocog::data::TextSearch;
+using autocog::data::ChoiceSearch;
 
 // ============================================================================
 // Helpers
@@ -19,7 +71,7 @@ using json = nlohmann::json;
 // ============================================================================
 
 static std::string make_tag(AbstractState const & abs,
-                            std::vector<FieldInfo> const & fields,
+                            std::vector<autocog::data::Field> const & fields,
                             std::vector<int> const & indices) {
     std::string base = abs_tag(abs, fields);
     std::string idx_str;
@@ -32,7 +84,7 @@ static std::string make_tag(AbstractState const & abs,
 
 static std::string build_concrete_rec(
     std::vector<AbstractState> const & abstracts,
-    std::vector<FieldInfo> const & fields,
+    std::vector<autocog::data::Field> const & fields,
     std::map<std::string, ConcreteState> & states,
     int abs_idx,
     std::vector<int> indices
@@ -120,7 +172,7 @@ static std::vector<std::string> get_sequence(std::map<std::string, ConcreteState
 }
 
 static void post_process(
-    std::vector<FieldInfo> const & fields,
+    std::vector<autocog::data::Field> const & fields,
     std::map<std::string, ConcreteState> & states
 ) {
     // Step 1: merge flows/exits into successors
@@ -263,7 +315,7 @@ static void post_process(
 // expansion is a later step.) Returns the concrete states; fills `sequence`.
 static std::map<std::string, ConcreteState> concretize(
     std::vector<AbstractState> const & abstracts,
-    std::vector<FieldInfo> const & fields,
+    std::vector<autocog::data::Field> const & fields,
     std::vector<std::string> & sequence
 ) {
     std::map<std::string, ConcreteState> states;
@@ -281,7 +333,7 @@ static std::map<std::string, ConcreteState> concretize(
     return states;
 }
 
-static std::vector<int> build_parent_map(std::vector<FieldInfo> const & fields) {
+static std::vector<int> build_parent_map(std::vector<autocog::data::Field> const & fields) {
     std::vector<int> parent(fields.size(), -1);
     for (size_t i = 0; i < fields.size(); ++i) {
         if (fields[i].depth <= 1) continue;
@@ -309,27 +361,29 @@ static std::vector<int> build_ancestors(int field_idx, std::vector<int> const & 
 // Validate that content arrays satisfy field range minimums.
 // Throws ExecutionError if content provides fewer elements than the field's minimum.
 static void validate_content_ranges(
-    std::vector<FieldInfo> const & fields,
+    std::vector<autocog::data::Field> const & fields,
     std::vector<int> const & parent_map,
-    json const & content
+    Doc const & content
 ) {
     // For each field with a range, navigate content to find the array and check size.
     // Uses a recursive approach to handle nested array-of-record structures.
     struct Walker {
-        std::vector<FieldInfo> const & fields;
+        std::vector<autocog::data::Field> const & fields;
         std::vector<int> const & parent_map;
 
-        void check(json const & node, int field_idx, std::string const & path) const {
+        void check(Doc const & node, int field_idx, std::string const & path) const {
             auto const & fld = fields[field_idx];
             std::string fpath = path.empty() ? fld.name : path + "." + fld.name;
 
-            if (!node.is_object() || !node.contains(fld.name)) return;
-            auto const & val = node[fld.name];
+            Doc const * valp = obj_get(node, fld.name);
+            if (!valp) return;
+            Doc const & val = *valp;
 
             if (fld.range && fld.is_list()) {
-                if (val.is_array()) {
+                if (is_arr(val)) {
                     auto [lo, hi] = *fld.range;
-                    int n = static_cast<int>(val.size());
+                    auto const & arr = std::get<Doc::Array>(val.value);
+                    int n = static_cast<int>(arr.size());
                     if (n < lo) {
                         // A content/range mismatch during instantiation is a
                         // recoverable orchestration failure (the loop may retry
@@ -342,19 +396,19 @@ static void validate_content_ranges(
                     }
                     // Check children of each array element
                     for (int i = 0; i < n; ++i) {
-                        if (val[i].is_object()) {
-                            check_children(val[i], field_idx, fpath + "[" + std::to_string(i) + "]");
+                        if (is_obj(arr[i])) {
+                            check_children(arr[i], field_idx, fpath + "[" + std::to_string(i) + "]");
                         }
                     }
                 }
             } else if (fld.is_record()) {
-                if (val.is_object()) {
+                if (is_obj(val)) {
                     check_children(val, field_idx, fpath);
                 }
             }
         }
 
-        void check_children(json const & obj, int parent_idx, std::string const & path) const {
+        void check_children(Doc const & obj, int parent_idx, std::string const & path) const {
             for (size_t i = 0; i < fields.size(); ++i) {
                 if (parent_map[i] == parent_idx) {
                     check(obj, static_cast<int>(i), path);
@@ -372,28 +426,29 @@ static void validate_content_ranges(
     }
 }
 
-static json const * read_content(json const & content, ConcreteState const & state,
-                                  PromptSTA const & prompt,
-                                  std::vector<int> const & parent_map) {
+static Doc const * read_content(Doc const & content, ConcreteState const & state,
+                                autocog::data::Prompt const & prompt,
+                                std::vector<int> const & parent_map) {
     if (state.field < 0) return nullptr;
     auto ancestors = build_ancestors(state.field, parent_map);
-    json const * ptr = &content;
+    Doc const * ptr = &content;
 
     for (size_t a = 0; a < ancestors.size(); ++a) {
         auto const & f = prompt.fields[ancestors[a]];
-        if (ptr->is_object() && ptr->contains(f.name)) {
-            ptr = &(*ptr)[f.name];
-        } else if (ptr->is_object() || ptr->is_null()) {
+        if (Doc const * child = obj_get(*ptr, f.name)) {
+            ptr = child;
+        } else if (is_obj(*ptr) || doc_is_null(*ptr)) {
             return nullptr;
         }
         int idx = (a < state.indices.size()) ? state.indices[a] : 0;
-        if (f.is_list() && ptr->is_array()) {
-            if (idx < static_cast<int>(ptr->size())) {
-                ptr = &(*ptr)[idx];
+        if (f.is_list() && is_arr(*ptr)) {
+            auto const & arr = std::get<Doc::Array>(ptr->value);
+            if (idx < static_cast<int>(arr.size())) {
+                ptr = &arr[idx];
             } else {
                 return nullptr;
             }
-        } else if (f.is_list() && !ptr->is_array()) {
+        } else if (f.is_list() && !is_arr(*ptr)) {
             return nullptr;
         }
     }
@@ -401,33 +456,34 @@ static json const * read_content(json const & content, ConcreteState const & sta
 }
 
 static bool should_skip(ConcreteState const & state,
-                         PromptSTA const & prompt,
-                         json const & content,
-                         std::vector<int> const & parent_map) {
+                        autocog::data::Prompt const & prompt,
+                        Doc const & content,
+                        std::vector<int> const & parent_map) {
     if (state.field < 0) return false;
     auto ancestors = build_ancestors(state.field, parent_map);
-    json const * ptr = &content;
+    Doc const * ptr = &content;
 
     for (size_t a = 0; a < ancestors.size(); ++a) {
         auto const & f = prompt.fields[ancestors[a]];
-        if (ptr->is_object() && ptr->contains(f.name)) {
-            ptr = &(*ptr)[f.name];
-        } else if (ptr->is_object()) {
+        if (Doc const * child = obj_get(*ptr, f.name)) {
+            ptr = child;
+        } else if (is_obj(*ptr)) {
             return false;
         }
         int idx = (a < state.indices.size()) ? state.indices[a] : 0;
-        if (f.is_list() && ptr->is_array()) {
-            int content_size = static_cast<int>(ptr->size());
+        if (f.is_list() && is_arr(*ptr)) {
+            auto const & arr = std::get<Doc::Array>(ptr->value);
+            int content_size = static_cast<int>(arr.size());
             if (idx >= content_size) {
                 return true;
             }
-            ptr = &(*ptr)[idx];
+            ptr = &arr[idx];
         }
     }
     return false;
 }
 
-static std::string format_label(FieldInfo const & fld) {
+static std::string format_label(autocog::data::Field const & fld) {
     if (fld.format_ref) return *fld.format_ref;
     return std::visit([](auto const & fmt) -> std::string {
         using F = std::decay_t<decltype(fmt)>;
@@ -454,17 +510,17 @@ static std::string format_label(FieldInfo const & fld) {
             return fmt.mode + "(" + path + ")";
         }
         return "?";
-    }, fld.format);
+    }, fld.format.value);
 }
 
-static std::string range_str(FieldInfo const & fld) {
+static std::string range_str(autocog::data::Field const & fld) {
     if (!fld.range) return "";
     auto [lo, hi] = *fld.range;
     if (lo == hi) return "[" + std::to_string(lo) + "]";
     return "[" + std::to_string(lo) + ":" + std::to_string(hi) + "]";
 }
 
-static std::string format_str(FieldInfo const & fld) {
+static std::string format_str(autocog::data::Field const & fld) {
     // Full format description (for named format listing)
     return std::visit([](auto const & fmt) -> std::string {
         using F = std::decay_t<decltype(fmt)>;
@@ -491,11 +547,11 @@ static std::string format_str(FieldInfo const & fld) {
             return fmt.mode + "(" + path + ")";
         }
         return "?";
-    }, fld.format);
+    }, fld.format.value);
 }
 
 static std::string prompt_label(ConcreteState const & state,
-                                 PromptSTA const & prompt,
+                                 autocog::data::Prompt const & prompt,
                                  Syntax const & syntax) {
     if (state.field < 0) return "";
     auto const & fld = prompt.fields[state.field];
@@ -515,26 +571,24 @@ static std::string prompt_label(ConcreteState const & state,
 }
 
 static std::vector<std::string> ravel_choices(
-    json const & content,
+    Doc const & content,
     ChoiceFormat const & cf,
     Syntax const & syntax
 ) {
-    std::vector<json const *> current = {&content};
+    std::vector<Doc const *> current = {&content};
     for (auto const & step : cf.path) {
         auto const & name = step.name;
-        std::vector<json const *> next;
+        std::vector<Doc const *> next;
         for (auto const * ptr : current) {
-            if (ptr->is_object() && ptr->contains(name)) {
-                auto const & child = (*ptr)[name];
-                if (child.is_array()) {
-                    for (auto const & elem : child) next.push_back(&elem);
+            if (Doc const * child = obj_get(*ptr, name)) {
+                if (is_arr(*child)) {
+                    for (auto const & elem : std::get<Doc::Array>(child->value)) next.push_back(&elem);
                 } else {
-                    next.push_back(&child);
+                    next.push_back(child);
                 }
-            } else if (ptr->is_array()) {
-                for (auto const & elem : *ptr) {
-                    if (elem.is_object() && elem.contains(name))
-                        next.push_back(&elem[name]);
+            } else if (is_arr(*ptr)) {
+                for (auto const & elem : std::get<Doc::Array>(ptr->value)) {
+                    if (Doc const * ec = obj_get(elem, name)) next.push_back(ec);
                 }
             }
         }
@@ -547,8 +601,10 @@ static std::vector<std::string> ravel_choices(
         for (int i = 0; i < static_cast<int>(current.size()); ++i)
             choices.push_back(std::to_string(i + offset));
     } else {
+        std::string path;
+        for (auto const & step : cf.path) { if (!path.empty()) path += "."; path += step.name; }
         for (auto const * ptr : current)
-            choices.push_back(ptr->is_string() ? ptr->get<std::string>() : ptr->dump());
+            choices.push_back(value_to_text(*ptr, path));
     }
     return choices;
 }
@@ -558,12 +614,12 @@ static std::vector<std::string> ravel_choices(
 // ============================================================================
 
 struct FTABuilder {
-    json actions = json::array();
+    std::vector<autocog::data::Action> actions;
     int action_id = 0;
 
-    PromptSTA const & prompt;
+    autocog::data::Prompt const & prompt;
     std::map<std::string, ConcreteState> const & states;  // built by concretize()
-    json const & content;
+    Doc const & content;
     Syntax const & syntax;
     SearchConfig const & search;
     std::vector<int> parent_map;
@@ -599,14 +655,14 @@ struct FTABuilder {
         return {prev == field_id ? field_id : prev, endl_id};
     }
 
-    FTABuilder(PromptSTA const & p, std::map<std::string, ConcreteState> const & st,
-               json const & c, Syntax const & s, SearchConfig const & sc)
+    FTABuilder(autocog::data::Prompt const & p, std::map<std::string, ConcreteState> const & st,
+               Doc const & c, Syntax const & s, SearchConfig const & sc)
         : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
 
     int add_text(std::string const & uid, std::string const & text) {
         int id = action_id++;
-        actions.push_back({
-            {"uid", uid}, {"type", "text"}, {"text", text}, {"successors", json::array()}
+        actions.push_back(autocog::data::Action{
+            uid, {}, std::nullopt, std::nullopt, autocog::data::TextAction{text, false}
         });
         return id;
     }
@@ -617,8 +673,8 @@ struct FTABuilder {
     // context (field policy, prompt/STA, state, indices) is available for future
     // advanced policies; the raw policy below is just policy-value ?? config.
     static std::optional<float> pol_f(SearchParams const & pol, std::string const & cat, char const * key) {
-        auto c = pol.find(cat);
-        if (c == pol.end()) return std::nullopt;
+        auto c = pol.categories.find(cat);
+        if (c == pol.categories.end()) return std::nullopt;
         auto p = c->second.find(key);
         if (p == c->second.end()) return std::nullopt;
         if (auto const * v = std::get_if<float>(&p->second)) return *v;
@@ -626,8 +682,8 @@ struct FTABuilder {
         return std::nullopt;
     }
     static std::optional<unsigned> pol_u(SearchParams const & pol, std::string const & cat, char const * key) {
-        auto c = pol.find(cat);
-        if (c == pol.end()) return std::nullopt;
+        auto c = pol.categories.find(cat);
+        if (c == pol.categories.end()) return std::nullopt;
         auto p = c->second.find(key);
         if (p == c->second.end()) return std::nullopt;
         if (auto const * iv = std::get_if<int>(&p->second)) return static_cast<unsigned>(*iv);
@@ -655,41 +711,38 @@ struct FTABuilder {
     int add_choose(std::string const & uid, std::vector<std::string> const & choices,
                    ChoiceSearch const & cs) {
         int id = action_id++;
-        actions.push_back({
-            {"uid", uid}, {"type", "choose"}, {"choices", choices},
-            {"threshold", cs.threshold},
-            {"width", cs.width},
-            {"successors", json::array()}
+        actions.push_back(autocog::data::Action{
+            uid, {}, std::nullopt, std::nullopt,
+            autocog::data::ChooseAction{choices, cs.threshold, cs.width}
         });
         return id;
     }
 
     int add_complete(std::string const & uid, CompletionFormat const & cf, TextSearch const & ts) {
         int id = action_id++;
-        json j = {
-            {"uid", uid}, {"type", "complete"},
-            {"length", cf.length.has_value() ? cf.length.value() : 50},
-            {"threshold", ts.threshold},
-            {"beams", ts.beams},
-            {"ahead", ts.ahead},
-            {"width", ts.width},
-            {"stop_text", syntax.completion_stop},
-            {"successors", json::array()}
-        };
-        if (ts.repetition) j["repetition"] = *ts.repetition;
-        if (ts.diversity) j["diversity"] = *ts.diversity;
-        if (cf.vocab) j["vocab"] = *cf.vocab;
-        actions.push_back(j);
+        autocog::data::CompleteAction body;
+        body.length     = cf.length.has_value() ? static_cast<unsigned>(*cf.length) : 50u;
+        body.threshold  = ts.threshold;
+        body.beams      = ts.beams;
+        body.ahead      = ts.ahead;
+        body.width      = ts.width;
+        body.stop_text  = syntax.completion_stop;
+        body.repetition = ts.repetition;
+        body.diversity  = ts.diversity;
+        body.vocab      = cf.vocab;
+        actions.push_back(autocog::data::Action{
+            uid, {}, std::nullopt, std::nullopt, std::move(body)
+        });
         return id;
     }
 
     void connect(int from, int to) {
-        actions[from]["successors"].push_back(actions[to]["uid"]);
+        actions[from].successors.push_back(actions[to].uid);
     }
 
     void connect_choose(int choose_id, int next_id, int num_choices) {
         for (int i = 0; i < num_choices; ++i)
-            actions[choose_id]["successors"].push_back(actions[next_id]["uid"]);
+            actions[choose_id].successors.push_back(actions[next_id].uid);
     }
 
     static std::string safe(std::string tag) {
@@ -709,10 +762,8 @@ struct FTABuilder {
 
         // Metadata for psta: field index and indices enable direct field lookup
         auto add_field_meta = [&](int id) {
-            actions[id]["field"] = succ.field;
-            json idx = json::array();
-            for (auto i : succ.indices) idx.push_back(i);
-            actions[id]["indices"] = idx;
+            actions[id].field = succ.field;
+            actions[id].indices = succ.indices;
         };
 
         std::visit([&](auto const & fmt) {
@@ -722,17 +773,15 @@ struct FTABuilder {
             if constexpr (std::is_same_v<F, std::monostate>) {
                 // record — skip
             } else if constexpr (std::is_same_v<F, CompletionFormat>) {
-                if (val && !val->is_null()) {
-                    std::string text = val->is_string() ? val->get<std::string>() : val->dump();
-                    field_id = add_text("field." + succ_safe, text);
+                if (val && !doc_is_null(*val)) {
+                    field_id = add_text("field." + succ_safe, value_to_text(*val, fld.name));
                 } else {
                     field_id = add_complete("field." + succ_safe, fmt, resolve_text(pol));
                 }
                 add_field_meta(field_id);
             } else if constexpr (std::is_same_v<F, EnumFormat>) {
-                if (val && !val->is_null()) {
-                    std::string text = val->is_string() ? val->get<std::string>() : val->dump();
-                    field_id = add_text("field." + succ_safe, text);
+                if (val && !doc_is_null(*val)) {
+                    field_id = add_text("field." + succ_safe, value_to_text(*val, fld.name));
                 } else {
                     // The synthetic "next" field is the flow choice; real enums
                     // are enum-content choices.
@@ -745,9 +794,8 @@ struct FTABuilder {
                 }
                 add_field_meta(field_id);
             } else if constexpr (std::is_same_v<F, ChoiceFormat>) {
-                if (val && !val->is_null()) {
-                    std::string text = val->is_string() ? val->get<std::string>() : val->dump();
-                    field_id = add_text("field." + succ_safe, text);
+                if (val && !doc_is_null(*val)) {
+                    field_id = add_text("field." + succ_safe, value_to_text(*val, fld.name));
                 } else {
                     auto choices = ravel_choices(content, fmt, syntax);
                     field_id = add_choose("field." + succ_safe, choices,
@@ -756,7 +804,7 @@ struct FTABuilder {
                 }
                 add_field_meta(field_id);
             }
-        }, fld.format);
+        }, fld.format.value);
 
         return {field_id, choose_count};
     }
@@ -827,7 +875,7 @@ struct FTABuilder {
             for (size_t i = 0; i < valid.size(); ++i) {
                 auto const & succ = states.at(valid[i]);
                 auto const * val = read_content(content, succ, prompt, parent_map);
-                if (val && !val->is_null()) {
+                if (val && !doc_is_null(*val)) {
                     content_forced = static_cast<int>(i);
                     break;  // first pre-filled successor wins
                 }
@@ -861,7 +909,7 @@ struct FTABuilder {
 
                 for (size_t i = 0; i < valid.size(); ++i) {
                     auto [field_entry, endl_id] = create_field_endl(cur_safe, valid[i]);
-                    actions[branch_id]["successors"].push_back(actions[field_entry]["uid"]);
+                    actions[branch_id].successors.push_back(actions[field_entry].uid);
 
                     int next = instantiate_rec(valid[i]);
                     if (next >= 0) connect(endl_id, next);
@@ -878,8 +926,9 @@ struct FTABuilder {
 // Instantiate
 // ============================================================================
 
-json instantiate(PromptSTA const & prompt, json const & content,
-                 Syntax const & syntax, SearchConfig const & search) {
+autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const & content,
+                 Syntax const & syntax, SearchConfig const & search,
+                 std::string const & sta_uid) {
     auto parent_map = build_parent_map(prompt.fields);
     validate_content_ranges(prompt.fields, parent_map, content);
 
@@ -916,7 +965,7 @@ json instantiate(PromptSTA const & prompt, json const & content,
 
     // Named format descriptions
     std::set<std::string> seen_refs;
-    std::vector<std::pair<FieldInfo const *, std::string>> named_formats;
+    std::vector<std::pair<autocog::data::Field const *, std::string>> named_formats;
     for (auto const & fld : prompt.fields) {
         if (fld.format_ref && seen_refs.find(*fld.format_ref) == seen_refs.end()) {
             seen_refs.insert(*fld.format_ref);
@@ -948,67 +997,31 @@ json instantiate(PromptSTA const & prompt, json const & content,
     // xfta queue does not consume them yet. Policy (prompt.search["queue"]) wins
     // over the config default. TODO(xfta-queue).
     std::string metric = search.queue.metric;
-    auto qit = prompt.search.find("queue");
-    if (qit != prompt.search.end()) {
+    auto qit = prompt.search.categories.find("queue");
+    if (qit != prompt.search.categories.end()) {
         auto mit = qit->second.find("metric");
         if (mit != qit->second.end())
             if (auto const * s = std::get_if<std::string>(&mit->second)) metric = *s;
     }
 
-    json fta = json{{"actions", b.actions}, {"queue", json{{"metric", metric}}}};
-    // Vocab table: carried into the FTA so the backend (xfta) can build token
-    // masks from each vocab_<hash> -> STL expression. complete actions reference
-    // an entry by its key.
-    if (!prompt.vocabs.empty()) {
-        json vj = json::object();
-        for (auto const & [k, ve] : prompt.vocabs) vj[k] = ::autocog::runtime::fta::vocab_to_json(ve);
-        fta["vocabs"] = vj;
-    }
+    // Assemble the finalized FTA. The vocab table is carried so the backend
+    // (xfta) can build token masks from each vocab_<hash> -> STL expression;
+    // complete actions reference an entry by its key.
+    autocog::data::FTA fta;
+    fta.actions = std::move(b.actions);
+    fta.queue_metric = metric;
+    fta.vocabs = prompt.vocabs;
+
+    // Finalize as a derived artifact. Provenance is the three inputs this FTA
+    // was instantiated from; the sta/syntax/search uids are read from the
+    // finalized inputs the caller holds (no per-instantiate re-serialization).
+    fta.provenance = {
+        {"sta", sta_uid},
+        {"syntax", syntax.metadata->hash},
+        {"search", search.metadata->hash},
+    };
+    fta.finalize();
     return fta;
-}
-
-// ============================================================================
-// Render text
-// ============================================================================
-
-std::string render_text(json const & fta) {
-    auto const & actions = fta["actions"];
-    if (actions.empty()) return "";
-
-    std::map<std::string, size_t> uid_to_idx;
-    for (size_t i = 0; i < actions.size(); ++i)
-        uid_to_idx[actions[i]["uid"].get<std::string>()] = i;
-
-    std::ostringstream out;
-    size_t current = 0;
-    std::set<size_t> visited;
-    while (visited.find(current) == visited.end()) {
-        visited.insert(current);
-        auto const & action = actions[current];
-
-        if (action["type"] == "text") {
-            out << action["text"].get<std::string>();
-        } else if (action["type"] == "choose") {
-            auto const & choices = action["choices"];
-            out << "[";
-            for (size_t i = 0; i < choices.size(); ++i) {
-                if (i > 0) out << "|";
-                out << choices[i].get<std::string>();
-            }
-            out << "]";
-        } else if (action["type"] == "complete") {
-            int len = action.value("length", 20);
-            out << "[..." << len << " tokens]";
-        }
-
-        auto const & succs = action["successors"];
-        if (succs.empty()) break;
-        auto next_uid = succs[0].get<std::string>();
-        auto it = uid_to_idx.find(next_uid);
-        if (it == uid_to_idx.end()) break;
-        current = it->second;
-    }
-    return out.str();
 }
 
 }

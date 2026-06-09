@@ -2,143 +2,175 @@
 
 ## Overview
 
-The STL (Structured Thoughts Language) compiler transforms source files into executable IR (Intermediate Representation) that can be executed by the STA runtime.
+The STL (Structured Thoughts Language) compiler transforms source files into an
+**STA** (Structured Thought Automaton) — a content-addressed artifact the runtime
+instantiates and a language model executes. The compiler is C++; it is exposed to
+the `autocog` Python package and to the `stlc` command-line tool, both of which
+drive the same `Driver`.
+
+- **Implementation:** `libs/autocog/compiler/stl/`
+- **Entry points:** `tools/stlc/` (CLI), `bindings/compiler-stl/` (Python)
+- **Output artifact:** `autocog::data::STA`, serialized by `autocog::codec`
 
 ## Compilation Pipeline
 
+The `Driver` runs six sequential stages (`driver.hxx`, `CompilationStage`). Each
+stage checks for errors and stops early if any were reported; `driver.stage` also
+lets a caller stop after any stage to inspect its output (this is what `stlc`'s
+per-format emit flags do — see below).
+
 ```
-STL Source Files
-    ↓
-[Stage 1] Parse → AST
-    ↓
-[Stage 2] Symbol Collection → Symbol Table
-    ↓
-[Stage 3] Evaluate → Resolve Defines
-    ↓
-[Stage 4] Scan → Find Instantiations
-    ↓
-[Stage 5] Instantiate → Build Instantiation Graph
-    ↓
-[Stage 6] AST→IR → Generate IR (TODO)
-    ↓
-JSON Output → STA Format
+STL source files
+    │
+ ┌──┴── Stage 1: Parse        → AST              (driver.programs)
+ │      Stage 2: Symbols      → SymbolTable      (driver.tables)
+ │      Stage 3: Globals      → Evaluator        (driver.evaluator)
+ │      Stage 4: Instantiate  → InstantiationGraph (driver.graph)
+ │      Stage 5: Assemble     → IR               (driver.records, driver.prompts)
+ └──┬── Stage 6: Generate     → data::STA        (driver.sta)
+    │
+    ▼
+ codec::to_json(driver.sta)  → STA JSON
 ```
 
-## Compilation Stages
+### Stage 1 — Parse
 
-### Stage 1: Parse
+Parses each input file into an Abstract Syntax Tree.
 
-Parses STL source files into an Abstract Syntax Tree (AST).
+- **Method:** `run_parse()` — `compile/parse.cxx`
+- **Output:** `driver.programs` (one `ast::Program` per file) and a `fileids` map
+- **Implementation:** RE-flex lexer (`lexer.l`) + recursive-descent parser
+  (`parser.cxx`, `parser/*.cxx`), building nodes from `ast.hxx` / `ast/*`
+- **Node types:** 46, enumerated in `ast/nodes.def` (the single `X(...)` list that
+  drives the node templates, the printer, and the serializer)
 
-- **Input**: STL source files
-- **Output**: `ast::Program` nodes
-- **Implementation**: `libs/autocog/compiler/stl/parser.*`
-- **Tests**: `tests/units/autocog/compiler/stl/parser/`
+### Stage 2 — Symbols
 
-All 49 AST node types are implemented and tested.
+Collects every declared symbol (records, prompts, defines, imports, aliases,
+Python externals) into a symbol table, and resolves imports and aliases to the
+symbols they name.
 
-### Stage 2: Symbol Collection
+- **Method:** `run_symbols()` — `compile/symbols.cxx`
+- **Output:** `driver.tables` (a `SymbolTable`: qualified-name → symbol, plus a
+  per-file context map)
+- **Implementation:** `symbol-scanner.{hxx,cxx}`, `symbol-table.hxx`,
+  `symbols.{hxx,cxx}`
+- **Symbol kinds:** `DefineSymbol`, `RecordSymbol`, `PromptSymbol`, `PythonSymbol`,
+  and the transient `UnresolvedImport` / `UnresolvedAlias`
 
-Collects all symbols (prompts, records, defines, imports) into a symbol table.
+### Stage 3 — Globals
 
-- **Input**: AST nodes
-- **Output**: `SymbolTable` with qualified names
-- **Implementation**: `symbol-table.{hxx,cxx}`, `symbol-scanner.{hxx,cxx}`
+Evaluates file-level `define` statements and command-line `-D` defines to constant
+values, producing the `Evaluator` that later stages use to resolve expressions.
 
-### Stage 3: Evaluate
+- **Method:** `run_globals()` — `compile/globals.cxx`
+- **Output:** `driver.evaluator`
+- **Implementation:** `evaluate.{hxx,cxx}` (constant-folding over `ast::Expr`)
 
-Evaluates global define statements to constant values.
+### Stage 4 — Instantiate
 
-- **Input**: Symbol table + AST
-- **Output**: `Driver::defines` map populated
-- **Implementation**: `evaluate.{hxx,cxx}`
+Builds the instantiation graph: one node per distinct `(record-or-prompt,
+arguments)` combination, reached by BFS from the exported entry points, with name
+mangling, cycle detection, and argument/context propagation.
 
-### Stage 4: Scan
+- **Method:** `run_instantiate()` — `compile/instantiate.cxx`
+- **Output:** `driver.graph` (an `InstantiationGraph` of nodes keyed by mangled
+  name, with directed reference edges)
+- **Implementation:** `instantiation-graph.{hxx,cxx}`
 
-Scans for all prompt/record instantiations (including parameterized types).
+### Stage 5 — Assemble
 
-- **Input**: Symbol table + AST
-- **Output**: List of instantiations to create
-- **Implementation**: `instance-scanner.{hxx,cxx}`
+Lowers the instantiation graph to the compiler's Intermediate Representation:
+concrete records and prompts with their fields, formats, channels, flows, vocabs,
+and resolved search policies. Records are inlined (copied) into the prompts that
+reference them.
 
-### Stage 5: Instantiate
+- **Method:** `run_assemble()` — `compile/assemble.cxx`
+- **Output:** `driver.records`, `driver.prompts` (IR, `ir.hxx`)
+- **Key IR types:** `ir::Prompt`, `ir::Record`, `ir::Field`, and the leaf formats
+  `Completion`, `Enum`, `Choice`
 
-Builds instantiation graph with mangled names and parameter contexts.
+### Stage 6 — Generate
 
-- **Input**: Instantiation list
-- **Output**: `InstantiationGraph` with nodes and edges
-- **Implementation**: `instantiation-graph.{hxx,cxx}`
-- **Features**:
-  - Name mangling for parameterized types
-  - BFS graph building
-  - Cycle detection
-  - Context propagation
+Converts the IR into the `autocog::data::STA` artifact: it flattens each prompt's
+nested fields into a depth/index-indexed list, appends the implicit `next`
+flow-selection field, builds the abstract state graph, extracts flows and channels,
+computes per-entry-point input/output JSON schemas, and finalizes the artifact
+(stamping its content hash).
 
-### Stage 6: AST→IR Conversion
+- **Method:** `run_generate()` — `compile/generate.cxx`
+- **Output:** `driver.sta` (`autocog::data::STA`)
+- **Boundary:** this is where the compiler crosses from compiler-internal IR into
+  the shared [data layer](./data-codec.md); the STA is the first artifact in the
+  STA → FTA → FTT lineage
 
-Converts AST + instantiation graph into executable IR structures.
+## Emit Outputs
 
-- **Input**: Instantiation graph
-- **Output**: IR structures (prompts, records, fields, channels, flows)
-- **Target**: Populate `Driver::{prompts, records, entry_point_map}`
+`stlc` has one output flag per format, each taking a destination file
+(`/dev/stdout` for stdout). At least one is required, and several may be combined
+in a single run — the pipeline runs up to the deepest requested stage and each
+output is serialized from its stage (see `serialize/*.cxx`).
+
+| Flag    | Stage       | Serializer            | Output |
+|---------|-------------|-----------------------|--------|
+| `--ast`   | Parse       | `serialize/ast.cxx`   | Parsed AST |
+| `--graph` | Instantiate | `serialize/graph.cxx` | Instantiation graph |
+| `--ir`    | Assemble    | `serialize/ir.cxx`    | Intermediate representation |
+| `--sta`   | Generate    | `serialize/sta.cxx`   | **STA** (via `codec::to_json`) |
+
+Only `--sta` is a content-addressed artifact validated against a published schema;
+the others are debugging/inspection dumps. (The intermediate Symbols and Globals
+stages still run but are no longer separately emittable.)
 
 ## Key Data Structures
 
-### AST (Abstract Syntax Tree)
-- **Location**: `libs/autocog/compiler/stl/ast.hxx`
-- **Purpose**: Parse tree representation of STL source
-- **Node Types**: 49 types covering all language constructs
-
-### Symbol Table
-- **Location**: `libs/autocog/compiler/stl/symbol-table.hxx`
-- **Purpose**: Maps qualified names to symbol information
-- **Key Types**: `PromptSymbol`, `RecordSymbol`, `DefineSymbol`, `UnresolvedAlias`, `UnresolvedImport`
-
-### Instantiation Graph
-- **Location**: `libs/autocog/compiler/stl/instantiation-graph.hxx`
-- **Purpose**: Represents all type instantiations with parameters resolved
-- **Structure**: Nodes (instantiations) with edges (dependencies)
-
-### IR (Intermediate Representation)
-- **Location**: `libs/autocog/compiler/stl/ir.hxx`
-- **Purpose**: Executable representation for STA runtime
-- **Key Types**: `Prompt`, `Record`, `Field`, `Channel`, `Format`
-- **Recent Update**: Restructured to match Python STA implementation
-
-## Testing
-
-### Unit Tests
-- **Parser Tests**: JSON-driven parser fragment tests
-- **Location**: `tests/units/autocog/compiler/stl/parser/`
-
-### Integration Tests
-- **STL Programs**: Real STL files tested at each stage
-- **Location**: `tests/integration/stl/`
-
-### Demos
-- **MCQ Examples**: Multiple-choice question demos
-- **Location**: `share/demos/mcq/`
-- **Purpose**: Real-world examples showcasing language features
-
-## Build System
-
-- **Build Tool**: CMake
-- **Compiler**: C++17
-- **Dependencies**:
-  - RE/flex (lexer/parser)
-  - nlohmann/json (JSON output)
-  - pybind11 (Python bindings)
+| Structure | Location | Purpose |
+|-----------|----------|---------|
+| **AST** | `ast.hxx`, `ast/*`, `ast/nodes.def` | Parse-tree of the source (46 node types) |
+| **SymbolTable** | `symbol-table.hxx`, `symbols.hxx` | Qualified name → symbol; per-file contexts |
+| **InstantiationGraph** | `instantiation-graph.hxx` | All `(type, args)` instantiations, mangled |
+| **IR** | `ir.hxx` | Concrete prompts/records/fields/channels/flows |
+| **data::STA** | `data/sta.hxx` | Final compiled artifact (see [data-codec.md](./data-codec.md)) |
 
 ## Output Format
 
-The compiler generates JSON in STA (Structured Thoughts Automaton) format:
+`codec::to_json(driver.sta)` produces the STA JSON. Its shape is fixed by
+`share/schemas/sta.schema.json`:
 
 ```json
 {
-  "defines": { "var": value, ... },
-  "entry_points": { "main": "0::prompt_name", ... },
-  "records": { "0::RecordName": { ... }, ... },
-  "prompts": { "0::PromptName": { ... }, ... }
+  "metadata": {
+    "format": "sta",
+    "version": "0.5.5",
+    "hash": "<64-hex SHA-256 of content + provenance>",
+    "timestamp": "2026-06-07T12:00:00Z"
+  },
+  "provenance": {},
+  "entry_points": {
+    "main": { "prompt": "<mangled prompt name>", "inputs": {...}, "outputs": {...} }
+  },
+  "python_imports": { "<extern>": { "file": "...", "target": "..." } },
+  "prompts": {
+    "<mangled name>": { "fields": [...], "abstracts": [...], "flows": {...}, "channels": [...] }
+  }
 }
 ```
 
+The STA is a *root* artifact: its provenance is empty, so its hash is a pure
+function of its content. See [File Formats](../interfaces/formats.md) and the
+[data layer](./data-codec.md) for the artifact model, and
+[Runtime Semantics](./runtime-semantics.md) for how the STA is executed.
+
+## Build System
+
+- **Build tool:** CMake (C++17)
+- **Dependencies:** RE-flex (lexer/parser runtime), nlohmann/json (codec JSON),
+  pybind11 (Python bindings), picosha2 (artifact content hashing)
+
+## Testing
+
+- **Parser units:** `tests/units/libs/autocog/compiler/stl/parser/` (JSON-driven
+  grammar-production fixtures)
+- **Stage golden output:** `tests/integration/tools/stlc/{ir,sta,emit}/` diff each
+  emit target against checked-in goldens (see [tests/README.md](../../tests/README.md))
+- **Fixtures:** `tests/fixtures/stl/`

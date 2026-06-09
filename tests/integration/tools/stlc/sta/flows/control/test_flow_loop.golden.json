@@ -16,6 +16,12 @@
       "prompt": "solver"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "a131a54bc475e09441805a7cd358504990b865986ce6a197341aa39bce8497f2",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "solver": {
       "abstracts": [
@@ -141,5 +147,6 @@
       "name": "solver"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

@@ -43,7 +43,7 @@ static std::tuple<int, std::optional<std::string>, std::string> parse_scope(std:
 
 std::optional<int> Driver::run_globals() {
     // Collect file-scope defines that need evaluation
-    std::vector<std::tuple<int, std::string, std::optional<SourceRange>>> need_evaluation;
+    std::vector<std::tuple<int, std::string, std::optional<autocog::location::SourceRange>>> need_evaluation;
     for (auto const & [qname, symbol] : tables.symbols) {
         if (std::holds_alternative<DefineSymbol>(symbol)) {
             auto const & defn = std::get<DefineSymbol>(symbol);

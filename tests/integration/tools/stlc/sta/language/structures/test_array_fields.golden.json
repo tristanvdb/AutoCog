@@ -15,6 +15,12 @@
       "prompt": "collector"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "526ca14eceafb7fbc03488cf3df77fd4211544b50170eea45fd9c991d37203da",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "collector": {
       "abstracts": [
@@ -130,5 +136,6 @@
       "name": "collector"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

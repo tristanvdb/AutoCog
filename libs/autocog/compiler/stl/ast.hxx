@@ -2,7 +2,7 @@
 #define AUTOCOG_COMPILER_STL_AST_HXX
 
 #include "autocog/compiler/stl/token.hxx"
-#include "autocog/compiler/stl/location.hxx"
+#include "autocog/utilities/location.hxx"
 
 #include <string>
 #include <list>
@@ -16,7 +16,6 @@ namespace autocog::compiler::stl {
 
 class Lexer;
 class Parser;
-struct Diagnostic;
 
 }
 
@@ -55,7 +54,7 @@ struct Node {
   Node(Node &&) = delete;
   Node & operator=(Node &&) = delete;
 
-  std::optional<SourceRange> location;
+  std::optional<autocog::location::SourceRange> location;
   Data<tagT> data;
 
   template <class TraversalT>

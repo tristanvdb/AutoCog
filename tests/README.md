@@ -27,22 +27,30 @@ tests/
 │   │   ├── stlc/
 │   │   │   ├── ir/              Golden IR JSON output per fixture
 │   │   │   ├── sta/             Golden STA JSON output per fixture
-│   │   │   └── emit/            All --emit targets on representative subset
+│   │   │   └── emit/            All emit formats on a representative subset
 │   │   ├── ista/                STA instantiation tests
 │   │   ├── psta/                STA text parsing tests
 │   │   ├── xfta/                FTA evaluation tests (--rng)
 │   │   └── e2e/                 Full pipeline: stlc → ista → xfta → psta
+│   ├── bindings/                C++ binding integration tests (pytest)
+│   │   └── test_bindings.py     compile → instantiate → evaluate → walk via bindings
 │   └── modules/                 Python orchestration tests (pytest)
 │       ├── conftest.py          Build dir discovery, engine fixture
-│       └── test_smoke.py        Binding imports, compilation, pipeline
+│       ├── test_smoke.py        Binding imports, compilation, pipeline
+│       ├── test_channels.py     Channel resolution (get/use/call, clauses)
+│       ├── test_error_contract.py   Error types and messages
+│       └── test_json_logging.py     --json NDJSON logging
 │
 └── units/
+    ├── bindings/                Datastore binding units (pytest)
+    │   └── test_store.py        Six-verb load/read/get/store/dump/release round-trips
     ├── libs/                    C++ library unit tests (ctest)
-    │   └── autocog/compiler/stl/parser/
-    │       ├── driver.cxx       Parser unit test driver
-    │       └── inputs/          Grammar production test fixtures (JSON)
+    │   └── autocog/
+    │       ├── compiler/stl/parser/   driver.cxx + inputs/*.json (grammar productions)
+    │       ├── data/                  registry + artifact smoke drivers
+    │       └── utilities/             backtrace driver
     └── modules/                 Python module unit tests (pytest)
-        └── autocog/             (future)
+        └── autocog/             test_clauses.py
 ```
 
 ## Test Frameworks
@@ -85,8 +93,9 @@ Golden output updates MUST be done in a dedicated commit with no other
 changes, so they are easy to review and track:
 
 ```bash
-# Regenerate all golden outputs
-scripts/update-golden.sh
+# Regenerate all golden outputs (validates each against its schema before writing)
+BUILD_DIR=build tests/scripts/update-golden.sh           # all targets
+BUILD_DIR=build tests/scripts/update-golden.sh --target sta --dry-run
 
 # Review the changes
 git diff tests/
@@ -95,6 +104,12 @@ git diff tests/
 git add tests/integration/tools/
 git commit -m "Update golden test outputs"
 ```
+
+`update-golden.sh` never writes a golden that fails its schema — it shells out to
+`golden_compare.py --validate-only`. Pass `--target sta|ir|e2e|all` to scope it and
+`--dry-run` to preview. The `e2e` target reruns the full
+`stlc → ista → xfta --rng --seed 42 → psta` pipeline per fixture, validating the
+intermediate FTA and FTT against their schemas before writing the frame golden.
 
 ### Adding a new test fixture
 
@@ -216,3 +231,42 @@ Triggered on push to `develop`, `*-dev`, and `candidate` (no PR triggers).
 
 The `latest release` badges (and the master fast-forward) are handled by
 `release.yaml`, only after a release fully succeeds.
+
+### Release pipeline (`release.yaml`)
+
+Triggered by pushing a `v*` tag. Jobs run roughly in dependency order:
+
+1. `verify` — gates the tag: it must match the `VERSION` file, be contained in
+   `candidate`, and have a fully green CI run for its commit. Also a major-version
+   `NotImplementedError`-site check, and an *informational* report of any
+   `share/schemas/` changes since the previous tag (no longer a hard gate).
+2. `coverage-gate` — downloads the CI coverage artifact for the commit and
+   re-asserts `pass=true` (defense-in-depth; thresholds are enforced upstream in
+   `coverage_report.py`).
+3. `wheels` / `sdist` — build distributables with `cibuildwheel` (portable:
+   `AUTOCOG_TUNED=OFF`) and an sdist.
+4. `demo` — installs the built wheel and packs the story-writer demo into a `.stapp`.
+5. `containers` — build & push the `run`/`serve`/`rpc`/`backend` images to GHCR.
+6. `release` — create the GitHub Release with wheels, sdist, demo, and coverage.
+7. `publish-badges` — stamp the live `release` badges from the CI coverage artifact.
+8. `push-master` — fast-forward `master` to the tag (fails on purpose if the tag
+   touched `.github/workflows/**`, since `GITHUB_TOKEN` can't push those — a human
+   must fast-forward manually).
+9. `release-status` — writes the `release` status badge (version, green only if
+   every needed job succeeded).
+
+## Helper scripts (`tests/scripts/`)
+
+The pipeline orchestration (top scripts + `steps/`) is described under
+[Test Pipelines](#test-pipelines). The remaining standalone helpers:
+
+| Script | Purpose |
+|--------|---------|
+| `golden_compare.py` | Compare tool output to a golden with a structural (deepdiff) diff, and validate against the matching `share/schemas/` schema. Exit codes: 0 match, 1 structural mismatch, 2 schema failure. `--validate-only` / `--no-validate`. The ctest golden tests call this. |
+| `update-golden.sh` | Regenerate goldens, schema-validating each before writing. `sta`/`ir` from `stlc` output; `e2e` from the full `stlc→ista→xfta→psta` pipeline (validating the FTA + FTT too). `--target sta\|ir\|e2e\|all`, `--dry-run`. Needs `BUILD_DIR`. |
+| `coverage_report.py` | Turn gcovr + pytest-cov JSON into `tests/coverage.{md,json}`; the single source of truth for the template-file classification, coverage thresholds, and the pass/fail the CI badges and release gate consume. Nonzero exit if a gating category misses threshold. |
+| `check_error_output.py` | For negative STL fixtures: assert `stlc`'s combined output contains each `// expect-error: <substr>` directive; an `internal error` always fails. |
+| `check_stlc_behavior.py` | For flag-driven `stlc` invocations: assert exit code + diagnostics against an expected `ok` / `warning <substr>` / `error <substr>` outcome. |
+| `check_dep_group_drift.py` | Fail if the `server`/`validate` extras are not mirrored (name + specifier) into the `test` dependency-group in `pyproject.toml`. Run by the `check-deps` CI job. |
+| `fuzz.sh` | Run an STL program under many random RNG seeds (`autocog run --rng`) to shake out instantiation/parse crashes. Not part of CI; a manual robustness tool. |
+| `smoke.sh` | Framework-free install check (import, `autocog --version`, `stlc --version`). Run by the `check-release` CI job and usable directly by end users. |

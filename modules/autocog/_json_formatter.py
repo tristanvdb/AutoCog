@@ -72,7 +72,6 @@ class ECSFormatter(logging.Formatter):
             out["event.kind"] = (
                 "alert" if isinstance(exc, errors.InternalError) else "event"
             )
-            out["autocog.exception.recoverable"] = exc.recoverable
 
             if isinstance(exc, errors.OrchestrationError):
                 if getattr(exc, "prompt", None):
@@ -82,6 +81,16 @@ class ECSFormatter(logging.Formatter):
             if isinstance(exc, errors.ConfigError):
                 if getattr(exc, "path", None):
                     out["autocog.exception.path"] = exc.path
+            if isinstance(exc, errors.SchemaError):
+                if getattr(exc, "path", None):
+                    out["autocog.exception.path"] = exc.path
+            if isinstance(exc, errors.IntegrityError):
+                if getattr(exc, "format", None):
+                    out["autocog.exception.format"] = exc.format
+                if getattr(exc, "expected", None):
+                    out["autocog.exception.expected"] = exc.expected
+                if getattr(exc, "actual", None):
+                    out["autocog.exception.actual"] = exc.actual
             if isinstance(exc, errors.FileError):
                 if getattr(exc, "path", None):
                     out["autocog.exception.path"] = exc.path

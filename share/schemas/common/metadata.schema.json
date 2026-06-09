@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "common/metadata.schema.json",
   "title": "AutoCog artifact metadata",
-  "description": "Universal metadata block carried by every generated AutoCog artifact (IR, STA, FTA). STL source files have no metadata.",
+  "description": "Universal metadata block carried by every generated AutoCog artifact (STA, FTA, FTT, and the syntax/search configs once stored). STL source files, and the `--ir` debug dump, have no metadata block.",
   "type": "object",
   "properties": {
     "format": {
       "type": "string",
-      "enum": ["ir", "sta", "fta"],
+      "enum": ["sta", "fta", "ftt", "syntax", "search"],
       "description": "Discriminator; identifies which schema governs this artifact."
     },
     "version": {
@@ -15,15 +15,10 @@
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "description": "AutoCog project version that produced this artifact."
     },
-    "uid": {
+    "hash": {
       "type": "string",
-      "pattern": "^[0-9a-f]{16}$",
-      "description": "Truncated SHA-256 of this artifact's JCS-canonicalized content (with this field absent during hashing)."
-    },
-    "source_uid": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{16}$",
-      "description": "uid of the artifact (or hash of the source file) from which this was derived."
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of this artifact's content combined with its top-level provenance (the metadata block itself is not an input to the hash)."
     },
     "timestamp": {
       "type": "string",
@@ -31,5 +26,5 @@
       "description": "RFC 3339 UTC timestamp of artifact creation."
     }
   },
-  "required": ["format", "version", "uid", "source_uid", "timestamp"]
+  "required": ["format", "version", "hash", "timestamp"]
 }

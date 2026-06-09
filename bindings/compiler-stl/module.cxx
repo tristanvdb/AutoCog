@@ -1,19 +1,29 @@
 
 #include "autocog/compiler/stl/driver.hxx"
-#include "autocog/runtime/sta/load.hxx"
-#include "autocog/runtime/store/store.hxx"
+#include "autocog/data/store.hxx"
 
 #include <pybind11/pybind11.h>
 #include "errors.hxx"
 #include <pybind11/stl.h>
 
 #include <nlohmann/json.hpp>
+#include <map>
+#include <mutex>
 #include <sstream>
 
 namespace py = pybind11;
-namespace store = autocog::runtime::store;
 
 namespace {
+
+// Diagnostics are not a tracked artifact (the datastore only holds finalized
+// STA/FTA/FTT), so they live in a module-local side table keyed by the program
+// handle (the STA's content hash). Guarded because the bindings are driven from
+// multiple threads.
+std::map<std::string, nlohmann::json> & diag_table() {
+    static std::map<std::string, nlohmann::json> table;
+    return table;
+}
+std::mutex & diag_mutex() { static std::mutex m; return m; }
 
 // Resolve a file id to its path using the driver's filename->id map.
 std::string resolve_fid(autocog::compiler::stl::Driver const & driver, int fid) {
@@ -26,7 +36,7 @@ std::string resolve_fid(autocog::compiler::stl::Driver const & driver, int fid) 
 // Serialize the driver's diagnostics into a JSON array, resolving each
 // location's file id to a path so the Python side never sees raw ids.
 nlohmann::json diagnostics_to_json(autocog::compiler::stl::Driver const & driver) {
-    using autocog::compiler::stl::DiagnosticLevel;
+    using autocog::data::DiagnosticLevel;
     nlohmann::json arr = nlohmann::json::array();
     for (auto const & diag : driver.diagnostics_log()) {
         nlohmann::json rec;
@@ -62,75 +72,64 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
     module.def("compile",
         [](std::string const & filepath,
            std::vector<std::string> includes,
-           std::vector<std::string> entry_points) -> int {
+           std::vector<std::string> entry_points) -> std::string {
 
             using namespace autocog::compiler::stl;
 
             Driver driver;
-            // Diagnostics are routed through Python logging by the caller, not
-            // printed to stderr here (avoids double-logging).
             driver.print_diagnostics = false;
             driver.inputs.push_back(filepath);
             for (auto & inc : includes) driver.includes.push_back(std::move(inc));
             driver.entry_points.clear();
             for (auto & ep : entry_points) driver.entry_points.push_back(std::move(ep));
 
-            // Compile errors are accumulated as diagnostics, not thrown. A
-            // CompileError escaping here would be a compiler bug, so surface it
-            // as a fatal internal error rather than letting it become a bare
-            // RuntimeError at the boundary.
             try {
                 driver.compile();
-            } catch (CompileError const & e) {
+            } catch (autocog::CompileError const & e) {
                 throw autocog::utilities::InternalError(
                     std::string("CompileError escaped compile(): ") + e.what());
             }
 
-            // Always mint an id (even on failure: the empty program is harmless
-            // and the caller releases it after raising). Store the diagnostics
-            // under that same id so Python can retrieve them by program id.
+            // Always mint a handle (even on failure: the empty program is
+            // harmless and the caller releases it after raising). The compiler
+            // has already finalized the STA, so the store keys on its content
+            // hash; diagnostics are filed under that same handle.
             nlohmann::json diags = diagnostics_to_json(driver);
-            int pid = store::programs().add(std::move(driver.sta));
-            store::diagnostics().set(pid, std::move(diags));
+            auto sta = std::make_unique<autocog::data::STA>(std::move(driver.sta));
+            std::string pid = autocog::data::datastore().sta.add(std::move(sta));
+            {
+                std::lock_guard<std::mutex> lock(diag_mutex());
+                diag_table()[pid] = std::move(diags);
+            }
             return pid;
         },
-        "Compile an STL file and return a ProgramID",
+        "Compile an STL file and return a program handle",
         py::arg("filepath"),
         py::arg("includes") = std::vector<std::string>{},
         py::arg("entry_points") = std::vector<std::string>{"main"}
     );
 
     module.def("get_diagnostics",
-        [](int program_id) -> py::object {
-            nlohmann::json arr = store::diagnostics().has(program_id)
-                ? store::diagnostics().get(program_id)
-                : nlohmann::json::array();
+        [](std::string const & program_id) -> py::object {
+            nlohmann::json arr = nlohmann::json::array();
+            {
+                std::lock_guard<std::mutex> lock(diag_mutex());
+                auto it = diag_table().find(program_id);
+                if (it != diag_table().end()) arr = it->second;
+            }
+            // Diagnostics are not a tracked structure; translate via json.
             auto json_module = py::module_::import("json");
             return json_module.attr("loads")(arr.dump());
         },
-        "Retrieve the compile diagnostics for a ProgramID as a list of dicts",
+        "Retrieve the compile diagnostics for a program handle as a list of dicts",
         py::arg("program_id")
     );
 
-    module.def("emit",
-        [](int program_id, std::string const & target) -> py::object {
-            if (target != "sta") {
-                throw autocog::ConfigError("Unknown emit target: " + target, target);
-            }
-            auto const & program = store::programs().get(program_id);
-            auto j = autocog::runtime::sta::serialize_program(program);
-            auto json_module = py::module_::import("json");
-            return json_module.attr("loads")(j.dump());
-        },
-        "Emit program data as a Python dict",
-        py::arg("program_id"),
-        py::arg("target") = "sta"
-    );
-
     module.def("release",
-        [](int program_id) {
-            store::programs().remove(program_id);
-            store::diagnostics().remove(program_id);
+        [](std::string const & program_id) {
+            autocog::data::datastore().sta.release(program_id);
+            std::lock_guard<std::mutex> lock(diag_mutex());
+            diag_table().erase(program_id);
         },
         "Release a compiled program and its diagnostics",
         py::arg("program_id")

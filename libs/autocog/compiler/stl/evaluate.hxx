@@ -1,9 +1,11 @@
 #ifndef AUTOCOG_COMPILER_STL_INSTANTIATE_HXX
 #define AUTOCOG_COMPILER_STL_INSTANTIATE_HXX
 
+#include "autocog/utilities/exception.hxx"
+#include "autocog/utilities/location.hxx"
 #include "autocog/compiler/stl/ast.hxx"
 #include "autocog/compiler/stl/ir.hxx"
-#include "autocog/compiler/stl/diagnostic.hxx"
+#include "autocog/data/diagnostic.hxx"
 
 #include <unordered_map>
 #include <optional>
@@ -18,11 +20,11 @@ namespace autocog::compiler::stl {
 class SymbolTable;
 class Evaluator {
   private:
-    std::list<Diagnostic> & diagnostics;
+    std::list<autocog::data::Diagnostic> & diagnostics;
     SymbolTable & tables;
 
   private:
-    void emit_error(std::string msg, std::optional<SourceRange> const & loc);
+    void emit_error(std::string msg, std::optional<autocog::location::SourceRange> const & loc);
 
   private:
     ir::Value evaluate(
@@ -46,11 +48,11 @@ class Evaluator {
     );
 
   public:
-    Evaluator(std::list<Diagnostic> & diagnostics_, SymbolTable & tables);
+    Evaluator(std::list<autocog::data::Diagnostic> & diagnostics_, SymbolTable & tables);
 
     ir::Value retrieve_value(
       std::string const &, std::string const &, ir::VarMap &,
-      std::optional<SourceRange> const & = std::nullopt
+      std::optional<autocog::location::SourceRange> const & = std::nullopt
     );
 
     // Public interface for evaluating expressions
@@ -66,13 +68,13 @@ class Evaluator {
     // distinct, matching graph instantiation identity) and detects cycles.
     std::unique_ptr<ir::VocabExpr> translate_vocab(
       std::string const & scope, ast::Expression const & expr, ir::VarMap & ctx,
-      std::optional<SourceRange> const & loc = std::nullopt
+      std::optional<autocog::location::SourceRange> const & loc = std::nullopt
     );
 
   private:
     std::unique_ptr<ir::VocabExpr> resolve_vocab(
       std::string const & scope, std::string const & name, ir::VarMap & ctx,
-      std::optional<SourceRange> const & loc
+      std::optional<autocog::location::SourceRange> const & loc
     );
 
     std::map<std::string, std::unique_ptr<ir::VocabExpr>> vocab_cache;

@@ -8,9 +8,9 @@ import pytest
 
 import autocog
 from autocog.errors import (
-    AutoCogError, CompileError, ConfigError, ModelError,
+    AutoCogError, ExecutionError, CompileError, ConfigError, ModelError,
     OrchestrationError, FlowInvariantError, RemoteError, Timeout, FileError,
-    InternalError, Diagnostic, SourceLocation,
+    InternalError, Diagnostic, SourceLocation, SchemaError, IntegrityError,
 )
 
 
@@ -31,7 +31,6 @@ class TestTypedErrors:
         with pytest.raises(AutoCogError) as ei:
             autocog.compile(str(bad))
         assert isinstance(ei.value, CompileError)
-        assert not ei.value.recoverable
 
     def test_compile_error_carries_diagnostics(self, repo_root):
         """CompileError carries the full structured diagnostics list."""
@@ -66,25 +65,6 @@ class TestTypedErrors:
         assert located, "expected at least one located error diagnostic"
 
 
-class TestRecoveryFlag:
-    """recoverable defaults match the design."""
-
-    @pytest.mark.parametrize("cls,expected", [
-        (CompileError, False),
-        (ConfigError, False),
-        (ModelError, False),
-        (OrchestrationError, True),
-        (FlowInvariantError, False),   # overrides parent
-        (RemoteError, True),
-        (Timeout, True),
-        (FileError, False),
-        (InternalError, False),
-    ])
-    def test_recoverable_default(self, cls, expected):
-        e = cls("test message")
-        assert e.recoverable is expected
-
-
 class TestNoRawRuntimeError:
     """Predictable bad input fails as an AutoCogError, never a bare exception."""
 
@@ -105,3 +85,27 @@ class TestNoRawRuntimeError:
         )
         # And specifically not a bare RuntimeError leaking from C++/bindings.
         assert not (type(ei.value) is RuntimeError)
+
+
+class TestSchemaAndIntegrityErrors:
+    """SchemaError and IntegrityError sit in the execution tree and carry the
+    structured fields the C++ translator forwards across the boundary."""
+
+    def test_schema_error_hierarchy_and_fields(self):
+        assert issubclass(SchemaError, ExecutionError)
+        assert issubclass(SchemaError, AutoCogError)
+        e = SchemaError("bad tag", path="actions[0].type")
+        assert e.path == "actions[0].type"
+        assert str(e) == "bad tag"
+
+    def test_integrity_error_hierarchy_and_fields(self):
+        assert issubclass(IntegrityError, ExecutionError)
+        assert issubclass(IntegrityError, AutoCogError)
+        e = IntegrityError("hash mismatch", format="fta", expected="aa", actual="bb")
+        assert (e.format, e.expected, e.actual) == ("fta", "aa", "bb")
+        assert str(e) == "hash mismatch"
+
+    def test_distinct_from_config_error(self):
+        # SchemaError must not be a ConfigError (different semantic category).
+        assert not issubclass(SchemaError, ConfigError)
+        assert not issubclass(IntegrityError, ConfigError)

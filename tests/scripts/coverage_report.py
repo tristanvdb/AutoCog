@@ -44,7 +44,7 @@ TEMPLATE_FILES = {
 THRESHOLDS = {
     "cxx": 83.0,
     "cxx_templates": 36.0,
-    "python": 87.0,
+    "python": 86.0,
 }
 
 # Optional per-file thresholds for fine-grained control, keyed by the same

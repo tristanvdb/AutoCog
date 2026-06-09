@@ -15,6 +15,12 @@
       "prompt": "location"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "460105223b0116af32dfd71315a5eb4f1ea80ca397bec36588fbbf6e6f8c51c3",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "location": {
       "abstracts": [
@@ -82,5 +88,6 @@
       "name": "location"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

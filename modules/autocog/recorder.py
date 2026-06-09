@@ -18,7 +18,7 @@ class Recorder:
     reflects progress even when execution crashes mid-way.
     """
 
-    VALID_KINDS = {"input", "frame", "text", "fta", "ftt"}
+    VALID_KINDS = {"input", "frame", "fta", "ftt"}
 
     def __init__(self, kinds, path=None):
         if isinstance(kinds, str):
@@ -88,26 +88,25 @@ class Recorder:
     # -- Step artifacts --
 
     def record_step(self, ctx_id, prompt_name, step, **artifacts):
-        """Write step artifacts to ctx-{id}/{prompt}/{step}.json (and .txt for text)."""
-        data = {}
-        for kind in self.kinds:
-            if kind == "text":
-                continue  # text goes to a separate file
-            if kind in artifacts and artifacts[kind] is not None:
-                data[kind] = artifacts[kind]
+        """Write each step artifact to its own file by record type.
 
+        One file per artifact rather than a merged blob, so each recorded
+        artifact is a standalone document (and can later carry its own
+        metadata/uid and be schema-validated as its type):
+            {step}.fta.json   — the FTA document
+            {step}.ftt.json   — the FTT document
+            {step}.frame.json — the frame
+            {step}.input.json — the input content (raw JSON; not a tracked type)
+        """
         step_dir = os.path.join(self.path, f"ctx-{ctx_id}", prompt_name)
         os.makedirs(step_dir, exist_ok=True)
 
-        if data:
-            fpath = os.path.join(step_dir, f"{step}.json")
+        for kind in self.kinds:
+            if kind not in artifacts or artifacts[kind] is None:
+                continue
+            fpath = os.path.join(step_dir, f"{step}.{kind}.json")
             with open(fpath, "w") as f:
-                json.dump(data, f, indent=2, default=str)
-
-        if "text" in self.kinds and "text" in artifacts and artifacts["text"] is not None:
-            tpath = os.path.join(step_dir, f"{step}.txt")
-            with open(tpath, "w") as f:
-                f.write(artifacts["text"])
+                json.dump(artifacts[kind], f, indent=2, default=str)
 
     # -- Internal --
 

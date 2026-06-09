@@ -28,7 +28,7 @@ except Exception:
 from .program import compile, load, Program
 from .engine import Engine
 from .context import Context
-from .remote import RemoteEngine, remote_run
+from .remote import RemoteEngine, RemoteBackend, remote_run
 
 
 def set_log_level(level):

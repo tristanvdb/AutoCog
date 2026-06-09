@@ -17,6 +17,12 @@
       "prompt": "main"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "e37badc8a5d3ad228ee82fa6e05419de1ff3f6dcf3f3afe1a7fec6db3079507b",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "main": {
       "abstracts": [
@@ -253,5 +259,6 @@
       "name": "task_runner"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

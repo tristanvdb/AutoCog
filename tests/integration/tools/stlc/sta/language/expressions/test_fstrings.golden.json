@@ -12,6 +12,12 @@
       "prompt": "test__12909789474868431288_4"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "17c65aa17314d2e1c7b9acb5e68dcc5c6c3a29c9d6c501cb3d7e08560ec72ab2",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "test__12909789474868431288_4": {
       "abstracts": [
@@ -104,5 +110,6 @@
       "name": "test__12909789474868431288_4"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

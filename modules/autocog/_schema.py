@@ -65,17 +65,13 @@ def _load_schema_store():
 
 
 def _detect_format(artifact):
-    """Detect artifact format from metadata or top-level keys."""
-    fmt = artifact.get("metadata", {}).get("format")
-    if fmt:
-        return fmt
-    if "prompts" in artifact and "entry_points" in artifact:
-        if "defines" in artifact and "records" in artifact:
-            return "ir"
-        return "sta"
-    if "actions" in artifact:
-        return "fta"
-    return None
+    """Return the artifact's declared format from its metadata block, or None.
+
+    Every finalized artifact carries metadata.format, so format is read straight
+    from it; there is no top-level-key heuristic. A metadata-less artifact (e.g.
+    a partial or hand-written fragment) yields None and is simply not validated.
+    """
+    return artifact.get("metadata", {}).get("format")
 
 
 def validate_artifact(artifact, filepath="<unknown>"):
@@ -128,18 +124,3 @@ def validate_artifact(artifact, filepath="<unknown>"):
             raise ConfigError(
                 f"Schema violation in {fmt.upper()} at $.{path}: {e.message}",
             )
-
-
-def compute_uid(artifact):
-    """Compute the UID of a Python-side artifact dict.
-
-    Strips metadata before hashing for stability across runs.
-    Returns a 16-char hex string.
-    """
-    import copy
-    import hashlib
-    a = copy.deepcopy(artifact)
-    a.pop("metadata", None)
-    # Compact JSON with sorted keys (JCS-compatible for our types)
-    canonical = json.dumps(a, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()[:16]

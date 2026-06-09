@@ -1,25 +1,16 @@
 
 #include "autocog/compiler/stl/serialize.hxx"
 #include "autocog/compiler/stl/driver.hxx"
-#include "autocog/runtime/sta/load.hxx"
-#include "autocog/utilities/metadata.hxx"
+#include "autocog/codec/json.hxx"
 
-#include <fstream>
-#include <sstream>
+#include <ostream>
 
 namespace autocog::compiler::stl {
 
 void serialize_sta(Driver const & driver, std::ostream & out) {
-    // Compute source_uid from the main input file
-    std::string source_uid;
-    if (!driver.inputs.empty()) {
-        std::ifstream ifs(driver.inputs.front());
-        std::ostringstream ss;
-        ss << ifs.rdbuf();
-        source_uid = autocog::compute_source_uid(ss.str());
-    }
-    auto output = runtime::sta::serialize_program(driver.sta, source_uid);
-    out << output.dump(2) << std::endl;
+    // STA is a root artifact; its metadata was stamped by run_generate()
+    // (finalize). Serialize the data:: program through its JSON conversion.
+    out << autocog::codec::to_json(driver.sta).dump(2) << std::endl;
 }
 
 }

@@ -1,11 +1,16 @@
 
-#include "autocog/runtime/sta/load.hxx"
+#include "autocog/runtime/sta/walk.hxx"
+#include "autocog/codec/json.hxx"
+#include "autocog/data/sta.hxx"
+#include "autocog/data/ftt.hxx"
+#include "autocog/utilities/types.hxx"
 #include "autocog/build_info.hxx"
 #include "autocog/logging.hxx"
 #include "autocog/utilities/errors.hxx"
 #include "autocog/utilities/exception.hxx"
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 
 #include <nlohmann/json.hpp>
 
@@ -15,155 +20,42 @@
 #include <string>
 
 using json = nlohmann::json;
-namespace sta = autocog::runtime::sta;
+namespace sta   = autocog::runtime::sta;
+namespace data  = autocog::data;
+namespace codec = autocog::codec;
 
 static void print_usage(char const * prog) {
-    std::cerr << "Usage: " << prog << " [options] <sta.json>\n\n"
-              << "Score and parse FTT into field values\n\n"
-              << "Options:\n"
-              << "  -p, --prompt <name>    Prompt name (default: entry point)\n"
-              << "  -i, --input <file>     FTT JSON (default: stdin)\n"
-              << "  -o, --output <file>    Output JSON (default: stdout)\n"
+    std::cerr << "Usage: " << prog << " --sta <file> --ftt <file> --prompt <name> --frame <file>\n\n"
+              << "Score an FTT and parse it into a frame of field values.\n\n"
+              << "Options (--sta, --ftt, --prompt, --frame are required):\n"
+              << "  --sta <file>           Compiled STA JSON\n"
+              << "  --ftt <file>           Input FTT JSON\n"
+              << "  --prompt <name>        Prompt the FTT corresponds to\n"
+              << "  --frame <file>         Output frame JSON (/dev/stdout for stdout)\n"
               << "  --metric <name>        Scoring metric: best (default)\n"
-              << "  -V, --verbose [LEVEL]  Log level (trace,debug,info,warn,error; default: debug)\n"
-              << "  -v, --version          Show version\n"
+              << "  --verbose [LEVEL]      Log level (trace,debug,info,warn,error; default: debug)\n"
+              << "  --version              Show version\n"
               << "  --build-info           Show build configuration\n"
-              << "  -h, --help             Show this help\n";
-}
-
-// Walk FTT tree following best (first non-pruned) path at each branch.
-// Collect nodes with "field" metadata.
-static void walk_best_path(
-    json const & node,
-    std::vector<json const *> & path
-) {
-    path.push_back(&node);
-    auto const & children = node["children"];
-    for (auto const & child : children) {
-        if (!child.value("pruned", false)) {
-            walk_best_path(child, path);
-            return;
-        }
-    }
-}
-
-// Build nested result from path nodes that have field metadata.
-static json build_result(
-    std::vector<json const *> const & path,
-    sta::Program const & program,
-    std::string const & prompt_name
-) {
-    auto const & prompt = program.prompts.at(prompt_name);
-    json result = json::object();
-
-    for (auto const * node : path) {
-        if (!node->contains("field")) continue;
-
-        int field_idx = (*node)["field"].get<int>();
-        auto const & fld = prompt.fields[field_idx];
-        std::string value = node->value("text", "");
-
-        // Trim trailing whitespace
-        while (!value.empty() && (value.back() == '\n' || value.back() == '\r'))
-            value.pop_back();
-
-        // Get indices
-        std::vector<int> indices;
-        if (node->contains("indices")) {
-            for (auto const & idx : (*node)["indices"]) {
-                indices.push_back(idx.get<int>());
-            }
-        }
-
-        bool is_list = fld.is_list();
-
-        if (fld.depth == 1) {
-            // Top-level field
-            if (is_list && !indices.empty()) {
-                int arr_idx = indices.back();
-                if (!result.contains(fld.name)) result[fld.name] = json::array();
-                auto & arr = result[fld.name];
-                while (static_cast<int>(arr.size()) <= arr_idx) arr.push_back(nullptr);
-                arr[arr_idx] = value;
-            } else {
-                result[fld.name] = value;
-            }
-        } else {
-            // Nested field: walk ancestor chain to build path
-            struct Step { std::string name; int arr_idx; }; // arr_idx = -1 if not array
-            std::vector<Step> chain;
-            int idx = field_idx;
-            int idx_cursor = static_cast<int>(indices.size());
-
-            while (idx >= 0) {
-                auto const & f = prompt.fields[idx];
-                bool f_is_list = f.is_list();
-                // Every field consumes one index from the end
-                idx_cursor--;
-                int arr_idx = (idx_cursor >= 0) ? indices[idx_cursor] : 0;
-                if (f_is_list) {
-                    chain.push_back({f.name, arr_idx});
-                } else {
-                    chain.push_back({f.name, -1});
-                }
-                if (f.depth == 1) break;
-                // Find parent: previous field with lower depth
-                int parent_idx = idx - 1;
-                while (parent_idx >= 0 && prompt.fields[parent_idx].depth >= f.depth)
-                    parent_idx--;
-                idx = parent_idx;
-            }
-            std::reverse(chain.begin(), chain.end());
-
-            // Navigate/create nested structure
-            json * current = &result;
-            for (size_t i = 0; i < chain.size(); ++i) {
-                auto const & step = chain[i];
-                bool is_last = (i == chain.size() - 1);
-
-                if (is_last) {
-                    if (step.arr_idx >= 0) {
-                        if (!current->contains(step.name)) (*current)[step.name] = json::array();
-                        auto & arr = (*current)[step.name];
-                        while (static_cast<int>(arr.size()) <= step.arr_idx) arr.push_back(nullptr);
-                        arr[step.arr_idx] = value;
-                    } else {
-                        (*current)[step.name] = value;
-                    }
-                } else {
-                    if (step.arr_idx >= 0) {
-                        if (!current->contains(step.name)) (*current)[step.name] = json::array();
-                        auto & arr = (*current)[step.name];
-                        while (static_cast<int>(arr.size()) <= step.arr_idx) arr.push_back(json::object());
-                        current = &arr[step.arr_idx];
-                    } else {
-                        if (!current->contains(step.name)) (*current)[step.name] = json::object();
-                        current = &(*current)[step.name];
-                    }
-                }
-            }
-        }
-    }
-
-    return result;
+              << "  --help                 Show this help\n";
 }
 
 static int run(int argc, char ** argv) {
-    std::string sta_file, prompt_name, input_file, output_file;
+    std::string sta_file, prompt_name, ftt_file, frame_file;
     std::string metric = "best";
 
     autocog::init_console_logger();
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "-h" || arg == "--help") { print_usage(argv[0]); return 0; }
-        if (arg == "-v" || arg == "--version") { std::cout << "psta " << autocog::version() << "\n"; return 0; }
+        if (arg == "--help") { print_usage(argv[0]); return 0; }
+        if (arg == "--version") { std::cout << "psta " << autocog::version() << "\n"; return 0; }
         if (arg == "--build-info") { std::cout << autocog::build_info(); return 0; }
-        if ((arg == "-p" || arg == "--prompt") && i + 1 < argc) { prompt_name = argv[++i]; continue; }
-        if ((arg == "-i" || arg == "--input") && i + 1 < argc) { input_file = argv[++i]; continue; }
-        if ((arg == "-o" || arg == "--output") && i + 1 < argc) { output_file = argv[++i]; continue; }
-        if (arg == "--metric" && i + 1 < argc) { metric = argv[++i]; continue; }
-        if (arg == "-V" || arg == "--verbose") {
+        if (arg == "--sta"    && i + 1 < argc) { sta_file    = argv[++i]; continue; }
+        if (arg == "--ftt"    && i + 1 < argc) { ftt_file    = argv[++i]; continue; }
+        if (arg == "--prompt" && i + 1 < argc) { prompt_name = argv[++i]; continue; }
+        if (arg == "--frame"  && i + 1 < argc) { frame_file  = argv[++i]; continue; }
+        if (arg == "--metric" && i + 1 < argc) { metric      = argv[++i]; continue; }
+        if (arg == "--verbose") {
           spdlog::level::level_enum lvl = spdlog::level::debug;
           if (i + 1 < argc && autocog::looks_like_level_token(argv[i + 1])) {
             if (autocog::parse_level(argv[i + 1], lvl)) {
@@ -177,62 +69,45 @@ static int run(int argc, char ** argv) {
           autocog::init_console_logger(lvl);
           continue;
         }
-        if (arg[0] == '-') { std::cerr << "Unknown option: " << arg << "\n"; return 1; }
-        sta_file = arg;
+        std::cerr << "Unknown option: " << arg << "\n"; print_usage(argv[0]); return 1;
     }
 
-    if (sta_file.empty()) { std::cerr << "Error: no STA file specified\n"; print_usage(argv[0]); return 1; }
+    if (sta_file.empty())    { std::cerr << "Error: --sta is required\n";    print_usage(argv[0]); return 1; }
+    if (ftt_file.empty())    { std::cerr << "Error: --ftt is required\n";    print_usage(argv[0]); return 1; }
+    if (prompt_name.empty()) { std::cerr << "Error: --prompt is required\n"; print_usage(argv[0]); return 1; }
+    if (frame_file.empty())  { std::cerr << "Error: --frame is required\n";  print_usage(argv[0]); return 1; }
 
     // Load STA
-    json sta_json;
-    {
-        if (!std::filesystem::exists(sta_file)) {
-            throw autocog::FileError("Cannot find file: " + sta_file, sta_file);
-        }
-        std::ifstream f(sta_file);
-        if (!f) { throw autocog::FileError("Cannot read file: " + sta_file, sta_file); }
-        sta_json = json::parse(f);
+    if (!std::filesystem::exists(sta_file)) {
+        throw autocog::FileError("Cannot find file: " + sta_file, sta_file);
     }
+    auto program = codec::from_file<data::STA>(sta_file);
 
-    auto program = sta::load_program(sta_json);
-
-    // Resolve prompt name
-    if (prompt_name.empty()) {
-        auto const & entries = sta_json["entry_points"];
-        if (entries.empty()) { std::cerr << "Error: no entry points in STA\n"; return 1; }
-        prompt_name = entries.begin().value()["prompt"].get<std::string>();
-    }
-
-    if (program.prompts.find(prompt_name) == program.prompts.end()) {
+    if (program->prompts.find(prompt_name) == program->prompts.end()) {
         std::cerr << "Error: prompt '" << prompt_name << "' not found in STA\n";
         return 1;
     }
 
-    // Read FTT JSON
-    json ftt_json;
-    if (!input_file.empty()) {
-        std::ifstream f(input_file);
-        if (!f) { std::cerr << "Error: cannot read " << input_file << "\n"; return 1; }
-        ftt_json = json::parse(f);
-    } else {
-        ftt_json = json::parse(std::cin);
-    }
+    // Read FTT (file path).
+    auto ftt = codec::from_file<data::FTT>(ftt_file);
 
-    // Walk best path
-    std::vector<json const *> path;
-    walk_best_path(ftt_json, path);
+    // Build the frame via the canonical FTT->frame walker. psta has no input
+    // content and historically kept raw select indices, so select-resolution
+    // is disabled here (resolve_selects=false), preserving its output. The
+    // --metric selects which completed path becomes the frame.
+    autocog::types::Document empty{ autocog::types::Document::Object{} };
+    auto result = sta::walk_ftt_to_frame(*ftt, *program, prompt_name,
+                                         empty, /*resolve_selects=*/false, metric);
 
-    // Build result
-    json result = build_result(path, program, prompt_name);
-
-    // Output
+    // Write frame JSON to --frame (/dev/stdout for stdout).
     std::ostream * out = &std::cout;
     std::ofstream outfile;
-    if (!output_file.empty()) {
-        outfile.open(output_file);
+    if (frame_file != "/dev/stdout") {
+        outfile.open(frame_file);
+        if (!outfile) { std::cerr << "Error: cannot write " << frame_file << "\n"; return 1; }
         out = &outfile;
     }
-    *out << result.dump(2) << std::endl;
+    *out << codec::to_json(result).dump(2) << std::endl;
 
     return 0;
 }

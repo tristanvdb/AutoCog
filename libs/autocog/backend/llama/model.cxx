@@ -2,10 +2,17 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/logging.hxx"
 
+#include "autocog/data/vocab.hxx"
+
+#include <regex>
+
 #include <llama.h>
 
 #include <cmath>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
+#include "picosha2.h"
 #include "autocog/utilities/exception.hxx"
 
 
@@ -26,7 +33,8 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   id(id_),
   model(nullptr),
   contexts(),
-  rng(0)
+  rng(0),
+  source_(model_path)
 {
   // Load model
   llama_model_params model_params = llama_model_default_params();
@@ -76,18 +84,9 @@ llama_context * Model::get_context(ContextID const id) const {
   return this->contexts[id];
 }
 
-TokenSequence const & Model::get_tokens_const(ContextID const id) const {
-  check_context_id(id);
-  return this->tokens[id];
-}
-
 TokenSequence & Model::get_tokens(ContextID const id) {
   check_context_id(id);
   return this->tokens[id];
-}
-
-ContextID Model::fork_context(ContextID const) {
-  throw autocog::NotImplementedError("Context forking is not implemented yet (Phase 3 feature)");
 }
 
 TokenSequence Model::tokenize(std::string const & text, bool add_bos, bool special) {
@@ -174,20 +173,6 @@ size_t Model::vocab_size() const {
   return llama_vocab_n_tokens(this->get_vocab());
 }
 
-TokenID Model::bos_token() const {
-  if (this->id == 0) {
-    return RNG_BOS;
-  }
-  return llama_vocab_bos(this->get_vocab());
-}
-
-TokenID Model::eos_token() const {
-  if (this->id == 0) {
-    return RNG_EOS;
-  }
-  return llama_vocab_eos(this->get_vocab());
-}
-
 static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
   // Find max logit for numerical stability
   float max_logit = *std::max_element(logit, logit + vocab_size);
@@ -198,15 +183,6 @@ static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
     log_sum_exp += std::exp(logit[i] - max_logit);
   }
   return max_logit + std::log(log_sum_exp);
-}
-
-[[maybe_unused]] static void retrieve_logprobs(llama_context * ctx, unsigned vocab_size, std::vector<float> & logprobs) {
-  float * logits = llama_get_logits(ctx);
-  float log_sum_exp = logit_to_log_sum_exp(logits, vocab_size);
-  logprobs.resize(vocab_size);
-  for (unsigned tok = 0; tok < vocab_size; tok++) {
-    logprobs[tok] = log_sum_exp - logits[tok];
-  }
 }
 
 static void sample_logprobs(llama_context * ctx, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
@@ -411,6 +387,81 @@ unsigned Model::eval_topk_tokens(
   }
     
   return 1;
+}
+
+std::string Model::sha256() const {
+  // The RNG model has no backing file; report a stable sentinel so an FTT it
+  // produced still records which "model" evaluated it.
+  if (source_.empty()) return "rng";
+  if (sha_cache_.empty()) {
+    std::ifstream f(source_, std::ios::binary);
+    if (!f)
+      throw autocog::ModelError("Cannot open model file to hash: " + source_, id, "hash");
+    // Stream the file through SHA-256 (full 64-hex) so a multi-GB GGUF is not
+    // loaded into memory. Cached for the lifetime of the loaded model.
+    sha_cache_ = picosha2::hash256_hex_string(
+        std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+  }
+  return sha_cache_;
+}
+
+std::vector<bool> Model::build_vocab_mask(autocog::data::VocabExpr const & ve) {
+  size_t const n = vocab_size();
+  using Kind = autocog::data::VocabExpr::Kind;
+  switch (ve.kind) {
+    case Kind::Tokenize: {
+      std::vector<bool> m(n, false);
+      for (auto const & s : ve.strings)
+        for (TokenID t : tokenize(s, false, true))
+          if (t >= 0 && static_cast<size_t>(t) < n) m[t] = true;
+      return m;
+    }
+    case Kind::Regex: {
+      std::vector<bool> m(n, false);
+      std::regex re(ve.strings.empty() ? std::string{} : ve.strings[0]);
+      for (size_t t = 0; t < n; ++t) {
+        std::string surface = detokenize({static_cast<TokenID>(t)}, false, false);
+        if (std::regex_search(surface, re)) m[t] = true;
+      }
+      return m;
+    }
+    case Kind::Union: {
+      auto a = build_vocab_mask(ve.operands[0]);
+      auto b = build_vocab_mask(ve.operands[1]);
+      for (size_t i = 0; i < n; ++i) a[i] = a[i] || b[i];
+      return a;
+    }
+    case Kind::Intersect: {
+      auto a = build_vocab_mask(ve.operands[0]);
+      auto b = build_vocab_mask(ve.operands[1]);
+      for (size_t i = 0; i < n; ++i) a[i] = a[i] && b[i];
+      return a;
+    }
+    case Kind::Diff: {
+      auto a = build_vocab_mask(ve.operands[0]);
+      auto b = build_vocab_mask(ve.operands[1]);
+      for (size_t i = 0; i < n; ++i) a[i] = a[i] && !b[i];
+      return a;
+    }
+    case Kind::Complement: {
+      auto a = build_vocab_mask(ve.operands[0]);
+      a.flip();
+      return a;
+    }
+  }
+  return std::vector<bool>(n, true);
+}
+
+std::vector<bool> const & Model::vocab_mask(std::string const & ref, autocog::data::VocabExpr const & expr) {
+  auto it = vocab_mask_cache_.find(ref);
+  if (it != vocab_mask_cache_.end()) return it->second;
+  return vocab_mask_cache_.emplace(ref, build_vocab_mask(expr)).first->second;
+}
+
+std::vector<bool> const & Model::full_vocab_mask() {
+  if (full_vocab_mask_.size() != vocab_size())
+    full_vocab_mask_.assign(vocab_size(), true);
+  return full_vocab_mask_;
 }
 
 }

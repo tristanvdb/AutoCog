@@ -1,7 +1,7 @@
 
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/utilities/exception.hxx"
-#include "autocog/runtime/sta/state.hxx"
+#include "autocog/data/sta.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
@@ -12,7 +12,7 @@
 
 namespace autocog::compiler::stl {
 
-namespace sta = autocog::runtime::sta;
+namespace data = autocog::data;
 
 // ============================================================================
 // Extract compact FieldInfo from IR
@@ -20,35 +20,48 @@ namespace sta = autocog::runtime::sta;
 
 namespace {
 
+// Local helpers over the data field/abstract tables: the data:: types are pure
+// PODs, so the methods/free fns that lived on the runtime types live here.
+static bool is_list(data::Field const & f) { return f.range.has_value(); }
+
+static int abs_depth(data::Abstract const & a, std::vector<data::Field> const & fields) {
+    return (a.field < 0) ? 0 : fields[a.field].depth;
+}
+
+// runtime/fta VocabExpr (unique_ptr operands) -> data VocabExpr (by-value
+// operands). The Kind enums share order. Full unification is deferred.
+static data::VocabExpr to_data_vocab(ir::VocabExpr const & ve) {
+    data::VocabExpr out;
+    out.kind = static_cast<data::VocabExpr::Kind>(ve.kind);
+    out.strings = ve.strings;
+    out.operands.reserve(ve.operands.size());
+    for (auto const & op : ve.operands) out.operands.push_back(to_data_vocab(*op));
+    return out;
+}
+
 // Convert an IR leaf format (variant alternative) to the STA FieldFormat.
 // The struct (sub-fields) arm is handled by the caller (collect_fields), not here.
-static sta::FieldFormat extract_format(ir::Format const & fmt) {
-    return std::visit([](auto const & f) -> sta::FieldFormat {
+static data::FieldFormat extract_format(ir::Format const & fmt) {
+    return std::visit([](auto const & f) -> data::FieldFormat {
         using T = std::decay_t<decltype(f)>;
-        if constexpr (std::is_same_v<T, ir::Completion>) {
-            sta::CompletionFormat cf;
-            cf.length = f.length;
-            cf.vocab = f.vocab;
-            return cf;
-        } else if constexpr (std::is_same_v<T, ir::Enum>) {
-            sta::EnumFormat ef;
-            ef.values = f.values;
-            return ef;
-        } else if constexpr (std::is_same_v<T, ir::Choice>) {
-            return f;   // ir::Choice IS sta::ChoiceFormat now
+        if constexpr (std::is_same_v<T, ir::Completion> ||
+                      std::is_same_v<T, ir::Enum> ||
+                      std::is_same_v<T, ir::Choice>) {
+            // The IR leaf formats ARE the data leaf formats (shared types).
+            return data::FieldFormat{f};
         } else {
-            // struct (vector<Field>) → record (no leaf format); handled by caller.
-            return std::monostate{};
+            // struct (vector<Field>) -> record (no leaf format); handled by caller.
+            return data::FieldFormat{std::monostate{}};
         }
     }, fmt);
 }
 
 // Convert resolved IR search policies to the STA SearchParams shape.
-static sta::SearchParams convert_policies(ir::SearchPolicies const & pol) {
-    sta::SearchParams out;
+static data::SearchParams convert_policies(ir::SearchPolicies const & pol) {
+    data::SearchParams out;
     for (auto const & [category, params] : pol) {
         for (auto const & [key, val] : params) {
-            std::visit([&](auto const & v) { out[category][key] = v; }, val);
+            std::visit([&](auto const & v) { out.categories[category][key] = v; }, val);
         }
     }
     return out;
@@ -56,7 +69,7 @@ static sta::SearchParams convert_policies(ir::SearchPolicies const & pol) {
 
 static void collect_fields(
     std::vector<ir::Field const *> & flat,
-    std::vector<sta::FieldInfo> & infos,
+    std::vector<data::Field> & infos,
     std::vector<std::unique_ptr<ir::Field>> const & fields,
     int target_depth = 1   // what depth the first child should have
 ) {
@@ -69,7 +82,7 @@ static void collect_fields(
 
     for (auto const & fptr : fields) {
         auto const & f = *fptr;
-        sta::FieldInfo info;
+        data::Field info;
         info.name = f.name;
         info.depth = f.depth + depth_offset;
         info.index = f.index;
@@ -101,18 +114,18 @@ static void collect_fields(
 
 // Matches Python: stack of lists, flow from parent to first child,
 // exit from sibling to sibling, self-loop for lists.
-static std::vector<sta::AbstractState> build_abstract(std::vector<sta::FieldInfo> const & fields) {
-    std::vector<sta::AbstractState> abstracts;
+static std::vector<data::Abstract> build_abstract(std::vector<data::Field> const & fields) {
+    std::vector<data::Abstract> abstracts;
     abstracts.emplace_back(); // root at index 0 (field = -1)
     std::vector<std::vector<int>> stack = {{0}};
 
     for (int f = 0; f < static_cast<int>(fields.size()); ++f) {
         auto const & fld = fields[f];
         int idx = static_cast<int>(abstracts.size());
-        sta::AbstractState st; st.field = f;
+        data::Abstract st; st.field = f;
         abstracts.push_back(st);
 
-        if (fld.is_list()) {
+        if (is_list(fld)) {
             abstracts[idx].flow = idx; // self-loop
         }
 
@@ -154,23 +167,23 @@ static std::vector<sta::AbstractState> build_abstract(std::vector<sta::FieldInfo
 // Extract flow info from IR prompt
 // ============================================================================
 
-static std::map<std::string, sta::FlowEntry> extract_flows(ir::Prompt const & pmt) {
-    std::map<std::string, sta::FlowEntry> flows;
+static std::map<std::string, data::Flow> extract_flows(ir::Prompt const & pmt) {
+    std::map<std::string, data::Flow> flows;
     for (auto const & flow : pmt.flows) {
         std::string label = flow.label.value_or(flow.target_prompt);
-        flows[label] = sta::FlowTarget{flow.target_prompt, flow.limit};
+        flows[label] = data::Flow{data::FlowControl{flow.target_prompt, flow.limit}};
     }
     if (pmt.return_info) {
         auto const & ri = pmt.return_info.value();
         std::string label = ri.label.value_or("return");
-        sta::ReturnTarget rt;
+        data::FlowReturn rt;
         for (auto const & rf : ri.fields) {
-            sta::ReturnField srf;
+            data::ReturnField srf;
             srf.alias = rf.alias.value_or("_");
             srf.path = rf.source.steps;   // shared PathStep; copy through
             rt.fields.push_back(std::move(srf));
         }
-        flows[label] = std::move(rt);
+        flows[label] = data::Flow{std::move(rt)};
     }
     return flows;
 }
@@ -179,50 +192,53 @@ static std::map<std::string, sta::FlowEntry> extract_flows(ir::Prompt const & pm
 // Extract channel descriptions from IR prompt
 // ============================================================================
 
-static sta::PathStep convert_step(ir::PathStep const & step) {
+static data::PathStep convert_step(ir::PathStep const & step) {
     // IR and STA PathStep are the same shared type now; copy through faithfully.
     return step;
 }
 
-static std::vector<sta::PathStep> convert_steps(std::vector<ir::PathStep> const & steps) {
-    std::vector<sta::PathStep> result;
+static std::vector<data::PathStep> convert_steps(std::vector<ir::PathStep> const & steps) {
+    std::vector<data::PathStep> result;
     for (auto const & s : steps) result.push_back(convert_step(s));
     return result;
 }
 
-static std::vector<sta::PathStep> convert_docpath(ir::DocPath const & dp) {
+static std::vector<data::PathStep> convert_docpath(ir::DocPath const & dp) {
     return convert_steps(dp.steps);
 }
 
-static std::vector<sta::Clause> convert_clauses(std::vector<ir::Clause> const & clauses) {
-    // IR and STA clauses are the same shared type now; copy through unchanged.
-    return clauses;
+static std::vector<data::Clause> convert_clauses(std::vector<ir::Clause> const & clauses) {
+    // IR keeps a bare clause variant; wrap each into data::Clause at the boundary.
+    std::vector<data::Clause> out;
+    out.reserve(clauses.size());
+    for (auto const & c : clauses) out.push_back(data::Clause{c});
+    return out;
 }
 
-static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
-    std::vector<sta::Channel> channels;
+static std::vector<data::Channel> extract_channels(ir::Prompt const & pmt) {
+    std::vector<data::Channel> channels;
     for (auto const & ch : pmt.channels) {
         std::visit([&](auto const & c) {
             using T = std::decay_t<decltype(c)>;
             if constexpr (std::is_same_v<T, ir::InputChannel>) {
-                sta::InputChannel ic;
+                data::InputChannel ic;
                 ic.target = convert_docpath(c.target);
                 ic.source = convert_steps(c.source);
-                channels.push_back(std::move(ic));
+                channels.push_back(data::Channel{std::move(ic)});
             } else if constexpr (std::is_same_v<T, ir::DataflowChannel>) {
-                sta::DataflowChannel dc;
+                data::DataflowChannel dc;
                 dc.target = convert_docpath(c.target);
                 dc.prompt = c.prompt;
                 dc.source = convert_steps(c.source);
                 dc.clauses = convert_clauses(c.clauses);
-                channels.push_back(std::move(dc));
+                channels.push_back(data::Channel{std::move(dc)});
             } else if constexpr (std::is_same_v<T, ir::CallChannel>) {
-                sta::CallChannel cc;
+                data::CallChannel cc;
                 cc.target = convert_docpath(c.target);
                 cc.extern_func = c.extern_func;
                 cc.entry = c.entry;
                 for (auto const & [name, kwarg] : c.kwargs) {
-                    sta::ChannelKwarg ck;
+                    data::ChannelKwarg ck;
                     ck.name = name;
                     ck.is_input = kwarg.is_input;
                     ck.prompt = kwarg.prompt;
@@ -233,7 +249,7 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
                 }
                 // Link-level clauses
                 cc.clauses = convert_clauses(c.link_clauses);
-                channels.push_back(std::move(cc));
+                channels.push_back(data::Channel{std::move(cc)});
             }
         }, ch);
     }
@@ -246,13 +262,13 @@ static std::vector<sta::Channel> extract_channels(ir::Prompt const & pmt) {
 // Schema generation: collect inputs and outputs for each entry point
 // ============================================================================
 
-static sta::SchemaField format_to_schema(sta::FieldFormat const & fmt) {
-    sta::SchemaField s;
+static data::SchemaField format_to_schema(data::FieldFormat const & fmt) {
+    data::SchemaField s;
     s.type = "text";
-    if (auto * cf = std::get_if<sta::CompletionFormat>(&fmt)) {
+    if (auto * cf = std::get_if<data::CompletionFormat>(&fmt.value)) {
         s.type = "text";
         if (cf->length > 0) s.max_length = cf->length;
-    } else if (auto * ef = std::get_if<sta::EnumFormat>(&fmt)) {
+    } else if (auto * ef = std::get_if<data::EnumFormat>(&fmt.value)) {
         s.type = "text";
         for (auto const & v : ef->values) {
             // Strip surrounding quotes if present
@@ -262,16 +278,16 @@ static sta::SchemaField format_to_schema(sta::FieldFormat const & fmt) {
                 s.enum_values.push_back(v);
             }
         }
-    } else if (std::holds_alternative<sta::ChoiceFormat>(fmt)) {
+    } else if (std::holds_alternative<data::ChoiceFormat>(fmt.value)) {
         s.type = "text";
-    } else if (std::holds_alternative<std::monostate>(fmt)) {
+    } else if (std::holds_alternative<std::monostate>(fmt.value)) {
         s.type = "object";
     }
     return s;
 }
 
 static std::set<std::string> reachable_via_flow(
-    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::map<std::string, data::Prompt> const & prompts,
     std::string const & entry
 ) {
     std::set<std::string> visited;
@@ -283,7 +299,7 @@ static std::set<std::string> reachable_via_flow(
         auto it = prompts.find(p);
         if (it == prompts.end()) continue;
         for (auto const & [fname, fentry] : it->second.flows) {
-            if (auto * ft = std::get_if<sta::FlowTarget>(&fentry)) {
+            if (auto * ft = std::get_if<data::FlowControl>(&fentry.value)) {
                 queue.push_back(ft->prompt);
             }
         }
@@ -292,10 +308,10 @@ static std::set<std::string> reachable_via_flow(
 }
 
 static void collect_inputs(
-    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::map<std::string, data::Prompt> const & prompts,
     std::set<std::string> const & reachable,
     std::string const & entry_prompt,
-    std::map<std::string, sta::SchemaField> & inputs
+    std::map<std::string, data::SchemaField> & inputs
 ) {
     for (auto const & pname : reachable) {
         auto it = prompts.find(pname);
@@ -303,14 +319,14 @@ static void collect_inputs(
         auto const & prompt = it->second;
 
         for (auto const & ch : prompt.channels) {
-            if (auto * ic = std::get_if<sta::InputChannel>(&ch)) {
+            if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
                 // Direct input channel
                 if (ic->source.empty()) continue;
                 std::string name = ic->source.back().name;
                 std::string target_name = ic->target.empty() ? name : ic->target.back().name;
 
                 // Find target field format and range
-                sta::SchemaField schema;
+                data::SchemaField schema;
                 schema.type = "text";
                 for (auto const & f : prompt.fields) {
                     if (f.name == target_name) {
@@ -339,13 +355,13 @@ static void collect_inputs(
                     inputs[name] = schema;
                 }
 
-            } else if (auto * cc = std::get_if<sta::CallChannel>(&ch)) {
+            } else if (auto * cc = std::get_if<data::CallChannel>(&ch.value)) {
                 for (auto const & kw : cc->kwargs) {
                     if (kw.is_input && !kw.value.has_value()) {
                         if (kw.path.empty()) continue;
                         std::string name = kw.path.back().name;
                         if (inputs.count(name) == 0) {
-                            sta::SchemaField schema;
+                            data::SchemaField schema;
                             schema.type = "text";
                             schema.required = (pname == entry_prompt);
                             inputs[name] = schema;
@@ -367,7 +383,7 @@ static void collect_inputs(
         std::string next;
         int control_count = 0;
         for (auto const & [fname, fentry] : it->second.flows) {
-            if (auto * ft = std::get_if<sta::FlowTarget>(&fentry)) {
+            if (auto * ft = std::get_if<data::FlowControl>(&fentry.value)) {
                 control_count++;
                 next = ft->prompt;
             }
@@ -382,9 +398,9 @@ static void collect_inputs(
             if (it == prompts.end()) continue;
             for (auto const & ch : it->second.channels) {
                 bool found = false;
-                if (auto * ic = std::get_if<sta::InputChannel>(&ch)) {
+                if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
                     if (!ic->source.empty() && ic->source.back().name == name) found = true;
-                } else if (auto * cc = std::get_if<sta::CallChannel>(&ch)) {
+                } else if (auto * cc = std::get_if<data::CallChannel>(&ch.value)) {
                     for (auto const & kw : cc->kwargs) {
                         if (kw.is_input && !kw.path.empty() && kw.path.back().name == name) found = true;
                     }
@@ -396,9 +412,9 @@ static void collect_inputs(
 }
 
 static void collect_outputs(
-    std::map<std::string, sta::PromptSTA> const & prompts,
+    std::map<std::string, data::Prompt> const & prompts,
     std::set<std::string> const & reachable,
-    std::map<std::string, sta::SchemaField> & outputs
+    std::map<std::string, data::SchemaField> & outputs
 ) {
     for (auto const & pname : reachable) {
         auto it = prompts.find(pname);
@@ -407,11 +423,11 @@ static void collect_outputs(
 
         // Check for return flows
         for (auto const & [fname, fentry] : prompt.flows) {
-            auto * rt = std::get_if<sta::ReturnTarget>(&fentry);
+            auto * rt = std::get_if<data::FlowReturn>(&fentry.value);
             if (!rt) continue;
             for (auto const & rf : rt->fields) {
                 std::string name = rf.alias.empty() ? "_" : rf.alias;
-                sta::SchemaField schema;
+                data::SchemaField schema;
                 schema.type = "text";
                 if (!rf.path.empty()) {
                     std::string field_name = rf.path.back().name;
@@ -439,8 +455,8 @@ static void collect_outputs(
         // Terminal prompts (no flows): output is the full frame
         if (prompt.flows.empty()) {
             for (auto const & f : prompt.fields) {
-                if (std::holds_alternative<std::monostate>(f.format)) continue; // skip records
-                sta::SchemaField schema = format_to_schema(f.format);
+                if (std::holds_alternative<std::monostate>(f.format.value)) continue; // skip records
+                data::SchemaField schema = format_to_schema(f.format);
                 if (f.range.has_value()) {
                     auto items = format_to_schema(f.format);
                     schema.type = "array";
@@ -469,13 +485,13 @@ std::optional<int> Driver::run_generate() {
             auto pos = key.rfind("::");
             auto name = (pos != std::string::npos) ? key.substr(pos + 2) : key;
             auto & target = ps->target.data.name.data.name;
-            sta.python_imports[name] = runtime::sta::PythonImport{ps->filename, target};
+            sta.python_imports[name] = data::PythonImport{ps->filename, target};
         }
     }
 
     for (auto const & [mangled, pmt_ptr] : prompts) {
         auto const & pmt = *pmt_ptr;
-        runtime::sta::PromptSTA pstas;
+        data::Prompt pstas;
         pstas.name = pmt.mangled_name;
         pstas.desc = pmt.desc;
 
@@ -485,14 +501,14 @@ std::optional<int> Driver::run_generate() {
         for (auto const & [category, params] : pmt.search) {
             for (auto const & [key, val] : params) {
                 std::visit([&](auto const & v) {
-                    pstas.search[category][key] = v;
+                    pstas.search.categories[category][key] = v;
                 }, val);
             }
         }
 
         // Carry the vocab table: vocab_<hash> -> resolved expression tree.
         for (auto const & [key, ve] : pmt.vocabs) {
-            pstas.vocabs[key] = std::move(*ve.canonical());
+            pstas.vocabs[key] = to_data_vocab(ve);
         }
 
     SPDLOG_LOGGER_DEBUG(autocog::log(), "STA: building {} ({} IR fields)", mangled, pmt.fields.size());
@@ -507,16 +523,16 @@ std::optional<int> Driver::run_generate() {
         {
             auto flow_map = extract_flows(pmt);
             if (!flow_map.empty()) {
-                sta::FieldInfo next_field;
+                data::Field next_field;
                 next_field.name = "next";
                 next_field.depth = 1;
                 next_field.index = static_cast<int>(pstas.fields.size());
                 next_field.flat_index = static_cast<int>(pstas.fields.size());
-                sta::EnumFormat ef;
+                data::EnumFormat ef;
                 for (auto const & [label, _] : flow_map) {
                     ef.values.push_back(label);
                 }
-                next_field.format = ef;
+                next_field.format.value = ef;
                 next_field.desc.push_back("the next step");
                 pstas.fields.push_back(std::move(next_field));
             }
@@ -546,7 +562,7 @@ std::optional<int> Driver::run_generate() {
 
     // Build entry points with schemas (must be after prompts are populated)
     for (auto const & [entry_name, mangled] : entry_point_map) {
-        sta::EntryPoint ep;
+        data::EntryPoint ep;
         ep.prompt = mangled;
 
         auto reachable = reachable_via_flow(sta.prompts, mangled);
@@ -555,6 +571,9 @@ std::optional<int> Driver::run_generate() {
 
         sta.entry_points[entry_name] = std::move(ep);
     }
+
+    // STA is a root artifact: empty provenance, content-only hash.
+    sta.finalize();
 
     return std::nullopt;
 }

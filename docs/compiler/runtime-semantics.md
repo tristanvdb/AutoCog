@@ -1,462 +1,136 @@
-# STL Runtime Semantics & Execution Model
+# Runtime Semantics & Execution Model
 
-Clarifications from developer discussion to guide Stage 6 implementation.
+This document describes how a compiled program (an **STA**) is executed. The STA
+format and how it is produced are covered in
+[Compiler Architecture](./architecture.md); the artifact types used throughout are
+covered in [Data & Codec](./data-codec.md).
 
-## Execution Pipeline
+## Execution pipeline
 
 ```
-STL source → Parser → AST → Stage 1-5 → Instantiation Graph
-                                              ↓
-                                    Stage 6: AST→IR Conversion
-                                              ↓
-                                         STA (IR/JSON)
-                                              ↓
-                                    Runtime: STA→FTA Unrolling
-                                              ↓
-                                         LLM Execution
+STA  ──instantiate──▶  FTA  ──evaluate──▶  FTT  ──walk──▶  frame
+(program)             (one prompt,        (model's        (field
+                       text automaton)     eval tree)      values)
 ```
 
-## 1. Execution Model: STA → FTA → LLM
+A program is a graph of prompts. Execution proceeds one prompt at a time. For each
+prompt the runtime:
 
-**Compile Time (Stage 6):**
-- STL → STA (Structured Thoughts Automaton) IR
-- STA is the compiled representation with prompts, fields, channels, flows
+1. **resolves channels** to build the prompt's input `content` (a `Document`);
+2. **instantiates** the prompt + content into an **FTA** (a token-level automaton);
+3. **evaluates** the FTA against the model to produce an **FTT** (the evaluation tree);
+4. **walks** the FTT back into a **frame** (the parsed field values);
+5. **branches** to the next prompt — or returns — based on the frame.
 
-**Runtime (xFTA tool):**
-- STA → FTA (Finite Thoughts Automaton) unrolling
-- FTA is the actual state machine executed by LLM
-- Each **prompt** = basic block in control flow graph
-- Each **field** in prompt = FTA state for LLM to fill
+Steps 2–4 are a single prompt evaluation; step 1 and 5 are orchestration.
 
-**Example:**
-```stl
-prompt main {
-  is {
-    topic is text;              // → FTA state 1: completion
-    question is text;           // → FTA state 2: completion
-    answer is enum("A", "B", "C");  // → FTA state 3: choice(A,B,C)
-  }
-  return { from .answer; }
-}
+## 1. Prompt evaluation (STA → FTA → FTT → frame)
+
+This is `Engine.evaluate_prompt` (`modules/autocog/engine.py`), which composes the
+C++ runtime and backend bindings:
+
+```
+fta_id = runtime_sta_cxx.instantiate(sta_id, prompt, content, syntax_id, search_id)
+ftt_id = backend_llama_cxx.evaluate(model_id, fta_id)
+frame  = runtime_sta_cxx.walk_ftt_to_frame(sta_id, prompt, ftt_id, content)
 ```
 
-FTA creates 3 sequential states, then terminates.
-
-## 2. Flows = Control Flow Branches
-
-Flows create edges in the control flow graph between prompts (basic blocks).
-
-**Semantics:**
-- Prompts = basic blocks
-- Flows = branch edges
-- LLM chooses which flow to take at runtime
-
-**Example 1: Choice between branches**
-```stl
-prompt step1 { ... }
-prompt step2 { ... }
-
-prompt main {
-  flow { to step1; to step2; }
-}
-```
-→ LLM must choose: execute step1 OR step2
-
-**Example 2: Loop with bound**
-```stl
-prompt main {
-  flow { to main[5] as "retry"; }
-  return { ... }
-}
-```
-→ LLM can choose: loop back to main (max 5 times) OR return
-
-**Example 3: Multiple options**
-```stl
-flow {
-  to process;
-  to skip;
-  to retry[3];
-}
-return { ... }
-```
-→ LLM chooses: process, skip, retry(max 3), or return
-
-**Key Point:** Return statement provides termination edge. Without it, execution must flow somewhere.
-
-## 3. Channels = Data Flow (Pre-computed)
-
-Channels execute **BEFORE** prompt is unrolled to FTA. They populate fields with data.
-
-### Channel Execution Order:
-
-1. **Input channels:** Bring in external data
-2. **Dataflow channels:** Pull from other prompt executions (Frame object)
-3. **Call channels:** Invoke functions/prompts
-4. **Then:** Unroll prompt to FTA with all data populated
-
-**Critical:** Channels are pre-computation, not concurrent with LLM execution!
-
-### Channel Types:
-
-**Input:** External data
-```stl
-channel {
-  to .topic from ?topic;     // '?' marks external input
-  to .question from ?question;
-}
-```
-
-**Dataflow:** From current or other prompts
-```stl
-channel {
-  to .hint from .reflect;           // Internal: current prompt
-  to .context from other.result;    // Cross-prompt: from 'other'
-}
-```
-
-For cross-prompt dataflow, data pulled from last execution of that prompt (Frame).
-
-**Call:** Function/prompt invocation
-```stl
-channel {
-  to .result from call(process, input: .data, mode: "fast");
-}
-```
-
-Calls can be:
-- Python functions (extern): `call(module.function, ...)`
-- Other prompts: `call(helper, ...)`
-
-### Channel Dependency Resolution:
-
-**STL:** Channels execute in **declaration order**
-**Future:** Could analyze dependencies at compile time and reorder
-
-**Example:**
-```stl
-channel {
-  to .processed from call(clean, text: .raw);  // Must execute after next line
-  to .raw from ?input;                          // Must execute first
-}
-```
-Compiler should warn or reorder.
-
-## 4. Records = Inlined Copies
-
-Records are **templates** that get **copied** when inlined into prompts.
-
-### Storage Strategy:
-
-**Driver cache:**
-```cpp
-std::unordered_map<std::string, std::unique_ptr<ir::Record>> records;
-```
-
-Each unique (name, parameters) combination gets one entry:
-- `"0::Address"` - Address with no parameters
-- `"0::Data__length_i10"` - Data<10>
-- `"0::Data__length_i20"` - Data<20>
-
-**When inlining into prompt:**
-1. Look up record template in cache by mangled name
-2. **Copy** the record structure (fields)
-3. Add copied fields to prompt's field list
-4. Update field.parent to point to prompt (not template)
-
-**Example:**
-```stl
-record Address {
-  is {
-    street is text;
-    city is text;
-  }
-}
-
-prompt p1 { is { addr1 is Address; } }
-prompt p2 { is { addr2 is Address; } }
-```
-
-Result:
-- `records["0::Address"]` = template with street, city fields
-- `prompts["0::p1"]` = copy of Address fields inlined
-- `prompts["0::p2"]` = separate copy of Address fields inlined
-
-Each prompt gets its own copy of the record structure.
-
-### Field Indexing:
-
-Fields are indexed **per depth level**:
-
-```stl
-record Addr {
-  is {
-    street is text;   // depth=2, index=0
-    city is text;     // depth=2, index=1
-  }
-}
-
-prompt main {
-  is {
-    name is text;     // depth=1, index=0
-    addr is Addr;     // depth=1, index=1
-  }
-}
-```
-
-Index **restarts at 0** for each depth level, not global.
-
-## 5. STL Language Features
-
-### Define Statements
-
-**Purpose:** Compile-time variables/constants
-
-```stl
-define max_length = 50;
-define mode = "strict";
-
-record Data {
-  is text<max_length>;  // Evaluated at compile time → text<50>
-}
-```
-
-**Scope:**
-- Global defines (file-level)
-- Prompt/record-level defines (local scope)
-
-**Evaluation:** All expressions are **compile-time constant evaluation**
-
-**NOT:** Runtime variables (no mutable state)
-
-### Unnamed Records (Inline Structs)
-
-**Syntax:** Nest record directly in field definition
-
-```stl
-prompt main {
-  is {
-    // Named record reference:
-    addr1 is Address;
-
-    // Unnamed record (inline struct):
-    addr2 {
-      street is text;
-      city is text;
-    }
-  }
-}
-```
-
-Unnamed records create ad-hoc structure without separate record definition.
-
-### Search (RAG Extension)
-
-**Status:** Out of scope for initial implementation
-**Purpose:** Typed retrieval using Records
-**Parser:** Already present, ignore for now
-
-### Assign
-
-**Purpose:** Parameter/define assignment (compile-time only)
-**Not:** Runtime variable mutation
-
-### Return Statement
-
-**Purpose:** Specify output fields and termination
-
-```stl
-prompt main {
-  is {
-    thinking is text;
-    answer is text;
-  }
-  return {
-    from .answer;  // Only return answer field, not thinking
-  }
-}
-```
-
-**Semantics:**
-- Creates termination edge in control flow
-- Specifies which fields to export to caller
-- Optional alias: `return { as "success"; from .answer; }`
-
-## 6. Python Function Calls
-
-**IR Representation:**
-```cpp
-struct Call {
-    std::optional<std::string> extern;  // "module.function"
-    std::optional<std::string> entry;   // For prompt calls
-    std::unordered_map<std::string, Kwarg> kwargs;
-    std::optional<std::unordered_map<std::string, DocPath>> binds;
-    DocPath target;  // Where result goes
-};
-```
-
-**Module Resolution:**
-- Store as string: "module.function"
-- Link with file ID from import statement
-- Validation: Not at compile time (runtime concern)
-
-**Example:**
-```stl
-import python from "helper.py";
-
-channel {
-  to .result from call(python.process, input: .data);
-}
-```
-
-## 7. Type/Expression Evaluation
-
-**Rule:** All expressions evaluated at **compile time**
-
-```stl
-define max_length = 50;
-define doubled = max_length * 2;
-
-record Data {
-  is text<doubled>;  // Compiled to: text<100>
-}
-```
-
-**IR stores evaluated values:**
-- `Completion(length=100)` NOT `Completion(length=doubled)`
-- All format parameters are concrete values in IR
-
-**Implications:**
-- No symbolic references in IR
-- Evaluator must resolve all expressions during Stage 6 conversion
-- Runtime doesn't need expression evaluator
-
-## 8. Annotations = Prompt Engineering
-
-Annotations are **critical** for LLM execution. They generate prompt headers describing fields.
-
-**Syntax:**
-```stl
-prompt main @ "You are answering questions." {
-  is {
-    question @ "the question to answer" is text;
-    answer @ "your answer to the question" is text;
-  }
-}
-```
-
-**IR Storage:**
-```cpp
-struct Object {
-    std::string name;
-    std::vector<std::string> desc;  // Annotations here
-};
-
-struct Field : Object {
-    // Inherits desc for field annotations
-};
-
-struct Prompt : Object {
-    // desc contains prompt-level annotations
-};
-```
-
-**Runtime Usage:**
-Annotations assembled into prompt header for LLM:
-```
-You are answering questions.
-
-Fields:
-- question: the question to answer
-- answer: your answer to the question
-```
-
-**Key Point:** Annotations are not debug info, they're part of the compiled output for LLM consumption.
-
-## 9. Dataflow from Parameterized Prompts
-
-**Problem:** Dataflow channels reference prompts by name, but parameterized prompts have multiple instantiations.
-
-```stl
-prompt worker<id> { is { result is text; } }
-
-// worker<1>, worker<2>, worker<3> are all different instantiations
-
-prompt collector {
-  channel {
-    to .data from worker<?>.result;  // Which worker?
-  }
-}
-```
-
-**Solution:** Use **mangled names** in channel IR
-
-```stl
-export worker<1> as w1;
-
-prompt collector {
-  channel {
-    to .data from w1.result;  // Unambiguous
-  }
-}
-```
-
-**IR Representation:**
-```cpp
-struct Dataflow {
-    std::optional<std::string> prompt;  // Mangled name: "0::worker__id_i1"
-    DocPath src;
-    DocPath tgt;
-};
-```
-
-**Design Decision:** Store mangled names in IR. User must use aliases to disambiguate parameterized prompts in dataflow.
-
-## 10. Field Parent Pointers
-
-When records are inlined into prompts, field.parent points to the **containing prompt**, not the record template.
-
-**Example:**
-```stl
-record Address {
-  is {
-    street is text;
-    city is text;
-  }
-}
-
-prompt main {
-  is {
-    addr is Address;
-  }
-}
-```
-
-**Result in IR:**
-```cpp
-Prompt main:
-  fields = [
-    Field(name="addr", format=nullptr, depth=1, index=0, parent=&main),
-    Field(name="street", format=Completion(), depth=2, index=0, parent=Field("addr")),
-    Field(name="city", format=Completion(), depth=2, index=1, parent=Field("addr")),
-  ]
-```
-
-Parent chain: `city.parent → addr.parent → main`
-
-This creates a proper tree structure for path resolution.
-
-## Summary: Critical Points for Stage 6
-
-1. ✅ Records use `unique_ptr` and are copied when inlined
-2. ✅ Field indices restart per depth level
-3. ✅ All expressions evaluated at compile time
-4. ✅ Channels execute before FTA unrolling
-5. ✅ Flows create control flow edges (branches)
-6. ✅ Annotations are for LLM prompt engineering
-7. ✅ Store mangled names in dataflow channels
-8. ✅ Field.parent points to containing structure, not template
-9. ✅ Python calls stored as strings with file linkage
-10. ✅ Return creates termination edges
-
-Next: Fix ir.hxx based on these semantics, then implement Stage 6.
+### Instantiate: STA prompt → FTA
+
+`runtime::sta::instantiate` (`libs/autocog/runtime/sta/instantiate.cxx`) unrolls the
+prompt's flat field list into a **Finite Thought Automaton** — a DAG of actions,
+formatted according to the `Syntax` config, with `SearchConfig` parameters embedded
+into each action. Each field becomes one or more actions:
+
+- a **text/completion** field → a `CompleteAction` (free generation, bounded by
+  length / threshold / stop);
+- an **enum** field → a `ChooseAction` over the fixed values;
+- a **select/repeat** field → a `ChooseAction` over the runtime options drawn from
+  `content`;
+- fixed prompt scaffolding (labels, annotations, separators) → `TextAction`s.
+
+The implicit `next` field (added during compilation) becomes a final `ChooseAction`
+over the prompt's flow labels. The FTA's provenance records the STA's hash.
+
+### Evaluate: FTA → FTT
+
+`backend_llama_cxx.evaluate` (`libs/autocog/backend/llama/`) runs the FTA against the
+model, exploring it with beam/choice search per the embedded search config, and
+produces a **Finite Thought Tree** — a tree of `FTTNode`s carrying the generated
+text, token ids, and log-probabilities for each explored path. The FTT's provenance
+records the FTA's hash **and** the model's GGUF hash, so an FTT identifies exactly
+what produced it.
+
+With the built-in RNG model (`model_id = 0`), generation is deterministic given the
+seed (`Engine.set_seed`), which is what the test suite and `--rng` use.
+
+### Walk: FTT → frame
+
+`runtime::sta::walk_ftt_to_frame` (`libs/autocog/runtime/sta/walk.cxx`) selects a
+single root→leaf path through the FTT (by default the `"best"` path — highest leaf
+score) and maps it back onto the prompt's field schema, producing the **frame**: a
+nested `Document` of field name → value. A `select` field's chosen index is resolved
+back to its actual value from `content` when available.
+
+## 2. Channels (resolved before instantiation)
+
+Channels populate the prompt's `content` *before* the FTA is built — the model never
+sees channel mechanics, only the rendered prompt. Resolution happens in Python
+(`modules/autocog/channels.py`, `clauses.py`), in declaration order. There are three
+kinds (see the [Language Reference](../structured-thoughts/language.md#channels) for
+syntax):
+
+- **get** — read a value from the caller-provided external inputs;
+- **use** — read from another prompt's already-computed frame (dataflow), or from a
+  previous iteration of the same prompt (self-reference);
+- **call** — invoke a Python external or another prompt, optionally transformed by
+  clauses (`bind`, `ravel`, `mapped`, `wrap`, `prune`).
+
+Resolving a `call` to another prompt runs that prompt (a nested evaluation) before
+the current one is instantiated.
+
+## 3. Flow control (orchestration)
+
+After a prompt is evaluated, `Context.step` (`modules/autocog/context.py`) decides
+what happens next using the frame's `next` field:
+
+- if the prompt has **no flows**, it is terminal: the frame becomes the result and
+  execution ends;
+- the value of `next` selects one of the prompt's flow entries;
+- a **return** flow extracts the declared return fields (resolving dotted paths,
+  mapping over arrays) and ends execution;
+- a **control** flow moves to the named target prompt. If that flow has a limit, the
+  per-prompt branch counter is checked first and exceeding it is an error.
+
+The model therefore drives branching by completing the `next` choice, but the set of
+legal branches and any loop bounds are fixed at compile time. `Engine.run` repeats
+`step` until the context is done or `max_steps` is hit.
+
+## 4. Records and field indexing
+
+Records are **templates copied** (inlined) into each prompt that uses them; the
+compiler flattens the resulting nesting into a single field list where each field
+carries its `depth` and a per-depth `index` (the index restarts at 0 at each depth
+level). Parent pointers run from a leaf field up to the containing prompt, giving a
+tree the runtime uses for path resolution. This flattening happens in Stage 6
+(Generate) and is what the FTA unrolls and the frame mirrors.
+
+## 5. Determinism and reproducibility
+
+Because every artifact is content-addressed (see [Data & Codec](./data-codec.md)),
+the lineage `STA → FTA → FTT` is reproducible: the same STA + content + syntax +
+search yields the same FTA hash, and evaluating it with the same model and seed
+yields the same FTT hash. This is what lets recorded artifacts (`autocog run
+--record`) be compared and replayed.
+
+## Tools
+
+The same pipeline is available as standalone tools for inspection and scripting
+(see [C++ Tools](../interfaces/tools-cli.md)):
+
+| Tool   | Stage                | In → Out      |
+|--------|----------------------|---------------|
+| `stlc` | compile              | STL → STA     |
+| `ista` | instantiate          | STA → FTA     |
+| `xfta` | evaluate             | FTA → FTT (or best-path text) |
+| `psta` | parse text → frame   | text → frame (using the STA schema) |

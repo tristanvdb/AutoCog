@@ -5,6 +5,54 @@ Smoke tests — verify bindings load and basic pipeline works.
 import autocog.errors
 import pytest
 
+import contextlib
+
+
+@contextlib.contextmanager
+def running_server(app):
+    """Run a uvicorn app in a background thread on an ephemeral port.
+
+    Yields the chosen port. This avoids the flaky fixed-port + fixed-sleep
+    pattern: the OS assigns a free port (so tests never collide on a hardcoded
+    one), startup is detected by polling the port rather than sleeping a fixed
+    interval, and the server thread is joined on exit so the port is released
+    before the next test tries to bind.
+    """
+    import socket
+    import threading
+    import time
+    import uvicorn
+
+    # Ask the OS for a free port, then hand it to uvicorn.
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.bind(("127.0.0.1", 0))
+    port = probe.getsockname()[1]
+    probe.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    # Wait until the server is actually accepting connections.
+    deadline = time.time() + 15.0
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.25):
+                break
+        except OSError:
+            time.sleep(0.05)
+    else:
+        server.should_exit = True
+        thread.join(timeout=5)
+        raise RuntimeError(f"uvicorn did not start on port {port}")
+
+    try:
+        yield port
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+
 
 class TestBindings:
     """Verify all three bindings import and respond."""
@@ -41,6 +89,31 @@ class TestCompile:
         # Verify channels are present
         channels = sta["prompts"]["main"].get("channels", [])
         assert len(channels) > 0
+
+
+class TestStoreDedup:
+    """The datastore is content-addressed: identical artifacts collapse to one
+    handle. That shared entry must outlive any single holder being released or
+    garbage-collected — otherwise dropping one duplicate corrupts the others."""
+
+    def test_dedup_survives_duplicate_release(self, repo_root):
+        import gc
+        import autocog
+
+        src = str(repo_root / "share/demos/mcq/select.stl")
+        # Two independent compiles of the same source are byte-identical, so
+        # they resolve to the same content uid (one store entry, two holders).
+        p1 = autocog.compile(src)
+        p2 = autocog.compile(src)
+        assert p1.id == p2.id, "identical programs must content-address to one handle"
+
+        # Dropping one holder (its __del__ releases the uid) must NOT invalidate
+        # the entry the surviving holder still points at.
+        del p2
+        gc.collect()
+
+        sta = p1.sta  # faults if the shared entry was destroyed by p2's release
+        assert "prompts" in sta
 
 
 class TestPipeline:
@@ -324,19 +397,6 @@ class TestStapp:
 class TestRemoteEngine:
     """Test RemoteEngine against in-process servers."""
 
-    @staticmethod
-    def _start_server(app, port):
-        """Start a uvicorn server in a background thread."""
-        import uvicorn
-        import threading
-        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
-        server = uvicorn.Server(config)
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        import time
-        time.sleep(1)  # wait for startup
-        return server
-
     def test_remote_run_level1(self, repo_root):
         """Test remote_run against a serve endpoint."""
         import autocog
@@ -346,16 +406,13 @@ class TestRemoteEngine:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        server = self._start_server(app, 18091)
-        try:
+        with running_server(app) as port:
             result = autocog.remote_run(
-                "http://127.0.0.1:18091",
+                f"http://127.0.0.1:{port}",
                 topic="Science", question="What is H2O?",
                 choices=["Water", "Fire", "Air", "Earth"]
             )
             assert result in ["Water", "Fire", "Air", "Earth"]
-        finally:
-            server.should_exit = True
 
     def test_remote_engine_level2(self, repo_root):
         """Test RemoteEngine against an RPC endpoint."""
@@ -365,31 +422,18 @@ class TestRemoteEngine:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        server = self._start_server(app, 18092)
-        try:
-            engine = autocog.RemoteEngine("http://127.0.0.1:18092")
+        with running_server(app) as port:
+            engine = autocog.RemoteEngine(f"http://127.0.0.1:{port}")
             result = engine.run(
                 prog,
                 topic="Science", question="What is H2O?",
                 choices=["Water", "Fire", "Air", "Earth"]
             )
             assert result in ["Water", "Fire", "Air", "Earth"]
-        finally:
-            server.should_exit = True
 
 
 class TestBackendServer:
     """Test the level-3 backend server."""
-
-    @staticmethod
-    def _start_server(app, port):
-        import uvicorn, threading
-        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
-        server = uvicorn.Server(config)
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        import time; time.sleep(1)
-        return server
 
     def test_backend_evaluate(self, repo_root):
         """Submit FTA to backend, poll for result."""
@@ -397,7 +441,8 @@ class TestBackendServer:
         from autocog.runtime.sta import runtime_sta_cxx
         from autocog.server.backend import create_app
 
-        # Compile and instantiate to get FTA JSON
+        # Compile and instantiate to an FTA, then fetch it as JSON straight from
+        # the datastore (dump_fta) -- no need to shell out to the ista tool.
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         search = str(repo_root / "share/search/default.json")
@@ -406,55 +451,22 @@ class TestBackendServer:
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id, engine.search_id
         )
-        # Get FTA as JSON via the store
-        from autocog.backend.llama import backend_llama_cxx
-        # Use evaluate to verify the FTA works locally first
-        ftt_id = backend_llama_cxx.evaluate(0, fta_id)
-        backend_llama_cxx.release_ftt(ftt_id)
-
-        # Export FTA JSON - instantiate again for the server test
-        fta_id2 = runtime_sta_cxx.instantiate(
-            prog.id, "main", content, engine.syntax_id, engine.search_id
-        )
-        # Get the FTA JSON from the store via emit
-        import autocog.compiler.stl.compiler_stl_cxx as cxx
-        # Actually, we need the FTA JSON. Let's use ista approach:
-        # instantiate returns an fta_id in the store, but we need JSON.
-        # Use the xfta tool approach: serialize FTA from store
-        runtime_sta_cxx.release_fta(fta_id)
-        runtime_sta_cxx.release_fta(fta_id2)
-
-        # Simpler: use stlc to compile, ista to get FTA JSON
-        import subprocess, tempfile
-        sta_json = json.dumps(prog.sta)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write(sta_json)
-            sta_path = f.name
         try:
-            ista_result = subprocess.run(
-                ["ista", "-s", str(repo_root / "share/syntax/default.json"),
-                 "--search", str(repo_root / "share/search/default.json"),
-                 "-d", "/dev/stdin", sta_path],
-                input=json.dumps(content),
-                capture_output=True, text=True, timeout=10
-            )
-            assert ista_result.returncode == 0, f"ista failed: {ista_result.stderr}"
-            fta_json = json.loads(ista_result.stdout)
+            fta_json = json.loads(runtime_sta_cxx.dump_fta(fta_id))
         finally:
-            import os; os.unlink(sta_path)
+            runtime_sta_cxx.release_fta(fta_id)
 
         # Start backend server
         app = create_app(model_path=None)  # RNG model
-        server = self._start_server(app, 18093)
-        try:
+        with running_server(app) as port:
             # Test GET /models
-            with urllib.request.urlopen("http://127.0.0.1:18093/models") as resp:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/models") as resp:
                 models = json.loads(resp.read())
             assert "rng" in models["models"]
 
             # Test POST /evaluate
             req = urllib.request.Request(
-                "http://127.0.0.1:18093/evaluate",
+                f"http://127.0.0.1:{port}/evaluate",
                 data=json.dumps({"fta": fta_json}).encode(),
                 headers={"Content-Type": "application/json"},
                 method="POST",
@@ -467,30 +479,41 @@ class TestBackendServer:
             import time
             for _ in range(30):
                 time.sleep(0.5)
-                with urllib.request.urlopen(f"http://127.0.0.1:18093/status/{request_id}") as resp:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/status/{request_id}") as resp:
                     status = json.loads(resp.read())
                 if status["state"] == "complete":
-                    assert isinstance(status["result"], str)
+                    # Backend returns the FTT (xfta over the wire), not text.
+                    ftt = status["result"]
+                    assert isinstance(ftt, dict)
+                    assert "children" in ftt and "text" in ftt
                     return
                 elif status["state"] == "error":
                     raise AssertionError(f"Backend error: {status['error']}")
             raise AssertionError("Backend evaluation timed out")
-        finally:
-            server.should_exit = True
+
+    def test_remote_backend_level3(self, repo_root):
+        """RemoteBackend instantiates+walks locally, evaluates on the backend."""
+        import autocog
+        from autocog.server.backend import create_app
+
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        app = create_app(model_path=None)  # RNG model
+        with running_server(app) as port:
+            engine = autocog.RemoteBackend(
+                f"http://127.0.0.1:{port}",
+                syntax=str(repo_root / "share/syntax/default.json"),
+                search=str(repo_root / "share/search/default.json"),
+            )
+            result = engine.run(
+                prog,
+                topic="Science", question="What is H2O?",
+                choices=["Water", "Fire", "Air", "Earth"],
+            )
+            assert result in ["Water", "Fire", "Air", "Earth"]
 
 
 class TestServeServer:
     """Test the level-1 serve server including web form."""
-
-    @staticmethod
-    def _start_server(app, port):
-        import uvicorn, threading
-        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
-        server = uvicorn.Server(config)
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        import time; time.sleep(1)
-        return server
 
     def test_web_form(self, repo_root):
         """Test GET / returns HTML form."""
@@ -500,16 +523,13 @@ class TestServeServer:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        server = self._start_server(app, 18094)
-        try:
-            with urllib.request.urlopen("http://127.0.0.1:18094/") as resp:
+        with running_server(app) as port:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp:
                 html = resp.read().decode()
             assert "<form" in html
             assert "topic" in html
             assert "question" in html
             assert "choices" in html
-        finally:
-            server.should_exit = True
 
     def test_schema_endpoint(self, repo_root):
         """Test GET /schema returns entry point schemas."""
@@ -519,15 +539,12 @@ class TestServeServer:
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        server = self._start_server(app, 18095)
-        try:
-            with urllib.request.urlopen("http://127.0.0.1:18095/schema") as resp:
+        with running_server(app) as port:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/schema") as resp:
                 schema = json.loads(resp.read())
             assert "main" in schema
             assert "inputs" in schema["main"]
             assert "topic" in schema["main"]["inputs"]
-        finally:
-            server.should_exit = True
 
 
 class TestCLI:
@@ -876,51 +893,33 @@ class TestCoverageEdgeCases:
         """Test RemoteEngine error path."""
         import autocog, json, urllib.request
         from autocog.server.rpc import create_app
-        import uvicorn, threading, time
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        config = uvicorn.Config(app, host="127.0.0.1", port=18096, log_level="error")
-        server = uvicorn.Server(config)
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        time.sleep(1)
-
-        try:
+        with running_server(app) as port:
             # Request with bad prompt name should cause error
-            engine = autocog.RemoteEngine("http://127.0.0.1:18096", poll_interval=0.2, timeout=5)
+            engine = autocog.RemoteEngine(f"http://127.0.0.1:{port}", poll_interval=0.2, timeout=5)
             try:
                 engine.evaluate_prompt(prog, "nonexistent_prompt", {})
                 assert False, "Should have raised"
             except (RuntimeError, autocog.errors.AutoCogError) as e:
                 assert "failed" in str(e).lower() or "error" in str(e).lower()
-        finally:
-            server.should_exit = True
 
     def test_status_not_found(self, repo_root):
         """Test GET /status with unknown request_id returns 404."""
         import autocog, urllib.request, urllib.error, json
         from autocog.server.serve import create_app
-        import uvicorn, threading, time
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         syntax = str(repo_root / "share/syntax/default.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
-        config = uvicorn.Config(app, host="127.0.0.1", port=18097, log_level="error")
-        server = uvicorn.Server(config)
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        time.sleep(1)
-
-        try:
+        with running_server(app) as port:
             try:
-                urllib.request.urlopen("http://127.0.0.1:18097/status/nonexistent-id")
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/status/nonexistent-id")
                 assert False, "Should have raised"
             except urllib.error.HTTPError as e:
                 assert e.code == 404
-        finally:
-            server.should_exit = True
 
 
 class TestVersionAndBuildInfo:
@@ -954,7 +953,7 @@ class TestVersionAndBuildInfo:
 class TestRecorder:
     """Test execution recording."""
 
-    def test_record_frame_text(self, repo_root):
+    def test_record_frame(self, repo_root):
         import autocog, tempfile, os, json
         from autocog.recorder import Recorder
 
@@ -962,7 +961,7 @@ class TestRecorder:
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
-            recorder = Recorder(kinds="frame,text", path=tmpdir)
+            recorder = Recorder(kinds="frame", path=tmpdir)
             result = engine.run(
                 prog, recorder=recorder,
                 topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
@@ -976,14 +975,14 @@ class TestRecorder:
             assert ctx["entry"] == "main"
             assert len(ctx["trace"]) > 0
 
-            # Check step artifacts
+            # Each artifact is its own typed file.
             prompt = ctx["trace"][0]["prompt"]
             step = ctx["trace"][0]["step"]
-            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
-            assert os.path.isfile(json_path)
-            with open(json_path) as f:
-                data = json.load(f)
-            assert "frame" in data
+            frame_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.frame.json")
+            assert os.path.isfile(frame_path)
+            with open(frame_path) as f:
+                frame = json.load(f)
+            assert isinstance(frame, dict)
 
     def test_record_input(self, repo_root):
         import autocog, tempfile, os, json
@@ -1004,12 +1003,13 @@ class TestRecorder:
                 ctx = json.load(f)
             prompt = ctx["trace"][0]["prompt"]
             step = ctx["trace"][0]["step"]
-            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
-            with open(json_path) as f:
+            input_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.input.json")
+            assert os.path.isfile(input_path)
+            with open(input_path) as f:
                 data = json.load(f)
-            assert "input" in data
-            assert "topic" in data["input"]
-            assert "frame" not in data
+            assert "topic" in data
+            # frame was not requested -> no frame file
+            assert not os.path.isfile(os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.frame.json"))
 
     def test_record_invalid_kind(self):
         from autocog.recorder import Recorder
@@ -1024,7 +1024,7 @@ class TestRecorder:
                 ["autocog", "run",
                  "--stl", str(repo_root / "share/demos/mcq/select.stl"),
                  "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}',
-                 "--record", "frame,text",
+                 "--record", "frame",
                  "--record-path", tmpdir],
                 capture_output=True, text=True, timeout=30
             )
@@ -1063,7 +1063,7 @@ class TestSyntaxVariants:
             json.dump({"system_msg": "test"}, f)
             bad_syntax = f.name
         try:
-            with __import__("pytest").raises(autocog.errors.ConfigError, match="missing required field"):
+            with __import__("pytest").raises(ValueError, match="malformed Syntax"):
                 autocog.Engine(syntax=bad_syntax, search=str(repo_root / "share/search/default.json"))
         finally:
             os.unlink(bad_syntax)
@@ -1080,7 +1080,7 @@ class TestRecorderFtaFtt:
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
-            recorder = Recorder(kinds="input,frame,text,fta,ftt", path=tmpdir)
+            recorder = Recorder(kinds="input,frame,fta,ftt", path=tmpdir)
             result = engine.run(
                 prog, recorder=recorder,
                 topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
@@ -1093,22 +1093,27 @@ class TestRecorderFtaFtt:
 
             prompt = ctx["trace"][0]["prompt"]
             step = ctx["trace"][0]["step"]
-            json_path = os.path.join(tmpdir, f"ctx-0/{prompt}/{step}.json")
+            base = os.path.join(tmpdir, f"ctx-0/{prompt}")
 
-            assert os.path.isfile(json_path)
+            # Each artifact is its own typed file.
+            def load(kind):
+                p = os.path.join(base, f"{step}.{kind}.json")
+                assert os.path.isfile(p), f"missing {p}"
+                with open(p) as f:
+                    return json.load(f)
 
-            with open(json_path) as f:
-                data = json.load(f)
+            input_data = load("input")
+            frame_data = load("frame")
+            fta_data = load("fta")
+            ftt_data = load("ftt")
 
-            assert "input" in data
-            assert "frame" in data
-            assert "fta" in data
-            assert "ftt" in data
+            assert "topic" in input_data
+            assert isinstance(frame_data, dict)
             # FTA should have actions
-            assert "actions" in data["fta"]
+            assert "actions" in fta_data
             # FTT should have tree structure
-            assert "children" in data["ftt"]
-            assert "text" in data["ftt"]
+            assert "children" in ftt_data
+            assert "text" in ftt_data
 
 
 class TestCLIErrors:
@@ -1255,7 +1260,7 @@ class TestCLIErrorsDirect:
                     "--stl", str(repo_root / "share/demos/mcq/select.stl"),
                     "--rng",
                     "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}',
-                    "--record", "frame,text",
+                    "--record", "frame",
                     "--record-path", tmpdir]
             with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO):
                 main()
@@ -1377,36 +1382,39 @@ class TestLogging:
 class TestErrorHierarchy:
     """Test typed exceptions across C++/Python boundary."""
 
-    def test_config_error_bad_syntax(self):
-        """Loading nonexistent syntax file raises ConfigError with path."""
-        from autocog.errors import ConfigError, AutoCogError
+    def test_file_error_missing_syntax(self):
+        """Loading a nonexistent syntax file raises FileError with path."""
+        from autocog.errors import FileError, AutoCogError
         from autocog.runtime.sta import runtime_sta_cxx
 
-        with pytest.raises(ConfigError) as exc_info:
+        with pytest.raises(FileError) as exc_info:
             runtime_sta_cxx.load_syntax("/tmp/nonexistent_syntax.json")
         e = exc_info.value
         assert "/tmp/nonexistent_syntax.json" in e.path
-        assert not e.recoverable
         assert isinstance(e, AutoCogError)
 
-    def test_config_error_bad_search(self):
-        """Loading nonexistent search config raises ConfigError."""
-        from autocog.errors import ConfigError
+    def test_file_error_missing_search(self):
+        """Loading a nonexistent search config raises FileError."""
+        from autocog.errors import FileError
         from autocog.runtime.sta import runtime_sta_cxx
 
-        with pytest.raises(ConfigError):
-            runtime_sta_cxx.load_search_config("/tmp/nonexistent_search.json")
+        with pytest.raises(FileError):
+            runtime_sta_cxx.load_search("/tmp/nonexistent_search.json")
 
     def test_config_error_missing_field(self, repo_root):
-        """Syntax file missing required field raises ConfigError."""
+        """Syntax file missing a required field is rejected.
+
+        Until schema validation lands, the codec reports the malformed input as
+        a ValueError (nlohmann access failure); a schema check will eventually
+        reject it earlier with a typed ConfigError.
+        """
         import autocog, tempfile, json, os
-        from autocog.errors import ConfigError
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"system_msg": "test"}, f)
             bad_syntax = f.name
         try:
-            with pytest.raises(ConfigError, match="missing required field"):
+            with pytest.raises(ValueError, match="malformed Syntax"):
                 autocog.Engine(syntax=bad_syntax,
                                search=str(repo_root / "share/search/default.json"))
         finally:
@@ -1422,7 +1430,6 @@ class TestErrorHierarchy:
             autocog.compile(str(bad))
         e = exc_info.value
         assert isinstance(e, AutoCogError)
-        assert not e.recoverable
         assert e.diagnostics
         assert any(d.level == "error" for d in e.diagnostics)
 
@@ -1441,7 +1448,7 @@ class TestErrorHierarchy:
         from autocog.runtime.sta import runtime_sta_cxx
 
         with pytest.raises(FileError) as exc_info:
-            runtime_sta_cxx.load_program("/tmp/nonexistent_program.json")
+            runtime_sta_cxx.load_sta("/tmp/nonexistent_program.json")
         e = exc_info.value
         assert "/tmp/nonexistent_program.json" in e.path
         assert isinstance(e, OSError)  # MI with builtins.OSError
@@ -1478,57 +1485,16 @@ class TestErrorHierarchy:
         # InternalError
         assert issubclass(InternalError, AutoCogError)
 
-    def test_recoverable_defaults(self):
-        """Recovery defaults match the design contract."""
-        from autocog.errors import (
-            ConfigError, OrchestrationError, FlowInvariantError,
-            RemoteError, Timeout, InternalError
-        )
-
-        assert not ConfigError("x").recoverable
-        assert OrchestrationError("x").recoverable
-        assert not FlowInvariantError("x").recoverable
-        assert RemoteError("x").recoverable
-        assert Timeout("x").recoverable
-        assert not InternalError("x").recoverable
-
-    def test_recoverable_override(self):
-        """Recovery flag can be overridden per instance."""
-        from autocog.errors import OrchestrationError
-
-        e = OrchestrationError("x", recoverable=False)
-        assert not e.recoverable
-
     def test_handle_helper(self):
         """handle() returns correct exit codes."""
         import logging
-        from autocog.errors import (
-            handle, ConfigError, InternalError, AutoCogError
-        )
+        from autocog.errors import handle, ConfigError, InternalError
 
         log = logging.getLogger("autocog.test.handle")
 
-        code, recovered = handle(ConfigError("bad"), log)
-        assert code == 1
-        assert not recovered
-
-        code, recovered = handle(InternalError("bug"), log)
-        assert code == 250
-        assert not recovered
-
-        code, recovered = handle(ValueError("other"), log)
-        assert code == 251
-        assert not recovered
-
-    def test_handle_recovery(self):
-        """handle() with allow_recovery returns recovered=True for recoverable errors."""
-        import logging
-        from autocog.errors import handle, OrchestrationError
-
-        log = logging.getLogger("autocog.test.handle")
-        code, recovered = handle(OrchestrationError("retry"), log, allow_recovery=True)
-        assert code == 0
-        assert recovered
+        assert handle(ConfigError("bad"), log) == 1
+        assert handle(InternalError("bug"), log) == 250
+        assert handle(ValueError("other"), log) == 251
 
     def test_error_fields(self):
         """Error subtypes expose their typed fields."""
@@ -1605,41 +1571,18 @@ class TestSchemaValidation:
         with pytest.raises(ConfigError, match="Schema violation"):
             validate_artifact(bad)
 
-    def test_compute_uid_stable(self, repo_root):
-        """compute_uid returns same value for same input."""
-        from autocog._schema import compute_uid
-        artifact = {"prompts": {"a": 1}, "entry_points": {"main": "a"}}
-        uid1 = compute_uid(artifact)
-        uid2 = compute_uid(artifact)
-        assert uid1 == uid2
-        assert len(uid1) == 16
-
-    def test_compute_uid_ignores_metadata(self):
-        """compute_uid strips metadata so timestamps don't affect it."""
-        from autocog._schema import compute_uid
-        a1 = {"data": 1, "metadata": {"timestamp": "2026-01-01T00:00:00Z"}}
-        a2 = {"data": 1, "metadata": {"timestamp": "2026-12-31T23:59:59Z"}}
-        assert compute_uid(a1) == compute_uid(a2)
-
-    def test_compute_uid_differs_on_content(self):
-        """compute_uid produces different values for different content."""
-        from autocog._schema import compute_uid
-        a1 = {"data": 1}
-        a2 = {"data": 2}
-        assert compute_uid(a1) != compute_uid(a2)
-
 
 class TestGoldenCompare:
     """Test the golden file comparator."""
 
     def test_compare_identical(self, repo_root):
-        """compare returns None for identical artifacts."""
+        """compare returns None when artifacts differ only by timestamp."""
         import sys
         sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
-        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0.0"}}
-        b = {"prompts": {"x": 1}, "metadata": {"version": "2.0.0"}}
-        assert compare(a, b) is None  # metadata excluded
+        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0.0", "timestamp": "2026-01-01T00:00:00Z"}}
+        b = {"prompts": {"x": 1}, "metadata": {"version": "1.0.0", "timestamp": "2026-12-31T00:00:00Z"}}
+        assert compare(a, b) is None  # only the timestamp differs, which is excluded
 
     def test_compare_mismatch(self, repo_root):
         """compare returns diff message on mismatch."""
@@ -1653,14 +1596,20 @@ class TestGoldenCompare:
         assert "GOLDEN MISMATCH" in diff
         assert "$.prompts.x" in diff
 
-    def test_compare_ignores_metadata(self, repo_root):
-        """compare ignores metadata block differences."""
+    def test_compare_ignores_only_timestamp(self, repo_root):
+        """compare excludes metadata.timestamp but compares the rest of metadata."""
         import sys
         sys.path.insert(0, str(repo_root / "tests" / "scripts"))
         from golden_compare import compare
-        a = {"data": 1, "metadata": {"uid": "aaaa", "timestamp": "2026-01-01"}}
-        b = {"data": 1, "metadata": {"uid": "bbbb", "timestamp": "2026-12-31"}}
+        # Differing only in timestamp is treated as a match.
+        a = {"data": 1, "metadata": {"uid": "aaaa", "timestamp": "2026-01-01T00:00:00Z"}}
+        b = {"data": 1, "metadata": {"uid": "aaaa", "timestamp": "2026-12-31T00:00:00Z"}}
         assert compare(a, b) is None
+        # A differing uid is a real mismatch now: identity is part of the comparison.
+        c = {"data": 1, "metadata": {"uid": "bbbb", "timestamp": "2026-01-01T00:00:00Z"}}
+        diff = compare(a, c)
+        assert diff is not None
+        assert "$.metadata.uid" in diff
 
     def test_validate_valid_golden(self, repo_root):
         """validate passes on a real golden file."""
@@ -1694,10 +1643,10 @@ class TestGoldenCompare:
         assert 'actual' in diff.lower() or '"actual"' in diff
 
     def test_cli_compare(self, repo_root, tmp_path):
-        """golden_compare.py CLI works end-to-end."""
+        """golden_compare.py CLI exits 0 on a match (only timestamp differs)."""
         import json, subprocess
-        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0"}}
-        b = {"prompts": {"x": 1}, "metadata": {"version": "2.0"}}
+        a = {"prompts": {"x": 1}, "metadata": {"version": "1.0", "timestamp": "2026-01-01T00:00:00Z"}}
+        b = {"prompts": {"x": 1}, "metadata": {"version": "1.0", "timestamp": "2026-12-31T00:00:00Z"}}
         af = tmp_path / "actual.json"
         bf = tmp_path / "golden.json"
         af.write_text(json.dumps(a))
@@ -1806,11 +1755,13 @@ class TestWriterRecording:
                         artifact_files.append(os.path.join(root, f))
             assert len(artifact_files) >= 4, f"expected ≥4 step artifacts, got {len(artifact_files)}"
 
-            # Each step artifact should have input and/or frame
-            for af in artifact_files[:3]:
-                with open(af) as f:
-                    data = json.load(f)
-                assert "input" in data or "frame" in data, f"artifact {af} has neither input nor frame"
+            # Each artifact is its own typed file (input/frame), named
+            # {step}.{kind}.json with the artifact as its top-level content.
+            for af in artifact_files:
+                assert af.endswith(".input.json") or af.endswith(".frame.json"), \
+                    f"unexpected artifact file {af}"
+            with open(artifact_files[0]) as f:
+                json.load(f)  # parses as a standalone document
 
     def test_writer_recorded_sub_context_pages(self, repo_root, engine):
         """Verify create_pages sub-contexts record their frames."""

@@ -17,6 +17,12 @@
       "prompt": "main"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "e6d32c70e5de556b8c7c69ef53747c68e36787b5d27d11f0ea6432098ed85cff",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "list_handler": {
       "abstracts": [
@@ -218,5 +224,6 @@
       "name": "main"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

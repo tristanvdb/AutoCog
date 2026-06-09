@@ -206,7 +206,7 @@ def cmd_compile(args):
         raise FileError(f"STL file not found: {args.stl}")
     import autocog
     prog = autocog.compile(args.stl, includes=args.include)
-    output = json.dumps(prog.sta, indent=2)
+    output = prog.dump_json()
     if args.output:
         with open(args.output, "w") as f:
             f.write(output + "\n")
@@ -383,7 +383,7 @@ def main():
     p_run.add_argument("--max-steps", type=int, default=100, help="Max prompt steps")
     p_run.add_argument(
         "--record", default=None,
-        help="Record artifacts per step: comma-separated subset of input,frame,text,fta,ftt",
+        help="Record artifacts per step: comma-separated subset of input,frame,fta,ftt",
     )
     p_run.add_argument(
         "--record-path", default=None,

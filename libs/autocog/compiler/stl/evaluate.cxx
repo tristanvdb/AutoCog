@@ -10,7 +10,7 @@
 
 namespace autocog::compiler::stl {
 
-Evaluator::Evaluator(std::list<Diagnostic> & diagnostics_, SymbolTable & tables_) :
+Evaluator::Evaluator(std::list<autocog::data::Diagnostic> & diagnostics_, SymbolTable & tables_) :
   diagnostics(diagnostics_),
   tables(tables_)
 {}
@@ -245,10 +245,10 @@ ir::Value Evaluator::retrieve_value(
   std::string const & scope,
   std::string const & varname,
   ir::VarMap & varmap,
-  std::optional<SourceRange> const & loc
+  std::optional<autocog::location::SourceRange> const & loc
 ) {
   SPDLOG_LOGGER_TRACE(autocog::log(), "Evaluator::retrieve_value( )");
-  ir::Value value = nullptr;
+  ir::Value value = std::monostate{};
 
   auto varmap_it = varmap.find(varname);
   if (varmap_it != varmap.end()) {
@@ -294,7 +294,7 @@ ir::Value Evaluator::retrieve_value(
         throw CompileError("Define `" + varname + "` has no initializer to evaluate.", loc);
       }
       
-      varmap[varname] = nullptr; // causes cycles to return error values
+      varmap[varname] = std::monostate{}; // causes cycles to return error values
       value = evaluate(scope, defn.data.init.value(), varmap);
       varmap[varname] = value;
       
@@ -303,7 +303,7 @@ ir::Value Evaluator::retrieve_value(
       throw CompileError("Found a symbol for another object than a define when looking up " + varname + " for evaluation!", loc);
     }
   }
-  if (std::holds_alternative<std::nullptr_t>(value)) {
+  if (std::holds_alternative<std::monostate>(value)) {
     throw CompileError(
               "Found error value when retriving variable `" + varname + "`." +
                 "If no previous error was reported then it is likely a circular " +
@@ -342,7 +342,7 @@ std::string vocab_key(std::string const & name, ir::VarMap const & ctx) {
     std::visit([&](auto const & v) {
       using T = std::decay_t<decltype(v)>;
       if constexpr (std::is_same_v<T, std::string>) k += v;
-      else if constexpr (std::is_same_v<T, std::nullptr_t>) k += "null";
+      else if constexpr (std::is_same_v<T, std::monostate>) k += "null";
       else if constexpr (std::is_same_v<T, bool>) k += (v ? "true" : "false");
       else k += std::to_string(v);
     }, ctx.at(kk));
@@ -353,7 +353,7 @@ std::string vocab_key(std::string const & name, ir::VarMap const & ctx) {
 
 std::unique_ptr<ir::VocabExpr> Evaluator::translate_vocab(
   std::string const & scope, ast::Expression const & expr, ir::VarMap & ctx,
-  std::optional<SourceRange> const & loc
+  std::optional<autocog::location::SourceRange> const & loc
 ) {
   auto eval_str = [&](ast::String const & s) -> std::string {
     ir::Value v = evaluate(scope, s, ctx);
@@ -413,7 +413,7 @@ std::unique_ptr<ir::VocabExpr> Evaluator::translate_vocab(
 
 std::unique_ptr<ir::VocabExpr> Evaluator::resolve_vocab(
   std::string const & scope, std::string const & name, ir::VarMap & ctx,
-  std::optional<SourceRange> const & loc
+  std::optional<autocog::location::SourceRange> const & loc
 ) {
   std::string key = vocab_key(name, ctx);
   auto cit = vocab_cache.find(key);

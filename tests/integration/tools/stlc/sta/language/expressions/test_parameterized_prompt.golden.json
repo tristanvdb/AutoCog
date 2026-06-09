@@ -11,6 +11,12 @@
       "prompt": "worker__10_6390854715352638587"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "8fa7bae549b8d16dbf21254a1630d218c51da504317b9d4aa0f9fcab0c18bef0",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "worker__10_6390854715352638587": {
       "abstracts": [
@@ -98,5 +104,6 @@
       "name": "worker__10_6390854715352638587"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

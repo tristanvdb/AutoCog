@@ -12,7 +12,7 @@ target_include_directories(autocog_compiler_stl_pybind PRIVATE
 )
 target_link_libraries(autocog_compiler_stl_pybind PRIVATE
   autocog_compiler_stl_lib
-  autocog_runtime_store
+  autocog_data_store
   autocog_utilities_lib
 )
 set_property(TARGET autocog_compiler_stl_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)

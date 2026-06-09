@@ -52,11 +52,32 @@ def _download_model(url, path, min_size):
     return None
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def engine(syntax_path, search_path):
-    """Create a shared Engine with RNG model for all tests."""
+    """Create a fresh RNG Engine per test.
+
+    Function-scoped for isolation: each test gets its own engine so no engine
+    state (or the handles it holds) leaks across tests. The real-model engine
+    stays session-scoped to avoid reloading the GGUF every test.
+    """
     import autocog
     return autocog.Engine(syntax=syntax_path, search=search_path)
+
+
+@pytest.fixture(autouse=True)
+def _collect_store_garbage():
+    """Reclaim per-test Python handles at the test boundary.
+
+    The C++ datastore is a process-global singleton and is content-addressed,
+    so identical artifacts from different tests share one entry. A stale
+    Program (whose __del__ releases its uid) must therefore be collected at the
+    boundary between tests rather than mid-way through a later test, where it
+    would release a uid that test still holds. Forcing a collection after each
+    test keeps that lifecycle deterministic.
+    """
+    yield
+    import gc
+    gc.collect()
 
 
 @pytest.fixture(autouse=True)

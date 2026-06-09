@@ -23,6 +23,12 @@
       "prompt": "main"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "8f6415596e263d47d1d19e8f045e729c0652eaae021d6d469cc647c213bdd8b2",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "main": {
       "abstracts": [
@@ -114,7 +120,7 @@
             "text": {
               "ahead": 2,
               "beams": 4,
-              "threshold": 0.2
+              "threshold": 0.20000000298023224
             }
           }
         },
@@ -132,14 +138,14 @@
           "range": null,
           "search": {
             "branch": {
-              "threshold": 0.2,
+              "threshold": 0.20000000298023224,
               "width": 2
             },
             "enum": {
               "width": 3
             },
             "text": {
-              "threshold": 0.2,
+              "threshold": 0.20000000298023224,
               "width": 1
             }
           }
@@ -181,7 +187,7 @@
               "width": 2
             },
             "text": {
-              "threshold": 0.3
+              "threshold": 0.30000001192092896
             }
           }
         },
@@ -205,7 +211,7 @@
             },
             "text": {
               "beams": 2,
-              "threshold": 0.3
+              "threshold": 0.30000001192092896
             }
           }
         },
@@ -252,7 +258,7 @@
       "name": "main",
       "search": {
         "flow": {
-          "threshold": 0.05
+          "threshold": 0.05000000074505806
         },
         "queue": {
           "metric": "mean_logprob"
@@ -260,5 +266,6 @@
       }
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

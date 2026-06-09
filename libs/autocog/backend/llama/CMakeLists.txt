@@ -1,6 +1,6 @@
 
 add_library(autocog_backend_llama_lib STATIC
-    convert.cxx
+    prepared.cxx
     model.cxx
     manager.cxx
     evaluation.cxx
@@ -15,7 +15,7 @@ target_include_directories(autocog_backend_llama_lib PUBLIC
 )
 
 target_link_libraries(autocog_backend_llama_lib PUBLIC
-    autocog_runtime_fta_lib
+    autocog_data_lib
     llama
 )
 

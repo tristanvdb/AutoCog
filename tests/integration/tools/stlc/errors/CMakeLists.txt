@@ -16,7 +16,7 @@ function(add_error_test fixture_path)
     add_test(
         NAME stlc_error_${test_name}
         COMMAND ${CMAKE_COMMAND} -E env bash -c "
-            OUTPUT=$($<TARGET_FILE:autocog_stlc> --emit ir ${fixture_path} 2>&1) ;
+            OUTPUT=$($<TARGET_FILE:autocog_stlc> --ir /dev/stdout ${fixture_path} 2>&1) ;
             RC=\$? ;
             echo \"\$OUTPUT\" | python3 ${CHECK} ${fixture_path} \$RC
         "

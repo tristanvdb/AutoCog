@@ -5,8 +5,6 @@ Three trees under one root:
   - CompileError: STL source errors (has source location)
   - ExecutionError: prompt instantiation, evaluation, parsing
   - InternalError: invariant violations (backtrace in Debug)
-
-Recovery is a per-exception flag with category defaults.
 """
 
 import builtins
@@ -48,13 +46,9 @@ class Diagnostic:
 
 class AutoCogError(Exception):
     """Root of the AutoCog error hierarchy."""
-    recoverable_default = False
 
-    def __init__(self, message, *, recoverable=None):
+    def __init__(self, message):
         super().__init__(message)
-        self.recoverable = (
-            self.recoverable_default if recoverable is None else recoverable
-        )
 
 
 # ============================================================================
@@ -68,9 +62,9 @@ class CompileError(AutoCogError):
     compile (errors, warnings, notes). `location` and `source_line` mirror the
     first error-level diagnostic for convenience.
     """
-    def __init__(self, message, *, recoverable=None, location=None,
+    def __init__(self, message, *, location=None,
                  source_line=None, notes=None, diagnostics=None):
-        super().__init__(message, recoverable=recoverable)
+        super().__init__(message)
         self.location = location
         self.source_line = source_line
         self.notes = notes or []
@@ -93,56 +87,79 @@ class ExecutionError(AutoCogError):
 
 class ConfigError(ExecutionError):
     """Configuration or file loading error."""
-    def __init__(self, message, *, recoverable=None, path=None):
-        super().__init__(message, recoverable=recoverable)
+    def __init__(self, message, *, path=None):
+        super().__init__(message)
         self.path = path
+
+
+class SchemaError(ExecutionError):
+    """Serialized data failed schema/format validation.
+
+    Raised when serialized content does not conform to its expected schema:
+    an unknown discriminant tag, a missing required field, or a mistyped
+    value. `path` locates the offending element (e.g. a JSON path or uid).
+    """
+    def __init__(self, message, *, path=None):
+        super().__init__(message)
+        self.path = path
+
+
+class IntegrityError(ExecutionError):
+    """Content-addressed artifact failed its hash check.
+
+    Raised when a stored artifact's recomputed hash does not match the hash
+    recorded in its metadata (corruption or tampering). `format` is the
+    artifact format; `expected` is the stored hash; `actual` is the
+    recomputed hash.
+    """
+    def __init__(self, message, *, format=None, expected=None, actual=None):
+        super().__init__(message)
+        self.format = format
+        self.expected = expected
+        self.actual = actual
 
 
 class ModelError(ExecutionError):
     """Model loading, tokenization, or evaluation error."""
-    def __init__(self, message, *, recoverable=None, model_id=None, op=None):
-        super().__init__(message, recoverable=recoverable)
+    def __init__(self, message, *, model_id=None, op=None):
+        super().__init__(message)
         self.model_id = model_id
         self.op = op
 
 
 class OrchestrationError(ExecutionError):
     """Prompt orchestration error (step, flow, channel resolution)."""
-    recoverable_default = True
 
-    def __init__(self, message, *, recoverable=None, prompt=None, field=None):
-        super().__init__(message, recoverable=recoverable)
+    def __init__(self, message, *, prompt=None, field=None):
+        super().__init__(message)
         self.prompt = prompt
         self.field = field
 
 
 class FlowInvariantError(OrchestrationError):
     """Flow choice invariant violation."""
-    recoverable_default = False
 
 
 class RemoteError(ExecutionError):
     """Remote server communication error."""
-    recoverable_default = True
 
-    def __init__(self, message, *, recoverable=None, endpoint=None):
-        super().__init__(message, recoverable=recoverable)
+    def __init__(self, message, *, endpoint=None):
+        super().__init__(message)
         self.endpoint = endpoint
 
 
 class Timeout(ExecutionError, builtins.TimeoutError):
     """Operation timed out."""
-    recoverable_default = True
 
-    def __init__(self, message, *, recoverable=None, seconds=None):
-        super().__init__(message, recoverable=recoverable)
+    def __init__(self, message, *, seconds=None):
+        super().__init__(message)
         self.seconds = seconds
 
 
 class FileError(ExecutionError, builtins.OSError):
     """File not found or inaccessible."""
-    def __init__(self, message, *, recoverable=None, path=None):
-        ExecutionError.__init__(self, message, recoverable=recoverable)
+    def __init__(self, message, *, path=None):
+        ExecutionError.__init__(self, message)
         self.path = path
 
 
@@ -168,18 +185,13 @@ class InternalError(AutoCogError):
 # Recovery helper
 # ============================================================================
 
-def handle(exc, log, *, allow_recovery=False):
-    """Handle an AutoCogError at a boundary (CLI or server).
-
-    Returns (exit_code, recovered).
-    """
+def handle(exc, log):
+    """Handle an AutoCogError at a boundary (CLI or server). Returns an exit code."""
     if isinstance(exc, AutoCogError):
         if isinstance(exc, InternalError):
             log.critical("internal error: %s", exc)
-            return (250, False)
+            return 250
         log.error("%s", exc)
-        if allow_recovery and exc.recoverable:
-            return (0, True)
-        return (1, False)
+        return 1
     log.critical("uncaught: %s", exc, exc_info=True)
-    return (251, False)
+    return 251

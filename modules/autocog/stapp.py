@@ -163,7 +163,7 @@ def pack(stl_path, include_paths, output_path,
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
         if sta_json:
-            zf.writestr("program.sta.json", json.dumps(sta_json, indent=2))
+            zf.writestr("program.sta.json", prog.dump_json())
 
         if not no_source:
             zf.write(stl_path, os.path.basename(stl_path))

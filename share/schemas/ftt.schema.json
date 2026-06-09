@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ftt.schema.json",
+  "title": "Finite Thought Tree (FTT)",
+  "description": "Model evaluation tree over an FTA: a tree of nodes carrying the generated tokens/text and log-probabilities for each explored path. Produced by xfta / backend evaluation. The root node's fields are serialized at the top level alongside metadata and provenance; metadata is present only once the FTT has been finalized into the artifact store.",
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "allOf": [
+        { "$ref": "common/metadata.schema.json" },
+        {
+          "properties": {
+            "format": { "const": "ftt" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Tracked-artifact parents this FTT was derived from: role -> hash (fta, model). Empty until finalized.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "action": { "type": "integer", "minimum": 0, "description": "FTA action evaluated at the root node." },
+    "uid": { "type": "string", "description": "Action name (when the action is in range)." },
+    "field": { "type": "integer", "description": "Schema field index (value nodes only)." },
+    "indices": { "type": "array", "items": { "type": "integer" }, "description": "Nested field indices, when present." },
+    "text": { "type": "string", "description": "Detokenized text (\"\" when no tokens)." },
+    "logprob": { "type": "number", "description": "Cumulative log-probability from the root." },
+    "logprobs": { "type": "array", "items": { "type": "number" }, "description": "Per-token log-probabilities at this node." },
+    "length": { "type": "integer", "minimum": 0, "description": "Total length from the root." },
+    "pruned": { "type": "boolean" },
+    "tokens": { "type": "array", "items": { "type": "integer" }, "description": "Tokens generated at this node." },
+    "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+  },
+  "required": [
+    "action",
+    "text",
+    "logprob",
+    "logprobs",
+    "length",
+    "pruned",
+    "tokens",
+    "children",
+    "provenance"
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "node": {
+      "type": "object",
+      "description": "One node of the tree (recursive). Mirrors FTTNode in codec/ftt-json.cxx.",
+      "properties": {
+        "action": { "type": "integer", "minimum": 0 },
+        "uid": { "type": "string" },
+        "field": { "type": "integer" },
+        "indices": { "type": "array", "items": { "type": "integer" } },
+        "text": { "type": "string" },
+        "logprob": { "type": "number" },
+        "logprobs": { "type": "array", "items": { "type": "number" } },
+        "length": { "type": "integer", "minimum": 0 },
+        "pruned": { "type": "boolean" },
+        "tokens": { "type": "array", "items": { "type": "integer" } },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+      },
+      "required": [
+        "action",
+        "text",
+        "logprob",
+        "logprobs",
+        "length",
+        "pruned",
+        "tokens",
+        "children"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

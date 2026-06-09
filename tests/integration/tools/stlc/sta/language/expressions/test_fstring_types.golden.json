@@ -12,6 +12,12 @@
       "prompt": "test"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "daf8625d0d065f51e56e8b15f8dd99645dc10f4dd4dbc59d3a19402d6b497989",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "test": {
       "abstracts": [
@@ -83,5 +89,6 @@
       "name": "test"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

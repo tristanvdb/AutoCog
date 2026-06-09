@@ -44,7 +44,7 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
             } else if constexpr (std::is_same_v<T, std::string>) {
                 auto hash = std::hash<std::string>{}(val);
                 result += std::to_string(hash);
-            } else if constexpr (std::is_same_v<T, std::nullptr_t>) {
+            } else if constexpr (std::is_same_v<T, std::monostate>) {
                 result += "null";
             }
         }, value);
@@ -57,27 +57,27 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
 // Diagnostics
 // ============================================================================
 
-void Driver::emit_error(std::string msg, std::optional<SourceRange> const & loc) {
+void Driver::emit_error(std::string msg, std::optional<autocog::location::SourceRange> const & loc) {
     if (loc) {
-        diagnostics.emplace_back(DiagnosticLevel::Error, msg, loc.value().start);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Error, msg, loc.value().start);
     } else {
-        diagnostics.emplace_back(DiagnosticLevel::Error, msg);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Error, msg);
     }
 }
 
-void Driver::emit_warning(std::string msg, std::optional<SourceRange> const & loc) {
+void Driver::emit_warning(std::string msg, std::optional<autocog::location::SourceRange> const & loc) {
     if (loc) {
-        diagnostics.emplace_back(DiagnosticLevel::Warning, msg, loc.value().start);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Warning, msg, loc.value().start);
     } else {
-        diagnostics.emplace_back(DiagnosticLevel::Warning, msg);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Warning, msg);
     }
 }
 
-void Driver::emit_note(std::string msg, std::optional<SourceRange> const & loc) {
+void Driver::emit_note(std::string msg, std::optional<autocog::location::SourceRange> const & loc) {
     if (loc) {
-        diagnostics.emplace_back(DiagnosticLevel::Note, msg, loc.value().start);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Note, msg, loc.value().start);
     } else {
-        diagnostics.emplace_back(DiagnosticLevel::Note, msg);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Note, msg);
     }
 }
 
@@ -87,9 +87,9 @@ bool Driver::report_errors() {
             std::cerr << diag.format(fileids) << std::endl;
         }
         switch (diag.level) {
-            case DiagnosticLevel::Error:   errors++;   break;
-            case DiagnosticLevel::Warning: warnings++; break;
-            case DiagnosticLevel::Note:    notes++;    break;
+            case autocog::data::DiagnosticLevel::Error:   errors++;   break;
+            case autocog::data::DiagnosticLevel::Warning: warnings++; break;
+            case autocog::data::DiagnosticLevel::Note:    notes++;    break;
         }
     }
 

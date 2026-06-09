@@ -12,7 +12,8 @@ target_include_directories(autocog_backend_llama_pybind PRIVATE
 )
 target_link_libraries(autocog_backend_llama_pybind PRIVATE
   autocog_backend_llama_lib
-  autocog_runtime_store
+  autocog_data_store
+  autocog_codec_json
   autocog_utilities_lib
 )
 set_property(TARGET autocog_backend_llama_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)

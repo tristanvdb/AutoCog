@@ -11,6 +11,12 @@
       "prompt": "calculator"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "52f1b0e4481ef1640b8f800cde03a3b10750d79bf7a936f0f572e407e8da37d0",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "calculator": {
       "abstracts": [
@@ -186,5 +192,6 @@
       "name": "calculator"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

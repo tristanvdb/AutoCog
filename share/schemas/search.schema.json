@@ -5,6 +5,13 @@
   "description": "Concrete default search parameters per category (text, enum, branch, flow, queue). These mirror what xfta implements and provide the fallback values used when a program's search policy does not set a parameter.",
   "type": "object",
   "properties": {
+    "metadata": {
+      "allOf": [
+        { "$ref": "common/metadata.schema.json" },
+        { "properties": { "format": { "const": "search" } } }
+      ],
+      "unevaluatedProperties": false
+    },
     "text": {
       "type": "object",
       "description": "Defaults for `complete` (text) actions.",

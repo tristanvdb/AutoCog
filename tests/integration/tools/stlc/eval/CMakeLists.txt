@@ -16,7 +16,7 @@ function(add_eval_test name fixture mode substr)
     add_test(
         NAME stlc_eval_${name}
         COMMAND ${CMAKE_COMMAND} -E env bash -c "
-            OUT=$($<TARGET_FILE:autocog_stlc> --emit sta ${FIX}/${fixture} 2>&1) ;
+            OUT=$($<TARGET_FILE:autocog_stlc> --sta /dev/stdout ${FIX}/${fixture} 2>&1) ;
             RC=\$? ;
             echo \"\$OUT\" | python3 ${CHECK} \$RC ${mode} '${substr}'
         "

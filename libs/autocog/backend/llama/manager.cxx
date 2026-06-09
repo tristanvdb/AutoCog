@@ -9,7 +9,6 @@
 
 namespace autocog::backend::llama {
 
-using namespace autocog::runtime::fta;
 
 void quiet_log_callback(enum ggml_log_level level, const char * text, [[maybe_unused]] void * user_data) {
     if (level == GGML_LOG_LEVEL_ERROR) {
@@ -63,7 +62,7 @@ Model & Manager::get_model(ModelID id) {
   return manager.models[id];
 }
 
-EvalID Manager::add_eval(ModelID const model, FTA const & fta) {
+EvalID Manager::add_eval(ModelID const model, data::FTA const & fta) {
   auto & manager = instance();
   EvalID id = manager.next_eval_id++;
   EvaluationConfig config;
@@ -85,7 +84,7 @@ unsigned Manager::advance(EvalID id, std::optional<unsigned> max_token_eval) {
   return eval.advance(max_token_eval);
 }
 
-FTT const & Manager::retrieve(EvalID id) {
+data::FTT const & Manager::retrieve(EvalID id) {
   auto & eval = get_eval(id);
   return eval.retrieve();
 }

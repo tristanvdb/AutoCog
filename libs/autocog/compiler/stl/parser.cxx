@@ -1,7 +1,7 @@
 
 #include "autocog/compiler/stl/parser.hxx"
 #include "autocog/utilities/exception.hxx"
-#include "autocog/compiler/stl/diagnostic.hxx"
+#include "autocog/data/diagnostic.hxx"
 #include "autocog/logging.hxx"
 
 #include <filesystem>
@@ -13,14 +13,14 @@ namespace autocog::compiler::stl {
 
 ParseError::ParseError(
   std::string msg,
-  SourceLocation loc
+  autocog::location::SourceLocation loc
 ) :
   CompileError(std::move(msg)),
   parse_location(loc)
 {}
 
 Parser::Parser(
-  std::list<Diagnostic> & diagnostics_,
+  std::list<autocog::data::Diagnostic> & diagnostics_,
   std::unordered_map<std::string, int> & fileids_,
   std::list<std::string> const & search_paths_,
   std::list<ast::Program> & programs_,
@@ -86,9 +86,9 @@ void Parser::parse() {
       // missing top-level input has no source location (and is normally caught
       // earlier, at the tool/binding boundary).
       if (entry.import_location) {
-        diagnostics.emplace_back(DiagnosticLevel::Error, oss.str(), entry.import_location->start);
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Error, oss.str(), entry.import_location->start);
       } else {
-        diagnostics.emplace_back(DiagnosticLevel::Error, oss.str());
+        diagnostics.emplace_back(autocog::data::DiagnosticLevel::Error, oss.str());
       }
     } else {
       std::ifstream file(found_path);
@@ -138,7 +138,7 @@ void Parser::parse(int fid, std::string const & name, std::string const & source
     parse<ast::Tag::Program>(state, programs.back().data);
   } catch (ParseError const & e) {
     auto line = get_line(source, e.parse_location.line);
-    diagnostics.emplace_back(DiagnosticLevel::Error, e.message, line, e.parse_location);
+    diagnostics.emplace_back(autocog::data::DiagnosticLevel::Error, e.message, line, e.parse_location);
   }
 }
 

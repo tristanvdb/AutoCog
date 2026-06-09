@@ -21,32 +21,34 @@
 using namespace autocog::compiler::stl;
 
 static void print_usage(const char* program) {
-  std::cerr << "Usage: " << program << " [options] [files...]\n";
+  std::cerr << "Usage: " << program << " [options] <file.stl> ...\n";
   std::cerr << "\n";
-  std::cerr << "Compile STL files to JSON intermediate representation\n";
+  std::cerr << "Compile STL files. At least one emit output is required; several\n";
+  std::cerr << "may be combined to emit multiple artifacts in one run.\n";
   std::cerr << "\n";
   std::cerr << "Arguments:\n";
-  std::cerr << "  files          Input STL files (can also use -i)\n";
+  std::cerr << "  <file.stl> ...     Input STL source files (positional)\n";
+  std::cerr << "\n";
+  std::cerr << "Emit outputs (>= 1 required; use /dev/stdout for stdout):\n";
+  std::cerr << "  --ast <file>       Write the parsed AST\n";
+  std::cerr << "  --graph <file>     Write the instantiation graph\n";
+  std::cerr << "  --ir <file>        Write the intermediate representation\n";
+  std::cerr << "  --sta <file>       Write the compiled STA\n";
   std::cerr << "\n";
   std::cerr << "Options:\n";
-  std::cerr << "  -i, --input <file>     Input STL file\n";
-  std::cerr << "  -o, --output <file>    Write JSON IR to file (default: stdout)\n";
-  std::cerr << "  -I, --include <path>   Add to import search paths\n";
+  std::cerr << "  -I, --include <path>   Add to import search paths (also -I<path>)\n";
   std::cerr << "  -D, --define <var[:<type>]=<value>>\n";
-  std::cerr << "               Define a variable with optional type\n";
+  std::cerr << "               Define a variable with optional type (also -D<def>)\n";
   std::cerr << "               Examples:\n";
   std::cerr << "               -Dflag       (bool, true)\n";
   std::cerr << "               -Dcount=5    (int)\n";
   std::cerr << "               -Dpi=3.14    (float)\n";
   std::cerr << "               -Dname=\"text\"  (string)\n";
   std::cerr << "               -Dval:int=42   (explicit type)\n";
-  std::cerr << "  -e, --emit <target>    Emit target (default: sta)\n";
-  std::cerr << "               Targets: ast, symbols, globals, graph,\n";
-  std::cerr << "                        ir, sta (default)\n";
-  std::cerr << "  -V, --verbose [LEVEL]  Set log level (trace,debug,info,warn,error,critical)\n"
+  std::cerr << "  --verbose [LEVEL]  Set log level (trace,debug,info,warn,error,critical)\n"
               << "                         Default: debug if bare, warn if absent\n";
-  std::cerr << "  -h, --help         Show this help message\n";
-  std::cerr << "  -v, --version      Show version information\n";
+  std::cerr << "  --help             Show this help message\n";
+  std::cerr << "  --version          Show version information\n";
   std::cerr << "  --build-info       Show build configuration\n";
 }
 
@@ -109,27 +111,6 @@ static std::string unquote(const std::string& s) {
   return s;
 }
 
-// Parse an emit target argument
-static bool parse_emit(const std::string& arg, Driver& driver) {
-  if (arg == "ast") {
-    driver.stage = CompilationStage::Parse;
-  } else if (arg == "symbols") {
-    driver.stage = CompilationStage::Symbols;
-  } else if (arg == "globals") {
-    driver.stage = CompilationStage::Globals;
-  } else if (arg == "graph") {
-    driver.stage = CompilationStage::Instantiate;
-  } else if (arg == "ir") {
-    driver.stage = CompilationStage::Assemble;
-  } else if (arg == "sta") {
-    driver.stage = CompilationStage::Generate;
-  } else {
-    std::cerr << "Error: Invalid emit target: " << arg << std::endl;
-    std::cerr << "Valid targets: ast, symbols, globals, graph, ir, sta" << std::endl;
-    return false;
-  }
-  return true;
-}
 
 // Parse a define argument
 static bool parse_define(const std::string& arg, Driver& driver) {
@@ -212,17 +193,18 @@ static bool parse_define(const std::string& arg, Driver& driver) {
 }
 
 std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
+  std::optional<CompilationStage> deepest;  // deepest emit stage requested
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
 
     // Help
-    if (arg == "-h" || arg == "--help") {
+    if (arg == "--help") {
       print_usage(argv[0]);
       return 0;
     }
 
     // Version
-    if (arg == "-v" || arg == "--version") {
+    if (arg == "--version") {
       print_version(argv[0]);
       return 0;
     }
@@ -234,7 +216,7 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     }
 
     // Verbose
-    if (arg == "-V" || arg == "--verbose") {
+    if (arg == "--verbose") {
       spdlog::level::level_enum lvl = spdlog::level::debug;  // bare --verbose -> DEBUG
       if (i + 1 < argc && autocog::looks_like_level_token(argv[i + 1])) {
         if (autocog::parse_level(argv[i + 1], lvl)) {
@@ -246,28 +228,6 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
         }
       }
       autocog::init_console_logger(lvl);
-      continue;
-    }
-
-    // Input file
-    if (arg == "-i" || arg == "--input") {
-      if (i + 1 < argc) {
-        driver.inputs.push_back(argv[++i]);
-      } else {
-        std::cerr << "Error: " << arg << " requires an argument" << std::endl;
-        return 1;
-      }
-      continue;
-    }
-
-    // Output file
-    if (arg == "-o" || arg == "--output") {
-      if (i + 1 < argc) {
-        driver.output = argv[++i];
-      } else {
-        std::cerr << "Error: " << arg << " requires an argument" << std::endl;
-        return 1;
-      }
       continue;
     }
 
@@ -305,16 +265,21 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
       continue;
     }
 
-    // Emit target
-    if (arg == "-e" || arg == "--emit") {
-      if (i + 1 < argc) {
-        if (!parse_emit(argv[++i], driver)) {
-          return 1;
-        }
-      } else {
-        std::cerr << "Error: " << arg << " requires an argument" << std::endl;
+    // Emit outputs (per-format; several may be combined in one run). Each takes
+    // an output file (/dev/stdout for stdout). compile() runs up to the deepest
+    // requested stage; main serializes each requested artifact.
+    if (arg == "--ast" || arg == "--graph" || arg == "--ir" || arg == "--sta") {
+      if (i + 1 >= argc) {
+        std::cerr << "Error: " << arg << " requires an output file" << std::endl;
         return 1;
       }
+      std::string file = argv[++i];
+      CompilationStage st;
+      if      (arg == "--ast")   { driver.out_ast   = file; st = CompilationStage::Parse; }
+      else if (arg == "--graph") { driver.out_graph = file; st = CompilationStage::Instantiate; }
+      else if (arg == "--ir")    { driver.out_ir    = file; st = CompilationStage::Assemble; }
+      else                       { driver.out_sta   = file; st = CompilationStage::Generate; }
+      if (!deepest || static_cast<int>(st) > static_cast<int>(*deepest)) deepest = st;
       continue;
     }
 
@@ -328,6 +293,14 @@ std::optional<int> parse_args(int argc, char** argv, Driver & driver) {
     // Positional argument (input file)
     driver.inputs.push_back(arg);
   }
+
+  // Require at least one emit output
+  if (!deepest) {
+    std::cerr << "Error: no output requested (use one or more of --ast, --graph, --ir, --sta)" << std::endl;
+    print_usage(argv[0]);
+    return 1;
+  }
+  driver.stage = *deepest;
 
   // Validate we have at least one input
   if (driver.inputs.empty()) {

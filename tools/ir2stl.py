@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unparse an IR JSON document (from `stlc --emit ir`) back into STL*.
+"""Unparse an IR JSON document (from `stlc --ir`) back into STL*.
 
 STL* is the normalized form of an STL program: search policies are propagated
 and collapsed onto fields, self-form records are inlined, and every field is
@@ -8,7 +8,7 @@ output is itself valid STL, so it can be fed back through stlc; doing so should
 be idempotent (STL* in -> STL* out).
 
 Usage:
-    stlc --emit ir program.stl | python ir2stl.py
+    stlc --ir /dev/stdout program.stl | python ir2stl.py
     python ir2stl.py program.ir.json [prompt_name]
 """
 import json

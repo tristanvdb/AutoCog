@@ -24,7 +24,7 @@ inline json value_to_json(ir::Value const & value) {
         else if constexpr (std::is_same_v<T, float>) return round3(v);
         else if constexpr (std::is_same_v<T, bool>) return v;
         else if constexpr (std::is_same_v<T, std::string>) return v;
-        else if constexpr (std::is_same_v<T, std::nullptr_t>) return nullptr;
+        else if constexpr (std::is_same_v<T, std::monostate>) return nullptr;
     }, value);
 }
 

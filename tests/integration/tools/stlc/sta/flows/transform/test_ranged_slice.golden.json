@@ -26,6 +26,12 @@
       "prompt": "producer"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "09d7f82a863e54ad41266867845344e21b08d3979f658f44fcfcb1324fac9cca",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "consumer": {
       "abstracts": [
@@ -193,5 +199,6 @@
       "name": "producer"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

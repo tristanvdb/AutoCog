@@ -12,6 +12,12 @@
       "prompt": "test__1_true"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "1d8bd2018d59f1f55db33119480c043e676f5790bc04c5ea72309451968fc012",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "test__1_true": {
       "abstracts": [
@@ -118,5 +124,6 @@
       "name": "test__1_true"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

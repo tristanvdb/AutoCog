@@ -5,6 +5,13 @@
   "description": "Prompt formatting rules for a specific model family (e.g. ChatML, Llama2Chat, plain).",
   "type": "object",
   "properties": {
+    "metadata": {
+      "allOf": [
+        { "$ref": "common/metadata.schema.json" },
+        { "properties": { "format": { "const": "syntax" } } }
+      ],
+      "unevaluatedProperties": false
+    },
     "system_msg":        { "type": "string", "description": "System message prepended to every prompt." },
     "header_pre":        { "type": "string", "description": "Text before the header block." },
     "header_mid":        { "type": "string", "description": "Text between header sections." },

@@ -77,21 +77,15 @@ def _load_schema_store():
 
 
 def _detect_format(artifact):
-    """Detect artifact format from metadata or top-level keys."""
-    fmt = artifact.get("metadata", {}).get("format")
-    if fmt:
-        return fmt
-    # Heuristic for pre-metadata artifacts
-    if "prompts" in artifact and "entry_points" in artifact:
-        if "defines" in artifact and "records" in artifact:
-            return "ir"
-        return "sta"
-    if "actions" in artifact:
-        return "fta"
-    return None
+    """Detect artifact format from its metadata block.
+
+    Every emitted artifact (and every regenerated golden) now carries
+    metadata.format, so no top-level-key heuristic is needed.
+    """
+    return artifact.get("metadata", {}).get("format")
 
 
-def validate(artifact, filepath="<unknown>"):
+def validate(artifact, filepath="<unknown>", fmt=None):
     """Validate artifact against its schema.
 
     Returns None on success, error message string on failure.
@@ -101,7 +95,7 @@ def validate(artifact, filepath="<unknown>"):
         return None  # already warned (or exited under --force-validate)
     jsonschema, Registry, Resource, DRAFT202012 = deps
 
-    fmt = _detect_format(artifact)
+    fmt = fmt or _detect_format(artifact)
     if not fmt:
         return f"cannot detect format for {filepath}"
 
@@ -203,9 +197,14 @@ def _levenshtein(a, b):
 # Structural comparison
 # ---------------------------------------------------------------------------
 
-# Paths stripped before comparison — these change between runs by design
+# Paths stripped before comparison. The timestamp is non-deterministic and the
+# version is build-specific; both are normalized to placeholders in the goldens
+# (see update-golden.sh) and excluded here so neither churns the goldens when the
+# wall clock or the project version changes. The hash, format, and provenance are
+# part of the artifact's identity and ARE compared.
 EXCLUDE_PATHS = {
-    "root['metadata']",
+    "root['metadata']['timestamp']",
+    "root['metadata']['version']",
 }
 
 
@@ -339,6 +338,9 @@ def main():
                         help="Skip schema validation")
     parser.add_argument("--force-validate", action="store_true",
                         help="Hard-require jsonschema; fail (exit 2) if it is not installed")
+    parser.add_argument("--format", dest="fmt", default=None,
+                        help="Override artifact format for schema selection "
+                             "(needed for metadata-less artifacts like IR)")
     args = parser.parse_args()
 
     # --no-validate (explicit skip) wins over --force-validate (explicit
@@ -352,7 +354,7 @@ def main():
         failed = False
         for filepath in args.files:
             data = json.loads(Path(filepath).read_text())
-            err = validate(data, filepath)
+            err = validate(data, filepath, args.fmt)
             if err:
                 print(err, file=sys.stderr)
                 failed = True
@@ -369,7 +371,7 @@ def main():
     # Schema validation (both sides)
     if not args.no_validate:
         for data, fpath in [(actual, actual_path), (golden, golden_path)]:
-            err = validate(data, fpath)
+            err = validate(data, fpath, args.fmt)
             if err:
                 print(err, file=sys.stderr)
                 sys.exit(2)

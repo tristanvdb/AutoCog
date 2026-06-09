@@ -10,7 +10,7 @@ add_custom_command(
 )
 
 add_library(autocog_compiler_stl_lib STATIC
-    driver.cxx diagnostic.cxx
+    driver.cxx
     token.cxx ast.cxx ast/expr.cxx
     parser.cxx parser-state.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
@@ -43,6 +43,7 @@ target_link_libraries(autocog_compiler_stl_lib PUBLIC
     Reflex::ReflexLibStatic
     autocog_utilities_lib
     autocog_runtime_sta_lib
+    autocog_data_lib
 )
 
 set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -50,8 +51,6 @@ set_property(TARGET autocog_compiler_stl_lib PROPERTY POSITION_INDEPENDENT_CODE 
 # JSON serialization library (separate target — not linked into Python bindings)
 add_library(autocog_compiler_stl_serialize STATIC
     serialize/ast.cxx
-    serialize/symbols.cxx
-    serialize/globals.cxx
     serialize/graph.cxx
     serialize/ir.cxx
     serialize/sta.cxx
@@ -65,6 +64,7 @@ target_include_directories(autocog_compiler_stl_serialize PUBLIC
 target_link_libraries(autocog_compiler_stl_serialize PUBLIC
     autocog_compiler_stl_lib
     autocog_utilities_lib
+    autocog_codec_json
 )
 
 set_property(TARGET autocog_compiler_stl_serialize PROPERTY POSITION_INDEPENDENT_CODE ON)

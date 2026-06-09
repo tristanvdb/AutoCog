@@ -20,6 +20,12 @@
       "prompt": "main"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "4d5845187e725066bfb58cde40001bffe7b280573dade61a01f1622d561c01e8",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "main": {
       "abstracts": [
@@ -278,5 +284,6 @@
       "name": "step2"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

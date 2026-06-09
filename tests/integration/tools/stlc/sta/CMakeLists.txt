@@ -1,4 +1,4 @@
-# stlc --emit sta golden output tests
+# stlc --sta golden output tests
 
 set(FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
 set(GOLDEN ${CMAKE_CURRENT_SOURCE_DIR})
@@ -16,7 +16,7 @@ function(add_sta_test fixture_path)
         NAME stlc_sta_${flat_name}
         COMMAND ${CMAKE_COMMAND} -E env bash -c "
             TMPF=$(mktemp) &&
-            $<TARGET_FILE:autocog_stlc> --emit sta ${extra_args} ${fixture_path} > \$TMPF 2>/dev/null &&
+            $<TARGET_FILE:autocog_stlc> --sta \$TMPF ${extra_args} ${fixture_path} 2>/dev/null &&
             python3 ${COMPARE} --force-validate \$TMPF ${GOLDEN}/${rel_noext}.golden.json &&
             rm -f \$TMPF
         "

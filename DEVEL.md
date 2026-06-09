@@ -5,8 +5,9 @@
 ### With pip
 
 ```bash
-pip install .                # core
-pip install ".[server]"      # with FastAPI/uvicorn for serve/rpc/backend
+pip install .                       # core
+pip install ".[server]"             # + FastAPI/uvicorn for serve/rpc/backend
+pip install ".[server,validate]"    # + jsonschema/referencing for schema validation
 ```
 
 This builds everything via cmake internally (including vendored RE-flex and llama.cpp if not found on the system). Validate with:
@@ -51,7 +52,10 @@ cmake -B builds/autocog . -DCMAKE_PREFIX_PATH=$PREFIX -DCMAKE_BUILD_TYPE=Debug
 cmake --build builds/autocog --parallel $(nproc)
 ```
 
-For CUDA, replace `-DLLAMA_CUDA=OFF` with `-DLLAMA_CUDA=ON`.
+For CUDA in the manual-prebuild path above, replace `-DLLAMA_CUDA=OFF` with
+`-DLLAMA_CUDA=ON`. The integrated AutoCog build (and `pip install`) autodetects
+CUDA via `find_package(CUDAToolkit)`; pass `-DAUTOCOG_CUDA=ON` to force it on or
+`-DAUTOCOG_CUDA=OFF` to skip it (see the option block in `CMakeLists.txt`).
 
 Install ccache for faster rebuilds:
 
@@ -106,7 +110,22 @@ tests/scripts/check-release.sh [BUILD_DIR] [VENV_DIR]
 
 ## Getting Models
 
-For testing with real models (not required — the RNG model covers CI):
+The pytest suite exercises a real model, not just the built-in RNG. Its
+session fixtures auto-download a tiny test model — `tiny-llama3-test-Q2_K.gguf`
+(~21 MB, full Llama 3 tokenizer) — to `models/` on first use, and the
+real-model tests **run by default**. If it can't be obtained the suite fails
+loudly (so CI never silently drops that coverage); set
+`AUTOCOG_NO_MINIMAL_GGUF=1` to skip those tests instead (offline/air-gapped
+development). To pre-fetch it manually:
+
+```bash
+mkdir -p models && cd models
+wget https://github.com/tristanvdb/AutoCog/releases/download/v0.5.0/tiny-llama3-test-Q2_K.gguf
+cd ..
+```
+
+For manual experimentation with a larger model (optional, not used by the
+suite):
 
 ```bash
 mkdir -p models && cd models
@@ -125,3 +144,7 @@ cd ..
 | `autocog serve` | Full app server with web UI |
 | `autocog rpc` | Prompt evaluation server |
 | `autocog backend` | Inference server |
+
+The low-level C++ pipeline tools (`stlc`, `ista`, `xfta`, `psta`) that the
+`autocog` CLI wraps are documented in
+[docs/interfaces/tools-cli.md](docs/interfaces/tools-cli.md).

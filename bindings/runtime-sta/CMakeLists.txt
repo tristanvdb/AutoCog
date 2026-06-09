@@ -12,7 +12,9 @@ target_include_directories(autocog_runtime_sta_pybind PRIVATE
 )
 target_link_libraries(autocog_runtime_sta_pybind PRIVATE
   autocog_runtime_sta_lib
-  autocog_runtime_store
+  autocog_data_store
+  autocog_codec_json
+  autocog_codec_python
   autocog_utilities_lib
 )
 set_property(TARGET autocog_runtime_sta_pybind PROPERTY POSITION_INDEPENDENT_CODE ON)

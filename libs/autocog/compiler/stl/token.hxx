@@ -1,7 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_TOKEN_HXX
 #define AUTOCOG_COMPILER_STL_TOKEN_HXX
 
-#include "autocog/compiler/stl/location.hxx"
+#include "autocog/utilities/location.hxx"
 
 #include <string>
 #include <ostream>
@@ -96,7 +96,7 @@ enum class TokenType : int {
 struct Token {
     TokenType      type{TokenType::NOT_A_VALID_TOKEN};
     std::string    text{""};
-    SourceLocation location{-1,-1,-1,0};
+    autocog::location::SourceLocation location{-1,-1,-1,0};
 };
 
 // Helper function to get token type name

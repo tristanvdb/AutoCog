@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "fta.schema.json",
-  "title": "Finite Tree Automaton (FTA)",
+  "title": "Finite Thought Automaton (FTA)",
   "description": "Instantiated prompt: a sequence of actions (text, choose, complete) that the LLM evaluates. Produced by ista.",
   "type": "object",
   "properties": {
@@ -37,10 +37,23 @@
       "additionalProperties": {
         "$ref": "#/$defs/vocab_expr"
       }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Tracked-artifact parents this FTA was derived from: role -> hash (sta, syntax, search). Serialized top-level so it is folded into the hash.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "queue": {
+      "type": "object",
+      "description": "Scheduling config carried into the FTA (e.g. the best-path metric)."
     }
   },
   "required": [
-    "actions"
+    "actions",
+    "provenance"
   ],
   "unevaluatedProperties": false,
   "$defs": {
@@ -69,6 +82,15 @@
         "text": {
           "type": "string"
         },
+        "field": {
+          "type": "integer"
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
         "successors": {
           "type": "array",
           "items": {
@@ -76,6 +98,7 @@
           }
         }
       },
+      "$comment": "field/indices are present when a pre-filled content field is rendered as fixed text (uid 'field.*'), and absent on prompt scaffolding text (labels, separators).",
       "required": [
         "type",
         "uid",
@@ -121,11 +144,10 @@
           }
         }
       },
+      "$comment": "field/indices are present on value choices (uid 'field.*') and absent on flow-branch choices (uid 'branch.*').",
       "required": [
         "type",
         "uid",
-        "field",
-        "indices",
         "choices",
         "successors"
       ],

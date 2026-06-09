@@ -221,15 +221,14 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 add_subdirectory(libs/autocog/utilities)
+add_subdirectory(libs/autocog/data)
+add_subdirectory(libs/autocog/codec)
 
 add_subdirectory(libs/autocog/compiler/stl)
 add_subdirectory(tools/stlc)
 add_subdirectory(bindings/compiler-stl)
 
-add_subdirectory(libs/autocog/runtime/fta)
 add_subdirectory(libs/autocog/runtime/sta)
-add_subdirectory(libs/autocog/runtime/frame)
-add_subdirectory(libs/autocog/runtime/store)
 add_subdirectory(bindings/runtime-sta)
 
 add_subdirectory(libs/autocog/backend/llama)
@@ -240,6 +239,8 @@ add_subdirectory(bindings/backend-llama)
 
 add_subdirectory(tests/units/libs/autocog/compiler/stl/parser)
 add_subdirectory(tests/units/libs/autocog/utilities)
+add_subdirectory(tests/units/libs/autocog/data)
+add_subdirectory(tests/units/bindings)
 add_subdirectory(tests/integration/tools/stlc/ir)
 add_subdirectory(tests/integration/tools/stlc/sta)
 add_subdirectory(tests/integration/tools/stlc/emit)

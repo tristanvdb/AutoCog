@@ -77,10 +77,23 @@ class Program:
 
     @property
     def sta(self):
-        """Lazily load the STA dict for channel inspection."""
+        """Lazily cache the STA dict for channel inspection.
+
+        The dict is a translation of the C++ structure handed back by the
+        binding (get_sta); Python never parses STA JSON itself. Treated as a
+        read-only view of the immutable datastore entry.
+        """
         if self._sta is None:
-            self._sta = compiler_stl_cxx.emit(self.id, "sta")
+            self._sta = runtime_sta_cxx.get_sta(self.id)
         return self._sta
+
+    def dump_json(self):
+        """Serialize the STA to a JSON string via C++ (single serializer)."""
+        return runtime_sta_cxx.dump_sta(self.id)
+
+    def store(self, path):
+        """Serialize the STA to a file via C++."""
+        runtime_sta_cxx.store_sta(self.id, path)
 
     @property
     def entry_points(self):
@@ -195,5 +208,5 @@ def compile(filepath, includes=None, entry_points=None):
 
 def load(filepath):
     """Load a pre-compiled STA JSON file into a Program."""
-    pid = runtime_sta_cxx.load_program(filepath)
+    pid = runtime_sta_cxx.load_sta(filepath)
     return Program(pid)

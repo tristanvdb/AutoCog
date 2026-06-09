@@ -1,8 +1,9 @@
 """
 Level 3 server — Backend.
 
-Receives FTA JSON, evaluates against the model, returns raw text.
-Thinnest server — just model inference.
+Receives FTA JSON, evaluates against the model, returns the resulting FTT.
+Thinnest server — just model inference (xfta over the wire). Walking the FTT
+into a frame is the client's responsibility, using the program it holds locally.
 
     autocog backend --model model.gguf [--ctx N] [--port 8080]
 """
@@ -49,33 +50,25 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         models[tag] = model_id
         default_tag = tag
 
-    def evaluate_fta(fta: dict) -> str:
-        """Evaluate an FTA and return the best path text."""
-        import json as json_mod
+    def evaluate_fta(fta: dict) -> dict:
+        """Evaluate an FTA and return the resulting FTT.
+
+        The backend is xfta over the wire: it evaluates the FTA against the
+        model and returns the FTT. The client walks the FTT into a frame using
+        the program it holds locally (single FTT->frame implementation in the
+        runtime), so the backend does not walk it here.
+        """
         from autocog.runtime.sta import runtime_sta_cxx
 
-        fta_json_str = json_mod.dumps(fta)
-        # Store FTA in registry so get_ftt_json can access metadata
-        fta_id = runtime_sta_cxx.store_fta_json(fta_json_str)
+        # The FTA arrived as a dict (FastAPI parsed the HTTP body). Hand it to
+        # C++ to translate+store; C++ owns the structure from here.
+        fta_id = runtime_sta_cxx.read_fta(fta)
         model_id = models[default_tag]
-        ftt_id = backend_llama_cxx.evaluate_json(model_id, fta_json_str)
+        ftt_id = backend_llama_cxx.evaluate(model_id, fta_id)
         try:
-            ftt = json_mod.loads(
-                backend_llama_cxx.get_ftt_json(model_id, fta_id, ftt_id)
-            )
-            # Walk best path, concatenate text
-            text_parts = []
-            node = ftt
-            while True:
-                text_parts.append(node.get("text", ""))
-                children = [c for c in node.get("children", [])
-                            if not c.get("pruned", False)]
-                if not children:
-                    break
-                node = children[0]
-            return "".join(text_parts)
+            return runtime_sta_cxx.get_ftt(ftt_id)
         finally:
-            backend_llama_cxx.release_ftt(ftt_id)
+            runtime_sta_cxx.release_ftt(ftt_id)
             runtime_sta_cxx.release_fta(fta_id)
 
     @app.on_event("startup")

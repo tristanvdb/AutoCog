@@ -23,8 +23,8 @@ else()
   install(TARGETS autocog_stlc DESTINATION bin)
 endif()
 
-add_test(NAME stlc_smoke_test 
-         COMMAND stlc -h)
+add_test(NAME stlc_smoke_test
+         COMMAND stlc --help)
 set_tests_properties(stlc_smoke_test PROPERTIES
     LABELS "smoke;stlc"
 )

@@ -2,24 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ir.schema.json",
   "title": "Intermediate Representation (IR)",
-  "description": "Compiler intermediate representation: resolved symbols, types, and flow graph before state expansion. Produced by stlc --emit ir.",
+  "description": "Compiler intermediate representation: resolved symbols, types, and flow graph before state expansion. Produced by stlc --ir.",
   "type": "object",
   "properties": {
-    "metadata": {
-      "allOf": [
-        {
-          "$ref": "common/metadata.schema.json"
-        },
-        {
-          "properties": {
-            "format": {
-              "const": "ir"
-            }
-          }
-        }
-      ],
-      "unevaluatedProperties": false
-    },
     "defines": {
       "type": "object",
       "description": "Compile-time defines (currently unused)."

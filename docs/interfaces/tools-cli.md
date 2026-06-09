@@ -1,38 +1,46 @@
 # C++ Tools
 
-Low-level tools installed alongside the Python package. These operate on individual pipeline stages and are primarily used for development, debugging, and scripting.
+Low-level tools installed alongside the Python package. They operate on individual
+pipeline stages and are primarily used for development, debugging, and scripting.
 
-For most use cases, the `autocog` CLI (which wraps these) is preferred.
+For most use cases the `autocog` CLI (which wraps these) is preferred.
+
+## CLI conventions
+
+These tools use **long options only** — there are no short aliases. Only `stlc`
+takes positional arguments (its input `.stl` files); every other input and output
+is a named option. The pipeline-artifact tools (`ista`, `xfta`, `psta`) require an
+explicit output file; use `/dev/stdout` (and `/dev/stdin`) to pipe.
+
+For `ista`, the `--syntax`, `--search`, and `--content` options accept **either a
+file path or inline JSON** (e.g. `--content '{}'`).
 
 ## stlc — STL Compiler
 
-Compile STL source files to various intermediate representations.
+Compile STL source files. At least one emit output is required; several may be
+combined to emit multiple artifacts in one run.
 
 ```
-stlc [options] [files...]
+stlc [emit outputs] [options] <file.stl> ...
 ```
 
 | Flag | Description |
 |------|-------------|
-| `-i, --input FILE` | Input STL file |
-| `-o, --output FILE` | Output file (default: stdout) |
-| `-I, --include PATH` | Import search path (repeatable) |
-| `-D, --define VAR=VAL` | Define a compile-time variable |
-| `-e, --emit TARGET` | Output format (default: `sta`) |
-| `-V, --verbose` | Verbose output |
-| `-v, --version` | Show version |
+| `<file.stl> ...` | Input STL source files (positional) |
+| `--ast FILE` | Emit the parsed AST |
+| `--graph FILE` | Emit the instantiation graph |
+| `--ir FILE` | Emit the intermediate representation |
+| `--sta FILE` | Emit the compiled STA |
+| `-I, --include PATH` | Import search path (repeatable; also `-I<path>`) |
+| `-D, --define VAR[:TYPE]=VAL` | Define a compile-time variable (also `-D<def>`) |
+| `--verbose [LEVEL]` | Log level (trace,debug,info,warn,error,critical) |
+| `--version` | Show version |
 | `--build-info` | Show build configuration |
+| `--help` | Show help |
 
-### Emit targets
-
-| Target | Description |
-|--------|-------------|
-| `ast` | Abstract syntax tree (parse output) |
-| `symbols` | Symbol table |
-| `globals` | Global scope after resolution |
-| `graph` | Instantiation graph |
-| `ir` | Intermediate representation |
-| `sta` | Structured Thought Automaton (final compiled output) |
+`stlc` keeps the standard compiler-style `-I`/`-D` short forms; all other options
+are long-only. Each emit flag writes to its own file (use `/dev/stdout` for stdout),
+and they compose:
 
 ### Define syntax
 
@@ -47,111 +55,114 @@ stlc -Dval:int=42            # explicit type
 ### Examples
 
 ```bash
-stlc program.stl                              # STA to stdout
-stlc --emit ir program.stl                    # IR to stdout
-stlc --emit sta -I share/library/stlib program.stl -o program.sta.json
-stlc -Dmax_iter=5 program.stl                 # with compile-time define
+stlc --sta /dev/stdout program.stl                       # STA to stdout
+stlc --ir program.ir.json program.stl                    # IR to a file
+stlc --ast a.json --sta s.json program.stl               # emit both in one run
+stlc --sta program.sta.json -I share/library/stlib program.stl
+stlc --sta /dev/null -Dmax_iter=5 program.stl            # with a compile-time define
 ```
 
 ## ista — STA Instantiation
 
-Instantiate an STA prompt into an FTA (text-level automaton).
+Instantiate an STA prompt into an FTA. All inputs and `--fta` are required.
 
 ```
-ista [options] <sta.json>
+ista --sta FILE --prompt NAME --syntax F|JSON --search F|JSON --content F|JSON --fta FILE
 ```
 
 | Flag | Description |
 |------|-------------|
-| `-p, --prompt NAME` | Prompt name (default: first entry point) |
-| `-s, --syntax FILE` | Syntax description JSON (required) |
-| `-v, --version` | Show version |
-| `--build-info` | Show build configuration |
-| `-d, --data FILE` | Initial content JSON (default: `{}`) |
-| `-o, --output FILE` | Output FTA JSON (default: stdout) |
-| `-t, --text` | Print FTA as formatted text instead of JSON |
+| `--sta FILE` | Compiled STA JSON |
+| `--prompt NAME` | Prompt to instantiate |
+| `--syntax F\|JSON` | Syntax config — a file path or inline JSON |
+| `--search F\|JSON` | Search config — a file path or inline JSON |
+| `--content F\|JSON` | Initial content — a file path or inline JSON |
+| `--fta FILE` | Output FTA JSON (`/dev/stdout` for stdout) |
+| `--verbose [LEVEL]` | Log level |
+| `--version` / `--build-info` / `--help` | — |
 
 ### Examples
 
 ```bash
-ista -s syntax.json program.sta.json          # JSON output
-ista -s syntax.json --text program.sta.json   # human-readable text
-ista -p init_idea -d input.json program.sta.json   # specific prompt with data
-ista -s syntax.json -o output.fta.json program.sta.json
+ista --sta program.sta.json --prompt main --syntax syntax.json --search search.json \
+     --content '{}' --fta prompt.fta.json
+ista --sta program.sta.json --prompt init_idea --syntax syntax.json --search search.json \
+     --content input.json --fta /dev/stdout
 ```
 
 ## xfta — FTA Evaluation
 
-Evaluate an FTA against a language model, producing an FTT (execution trace).
+Evaluate an FTA against a language model, producing an FTT (Finite Thought Tree —
+the model's evaluation tree). `--fta` and `--ftt` are required.
 
 ```
-xfta [options] <fta.json> ...
-```
-
-| Flag | Description |
-|------|-------------|
-| `-m, --model PATH` | GGUF model file |
-| `-r, --rng` | Use built-in RNG model |
-| `-s, --search FILE` | Search config JSON (required) |
-| `--version` | Show version |
-| `--build-info` | Show build configuration |
-| `-c, --ctx SIZE` | Model context size |
-| `-b, --best` | Print best-path text to stdout (no FTT output) |
-| `-v, --verbose` | Verbose output |
-
-### Examples
-
-```bash
-xfta --rng -s search.json --best input.fta.json              # evaluate with RNG, print text
-xfta --model model.gguf -s search.json --best input.fta.json  # evaluate with real model
-xfta --rng -s search.json input.fta.json > output.ftt.json    # full FTT output
-```
-
-## psta — STA Text Parser
-
-Parse text (from model output) back into structured field values using the STA schema.
-
-```
-psta [options] <sta.json>
+xfta --fta FILE (--model FILE | --rng) --ftt FILE [--seed N] [--ctx N]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `-p, --prompt NAME` | Prompt name (default: first entry point) |
-| `-s, --syntax FILE` | Syntax description JSON (required) |
-| `-v, --version` | Show version |
-| `--build-info` | Show build configuration |
-| `-i, --input FILE` | Text to parse (default: stdin) |
-| `-o, --output FILE` | Output JSON (default: stdout) |
+| `--fta FILE` | Input FTA JSON |
+| `--model FILE` | GGUF model file |
+| `--rng` | Use built-in RNG model |
+| `--ftt FILE` | Output FTT JSON (`/dev/stdout` for stdout) |
+| `--seed N` | RNG seed (default: 42) |
+| `--ctx N` | Model context size |
+| `--verbose [LEVEL]` | Log level |
+| `--version` / `--build-info` / `--help` | — |
+
+The search parameters are embedded in the FTA (by `ista`), so `xfta` takes no
+`--search`.
 
 ### Examples
 
 ```bash
-echo "field text here" | psta program.sta.json             # parse from stdin
-psta -i model_output.txt -o parsed.json program.sta.json   # file to file
-psta -p init_idea program.sta.json < text.txt              # specific prompt
+xfta --rng --fta input.fta.json --ftt output.ftt.json                 # evaluate with RNG
+xfta --model model.gguf --fta input.fta.json --ftt /dev/stdout        # real model, to stdout
+```
+
+## psta — FTT Parser
+
+Score an FTT and parse it into a frame of field values, using the STA schema.
+`--sta`, `--ftt`, `--prompt`, and `--frame` are required.
+
+```
+psta --sta FILE --ftt FILE --prompt NAME --frame FILE [--metric NAME]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--sta FILE` | Compiled STA JSON |
+| `--ftt FILE` | Input FTT JSON |
+| `--prompt NAME` | Prompt the FTT corresponds to |
+| `--frame FILE` | Output frame JSON (`/dev/stdout` for stdout) |
+| `--metric NAME` | Scoring metric: `best` (default) |
+| `--verbose [LEVEL]` | Log level |
+| `--version` / `--build-info` / `--help` | — |
+
+### Examples
+
+```bash
+psta --sta program.sta.json --ftt output.ftt.json --prompt main --frame result.json
 ```
 
 ## Pipeline Example
 
-Chain the tools to execute the full pipeline manually:
+Chain the tools through files to run the full pipeline manually:
 
 ```bash
-# Compile
-stlc program.stl -o program.sta.json
-
-# Instantiate
-ista -s syntax.json -d input.json -o prompt.fta.json program.sta.json
-
-# Evaluate
-xfta --model model.gguf -s search.json --best prompt.fta.json > output.txt
-
-# Parse
-psta program.sta.json < output.txt > result.json
+stlc --sta program.sta.json program.stl
+ista --sta program.sta.json --prompt main --syntax syntax.json --search search.json \
+     --content input.json --fta prompt.fta.json
+xfta --model model.gguf --fta prompt.fta.json --ftt output.ftt.json
+psta --sta program.sta.json --ftt output.ftt.json --prompt main --frame result.json
 ```
 
-Or in a single pipeline:
+Or piped end-to-end via `/dev/stdin` and `/dev/stdout`:
 
 ```bash
-ista -s syntax.json -d input.json program.sta.json | xfta --rng -s search.json --best /dev/stdin | psta -s syntax.json program.sta.json
+stlc --sta program.sta.json program.stl
+ista --sta program.sta.json --prompt main --syntax syntax.json --search search.json \
+     --content input.json --fta /dev/stdout \
+  | xfta --rng --fta /dev/stdin --ftt /dev/stdout \
+  | psta --sta program.sta.json --ftt /dev/stdin --prompt main --frame /dev/stdout
 ```

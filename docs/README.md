@@ -17,7 +17,8 @@
 ## STL Compiler
 
 - [Compiler Architecture](./compiler/architecture.md) — Pipeline stages and data structures
-- [Runtime Semantics](./compiler/runtime-semantics.md) — Execution model: STA → FTA → LLM
+- [Runtime Semantics](./compiler/runtime-semantics.md) — Execution model: STA → FTA → FTT → frame
+- [Data & Codec](./compiler/data-codec.md) — Artifact layer, content-addressing, codec, bindings
 
 ## Development
 

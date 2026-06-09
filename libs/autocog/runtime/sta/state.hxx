@@ -1,189 +1,55 @@
 #ifndef AUTOCOG_RUNTIME_STA_STATE_HXX
 #define AUTOCOG_RUNTIME_STA_STATE_HXX
 
-#include <map>
-#include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
-#include "autocog/runtime/sta/channel.hxx"
-#include "autocog/runtime/fta/vocab.hxx"
+#include "autocog/data/sta.hxx"   // STA/Prompt/Field (+ formats, flow, abstract, ...)
 
 namespace autocog::runtime::sta {
 
-using VocabExpr = ::autocog::runtime::fta::VocabExpr;
-
-// Scalar value carried in opaque search-param dicts (mirrors the compiler IR's
-// value variant). The search dicts are intentionally open; values are
-// resolved/validated downstream at instantiation.
-using SearchValue = std::variant<int, float, bool, std::string, std::nullptr_t>;
-using SearchParams = std::map<std::string, std::map<std::string, SearchValue>>;
-
-// ============================================================================
-// Field format descriptions (self-contained, no IR dependency)
-// ============================================================================
-
-struct CompletionFormat {
-    std::optional<int> length;
-    std::optional<std::string> vocab;   // reference into the prompt vocab table ("vocab_<hash>")
-};
-
-struct EnumFormat {
-    std::vector<std::string> values;
-};
-
-struct ChoiceFormat {
-    std::string mode;   // "select" or "repeat"
-    std::vector<PathStep> path;
-};
-
-using FieldFormat = std::variant<
-    std::monostate,     // record (no format)
-    CompletionFormat,
-    EnumFormat,
-    ChoiceFormat
->;
+// The STA's structural types are the shared autocog::data types; the runtime
+// works on them directly (data::Field carries the structural query helpers
+// is_list/is_record/tag). The only runtime-only type is ConcreteState below:
+// the index-expanded automaton state built during instantiation, never
+// serialized. A few short aliases are re-exported for readability.
+using SearchParams     = ::autocog::data::SearchParams;
+using CompletionFormat = ::autocog::data::CompletionFormat;
+using EnumFormat       = ::autocog::data::EnumFormat;
+using ChoiceFormat     = ::autocog::data::ChoiceFormat;
+using FieldFormat      = ::autocog::data::FieldFormat;
+using FlowControl      = ::autocog::data::FlowControl;
+using FlowReturn       = ::autocog::data::FlowReturn;
+using ReturnField      = ::autocog::data::ReturnField;
+using Flow             = ::autocog::data::Flow;
+using AbstractState    = ::autocog::data::Abstract;
+using SchemaField      = ::autocog::data::SchemaField;
+using EntryPoint       = ::autocog::data::EntryPoint;
+using PythonImport     = ::autocog::data::PythonImport;
+using VocabExpr        = ::autocog::data::VocabExpr;
 
 // ============================================================================
-// Per-field info carried in the STA
+// Concrete state in the automaton (runtime scratch; NOT serialized)
 // ============================================================================
-
-struct FieldInfo {
-    std::string name;
-    int depth;
-    int index;        // index within parent
-    int flat_index;   // position in flattened field list (globally unique)
-    std::optional<std::pair<int,int>> range;  // null = scalar
-    FieldFormat format;
-    std::optional<std::string> format_ref;  // named format/record (e.g. "thought")
-    std::vector<std::string> desc;           // field annotations (from prompt)
-    std::vector<std::string> format_desc;    // format annotations (from record definition)
-    SearchParams search;                     // resolved search policy for this field's
-                                             // state (text|enum + branch), from the IR.
-
-    bool is_list() const { return range.has_value(); }
-    bool is_record() const { return std::holds_alternative<std::monostate>(format); }
-
-    std::string tag() const {
-        return name + "_" + std::to_string(depth) + "_" + std::to_string(flat_index);
-    }
-};
-
-// ============================================================================
-// Concrete state in the automaton
-// ============================================================================
-
 struct ConcreteState {
     std::string tag;            // unique id: "field_tag@i_j_k"
-    int field;                  // index into PromptSTA::fields (-1 for root)
+    int field;                  // index into the prompt's fields (-1 for root)
     std::vector<int> indices;   // concrete array indices (depth-0 omitted)
     std::vector<std::string> flows;      // flow targets (before post-processing)
     std::vector<std::string> exits;      // exit targets (before post-processing)
     std::vector<std::string> successors; // final linearized successors
 };
 
-// ============================================================================
-// Flow control
-// ============================================================================
-
-struct FlowTarget {
-    std::string prompt;
-    std::optional<int> limit;
-};
-
-struct ReturnField {
-    std::string alias;
-    std::vector<PathStep> path;
-};
-
-struct ReturnTarget {
-    std::vector<ReturnField> fields;
-};
-
-using FlowEntry = std::variant<FlowTarget, ReturnTarget>;
-
-// ============================================================================
-// Input/Output Schema
-// ============================================================================
-
-struct SchemaField {
-    std::string type;                        // "text", "array", "object"
-    bool required{true};
-    std::optional<int> max_length;           // for text fields
-    std::vector<std::string> enum_values;    // for enum fields
-    // For arrays:
-    std::string items_type;                  // element type (for arrays)
-    std::optional<int> items_max_length;     // element max_length (for arrays)
-    std::optional<int> length;               // fixed array length
-    std::optional<int> min_items;
-    std::optional<int> max_items;
-};
-
-struct EntryPoint {
-    std::string prompt;
-    std::map<std::string, SchemaField> inputs;
-    std::map<std::string, SchemaField> outputs;
-};
-
-// ============================================================================
-// Per-prompt STA
-// ============================================================================
-
-// Abstract state: the per-field state graph node, BEFORE index-expansion.
-// This is what the STA serializes. `flow`/`exit_` are indices into the prompt's
-// `abstracts` vector (-1 = none); `field` indexes `fields` (-1 = root). The
-// concrete (index-expanded) states are built at instantiation time by ista,
-// using the actual content — they are NOT serialized.
-struct AbstractState {
-    int field = -1;
-    int flow = -1;
-    int exit_ = -1;
-};
-
 // Depth/tag of an abstract state, derived from the field table (root = depth 0,
-// tag "root"). Free functions since AbstractState is a plain serializable POD.
-inline int abs_depth(AbstractState const & abs, std::vector<FieldInfo> const & fields) {
+// tag "root").
+inline int abs_depth(AbstractState const & abs,
+                     std::vector<::autocog::data::Field> const & fields) {
     return (abs.field < 0) ? 0 : fields[abs.field].depth;
 }
-inline std::string abs_tag(AbstractState const & abs, std::vector<FieldInfo> const & fields) {
+inline std::string abs_tag(AbstractState const & abs,
+                           std::vector<::autocog::data::Field> const & fields) {
     return (abs.field < 0) ? "root" : fields[abs.field].tag();
 }
-
-struct PromptSTA {
-    std::string name;
-    std::vector<std::string> desc;
-    std::vector<FieldInfo> fields;
-    std::vector<AbstractState> abstracts;           // serialized abstract state graph
-    std::map<std::string, ConcreteState> states;    // tag -> state (built by ista at runtime; NOT serialized)
-    std::vector<std::string> sequence;              // linear traversal order (built by ista at runtime)
-    std::map<std::string, FlowEntry> flows;         // name -> target
-    std::vector<Channel> channels;                  // data flow descriptions
-    // Prompt-scope search params from `search { }`, carried verbatim from the
-    // IR (category -> param -> value), OPEN by design. Per-field (completion/
-    // choice) and per-state (branch) resolution is applied at instantiation;
-    // queue.* is meaningful at this prompt scope.
-    std::map<std::string, std::map<std::string, SearchValue>> search;
-    // Vocab table: "vocab_<hash>" -> resolved vocab expression tree, transported
-    // from the IR. CompletionFormat.vocab references an entry. STA does not
-    // interpret it; the backend (xfta) walks the tree to build token masks.
-    std::map<std::string, VocabExpr> vocabs;
-};
-
-// ============================================================================
-// Full STA program
-// ============================================================================
-
-struct PythonImport {
-    std::string file;
-    std::string target;
-};
-
-struct Program {
-    std::map<std::string, EntryPoint> entry_points;
-    std::map<std::string, PromptSTA> prompts;
-    std::map<std::string, PythonImport> python_imports;
-};
 
 }
 

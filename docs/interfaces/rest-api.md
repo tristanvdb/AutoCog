@@ -44,7 +44,7 @@ Submit an FTA for evaluation.
 }
 ```
 
-The `fta` field contains a complete FTA JSON object (as produced by `ista` or `runtime_sta_cxx.instantiate`).
+The `fta` field contains a complete FTA JSON object (as produced by `ista`, or by `runtime_sta_cxx.dump_fta` on an instantiated FTA).
 
 **Response:**
 

@@ -20,7 +20,7 @@ namespace autocog::utilities {
 InternalError::InternalError(
   std::string msg
 ) :
-  AutoCogError(std::move(msg), /*recoverable=*/false)
+  AutoCogError(std::move(msg))
 {}
 
 thread_local Backtrace g_last_throw_backtrace;

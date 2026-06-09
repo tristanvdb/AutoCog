@@ -27,41 +27,6 @@ static ast::OpKind token_to_operator_kind(TokenType type) {
   }
 }
 
-[[maybe_unused]] static int get_precedence(TokenType type) {
-  switch (type) {
-    case TokenType::STAR:
-    case TokenType::SLASH:
-    case TokenType::PERCENT:
-      return 10;  // Multiplicative
-      
-    case TokenType::PLUS:
-    case TokenType::MINUS:
-      return 9;   // Additive
-      
-    case TokenType::LT:
-    case TokenType::GT:
-    case TokenType::LTEQ:
-    case TokenType::GTEQ:
-      return 8;   // Relational
-      
-    case TokenType::EQEQ:
-    case TokenType::BANGEQ:
-      return 7;   // Equality
-      
-    case TokenType::AMPAMP:
-      return 4;   // Logical AND
-      
-    case TokenType::PIPEPIPE:
-      return 3;   // Logical OR
-      
-    case TokenType::QUESTION:
-      return 2;   // Ternary conditional
-      
-    default:
-      return -1;  // Not a binary operator
-  }
-}
-
 static bool is_unary(TokenType tok) {
   return tok == TokenType::BANG || tok == TokenType::MINUS;
 }
@@ -79,10 +44,6 @@ static bool is_primary(TokenType tok) {
          tok == TokenType::IDENTIFIER      ||
          tok == TokenType::TOKENIZE        ||
          tok == TokenType::REGEX;
-}
-
-[[maybe_unused]] static bool is_conditional(TokenType tok) {
-  return tok == TokenType::QUESTION;
 }
 
 template <>

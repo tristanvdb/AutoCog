@@ -1,6 +1,6 @@
 %top{
 #include "autocog/compiler/stl/token.hxx"
-#include "autocog/compiler/stl/location.hxx"
+#include "autocog/utilities/location.hxx"
 #include <string>
 %}
 
@@ -28,7 +28,7 @@ private:
 public:
     void set_file_id(int fid_) { fid = fid_; }
 
-    SourceLocation current_location() const {
+    autocog::location::SourceLocation current_location() const {
         return {fid, line_number, last_column, current_offset};
     }
 

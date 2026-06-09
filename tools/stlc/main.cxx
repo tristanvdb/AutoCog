@@ -5,6 +5,9 @@
 #include "autocog/utilities/exception.hxx"
 
 #include <fstream>
+#include <iostream>
+#include <optional>
+#include <utility>
 
 using namespace autocog::compiler::stl;
 
@@ -19,25 +22,29 @@ static int run(int argc, char** argv) {
     retval = driver.compile();
     if (retval) return retval.value();
 
-    // Serialize
-    std::ostream * out = &std::cout;
-    std::ofstream outfile;
-    if (driver.output) {
-        outfile.open(*driver.output);
-        if (!outfile) {
-            std::cerr << "Error: Cannot write to output file: " << *driver.output << std::endl;
-            return 1;
+    // Serialize each requested emit to its file. Several may be requested in one
+    // run; compile() already ran up to the deepest requested stage.
+    using Emit = std::pair<std::optional<std::string> const &,
+                           void (*)(Driver const &, std::ostream &)>;
+    Emit const emits[] = {
+        { driver.out_ast,   serialize_ast   },
+        { driver.out_graph, serialize_graph },
+        { driver.out_ir,    serialize_ir    },
+        { driver.out_sta,   serialize_sta   },
+    };
+    for (auto const & [path, serialize] : emits) {
+        if (!path) continue;
+        std::ofstream outfile;
+        std::ostream * out = &std::cout;
+        if (*path != "/dev/stdout") {
+            outfile.open(*path);
+            if (!outfile) {
+                std::cerr << "Error: Cannot write to output file: " << *path << std::endl;
+                return 1;
+            }
+            out = &outfile;
         }
-        out = &outfile;
-    }
-
-    switch (driver.stage) {
-        case CompilationStage::Parse:       serialize_ast(driver, *out);     break;
-        case CompilationStage::Symbols:     serialize_symbols(driver, *out); break;
-        case CompilationStage::Globals:     serialize_globals(driver, *out); break;
-        case CompilationStage::Instantiate: serialize_graph(driver, *out);   break;
-        case CompilationStage::Assemble:    serialize_ir(driver, *out);      break;
-        case CompilationStage::Generate:    serialize_sta(driver, *out);     break;
+        serialize(driver, *out);
     }
 
     return 0;

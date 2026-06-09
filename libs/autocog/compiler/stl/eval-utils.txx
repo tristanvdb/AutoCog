@@ -4,7 +4,7 @@ namespace autocog::compiler::stl::eval_utils {
 // Static helper function for arithmetic operations
 template<ast::OpKind Op>
 ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const & rhs_val,
-                                    std::optional<SourceRange> const & loc = std::nullopt) {
+                                    std::optional<autocog::location::SourceRange> const & loc = std::nullopt) {
   return std::visit([&loc](auto const & l, auto const & r) -> ir::Value {
     using L = std::decay_t<decltype(l)>;
     using R = std::decay_t<decltype(r)>;
@@ -74,7 +74,7 @@ ir::Value evaluateArithmetic(ir::Value const & lhs_val, ir::Value const & rhs_va
 // purpose: logical and/or is spelled && / || -- there must be one way to say it.
 template<ast::OpKind Op>
 ir::Value evaluateBitwise(ir::Value const & lhs_val, ir::Value const & rhs_val,
-                                 std::optional<SourceRange> const & loc = std::nullopt) {
+                                 std::optional<autocog::location::SourceRange> const & loc = std::nullopt) {
   return std::visit([&loc](auto const & l, auto const & r) -> ir::Value {
     using L = std::decay_t<decltype(l)>;
     using R = std::decay_t<decltype(r)>;
@@ -95,7 +95,7 @@ ir::Value evaluateBitwise(ir::Value const & lhs_val, ir::Value const & rhs_val,
 // Static helper function for comparison operations
 template<ast::OpKind Op>
 ir::Value evaluateComparison(ir::Value const & lhs_val, ir::Value const & rhs_val,
-                                    std::optional<SourceRange> const & loc = std::nullopt) {
+                                    std::optional<autocog::location::SourceRange> const & loc = std::nullopt) {
   return std::visit([&loc](auto const & l, auto const & r) -> ir::Value {
     using L = std::decay_t<decltype(l)>;
     using R = std::decay_t<decltype(r)>;
@@ -149,7 +149,7 @@ ir::Value evaluateComparison(ir::Value const & lhs_val, ir::Value const & rhs_va
 // Static helper function for logical operations
 template<ast::OpKind Op>
 ir::Value evaluateLogical(ir::Value const & lhs_val, ir::Value const & rhs_val,
-                                 std::optional<SourceRange> const & loc = std::nullopt) {
+                                 std::optional<autocog::location::SourceRange> const & loc = std::nullopt) {
   return std::visit([&loc](auto const & l, auto const & r) -> ir::Value {
     using L = std::decay_t<decltype(l)>;
     using R = std::decay_t<decltype(r)>;

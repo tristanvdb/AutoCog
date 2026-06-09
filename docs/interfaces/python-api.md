@@ -74,7 +74,7 @@ engine = autocog.Engine(model=None, syntax=None, search=None, n_ctx=4096)
 Run a program to completion.
 
 ```python
-result = engine.run(program, entry="main", externals=None, max_steps=100, **inputs)
+result = engine.run(program, entry="main", externals=None, max_steps=100, recorder=None, **inputs)
 ```
 
 | Parameter | Type | Description |
@@ -83,16 +83,21 @@ result = engine.run(program, entry="main", externals=None, max_steps=100, **inpu
 | `entry` | str | Entry point name |
 | `externals` | dict | `{name: callable}` for extern channels |
 | `max_steps` | int | Safety limit on prompt iterations |
+| `recorder` | Recorder or None | Optional artifact recorder (see `autocog.recorder.Recorder`) |
 | `**inputs` | | Input values (passed to `get` channels) |
 
 Returns: result value (str, dict, or nested structure depending on the return flow).
+
+`engine.run_async(program, entry="main", externals=None, **inputs)` is the awaitable
+variant, for programs whose extern callables are coroutines.
+`engine.set_seed(seed)` sets the RNG seed of the underlying (or built-in RNG) model.
 
 #### engine.evaluate_prompt
 
 Evaluate a single prompt. This is the dispatch point for local vs remote execution.
 
 ```python
-frame = engine.evaluate_prompt(program, prompt_name, content)
+frame = engine.evaluate_prompt(program, prompt_name, content, record_kinds=None)
 ```
 
 | Parameter | Type | Description |
@@ -100,8 +105,11 @@ frame = engine.evaluate_prompt(program, prompt_name, content)
 | `program` | Program | Compiled program |
 | `prompt_name` | str | Mangled prompt name |
 | `content` | dict | Resolved channel values |
+| `record_kinds` | set or None | Artifact kinds to also return (`fta`, `ftt`, `frame`, `input`) |
 
-Returns: dict of parsed field values (the "frame").
+Returns: dict of parsed field values (the "frame"), or `(frame, artifacts)` when
+`record_kinds` is set. Internally this runs instantiate → evaluate → walk against the
+C++ runtime and backend (see [Runtime Semantics](../compiler/runtime-semantics.md)).
 
 ### RemoteEngine
 
@@ -128,6 +136,29 @@ result = engine.run(prog, query="test")
 engine = autocog.RemoteEngine("http://gpu-box:8080")
 result = engine.run(prog, externals=externals, query="test")
 ```
+
+### RemoteBackend
+
+Drop-in replacement for `Engine` that dispatches **FTA evaluation** over HTTP to a
+level-3 backend server. Channel resolution *and* instantiation happen locally (hence
+`syntax`/`search` are required); only the FTA→FTT evaluation is remote.
+
+```python
+engine = autocog.RemoteBackend(server_url, syntax=None, search=None,
+                               poll_interval=0.5, timeout=300)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `server_url` | str | Base URL of the backend server |
+| `syntax` | str | Path to syntax JSON file (required — local instantiation) |
+| `search` | str | Path to search config JSON file (required — local instantiation) |
+| `poll_interval` | float | Seconds between status polls |
+| `timeout` | float | Maximum seconds to wait |
+
+Provides the same `run()` / `evaluate_prompt()` interface as `Engine`. This is the
+third remoting level, alongside `remote_run` (level 1, full app) and `RemoteEngine`
+(level 2, per-prompt).
 
 ### autocog.remote_run
 

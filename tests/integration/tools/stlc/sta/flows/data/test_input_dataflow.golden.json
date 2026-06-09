@@ -23,6 +23,12 @@
       "prompt": "greeter"
     }
   },
+  "metadata": {
+    "format": "sta",
+    "hash": "017b87f045d13cb8d297a351212c4dbe154cb5347b46bc19b3cf8e5b94ed3af6",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.6.0"
+  },
   "prompts": {
     "greeter": {
       "abstracts": [
@@ -244,5 +250,6 @@
       "name": "summarizer"
     }
   },
+  "provenance": {},
   "python_imports": {}
 }

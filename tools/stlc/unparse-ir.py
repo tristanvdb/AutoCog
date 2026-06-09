@@ -7,7 +7,7 @@ records inlined, and parameters resolved — analogous to viewing
 preprocessed C++ after template instantiation.
 
 Usage:
-    stlc --emit ir program.stl | python tools/stlc/unparse-ir.py
+    stlc --ir /dev/stdout program.stl | python tools/stlc/unparse-ir.py
     python tools/stlc/unparse-ir.py < ir.json
     python tools/stlc/unparse-ir.py ir.json
 """

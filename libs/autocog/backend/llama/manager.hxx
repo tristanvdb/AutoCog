@@ -32,10 +32,10 @@ class Manager {
     static ModelID add_model(std::string const & path, int n_ctx);
     static Model & get_model(ModelID id);
 
-    static EvalID add_eval(ModelID const model_, runtime::fta::FTA const & fta);
+    static EvalID add_eval(ModelID const model_, data::FTA const & fta);
     static Evaluation & get_eval(EvalID id);
     static unsigned advance(EvalID id, std::optional<unsigned> max_token_eval=std::nullopt);
-    static runtime::fta::FTT const & retrieve(EvalID id);
+    static data::FTT const & retrieve(EvalID id);
     static void rm_eval(EvalID id);
 };
 

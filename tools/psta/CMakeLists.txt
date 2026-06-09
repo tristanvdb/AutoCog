@@ -9,6 +9,7 @@ target_include_directories(autocog_psta PRIVATE
 )
 target_link_libraries(autocog_psta PUBLIC
   autocog_runtime_sta_lib
+  autocog_codec_json
   autocog_utilities_lib
 )
 set_target_properties(autocog_psta PROPERTIES
