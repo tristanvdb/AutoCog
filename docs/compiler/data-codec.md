@@ -139,6 +139,6 @@ The Python `Engine` composes these: `instantiate` → `evaluate` → `walk_ftt_t
 ## Schemas
 
 The JSON form of each artifact is a published, machine-checkable contract under
-`share/schemas/` (`sta`, `fta`, `ftt`, `search`, `syntax`, all sharing
+`share/schemas/` (`sta`, `fta`, `ftt`, `ir`, `search`, `syntax`, all sharing
 `common/metadata.schema.json`). See
 [share/schemas/README.md](../../share/schemas/README.md).

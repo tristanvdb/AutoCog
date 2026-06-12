@@ -100,11 +100,12 @@ In-memory key-value store for persisting data across prompts within a single exe
 
 ### store
 
-Store a value under a key. Returns the key for confirmation.
+Store a value under a `(pkey, skey)` key pair. `data` is positional; `pkey` and
+`skey` (a sub-key) both default to `""`. Returns the key for confirmation.
 
 ```python
-def store(pkey: str, data: any) -> dict:
-    """Store data under pkey. Returns {"pkey": pkey, "skey": ""}."""
+def store(data, pkey="", skey=""):
+    """Store data under (pkey, skey). Returns {"pkey": pkey, "skey": skey}."""
 ```
 
 **STL usage:**
@@ -120,11 +121,11 @@ channel {
 
 ### retrieve
 
-Retrieve a previously stored value.
+Retrieve a previously stored value, or `None` if absent.
 
 ```python
-def retrieve(pkey: str) -> any:
-    """Retrieve data stored under pkey."""
+def retrieve(pkey="", skey=""):
+    """Retrieve the value stored under (pkey, skey), or None."""
 ```
 
 **STL usage:**

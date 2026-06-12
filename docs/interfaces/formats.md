@@ -16,7 +16,7 @@ The compiled output of `stlc` or `autocog compile`. JSON format containing promp
 {
   "metadata": {
     "format": "sta",
-    "version": "0.5.5",
+    "version": "<x.y.z>",
     "hash": "<64-hex SHA-256>",
     "timestamp": "2026-06-07T12:00:00Z"
   },
@@ -87,7 +87,7 @@ prompt with resolved channel content and syntax/search configuration.
 
 **Consumed by:** `xfta`, `backend_llama_cxx.evaluate()`
 
-The FTA is a DAG of actions (text, completion, choice) with token constraints and
+The FTA is a DAG of actions (`text`, `complete`, `choose`) with token constraints and
 embedded search parameters; it carries the source STA's hash in its provenance. Its
 structure is fixed by `share/schemas/fta.schema.json`. Evaluating an FTA produces an
 **FTT** (Finite Thought Tree), the model's evaluation tree, which the runtime walks
@@ -129,7 +129,7 @@ At least one of `program.sta.json` or the source STL must be present.
 {
   "name": "story-writer",
   "version": "1.0",
-  "abi_version": "0.5.5",
+  "abi_version": "<x.y.z>",
   "entry_points": {
     "main": {
       "prompt": "init_idea",
@@ -195,29 +195,31 @@ The syntax file format is documented in `share/syntax/default.json`.
 
 ## Search Config (`.json`)
 
-Controls beam search parameters for FTA evaluation. All fields are required.
+Tunes how the runtime explores generations during FTA evaluation. Parameters are
+grouped by category (matching the `search { … }` policies in STL):
 
 ```json
 {
-  "completion": {
-    "beams": 4,          // parallel beams during completion
-    "ahead": 2,          // look-ahead tokens for beam search
-    "width": 1,          // keep top-N beams after completion
-    "threshold": 0.1,    // prune beams below this probability
-    "repetition": null,  // repetition penalty weight (null = disabled)
-    "diversity": null,   // diversity bonus weight (null = disabled)
-    "stop": "\n"         // stop token string for completions
-  },
-  "choice": {
-    "threshold": 0.1,    // prune choices below this probability
-    "width": 1           // keep top-N choices
-  },
-  "text": {
-    "evaluate": false    // compute logprobs for text (fixed) nodes
-  }
+  "text":   { "threshold": 0.1, "beams": 4, "ahead": 2, "width": 1, "repetition": null, "diversity": null },
+  "enum":   { "threshold": 0.1, "width": 1 },
+  "branch": { "threshold": 0.1, "width": 1 },
+  "flow":   { "threshold": 0.1, "width": 1 },
+  "queue":  { "metric": "perplexity" }
 }
 ```
 
+- `text` — completion sampling: `threshold` (prune below this probability),
+  `beams`, `ahead` (look-ahead tokens), `width` (beams kept), plus optional
+  `repetition` / `diversity` penalty weights (`null` = disabled). The schema
+  requires `threshold`, `beams`, `ahead`, `width`.
+- `enum` / `branch` / `flow` — choice-style decisions: `threshold` and `width`.
+- `queue` — global work-queue ordering: `metric` (e.g. `"perplexity"`).
+
+The shape is fixed by `share/schemas/search.schema.json`. These correspond to the
+`search { text.* / enum.* / branch.* / flow.* / queue.* }` policies in STL (see
+[Search Policies](../structured-thoughts/language.md#search-policies)).
+
 Bundled configurations:
-- `share/search/default.json` — standard settings (beams=4, ahead=2)
-- `share/search/fast.json` — minimal search (beams=1, ahead=0)
+- `share/search/default.json` — standard settings
+- `share/search/fast.json` — minimal search (fewer beams / look-ahead)
+- `share/search/full.json` — broader search

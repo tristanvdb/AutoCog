@@ -12,14 +12,16 @@ tests/
 │   │   │   ├── expressions/     Defines, parameterized records/prompts
 │   │   │   ├── symbols/         Import, export, alias
 │   │   │   ├── annotations/     Prompt/field annotations
-│   │   │   └── search/          Search constructs
+│   │   │   ├── search/          Search constructs
+│   │   │   └── vocab/           Vocabularies (vocab, tokenize, regex, set algebra)
 │   │   ├── flows/               Execution semantics (need runtime to test)
 │   │   │   ├── control/         Flow statements (simple, loop with limit)
 │   │   │   ├── return/          Return statements (simple, labeled)
 │   │   │   ├── data/            Channels: input (get), dataflow (use), self-ref
 │   │   │   ├── calls/           Call channels (basic, mapped, bind)
 │   │   │   └── transform/       Clause modifiers (ravel, wrap, prune)
-│   │   └── programs/            Composition of multiple features
+│   │   ├── programs/            Composition of multiple features
+│   │   └── errors/              Invalid STL → expected diagnostics (check_error_output.py)
 │   └── fta/                     FTA JSON fixtures (pre-tokenized)
 │
 ├── integration/
@@ -29,7 +31,7 @@ tests/
 │   │   │   ├── sta/             Golden STA JSON output per fixture
 │   │   │   └── emit/            All emit formats on a representative subset
 │   │   ├── ista/                STA instantiation tests
-│   │   ├── psta/                STA text parsing tests
+│   │   ├── psta/                FTT scoring → frame tests (STA + FTT → frame)
 │   │   ├── xfta/                FTA evaluation tests (--rng)
 │   │   └── e2e/                 Full pipeline: stlc → ista → xfta → psta
 │   ├── bindings/                C++ binding integration tests (pytest)
@@ -39,7 +41,8 @@ tests/
 │       ├── test_smoke.py        Binding imports, compilation, pipeline
 │       ├── test_channels.py     Channel resolution (get/use/call, clauses)
 │       ├── test_error_contract.py   Error types and messages
-│       └── test_json_logging.py     --json NDJSON logging
+│       ├── test_json_logging.py     --json NDJSON logging
+│       └── test_cli_extra.py        Additional CLI command coverage
 │
 └── units/
     ├── bindings/                Datastore binding units (pytest)
@@ -63,9 +66,8 @@ tests/
 ### C++ (ctest)
 
 ```bash
-cd builds/autocog-dbg
-cmake --build . -j4
-ctest -j4 --timeout 30
+cmake --build build -j4
+ctest --test-dir build -j4 --timeout 30
 ```
 
 ### Python (pytest)
@@ -162,9 +164,17 @@ a venv's `bin` on `PATH`; CI uses the system interpreter.
 
 ```bash
 tests/scripts/tests-coverage.sh [BUILD_DIR] [VENV_DIR]   # Debug + coverage → coverage.md
-tests/scripts/tests-release.sh  [BUILD_DIR] [VENV_DIR]   # Release, ctest + pytest, no coverage
-tests/scripts/check-release.sh  [BUILD_DIR] [VENV_DIR]   # user install .[server,validate] + smoke
+tests/scripts/tests-release.sh  [BUILD_DIR] [VENV_DIR]   # Release (portable), ctest + pytest, no coverage
+tests/scripts/tests-native.sh   [BUILD_DIR] [VENV_DIR]   # Release, host-tuned (native/CUDA) + parallel
+tests/scripts/check-release.sh  [BUILD_DIR] [VENV_DIR]   # user install .[server,validate] + smoke (portable)
+tests/scripts/check-native.sh   [BUILD_DIR] [VENV_DIR]   # user install + smoke, host-tuned + parallel
 ```
+
+The `tests-*` scripts run `ctest`, so they build via `pip` with
+`-DAUTOCOG_BUILD_TESTS=ON` (a scikit-build/`pip` build configures **no** tests
+otherwise; a direct `cmake` build configures them by default). `tests-release`
+is portable (`AUTOCOG_TUNED=OFF`); `tests-native` is host-tuned and parallel,
+for validating one machine (e.g. CUDA/ARM) rather than a portable wheel.
 
 Argument semantics (all optional):
 - `BUILD_DIR` — cmake build dir. If supplied, reused across runs (ccache stays

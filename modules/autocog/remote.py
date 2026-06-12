@@ -40,8 +40,19 @@ class RemoteEngine:
         self.syntax_id = None
         self.model_id = None
 
-    def evaluate_prompt(self, program, prompt_name, content):
-        """Submit a prompt to the remote server and wait for the result."""
+    def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
+        """Submit a prompt to the remote server and wait for the result.
+
+        `record_kinds` exists for signature parity with Engine, but recording is
+        not supported over a RemoteEngine: the RPC server returns only the prompt
+        result, not the intermediate artifacts a Recorder needs. Requesting it
+        raises NotImplementedError rather than silently dropping the recording.
+        """
+        if record_kinds:
+            raise NotImplementedError(
+                "recording is not supported over RemoteEngine; the RPC protocol "
+                "returns only results, not the record artifacts a Recorder needs"
+            )
         # Submit
         req_data = json.dumps({"prompt": prompt_name, "content": content}).encode()
         req = urllib.request.Request(

@@ -3,8 +3,9 @@
 ## Structured Thoughts
 
 - [Overview](./structured-thoughts/overview.md) — Programming model, key concepts, how it works
-- [Language Reference](./structured-thoughts/language.md) — STL syntax: records, prompts, channels, flows
+- [Language Reference](./structured-thoughts/language.md) — STL syntax: records, prompts, channels, flows, vocabularies, search policies
 - [Standard Library](./structured-thoughts/stdlib.md) — Thought, reflexion, datastore
+- [Development Environment](./stl-dev-environment.md) — editor support (syntax highlighting)
 
 ## Interfaces
 
@@ -22,8 +23,8 @@
 
 ## Development
 
-- [Developer Guide](../DEVEL.md) — Build setup, testing, containers
-- [Test Structure](../tests/README.md) — Test framework, fixtures, coverage
+- [Developer Guide](../DEVEL.md) — Test-driven workflow, building, containers
+- [Test Structure](../tests/README.md) — Test framework, fixtures, coverage, CI/release pipeline
 
 ## Examples
 

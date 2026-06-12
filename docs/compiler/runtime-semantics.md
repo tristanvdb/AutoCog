@@ -133,4 +133,4 @@ The same pipeline is available as standalone tools for inspection and scripting
 | `stlc` | compile              | STL → STA     |
 | `ista` | instantiate          | STA → FTA     |
 | `xfta` | evaluate             | FTA → FTT (or best-path text) |
-| `psta` | parse text → frame   | text → frame (using the STA schema) |
+| `psta` | parse / score        | STA + FTT → frame (scores the tree, walks the best path) |

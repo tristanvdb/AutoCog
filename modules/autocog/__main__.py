@@ -230,13 +230,12 @@ def _cmd_run_inner(args, prog, include_paths):
     """Inner run logic (separated for cleanup)."""
     import autocog
 
-    # Schema validation
+    # Schema validation. A genuine schema violation is fatal (validate_artifact
+    # raises ConfigError); it degrades gracefully on its own when jsonschema or
+    # the schemas are unavailable. Pass --no-schema-check to skip entirely.
     if not getattr(args, 'no_schema_check', False):
         from ._schema import validate_artifact
-        try:
-            validate_artifact(prog.sta, filepath=getattr(args, 'stl', '<program>'))
-        except Exception:
-            pass  # validation is best-effort; don't block execution
+        validate_artifact(prog.sta, filepath=getattr(args, 'stl', '<program>'))
 
     # Parse inputs
     inputs = {}

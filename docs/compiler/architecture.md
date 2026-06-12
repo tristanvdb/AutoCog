@@ -141,7 +141,7 @@ stages still run but are no longer separately emittable.)
 {
   "metadata": {
     "format": "sta",
-    "version": "0.5.5",
+    "version": "<x.y.z>",
     "hash": "<64-hex SHA-256 of content + provenance>",
     "timestamp": "2026-06-07T12:00:00Z"
   },

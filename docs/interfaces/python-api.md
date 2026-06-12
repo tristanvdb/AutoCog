@@ -51,6 +51,19 @@ Wraps a compiled or loaded STA program.
 | `prog.output_schema(entry="main")` | dict | Output schema for an entry point |
 | `prog.prompt_channels(name)` | list | Channels for a prompt |
 | `prog.prompt_flows(name)` | dict | Flow definitions for a prompt |
+| `prog.dump_json()` | str | The STA serialized to a JSON string |
+| `prog.store(path)` | None | Write the STA JSON to `path` |
+
+## Logging
+
+```python
+import logging, autocog
+autocog.set_log_level(logging.DEBUG)   # or autocog.TRACE for very verbose output
+```
+
+`autocog.TRACE` is a custom level below `DEBUG`. `set_log_level()` sets the level
+for both the Python `autocog` logger and the C++ runtime's log sink, so logs from
+the native layers route through Python's `logging`.
 
 ## Execution
 
@@ -125,7 +138,9 @@ engine = autocog.RemoteEngine(server_url, poll_interval=0.5, timeout=300)
 | `poll_interval` | float | Seconds between status polls |
 | `timeout` | float | Maximum seconds to wait |
 
-Provides the same `run()` and `evaluate_prompt()` methods as `Engine`. Channel resolution happens locally; only evaluation is remote.
+Provides `run()` and `evaluate_prompt()` like `Engine`, with channel resolution local and only evaluation remote.
+
+> **Recording is not supported over a `RemoteEngine`.** The RPC server returns only the prompt result, not the intermediate artifacts a `Recorder` needs, so `evaluate_prompt(..., record_kinds=...)` raises `NotImplementedError`. Use a local `Engine` (or `RemoteBackend`, which instantiates locally) when you need recording.
 
 ```python
 # Local development
@@ -183,11 +198,15 @@ Returns: result from the program.
 Execution state for a single program run. Used internally by `engine.run()` but can be driven manually for step-by-step control.
 
 ```python
-ctx = autocog.Context(program, engine, prompt, inputs, externals)
+ctx = autocog.Context(program, engine, prompt, inputs,
+                      externals=None, recorder=None, parent_ctx=None)
 while not ctx.done:
-    ctx.step()
+    ctx.step()              # `await ctx.step_async()` is the awaitable variant
 result = ctx.result
 ```
+
+`recorder` attaches a `Recorder`; `parent_ctx` links a nested run (e.g. a prompt
+`call`) to its parent for recording.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -195,6 +214,8 @@ result = ctx.result
 | `ctx.result` | any | Final result (available when done) |
 | `ctx.prompt` | str | Current prompt name |
 | `ctx.frames` | dict | `{prompt_name: frame}` for completed prompts |
+| `ctx.branches` | dict | `{prompt_name: {target: count}}` — how often each flow branch was taken |
+| `ctx.recorder` | Recorder or None | The attached recorder, if any |
 
 ## Packaging
 

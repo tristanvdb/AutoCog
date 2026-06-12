@@ -103,6 +103,10 @@ autocog run (--stl <file> | --sta <file> | --app <file>)
 
 One of `--stl`, `--sta`, or `--app` is required. One of `--model` or `--rng` is required.
 
+By default the compiled STA is validated against its schema and a schema
+violation is a **fatal error**. Pass `--no-schema-check` to skip validation
+entirely (validation also no-ops if `jsonschema` is not installed).
+
 **Examples:**
 
 ```bash
@@ -138,6 +142,11 @@ autocog serve (--stl <file> | --sta <file> | --app <file>)
 | `--search FILE` | Search config JSON (default: `share/search/default.json`) |
 | `--host HOST` | Bind address (default: `0.0.0.0`) |
 | `--port PORT` | Bind port (default: `8080`) |
+
+> **Security:** `serve`, `rpc`, and `backend` bind `0.0.0.0` (all interfaces) by
+> default and expose **unauthenticated** endpoints. These are Flask dev servers,
+> not hardened services — bind `--host 127.0.0.1` for local use, and put them
+> behind your own authentication/proxy before exposing them on a network.
 
 The server provides:
 - `GET /` — auto-generated HTML form from input schema

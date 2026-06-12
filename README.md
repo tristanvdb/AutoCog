@@ -19,22 +19,6 @@
 
 **AutoCog** explores mechanisms to build automata that control applications driven by auto-regressive language models. We define a programming model called **Structured Thoughts**, with a language (STL) that compiles to executable automata.
 
-## Quick Start
-
-```bash
-git clone --recursive https://github.com/LLNL/AutoCog
-cd AutoCog
-pip install .
-```
-
-For server functionality (FastAPI + uvicorn):
-
-```bash
-pip install ".[server]"
-```
-
-Vendored dependencies (RE-flex, llama.cpp) are built automatically if not found on the system.
-
 ## What is Structured Thoughts?
 
 Structured Thoughts is a programming model where:
@@ -43,7 +27,7 @@ Structured Thoughts is a programming model where:
 - **Branching** between prompts is controlled by the language model
 - **Dataflow** is statically defined and executed when instantiating automata
 
-Example — Multiple Choice Question with Chain of Thought:
+Example — a multiple-choice question with chain-of-thought:
 
 ```
 record thought {
@@ -64,9 +48,7 @@ prompt main {
     question get question;
     choices get choices;
   }
-  return {
-    use answer;
-  }
+  return { use answer; }
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     question as "the question that you have to answer";
@@ -77,99 +59,61 @@ prompt main {
 }
 ```
 
-## CLI
-
-AutoCog provides a command-line interface with subcommands:
+Run it (use `--rng` to try it without a real model):
 
 ```bash
-# Compile STL to STA
-autocog compile --stl program.stl -o program.sta.json
-
-# Run a program
-autocog run --stl program.stl --rng --input '{"topic":"Science","question":"2+2?","choices":["3","4","5","6"]}'
-autocog run --sta program.sta.json --model model.gguf --input data.json
-
-# Package as a .stapp (Structured Thought App)
-autocog pack --stl program.stl -I includes/ -o app.stapp
-
-# Run from a .stapp
-autocog run --app app.stapp --model model.gguf --input '{"key":"value"}'
-
-# Serve with web UI
-autocog serve --app app.stapp --model model.gguf --port 8080
-
-# Prompt evaluation server (RPC)
-autocog rpc --sta program.sta.json --model model.gguf --port 8080
-
-# Inference server (backend)
-autocog backend --model model.gguf --port 8080
+autocog run --stl mcq.stl --rng \
+  --input '{"topic":"Science","question":"2+2?","choices":["3","4","5","6"]}'
 ```
 
-Use `--rng` instead of `--model` for testing without a real model.
+The `autocog` CLI also compiles (`compile`) and serves programs (`serve`, `rpc`,
+`backend`), and `autocog pack` bundles a program into a single distributable
+`.stapp`. See the [documentation](docs/README.md) for the full CLI and the STL
+language reference.
 
-## .stapp Packaging
+## How to get it
 
-Programs can be packaged as `.stapp` files (zip) for distribution:
+AutoCog builds a native llama.cpp backend, so the **preferred install is from
+source** — it tunes the build to your CPU (and autodetects CUDA) for the best
+inference performance. You need a C++17 toolchain and CMake; RE-flex and
+llama.cpp are built automatically if not found on the system.
+
+**From the source distribution (recommended)** — download `autocog-<version>.tar.gz`
+from the [latest release](https://github.com/LLNL/AutoCog/releases/latest):
 
 ```bash
-autocog pack --stl writer.stl -I src/ -o writer.stapp
-autocog pack --stl writer.stl -I src/ --no-source -o writer.stapp   # strip source
-autocog pack --stl writer.stl -I src/ --vendor-stdlib -o writer.stapp  # self-contained
+pip install autocog-<version>.tar.gz
 ```
 
-A `.stapp` bundles the compiled STA, source (optional), Python externals, and STL imports with a manifest containing entry point schemas.
-
-## Containers
-
-Build container variants for deployment:
+**From a git checkout** (development / latest):
 
 ```bash
-docker build --target serve   -f dockerfiles/ubuntu.df -t autocog:serve .
-docker build --target backend -f dockerfiles/ubuntu.df -t autocog:backend .
-docker build --target rpc     -f dockerfiles/ubuntu.df -t autocog:rpc .
-docker build --target run     -f dockerfiles/ubuntu.df -t autocog:run .
+git clone --recursive https://github.com/LLNL/AutoCog
+cd AutoCog
+pip install .
 ```
 
-| Variant | Purpose | Default |
-|---------|---------|---------|
-| `serve` | Full app server with web UI | `autocog serve` |
-| `rpc` | Prompt evaluation server | `autocog rpc` |
-| `backend` | Inference server (FTA evaluation) | `autocog backend --rng` |
-| `run` | Batch execution | `autocog run` |
+**From the prebuilt wheel** — no toolchain needed, but **portable and untuned**
+(generic CPU, no GPU); fine for a quick try. Grab the `.whl` for your Python from
+the [release page](https://github.com/LLNL/AutoCog/releases/latest).
 
-Example with docker compose:
+**Complete install** — add the `server` (FastAPI/uvicorn) and `validate`
+(jsonschema) extras to any of the above, e.g. from a checkout:
 
 ```bash
+pip install ".[server,validate]"
+```
+
+### Containers
+
+Prebuilt server variants (`serve`, `rpc`, `backend`, `run`) for deployment:
+
+```bash
+docker build --target serve -f dockerfiles/ubuntu.df -t autocog:serve .
 docker compose -f dockerfiles/compose.yaml up
 ```
 
 See [dockerfiles/compose.yaml](dockerfiles/compose.yaml) for a multi-container example.
-
-## Examples
-
-The [share/demos/mcq/](./share/demos/mcq/) directory contains Multiple Choice Question examples demonstrating various thought patterns (basic select/repeat, chain of thought, hypothesis, iterative reflection). See [share/demos/mcq/README.md](./share/demos/mcq/README.md).
-
-The [share/demos/story-writer/](./share/demos/story-writer/) directory contains a multi-prompt story writer with loops, Python externals, and templated content. See [share/demos/story-writer/README.md](./share/demos/story-writer/README.md).
-
-## Syntax Highlighting
-
-### gedit
-```bash
-mkdir -p ~/.local/share/libgedit-gtksourceview-300/language-specs
-cp share/syntax-highlight/gedit/stl.lang ~/.local/share/libgedit-gtksourceview-300/language-specs
-```
-
-### VSCode
-```bash
-mkdir -p ~/.vscode/extensions/stl-language
-cp -r share/syntax-highlight/vscode/* ~/.vscode/extensions/stl-language
-```
-
-## Contributing
-
-Contributions are welcome!
-
-**Key Rule**: **Linear git history** (no merge commits). Only the `master` branch has stable commits; other branches may be rebased without notice.
 
 ## License
 
