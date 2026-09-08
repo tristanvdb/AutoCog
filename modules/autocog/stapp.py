@@ -177,12 +177,18 @@ def pack(stl_path, include_paths, output_path,
         if vendor_stdlib:
             stdlib = _stdlib_path()
             if stdlib:
-                for fname in os.listdir(stdlib):
-                    if fname.startswith("__"):
-                        continue
-                    fpath = os.path.join(stdlib, fname)
-                    if os.path.isfile(fpath):
-                        zf.write(fpath, f"stlib/{fname}")
+                # Recursive: the stdlib is organized in subdirectories (e.g.
+                # thinking/) and imports use paths relative to the stdlib root,
+                # so arcnames must preserve that layout. Only importable files
+                # (.stl, .py) are vendored.
+                for root, dirs, files in os.walk(stdlib):
+                    dirs[:] = [d for d in dirs if not d.startswith("__")]
+                    for fname in files:
+                        if fname.startswith("__") or not fname.endswith((".stl", ".py")):
+                            continue
+                        fpath = os.path.join(root, fname)
+                        rel = os.path.relpath(fpath, stdlib)
+                        zf.write(fpath, f"stlib/{rel}")
 
 
 def load_stapp(stapp_path, recompile=False):
