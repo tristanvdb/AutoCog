@@ -24,7 +24,7 @@ prompt main {
   }
   return {
     status is "answer is ready";
-    use answer;
+    answer use answer;
   }
   annotate {
     _ as "You are answering a multiple choice questionnaire.";

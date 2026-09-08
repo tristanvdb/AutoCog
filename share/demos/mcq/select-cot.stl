@@ -1,10 +1,9 @@
 // Multiple Choice Question - Select with Chain of Thought
 // Shows intermediate reasoning steps before selecting answer
 
-record thought {
-  is text<length=20>;
-  annotate f"a short text representing a single thought, it does not have to be a proper sentence.";
-}
+from "thinking/thought.stl" import Thought;
+
+alias Thought<goal="reason toward the answer"> as thought;
 
 prompt main {
   is {

@@ -1,6 +1,5 @@
 // Multiple Choice Question - Repeat with Per-Choice Annotation
 // Demonstrates: call channels with map/bind, nested field annotations
-// NOTE: Call channel syntax not fully understood, may not compile
 
 record correctness {
   is enum("yes", "no", "maybe");
@@ -20,16 +19,13 @@ prompt main {
   channel {
     topic get topic;
     question get question;
-    // NOTE: Call channel with map and bind is supported but not yet implemented
-    // in this demo due to complexity. The clause conversion infrastructure is
-    // fully working and tested. Example syntax from original STA:
-    // to .choices call {
-    //     entry annotator;
-    //     kwarg topic    from ?topic;
-    //     kwarg question from ?question;
-    //     kwarg choice   map  ?choices;
-    //     bind choice as value;
-    // }
+    // Annotate each proposed answer independently: one annotator call per
+    // input choice, renaming the returned "choice" to this prompt's "value".
+    choices call annotator {
+      topic get topic;
+      question get question;
+      choice get choices mapped;
+    } bind(choice, value);
   }
   return {
     use answer;
