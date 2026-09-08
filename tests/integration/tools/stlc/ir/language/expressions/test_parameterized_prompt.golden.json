@@ -1,6 +1,8 @@
 {
   "defines": {},
   "entry_points": {
+    "default_worker": "worker__10_3a3127f5ea0269b5",
+    "fast_worker": "worker__5_acd85c97bf4d40bd",
     "main": "worker__10_3a3127f5ea0269b5"
   },
   "prompts": {
@@ -37,6 +39,59 @@
       ],
       "flows": [],
       "mangled_name": "worker__10_3a3127f5ea0269b5",
+      "name": "worker",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      }
+    },
+    "worker__5_acd85c97bf4d40bd": {
+      "channels": [],
+      "context": {
+        "count": 5,
+        "mode": "relaxed"
+      },
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            5
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "worker__5_acd85c97bf4d40bd",
       "name": "worker",
       "return": {
         "fields": [

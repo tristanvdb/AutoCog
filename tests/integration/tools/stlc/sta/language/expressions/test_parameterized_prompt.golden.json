@@ -1,5 +1,25 @@
 {
   "entry_points": {
+    "default_worker": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "worker__10_3a3127f5ea0269b5"
+    },
+    "fast_worker": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "worker__5_acd85c97bf4d40bd"
+    },
     "main": {
       "inputs": {},
       "outputs": {
@@ -13,7 +33,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "69d9443ab3a0fe7f94bd805a72464c8553c72e88c2ad582fbef853ded9b29def",
+    "hash": "d77a647787c649b8d62a73aaaed4990c20fe3aca81822f71bd0382dc8b279648",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -102,6 +122,91 @@
         }
       },
       "name": "worker__10_3a3127f5ea0269b5"
+    },
+    "worker__5_acd85c97bf4d40bd": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": 1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "items",
+          "range": [
+            5,
+            5
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "result",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "result"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "worker__5_acd85c97bf4d40bd"
     }
   },
   "provenance": {},

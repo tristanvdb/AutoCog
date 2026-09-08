@@ -1,16 +1,6 @@
 {
   "entry_points": {
-    "alt_name": {
-      "inputs": {},
-      "outputs": {
-        "input": {
-          "required": true,
-          "type": "text"
-        }
-      },
-      "prompt": "processor"
-    },
-    "main": {
+    "processor": {
       "inputs": {},
       "outputs": {
         "input": {
@@ -23,7 +13,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "23b9ef896660ae95818b34512bc495a1dceb43272942e21087313a8279c7262e",
+    "hash": "3af7dd88be4ce1bc9612b642afe8ae9a6aaad92765b920a4c90608a8d9a5c1a1",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },

@@ -1,8 +1,7 @@
 {
   "defines": {},
   "entry_points": {
-    "alt_name": "processor",
-    "main": "processor"
+    "processor": "processor"
   },
   "prompts": {
     "processor": {
