@@ -1,0 +1,165 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 12,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "c2736509961679d6e71f7cea7b4e5fe37e10617ceedd5e6cda557fc3baa2a3d7",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": 2
+        },
+        {
+          "exit": 4,
+          "field": 2,
+          "flow": -1
+        },
+        {
+          "exit": 5,
+          "field": 3,
+          "flow": -1
+        },
+        {
+          "exit": 6,
+          "field": 4,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 5,
+          "flow": -1
+        }
+      ],
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 12,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "a",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "b",
+          "range": [
+            12,
+            12
+          ]
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 2,
+          "format": {
+            "length": 16,
+            "type": "completion"
+          },
+          "format_ref": "Note",
+          "index": 2,
+          "name": "c",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 3,
+          "format": {
+            "length": 12,
+            "type": "completion"
+          },
+          "format_ref": "Note",
+          "index": 3,
+          "name": "d",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 4,
+          "format": {
+            "length": 14,
+            "type": "completion"
+          },
+          "index": 4,
+          "name": "e",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 5,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 5,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "a"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main"
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}

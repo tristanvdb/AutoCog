@@ -1,0 +1,109 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {},
+      "outputs": {
+        "_": {
+          "max_length": 12,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "e6b5e10138025b2481b546cf521cc82fda812ad3809d21500b72c41299074dfb",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 3,
+          "field": 1,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 2,
+          "flow": -1
+        }
+      ],
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 12,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "a",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 1,
+          "format": {
+            "length": 16,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "b",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 2,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 2,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "a"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main"
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}
