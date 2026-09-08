@@ -1,0 +1,18 @@
+// Driver: critique called as a sub-prompt, structured Critique results.
+from "thinking/critique.stl" import Critique, critique;
+
+prompt entry {
+  is {
+    feedback[1:5] is Critique<length=30>;
+  }
+  channel {
+    feedback call critique<subject="the driver test"> {
+      draft get draft;
+    } bind(_,critiques);
+  }
+  return {
+    use feedback;
+  }
+}
+
+export entry as main;

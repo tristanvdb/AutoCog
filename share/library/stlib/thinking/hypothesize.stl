@@ -1,0 +1,49 @@
+// Hypothesize: guess-then-check. Commit to candidate answers with an
+// explicit confidence before weighing them — making the model's priors
+// visible to the orchestrating program (generalizes the mcq *-hyp demos).
+//
+// Call shape:
+//   guesses call hypothesize<subject="..."> {
+//     question use ...;
+//   } bind(_,hypotheses);
+
+from "thinking/thought.stl" import Thought;
+
+record Hypothesis {
+  argument length = 30;
+
+  is {
+    statement is text<length=length>;
+    confidence is enum("high", "medium", "low");
+  }
+}
+
+prompt hypothesize {
+  argument subject;
+
+  argument length = 30;
+  argument min_hypotheses = 1;
+  argument max_hypotheses = 5;
+
+  is {
+    question[1:5] is text;
+    hypotheses[min_hypotheses:max_hypotheses] is Hypothesis<length=length>;
+    assessment[1:5] is Thought<length=20, mode="evaluative", goal="weigh the hypotheses">;
+  }
+  channel {
+    question get question;
+  }
+  return {
+    subject is f"Hypotheses about {subject}";
+    hypotheses use hypotheses;
+    assessment use assessment;
+  }
+  annotate {
+    _ as "You are forming hypotheses: commit to candidate answers before analyzing them.";
+    question as "the question to hypothesize about";
+    hypotheses as "candidate answers, most plausible first";
+    hypotheses.statement as "a candidate answer";
+    hypotheses.confidence as "how confident you are in this candidate";
+    assessment as "weigh the candidates against each other";
+  }
+}

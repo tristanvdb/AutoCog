@@ -1,0 +1,32 @@
+// Driver: critique -> revise chained across two prompts.
+from "thinking/critique.stl" import Critique, critique;
+from "thinking/revise.stl" import revise;
+
+prompt review {
+  is {
+    feedback[1:5] is Critique;
+  }
+  channel {
+    feedback call critique<subject="the chained test"> {
+      draft get draft;
+    } bind(_,critiques);
+  }
+  flow rework;
+}
+
+prompt rework {
+  is {
+    improved[1:20] is text<length=30>;
+  }
+  channel {
+    improved call revise<subject="the chained test"> {
+      draft get draft;
+      feedback use review.feedback.issue;
+    } bind(_,response);
+  }
+  return {
+    use improved;
+  }
+}
+
+export review as main;

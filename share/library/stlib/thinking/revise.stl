@@ -1,0 +1,43 @@
+// Revise: convergent counterpart to critique. Takes a draft and feedback,
+// produces a revised draft. critique -> revise is reflexion decomposed
+// into two callable stages, letting the orchestrating program control the
+// loop (and inspect the intermediate feedback) instead of the prompt.
+//
+// Call shape:
+//   improved call revise<subject="..."> {
+//     draft use ...;
+//     feedback use ...;
+//   } bind(_,response);
+
+from "thinking/thought.stl" import Thought;
+
+prompt revise {
+  argument subject;
+
+  argument length = 30;
+  argument min_out = 1;
+  argument max_out = 20;
+
+  is {
+    draft[1:20] is text;
+    feedback[1:10] is text;
+    plan[1:5] is Thought<length=20, mode="working", goal="decide what to change">;
+    revision[min_out:max_out] is Thought<length=length, mode="revised", goal="apply the feedback">;
+  }
+  channel {
+    draft get draft;
+    feedback get feedback;
+  }
+  return {
+    subject is f"Revision of {subject}";
+    intermediate use plan;
+    response use revision;
+  }
+  annotate {
+    _ as "You are revising a draft to address the feedback it received.";
+    draft as "the current draft";
+    feedback as "the feedback to address";
+    plan as "decide which feedback to apply and how";
+    revision as "the revised draft";
+  }
+}

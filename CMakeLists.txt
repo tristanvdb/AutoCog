@@ -268,6 +268,7 @@ add_subdirectory(tests/integration/tools/psta)
 add_subdirectory(tests/integration/tools/xfta)
 add_subdirectory(tests/integration/tools/e2e)
 add_subdirectory(tests/integration/bindings)
+add_subdirectory(tests/integration/stdlib/thinking)
 endif()
 
 add_subdirectory(share/demos)

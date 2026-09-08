@@ -1,0 +1,16 @@
+// Core building block of the thinking library: a single parameterized
+// thought. Every pattern in this directory builds on this record.
+
+define default_length = 20;
+define default_mode = "simple";
+define default_goal = "show your work";
+
+record Thought {
+  argument length=default_length;
+  argument mode=default_mode;
+  argument goal=default_goal;
+
+  is text<length=length>;
+
+  annotate f"A {mode} thought to {goal}.";
+}

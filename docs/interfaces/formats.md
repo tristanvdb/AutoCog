@@ -117,7 +117,7 @@ app.stapp (zip)
 │   ├── book.stl
 │   └── template.stl
 └── stlib/                  Vendored stdlib (only with --vendor-stdlib)
-    ├── thoughts.stl
+    ├── thinking/thoughts.stl
     └── datastore.py
 ```
 

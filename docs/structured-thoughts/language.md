@@ -384,7 +384,7 @@ and resolution are applied at instantiation.
 Import records, prompts, aliases, or Python externals from other files:
 
 ```
-from "thoughts.stl" import Thought, reflexion;
+from "thinking/thoughts.stl" import Thought, reflexion;
 from "datastore.py" import store, retrieve;
 from "template.py" import list_templates;
 ```

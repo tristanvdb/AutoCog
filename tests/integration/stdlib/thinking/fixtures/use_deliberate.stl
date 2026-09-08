@@ -1,0 +1,18 @@
+// Driver: deliberate called as a sub-prompt, bound synthesis.
+from "thinking/deliberate.stl" import deliberate;
+
+prompt entry {
+  is {
+    verdict[1:5] is text<length=30>;
+  }
+  channel {
+    verdict call deliberate<subject="the driver test"> {
+      question get question;
+    } bind(_,synthesis);
+  }
+  return {
+    use verdict;
+  }
+}
+
+export entry as main;

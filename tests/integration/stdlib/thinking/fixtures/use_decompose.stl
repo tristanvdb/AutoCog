@@ -1,0 +1,18 @@
+// Driver: decompose called as a sub-prompt, structured Step results.
+from "thinking/decompose.stl" import Step, decompose;
+
+prompt entry {
+  is {
+    plan[2:10] is Step<length=30>;
+  }
+  channel {
+    plan call decompose<subject="the driver test"> {
+      task get task;
+    } bind(_,steps);
+  }
+  return {
+    use plan;
+  }
+}
+
+export entry as main;

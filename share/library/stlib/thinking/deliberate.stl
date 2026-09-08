@@ -1,0 +1,50 @@
+// Deliberate: multi-perspective reasoning. Argue several distinct stances
+// before synthesizing — a single-prompt debate that surfaces trade-offs a
+// single line of reasoning would miss.
+//
+// Call shape:
+//   verdict call deliberate<subject="..."> {
+//     question use ...;
+//   } bind(_,synthesis);
+
+from "thinking/thought.stl" import Thought;
+
+record Perspective {
+  argument length = 30;
+
+  is {
+    stance is text<length=15>;
+    case is text<length=length>;
+  }
+}
+
+prompt deliberate {
+  argument subject;
+
+  argument length = 30;
+  argument min_views = 2;
+  argument max_views = 4;
+  argument len_synthesis = 30;
+
+  is {
+    question[1:5] is text;
+    perspectives[min_views:max_views] is Perspective<length=length>;
+    synthesis[1:5] is Thought<length=len_synthesis, mode="balanced", goal="reconcile the perspectives">;
+  }
+  channel {
+    question get question;
+  }
+  return {
+    subject is f"Deliberation on {subject}";
+    perspectives use perspectives;
+    synthesis use synthesis;
+  }
+  annotate {
+    _ as "You are deliberating: argue genuinely different positions before concluding.";
+    question as "the question to deliberate on";
+    perspectives as "distinct positions, each argued on its merits";
+    perspectives.stance as "a short name for this position";
+    perspectives.case as "the best argument for this position";
+    synthesis as "reconcile the positions into a conclusion";
+  }
+}

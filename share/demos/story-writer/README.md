@@ -55,4 +55,4 @@ The program executes 12 steps through 11 prompts:
 
 ## Dependencies
 
-Uses from stdlib: `thoughts.stl` (Thought record), `datastore.py` (key-value store).
+Uses from stdlib: `thinking/thoughts.stl` (Thought record), `datastore.py` (key-value store).

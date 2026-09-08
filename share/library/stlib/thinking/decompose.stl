@@ -1,0 +1,49 @@
+// Decompose: break a task into an ordered sequence of steps before doing
+// any of them (plan-then-act). Each step carries its own success check so
+// downstream prompts can verify progress.
+//
+// Call shape:
+//   plan call decompose<subject="..."> {
+//     task use ...;
+//   } bind(_,steps);
+
+from "thinking/thought.stl" import Thought;
+
+record Step {
+  argument length = 30;
+
+  is {
+    action is text<length=length>;
+    check is text<length=length>;
+  }
+}
+
+prompt decompose {
+  argument subject;
+
+  argument length = 30;
+  argument min_steps = 2;
+  argument max_steps = 10;
+
+  is {
+    task[1:10] is text;
+    analysis[1:5] is Thought<length=20, mode="analytical", goal="understand the task">;
+    steps[min_steps:max_steps] is Step<length=length>;
+  }
+  channel {
+    task get task;
+  }
+  return {
+    subject is f"Plan for {subject}";
+    intermediate use analysis;
+    steps use steps;
+  }
+  annotate {
+    _ as "You are planning: break the task into small ordered steps before doing any of them.";
+    task as "the task to break down";
+    analysis as "think about what the task requires";
+    steps as "the ordered steps of the plan";
+    steps.action as "what to do in this step";
+    steps.check as "how to tell this step succeeded";
+  }
+}

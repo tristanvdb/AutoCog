@@ -1,5 +1,5 @@
 
-from "thoughts.stl" import Thought, reflexion;
+from "thinking/thoughts.stl" import Thought, reflexion;
 from "datastore.py" import store as stlib_store, retrieve as stlib_retrieve;
 
 from "template.stl" import Age, TplDesc, Template;

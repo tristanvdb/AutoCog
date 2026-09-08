@@ -1,0 +1,43 @@
+// Reflexion: iterate privately on a task before responding.
+// The caller provides the task and an initial attempt; the model works
+// through intermediate thoughts and returns a refined response.
+//
+// Call shape:
+//   result call reflexion<subject="...", ...> {
+//     task use ...;
+//     initial use ...;
+//   } bind(_,response);
+
+from "thinking/thought.stl" import Thought;
+
+prompt reflexion {
+  argument subject;
+
+  // Literal defaults, deliberately matching thought.stl's defines: importing
+  // the defines here trips a compiler bug when reflexion is imported by a
+  // third file (see the v0.7.1 bug notes; two-hop imported-define lookup).
+  argument length = 20;
+  argument mode = "simple";
+  argument goal = "show your work";
+
+  argument num_steps = 10;
+  argument len_steps = 20;
+  argument min_response = 3;
+  argument max_response = 10;
+
+  is {
+    task[1:10] is text;
+    initial[1:10] is text;
+    work[1:num_steps] is Thought<length=len_steps, mode="working", goal="prepare a response">;
+    response[min_response:max_response] is Thought<length=length, mode=mode, goal=goal>;
+  }
+  channel {
+    task get task;
+    initial get initial;
+  }
+  return {
+    subject is f"Thought about {subject}";
+    intermediate use work;
+    response use response;
+  }
+}
