@@ -55,4 +55,4 @@ prompt choose {
   }
 }
 
-export main as entry;
+export main;

@@ -396,11 +396,14 @@ The compiler searches include paths in order: explicit `-I` paths, app-local, th
 Declare which prompts are entry points:
 
 ```
-export init_idea as main;
-export loop_cond as edit;
+export main_loop;                 // entry point under the prompt's own name
+export init_idea as main;         // entry point under a chosen name
+export worker<count=5> as fast;   // parameterized specialization as entry point
 ```
 
-Each export creates a named entry point with auto-generated input/output schemas.
+Each export creates a named entry point with auto-generated input/output
+schemas. A program with no exports (and no caller-requested entry points)
+gets an implicit `main` entry point, resolved against a prompt of that name.
 
 ## Defines
 

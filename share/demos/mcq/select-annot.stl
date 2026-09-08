@@ -70,4 +70,4 @@ prompt annotator {
   }
 }
 
-export main as entry;
+export main;

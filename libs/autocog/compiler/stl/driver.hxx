@@ -15,6 +15,7 @@
 #include <string>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 
 namespace autocog::compiler::stl {
 
@@ -38,7 +39,10 @@ class Driver {
     std::list<std::string> inputs;
     std::list<std::string> includes;
     ir::VarMap defines;
-    std::list<std::string> entry_points = {"main"};
+    // Entry points requested by the caller (tool/binding). `export`s declared
+    // in input files are added at instantiation; if neither yields any entry,
+    // "main" is the implicit default.
+    std::list<std::string> entry_points = {};
 
     // How far compile() runs. Set from the deepest requested emit output below.
     CompilationStage stage = CompilationStage::Generate;
@@ -60,6 +64,10 @@ class Driver {
 
     // Stage 2: Symbols
     SymbolTable tables;
+    // Entry points declared via `export`, as (fid, name); filtered to input
+    // files when seeding instantiation (a library's exports are not entry
+    // points of the programs that import it).
+    std::list<std::pair<int, std::string>> exported_entry_points;
 
     // Stage 3: Globals (evaluator, created here, used by later stages)
     std::unique_ptr<Evaluator> evaluator;

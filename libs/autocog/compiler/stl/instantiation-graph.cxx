@@ -3,6 +3,7 @@
 #include "autocog/compiler/stl/driver.hxx"
 
 #include <algorithm>
+#include <set>
 #include <stdexcept>
 
 
@@ -393,8 +394,23 @@ void InstantiationGraphBuilder::process_node(InstantiationNode & node) {
 
 void InstantiationGraphBuilder::build() {
 
+    // Entry points: caller-requested first, then `export`s declared in the
+    // input files (exports in imported libraries are not entry points of this
+    // program). With no caller request and no exports, "main" is implicit.
+    std::set<int> input_fids;
+    for (auto const & input : driver.inputs) {
+        auto fit = driver.fileids.find(input);
+        if (fit != driver.fileids.end()) input_fids.insert(fit->second);
+    }
+    std::list<std::string> entries = driver.entry_points;
+    std::set<std::string> seen(entries.begin(), entries.end());
+    for (auto const & [fid, name] : driver.exported_entry_points) {
+        if (input_fids.count(fid) && seen.insert(name).second) entries.push_back(name);
+    }
+    if (entries.empty()) entries.push_back("main");
+
     // Seed from entry points
-    for (auto const & entry_name : driver.entry_points) {
+    for (auto const & entry_name : entries) {
         // Try to find in any parsed file (check each file's scope)
         std::optional<ResolvedSymbol> resolved;
         for (auto const & [filename, fid] : driver.fileids) {

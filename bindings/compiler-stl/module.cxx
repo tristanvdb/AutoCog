@@ -111,7 +111,7 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
         "Compile an STL file and return a program handle",
         py::arg("filepath"),
         py::arg("includes") = std::vector<std::string>{},
-        py::arg("entry_points") = std::vector<std::string>{"main"}
+        py::arg("entry_points") = std::vector<std::string>{}
     );
 
     module.def("get_diagnostics",

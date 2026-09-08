@@ -79,6 +79,29 @@ class TestCompile:
         assert "main" in prog.prompts
         assert "main" in prog.entry_points
 
+    def test_compile_exports_are_entry_points(self, tmp_path):
+        """Each export creates an entry point; bare `export X;` uses X's name."""
+        import autocog
+        stl = tmp_path / "multi.stl"
+        stl.write_text(
+            'prompt first { is { t is text<length=10>; } return { use t; } }\n'
+            'prompt second { is { t is text<length=10>; } return { use t; } }\n'
+            'export first;\n'
+            'export second as alt;\n'
+        )
+        prog = autocog.compile(str(stl))
+        assert set(prog.entry_points.keys()) == {"first", "alt"}
+
+    def test_compile_exportless_implicit_main(self, tmp_path):
+        """No exports and no requested entries: implicit `main` entry point."""
+        import autocog
+        stl = tmp_path / "plain.stl"
+        stl.write_text(
+            'prompt main { is { t is text<length=10>; } return { use t; } }\n'
+        )
+        prog = autocog.compile(str(stl))
+        assert "main" in prog.entry_points
+
     def test_emit_sta(self, repo_root):
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
