@@ -1,0 +1,6 @@
+// Error: a record name used as a value in an evaluated expression
+// expect-error: Symbol `R` is not a define or argument
+record R { is text; }
+define x = (R + 1);
+prompt p { is { f is text<length=4>; } return { use f; } }
+export p as main;

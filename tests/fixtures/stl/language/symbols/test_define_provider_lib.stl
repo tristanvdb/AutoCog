@@ -1,0 +1,4 @@
+// Define provider for the imported-define tests (library, not a fixture).
+
+define base_length = 12;
+define derived_length = (base_length + 4);

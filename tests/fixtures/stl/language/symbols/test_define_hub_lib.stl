@@ -1,0 +1,4 @@
+// Re-export hub: forwards defines from the provider (library, not a fixture).
+
+from "test_define_provider_lib.stl" import base_length;
+from "test_define_provider_lib.stl" import derived_length as hub_length;

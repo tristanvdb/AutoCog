@@ -1,0 +1,19 @@
+// A library prompt whose defaults and fields use an imported define
+// (library, not a fixture).
+
+from "test_define_provider_lib.stl" import base_length;
+
+prompt refine {
+  argument length = base_length;
+
+  is {
+    out[1:3] is text<length=length>;
+    pad is text<length=base_length>;
+  }
+  channel {
+    out get seed;
+  }
+  return {
+    response use out;
+  }
+}

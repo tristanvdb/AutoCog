@@ -8,17 +8,14 @@
 //     initial use ...;
 //   } bind(_,response);
 
-from "thinking/thought.stl" import Thought;
+from "thinking/thought.stl" import Thought, default_length, default_mode, default_goal;
 
 prompt reflexion {
   argument subject;
 
-  // Literal defaults, deliberately matching thought.stl's defines: importing
-  // the defines here trips a compiler bug when reflexion is imported by a
-  // third file (see the v0.7.1 bug notes; two-hop imported-define lookup).
-  argument length = 20;
-  argument mode = "simple";
-  argument goal = "show your work";
+  argument length = default_length;
+  argument mode = default_mode;
+  argument goal = default_goal;
 
   argument num_steps = 10;
   argument len_steps = 20;
