@@ -95,6 +95,18 @@ print('OK: beams=4 without topk fans out to', n, 'children')
 \"")
 set_tests_properties(xfta_topk_wide PROPERTIES LABELS "xfta;search")
 
+# Queue ordering: a lexicographic metric list evaluates cleanly; an unknown
+# metric name is rejected when the evaluation is created.
+add_test(NAME xfta_queue_metric
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_metric.json --ftt /dev/null)
+set_tests_properties(xfta_queue_metric PROPERTIES LABELS "xfta;queue")
+
+add_test(NAME xfta_queue_metric_unknown
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_metric_unknown.json --ftt /dev/null)
+set_tests_properties(xfta_queue_metric_unknown PROPERTIES WILL_FAIL TRUE LABELS "xfta;queue")
+
 # Error paths (must exit non-zero)
 add_test(NAME xfta_err_missing_fta
          COMMAND $<TARGET_FILE:autocog_xfta> --rng --ftt /dev/null)

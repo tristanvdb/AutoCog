@@ -1,0 +1,65 @@
+{
+  "actions": [
+    {
+      "uid": "prompt",
+      "type": "text",
+      "text": "What is 2+2? ",
+      "evaluate": false,
+      "successors": [
+        "answer"
+      ]
+    },
+    {
+      "uid": "answer",
+      "type": "choose",
+      "threshold": 0.1,
+      "width": 4,
+      "choices": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "successors": [
+        "end_0",
+        "end_1",
+        "end_2",
+        "end_3"
+      ]
+    },
+    {
+      "uid": "end_0",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    },
+    {
+      "uid": "end_1",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    },
+    {
+      "uid": "end_2",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    },
+    {
+      "uid": "end_3",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    }
+  ],
+  "queue": {
+    "metric": [
+      "deepest",
+      "perplexity"
+    ]
+  }
+}
