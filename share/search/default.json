@@ -1,5 +1,5 @@
 {
-  "text":   { "threshold": 0.1, "beams": 4, "ahead": 2, "width": 1, "repetition": null, "diversity": null },
+  "text":   { "threshold": 0.1, "beams": 4, "ahead": 1, "width": 1, "repetition": null, "diversity": null },
   "enum":   { "threshold": 0.1, "width": 1 },
   "branch": { "threshold": 0.1, "width": 1 },
   "flow":   { "threshold": 0.1, "width": 1 },

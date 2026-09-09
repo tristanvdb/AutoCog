@@ -4,6 +4,7 @@
 
 #include "autocog/utilities/errors.hxx"
 
+#include <chrono>
 #include <functional>
 #include <map>
 #include <variant>
@@ -11,6 +12,7 @@
 namespace autocog::backend::llama {
 
 PreparedFTA prepare(ModelID const id, data::FTA const & fta) {
+  auto const t0 = std::chrono::steady_clock::now();
   Model & model = Manager::get_model(id);
 
   std::map<std::string, unsigned> uid_to_index;
@@ -51,6 +53,8 @@ PreparedFTA prepare(ModelID const id, data::FTA const & fta) {
       for (auto const & s : ch->choices) p.choices.push_back(model.tokenize(s, false, true));
     }
   }
+  prepared.prepare_seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
   return prepared;
 }
 

@@ -14,8 +14,9 @@ unsigned Evaluation::evaluate_text(PathState & state) {
   unsigned num_token_eval = 0;
   ProbaSequence logprobs(p.tokens.size(), 0.);
   if (ta.evaluate) {
-    auto [model, ctx] = this->restore(state);
+    auto [model, ctx] = this->restore(state, perf_.text);
     num_token_eval += model.eval_sequences(p.tokens, logprobs, ctx);
+    perf_.text.tokens_eval += static_cast<unsigned>(p.tokens.size());
   }
 
   auto & child = grow(state.parent, state.action, prepared.fta, p.tokens, logprobs);

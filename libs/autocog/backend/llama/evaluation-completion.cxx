@@ -74,19 +74,47 @@ static void calculate_diversity_bonuses(std::vector<BeamState> & beams, float co
   }
 }
 
+// Score a candidate's continuation: greedily roll out up to `steps` tokens
+// (masked) from `prefix`, returning the mean probability of the continuation.
+// The rollout pollutes the context past `prefix`; the next set_tokens call
+// trims it back via the common-prefix logic, so no explicit rewind is needed.
+static float lookahead_rollout(
+  Model & model, ContextID ctx, TokenSequence prefix, unsigned steps,
+  std::vector<bool> const & mask, std::vector<bool> const * stop_mask,
+  PerfCounters & perf
+) {
+  double sum = 0.0;
+  unsigned n = 0;
+  std::vector<TokenID> t1;
+  std::vector<float> l1;
+  for (unsigned a = 0; a < steps; ++a) {
+    perf.complete.tokens_restore += model.set_tokens(prefix, ctx);
+    model.eval_topk_tokens(mask, 1, t1, l1, ctx);
+    perf.lookahead_tokens += 1;
+    perf.complete.tokens_eval += 1;
+    if (t1.empty()) break;
+    sum += l1[0];
+    n += 1;
+    if (stop_mask && (*stop_mask)[t1[0]]) break;  // continuation ends naturally
+    prefix.push_back(t1[0]);
+  }
+  return n ? std::exp(static_cast<float>(-sum / n)) : 0.0f;
+}
+
 static unsigned expand_beam(
   Model & model, ContextID ctx, BeamState const & beam,
   data::CompleteAction const & ca, std::vector<bool> const * stop_mask,
   std::vector<bool> const & mask, TokenSequence const & base_tokens,
-  std::vector<BeamState> & beams
+  std::vector<BeamState> & beams, PerfCounters & perf
 ) {
   TokenSequence context_tokens = base_tokens;
   context_tokens.insert(context_tokens.end(), beam.tokens.begin(), beam.tokens.end());
-  model.set_tokens(context_tokens, ctx);
+  perf.complete.tokens_restore += model.set_tokens(context_tokens, ctx);
 
   std::vector<TokenID> topk_tokens;
   std::vector<float> topk_logits;
   unsigned num_token_eval = model.eval_topk_tokens(mask, ca.beams, topk_tokens, topk_logits, ctx);
+  perf.complete.tokens_eval += 1;
 
   for (size_t i = 0; i < topk_tokens.size(); ++i) {
     BeamState & new_beam = beams.emplace_back(beam);
@@ -107,6 +135,15 @@ static unsigned expand_beam(
     new_beam.stopped = stop_mask && (*stop_mask)[emitted];
     if (new_beam.stopped)
       new_beam.tokens.pop_back();
+
+    // ahead > 1: score this candidate's greedy continuation (ahead includes
+    // the candidate itself, so ahead=1 costs nothing extra).
+    if (ca.ahead > 1 && !new_beam.stopped) {
+      TokenSequence prefix = context_tokens;
+      prefix.push_back(emitted);
+      new_beam.lookahead_bonus =
+          lookahead_rollout(model, ctx, std::move(prefix), ca.ahead - 1, mask, stop_mask, perf);
+    }
   }
   return num_token_eval;
 }
@@ -129,12 +166,13 @@ static bool beam_search_step(
   Model & model, ContextID ctx,
   data::CompleteAction const & ca, std::vector<bool> const * stop_mask,
   std::vector<bool> const & mask, TokenSequence const & base_tokens,
-  std::vector<BeamState> & current_beams, unsigned & num_token_eval
+  std::vector<BeamState> & current_beams, unsigned & num_token_eval,
+  PerfCounters & perf
 ) {
   std::vector<BeamState> next_beams;
   for (BeamState const & beam : current_beams) {
     if (beam.stopped) next_beams.push_back(beam);
-    else num_token_eval += expand_beam(model, ctx, beam, ca, stop_mask, mask, base_tokens, next_beams);
+    else num_token_eval += expand_beam(model, ctx, beam, ca, stop_mask, mask, base_tokens, next_beams, perf);
   }
   if (ca.diversity) calculate_diversity_bonuses(next_beams, ca.diversity.value());
 
@@ -154,7 +192,7 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
   data::CompleteAction const & ca = std::get<data::CompleteAction>(fta.actions[state.action].body);
   PreparedAction const & p = prepared.actions[state.action];
 
-  auto [model, ctx] = this->restore(state);
+  auto [model, ctx] = this->restore(state, perf_.complete);
   std::vector<bool> const & gen_mask = ca.vocab
       ? model.vocab_mask(*ca.vocab, fta.vocabs.at(*ca.vocab))
       : model.full_vocab_mask();
@@ -175,7 +213,7 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
 
   unsigned num_token_eval = 0;
   for (unsigned pos = 0; pos < ca.length; ++pos) {
-    bool should_stop = beam_search_step(model, ctx, ca, stop_mask, mask, state.tokens, beams, num_token_eval);
+    bool should_stop = beam_search_step(model, ctx, ca, stop_mask, mask, state.tokens, beams, num_token_eval, perf_);
     if (should_stop) break;
   }
 

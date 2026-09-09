@@ -3,6 +3,7 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/logging.hxx"
 
+#include <chrono>
 #include <cmath>
 #include <utility>
 #include <variant>
@@ -40,21 +41,42 @@ Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, d
   result(),
   queue(),
   started(false)
-{}
+{
+  perf_.prepare_seconds = prepared.prepare_seconds;
+}
 
 unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
+  using clock = std::chrono::steady_clock;
+  auto const advance_start = clock::now();
   if (!started) { this->initial(); started = true; }
 
   unsigned num_token_eval = 0;
   while (!queue.empty() && (max_token_eval == std::nullopt || num_token_eval < max_token_eval)) {
     PathState & state = queue.front();
+    auto const t0 = clock::now();
     switch (prepared.fta.actions[state.action].body.index()) {
-      case 0: num_token_eval += this->evaluate_text(state);       break;  // TextAction
-      case 1: num_token_eval += this->evaluate_completion(state); break;  // CompleteAction
-      case 2: num_token_eval += this->evaluate_choice(state);     break;  // ChooseAction
+      case 0: {  // TextAction
+        num_token_eval += this->evaluate_text(state);
+        perf_.text.calls += 1;
+        perf_.text.seconds += std::chrono::duration<double>(clock::now() - t0).count();
+        break;
+      }
+      case 1: {  // CompleteAction
+        num_token_eval += this->evaluate_completion(state);
+        perf_.complete.calls += 1;
+        perf_.complete.seconds += std::chrono::duration<double>(clock::now() - t0).count();
+        break;
+      }
+      case 2: {  // ChooseAction
+        num_token_eval += this->evaluate_choice(state);
+        perf_.choose.calls += 1;
+        perf_.choose.seconds += std::chrono::duration<double>(clock::now() - t0).count();
+        break;
+      }
     }
     queue.pop();
   }
+  perf_.advance_seconds += std::chrono::duration<double>(clock::now() - advance_start).count();
   return num_token_eval;
 }
 
@@ -86,10 +108,10 @@ void Evaluation::enqueue(ActionID const action, data::FTTNode & parent, PathStat
   this->queue.emplace(action, parent, tokens, ctx);
 }
 
-std::pair<Model &, ContextID> Evaluation::restore(PathState & state) const {
+std::pair<Model &, ContextID> Evaluation::restore(PathState & state, PerfCounters::KindStats & stats) {
   Model & model = Manager::get_model(this->model);
   if (!state.context) state.context = 0;
-  model.set_tokens(state.tokens, state.context.value());
+  stats.tokens_restore += model.set_tokens(state.tokens, state.context.value());
   return std::pair<Model &, ContextID>(model, state.context.value());
 }
 

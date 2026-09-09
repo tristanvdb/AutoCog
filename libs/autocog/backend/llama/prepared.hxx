@@ -26,6 +26,7 @@ struct PreparedAction {
 struct PreparedFTA {
   data::FTA const & fta;
   std::vector<PreparedAction> actions;  ///< Parallel to fta.actions.
+  double prepare_seconds = 0.0;         ///< prepare() wall time (tokenization + mask priming).
 };
 
 /// Tokenize an FTA for a model: resolve successors and tokenize text/choices,

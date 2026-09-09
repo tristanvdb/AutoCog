@@ -31,9 +31,10 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   std::vector<ChoiceResult> results;
 
   for (size_t idx = 0; idx < p.choices.size(); ++idx) {
-    auto [model, ctx] = this->restore(state);
+    auto [model, ctx] = this->restore(state, perf_.choose);
     ProbaSequence logprobs;
     num_token_eval += model.eval_sequences(p.choices[idx], logprobs, ctx);
+    perf_.choose.tokens_eval += static_cast<unsigned>(p.choices[idx].size());
 
     float proba = 0.;
     for (float lpb : logprobs) proba += lpb;
