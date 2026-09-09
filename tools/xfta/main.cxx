@@ -228,6 +228,14 @@ static int run(int argc, char** argv) {
         pc.text.tokens_restore + pc.complete.tokens_restore + pc.choose.tokens_restore;
     f["autocog.perf.tokens.eval"] =
         pc.text.tokens_eval + pc.complete.tokens_eval + pc.choose.tokens_eval;
+    KvStats const & kv = Manager::get_model(model_id).kv_stats();
+    f["autocog.perf.kv.slots"] = Manager::get_model(model_id).kv_slots();
+    f["autocog.perf.kv.exact"] = kv.exact;
+    f["autocog.perf.kv.extends"] = kv.extends;
+    f["autocog.perf.kv.trims"] = kv.trims;
+    f["autocog.perf.kv.forks"] = kv.forks;
+    f["autocog.perf.kv.evictions"] = kv.evictions;
+    f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
     perf.emit("eval.summary", "evaluation complete", std::move(f));
   }
 

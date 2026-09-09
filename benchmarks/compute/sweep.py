@@ -136,7 +136,8 @@ def main():
         f.write(f"Build: {results[0].get('autocog.perf.build_type', '?')}  \n")
         f.write(f"Version: {results[0].get('service.version', '?')}\n\n")
         cols = list(matrix.keys()) + ["eval s", "wall s", "tok restore", "tok eval",
-                                      "tok lookahead", "complete s", "choose s", "text s"]
+                                      "tok lookahead", "kv forks", "kv evict",
+                                      "complete s", "choose s", "text s"]
         f.write("| " + " | ".join(cols) + " |\n")
         f.write("|" + "---|" * len(cols) + "\n")
         for r in results:
@@ -146,6 +147,8 @@ def main():
                     str(r["autocog.perf.tokens.restore"]),
                     str(r["autocog.perf.tokens.eval"]),
                     str(r["autocog.perf.complete.tokens.lookahead"]),
+                    str(r.get("autocog.perf.kv.forks", "-")),
+                    str(r.get("autocog.perf.kv.evictions", "-")),
                     f"{r['autocog.perf.complete.seconds']:.2f}",
                     f"{r['autocog.perf.choose.seconds']:.2f}",
                     f"{r['autocog.perf.text.seconds']:.2f}"]

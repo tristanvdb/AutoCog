@@ -88,7 +88,7 @@ static float lookahead_rollout(
   std::vector<TokenID> t1;
   std::vector<float> l1;
   for (unsigned a = 0; a < steps; ++a) {
-    perf.complete.tokens_restore += model.set_tokens(prefix, ctx);
+    perf.complete.tokens_restore += model.set_tokens(prefix, ctx, /*prime_logits=*/true);
     model.eval_topk_tokens(mask, 1, t1, l1, ctx);
     perf.lookahead_tokens += 1;
     perf.complete.tokens_eval += 1;
@@ -109,7 +109,7 @@ static unsigned expand_beam(
 ) {
   TokenSequence context_tokens = base_tokens;
   context_tokens.insert(context_tokens.end(), beam.tokens.begin(), beam.tokens.end());
-  perf.complete.tokens_restore += model.set_tokens(context_tokens, ctx);
+  perf.complete.tokens_restore += model.set_tokens(context_tokens, ctx, /*prime_logits=*/true);
 
   std::vector<TokenID> topk_tokens;
   std::vector<float> topk_logits;

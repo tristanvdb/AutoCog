@@ -12,6 +12,17 @@ namespace autocog::data { struct VocabExpr; }
 
 namespace autocog::backend::llama {
 
+// Counters for the KV sequence-slot pool, reported by xfta --perf. Each
+// set_tokens call resolves to exactly one of exact/extend/trim/fork.
+struct KvStats {
+  unsigned exact = 0;          ///< target fully cached in a slot, zero decode
+  unsigned extends = 0;        ///< slot was a strict prefix, appended in place
+  unsigned trims = 0;          ///< slot was a strict extension, tail removed
+  unsigned forks = 0;          ///< shared prefix copied (llama_memory_seq_cp), suffix decoded
+  unsigned evictions = 0;      ///< slots dropped (LRU victim reuse or KV-full recovery)
+  unsigned tokens_primed = 0;  ///< single-token re-decodes refreshing final-position logits
+};
+
 class Model {
   public:
     ModelID const id;
@@ -24,8 +35,33 @@ class Model {
   private:
     llama_model * model;
     std::vector<llama_context *> contexts;
-    std::vector<TokenSequence> tokens;
+    std::vector<TokenSequence> tokens;   // per-context record (RNG model only)
     std::mt19937 rng;
+
+    // KV sequence-slot pool (real models, context 0). Each slot is one llama
+    // sequence id in the shared (kv_unified) KV cache, remembering the token
+    // sequence it holds. set_tokens routes each target to the slot with the
+    // longest common prefix: exact/extend/trim reuse it in place, a divergent
+    // target *forks* — llama_memory_seq_cp of the shared prefix (metadata-only
+    // in the unified cache) into an LRU victim, then decode just the suffix.
+    // This keeps sibling branches resident during beam/choice ping-pong
+    // instead of re-decoding their suffixes on every switch.
+    struct Slot {
+      TokenSequence tokens;
+      uint64_t last_used = 0;
+    };
+    std::vector<Slot> slots_;
+    size_t active_slot_ = 0;
+    int live_logits_slot_ = -1;  ///< slot whose final position produced the live logits
+    uint64_t slot_clock_ = 0;
+    KvStats kv_stats_;
+
+    // Decode `n` tokens into `slot` starting at position `pos0` (final-position
+    // logits requested). On KV-cell exhaustion, evicts every other slot and
+    // retries once. Returns n.
+    unsigned decode_extension(size_t slot, int pos0, TokenID const * toks, size_t n,
+                              ContextID const id);
+    size_t pick_victim(size_t keep) const;
     std::string source_;                 // GGUF path ("" for the RNG model)
     mutable std::string sha_cache_;      // lazily-computed full SHA-256 of the GGUF
 
@@ -75,9 +111,18 @@ class Model {
     // provenance identity when stamping an evaluated FTT.
     std::string sha256() const;
 
+    KvStats const & kv_stats() const { return kv_stats_; }
+    size_t kv_slots() const { return slots_.size(); }
+
+    // Route `tokens` to a KV slot (see the slot-pool comment above), returning
+    // the number of tokens decoded doing so. With `prime_logits`, guarantees
+    // the live logits are those of the target's final position on return —
+    // required before eval_topk_tokens; costs one re-decoded token when the
+    // target was fully cached.
     unsigned set_tokens(
       TokenSequence const & tokens,
-      ContextID const id = 0
+      ContextID const id = 0,
+      bool prime_logits = false
     );
 
     unsigned eval_sequences(

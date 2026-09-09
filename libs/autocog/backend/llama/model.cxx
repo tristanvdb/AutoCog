@@ -9,6 +9,7 @@
 #include <llama.h>
 
 #include <cmath>
+#include <cstdlib>
 #include <algorithm>
 #include <fstream>
 #include <iterator>
@@ -18,6 +19,20 @@
 
 
 namespace autocog::backend::llama {
+
+// Number of KV slots (llama sequences) in the pool. More slots keep more
+// branches resident across beam/choice ping-pong; the unified KV cache shares
+// prefix cells between them, so the cost is only the divergent suffixes.
+// Overridable for experiments (AUTOCOG_KV_SLOTS=1 reproduces the historical
+// single-sequence trim-and-redecode behavior).
+static size_t kv_slot_count() {
+  size_t n = 16;
+  if (char const * env = std::getenv("AUTOCOG_KV_SLOTS")) {
+    long v = std::strtol(env, nullptr, 10);
+    if (v >= 1 && v <= 64) n = static_cast<size_t>(v);
+  }
+  return n;
+}
 
 Model::Model() :
   id(0),
@@ -43,10 +58,16 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
     throw autocog::ModelError("Failed to load model from: " + model_path, id, "load");
   }
    
-  // Create context parameters
+  // Create context parameters. One llama context; the slot pool multiplexes
+  // n_seq_max sequences inside it over a unified KV buffer, so sequences share
+  // prefix cells and llama_memory_seq_cp is metadata-only. n_batch must admit
+  // a full-context prompt decode in one llama_decode call.
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = n_ctx;
-   
+  ctx_params.n_batch = n_ctx;
+  ctx_params.n_seq_max = kv_slot_count();
+  ctx_params.kv_unified = true;
+
   // Create single context with ID=0 (and associated token sequence)
   llama_context * ctx = llama_init_from_model(this->model, ctx_params);
   if (!ctx) {
@@ -54,7 +75,8 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
     throw autocog::ModelError("Failed to create llama context", id, "context");
   }
   this->contexts.push_back(ctx);
-  this->tokens.emplace_back(); 
+  this->tokens.emplace_back();
+  this->slots_.resize(kv_slot_count());
 }
 
 Model::~Model() {
@@ -73,6 +95,11 @@ Model::Model(Model && o) noexcept
     contexts(std::move(o.contexts)),
     tokens(std::move(o.tokens)),
     rng(std::move(o.rng)),
+    slots_(std::move(o.slots_)),
+    active_slot_(o.active_slot_),
+    live_logits_slot_(o.live_logits_slot_),
+    slot_clock_(o.slot_clock_),
+    kv_stats_(o.kv_stats_),
     source_(std::move(o.source_)),
     sha_cache_(std::move(o.sha_cache_)),
     vocab_mask_cache_(std::move(o.vocab_mask_cache_)),
@@ -258,7 +285,54 @@ static llama_pos find_common_prefix(const TokenSequence& a, const TokenSequence&
   return common;
 }
 
-unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const id) {
+size_t Model::pick_victim(size_t keep) const {
+  size_t victim = keep;
+  for (size_t s = 0; s < slots_.size(); ++s) {
+    if (s == keep) continue;
+    if (victim == keep || slots_[s].last_used < slots_[victim].last_used) victim = s;
+  }
+  return victim;
+}
+
+unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, size_t n,
+                                 ContextID const id) {
+  if (n == 0) return 0;
+  llama_context * ctx = this->get_context(id);
+  llama_memory_t mem = llama_get_memory(ctx);
+
+  llama_batch batch = llama_batch_init(n, 0, 1);
+  batch.n_tokens = static_cast<int32_t>(n);
+  for (size_t i = 0; i < n; ++i) {
+    batch.token[i] = toks[i];
+    batch.pos[i] = pos0 + static_cast<int>(i);
+    batch.n_seq_id[i] = 1;
+    batch.seq_id[i][0] = static_cast<llama_seq_id>(slot);
+    batch.logits[i] = (i + 1 == n);
+  }
+
+  int ret = llama_decode(ctx, batch);
+  if (ret != 0) {
+    // KV cells exhausted (divergent suffixes accumulate across slots): drop
+    // every other slot, discard any partial insertion, and retry once.
+    for (size_t s = 0; s < slots_.size(); ++s) {
+      if (s == slot || slots_[s].tokens.empty()) continue;
+      llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
+      slots_[s].tokens.clear();
+      ++kv_stats_.evictions;
+    }
+    llama_memory_seq_rm(mem, static_cast<llama_seq_id>(slot), pos0, -1);
+    ret = llama_decode(ctx, batch);
+  }
+  llama_batch_free(batch);
+  if (ret != 0) {
+    throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
+  }
+  live_logits_slot_ = static_cast<int>(slot);
+  return n;
+}
+
+unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const id,
+                           bool prime_logits) {
   SPDLOG_LOGGER_TRACE(autocog::log(), "Model::set_tokens(...):");
   SPDLOG_LOGGER_TRACE(autocog::log(), " > target_tokens.size() =");
   if (this->id == 0) {
@@ -267,53 +341,93 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
   }
   check_context_id(id);
 
-  TokenSequence & current_tokens = this->get_tokens(id);
-  SPDLOG_LOGGER_TRACE(autocog::log(), " > current_tokens.size() =");
   llama_context * ctx = this->get_context(id);
   unsigned n_ctx = llama_n_ctx(ctx);
-  if (current_tokens.size() > n_ctx) {
-    throw autocog::ModelError("Token sequence too long: " + std::to_string(current_tokens.size()) + " > " + std::to_string(n_ctx), id, "context_overflow");
+  if (target_tokens.size() > n_ctx) {
+    throw autocog::ModelError("Token sequence too long: " + std::to_string(target_tokens.size()) + " > " + std::to_string(n_ctx), id, "context_overflow");
   }
 
   llama_memory_t mem = llama_get_memory(ctx);
-  SPDLOG_LOGGER_TRACE(autocog::log(), " > KV cache pos_min =");
-  SPDLOG_LOGGER_TRACE(autocog::log(), " > KV cache pos_max =");
+  ++slot_clock_;
 
-  llama_pos common_prefix = find_common_prefix(current_tokens, target_tokens);
+  // Route to the slot with the longest common prefix; among ties prefer one
+  // the target extends in place (no fork), then the most recently used.
+  size_t best = 0;
+  size_t best_cp = 0;
+  for (size_t s = 0; s < slots_.size(); ++s) {
+    size_t cp = find_common_prefix(slots_[s].tokens, target_tokens);
+    if (s == 0 || cp > best_cp
+        || (cp == best_cp && slots_[s].tokens.size() == cp && slots_[best].tokens.size() != best_cp)
+        || (cp == best_cp && (slots_[s].tokens.size() == cp) == (slots_[best].tokens.size() == best_cp)
+            && slots_[s].last_used > slots_[best].last_used)) {
+      best = s;
+      best_cp = cp;
+    }
+  }
   SPDLOG_LOGGER_TRACE(autocog::log(), " > common_prefix =");
 
   unsigned num_token_eval = 0;
-  if (common_prefix == 0) {
-    llama_memory_seq_rm(mem, 0, 0, -1);
-
-    llama_batch batch = llama_batch_get_one(const_cast<TokenID*>(target_tokens.data()), target_tokens.size());
-    if (llama_decode(ctx, batch) != 0) {
-      throw autocog::ModelError("Failed to set the token sequence", id, "set_tokens");
+  if (best_cp == target_tokens.size()) {
+    // Fully cached. A longer slot is trimmed in place: its tail (a rolled-out
+    // or superseded continuation) is never needed once we return here.
+    if (slots_[best].tokens.size() > best_cp) {
+      llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
+      slots_[best].tokens.resize(best_cp);
+      if (live_logits_slot_ == static_cast<int>(best)) live_logits_slot_ = -1;
+      ++kv_stats_.trims;
+    } else {
+      ++kv_stats_.exact;
     }
-    num_token_eval += target_tokens.size();
+    active_slot_ = best;
+  } else if (best_cp == slots_[best].tokens.size()) {
+    // The slot (possibly empty) is a strict prefix: append in place.
+    num_token_eval += decode_extension(best, static_cast<int>(best_cp),
+                                       target_tokens.data() + best_cp,
+                                       target_tokens.size() - best_cp, id);
+    slots_[best].tokens = target_tokens;
+    ++kv_stats_.extends;
+    active_slot_ = best;
   } else {
-    if (static_cast<size_t>(common_prefix) < current_tokens.size()) {
-      llama_memory_seq_rm(mem, 0, common_prefix, -1);
-    }
-
-    if (static_cast<size_t>(common_prefix) < target_tokens.size()) {
-      TokenSequence extension(target_tokens.begin() + common_prefix, target_tokens.end());
-
-      llama_batch batch = llama_batch_get_one(const_cast<TokenID*>(extension.data()), extension.size());
-      
-      std::vector<llama_pos> positions(extension.size());
-      for (size_t i = 0; i < extension.size(); ++i) {
-        positions[i] = common_prefix + i;
+    // Divergent target: fork. Keep the source resident (a sibling branch will
+    // come back to it), copy the shared prefix into an LRU victim — metadata
+    // only under kv_unified — and decode just the divergent suffix.
+    size_t victim = pick_victim(best);
+    if (victim == best) {
+      // Single-slot pool: legacy behavior, trim the divergence point and redecode.
+      llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
+      slots_[best].tokens.resize(best_cp);
+      if (live_logits_slot_ == static_cast<int>(best)) live_logits_slot_ = -1;
+      victim = best;
+    } else {
+      if (!slots_[victim].tokens.empty()) {
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(victim), -1, -1);
+        slots_[victim].tokens.clear();
+        ++kv_stats_.evictions;
       }
-      batch.pos = positions.data();
-
-      if (llama_decode(ctx, batch) != 0) {
-        throw autocog::ModelError("Failed to decode token", id, "decode");
-      }
-      num_token_eval += extension.size();
+      if (live_logits_slot_ == static_cast<int>(victim)) live_logits_slot_ = -1;
+      if (best_cp > 0)
+        llama_memory_seq_cp(mem, static_cast<llama_seq_id>(best), static_cast<llama_seq_id>(victim),
+                            0, static_cast<llama_pos>(best_cp));
+      slots_[victim].tokens.assign(target_tokens.begin(), target_tokens.begin() + best_cp);
     }
+    num_token_eval += decode_extension(victim, static_cast<int>(best_cp),
+                                       target_tokens.data() + best_cp,
+                                       target_tokens.size() - best_cp, id);
+    slots_[victim].tokens = target_tokens;
+    ++kv_stats_.forks;
+    active_slot_ = victim;
   }
-  current_tokens = target_tokens;
+  slots_[active_slot_].last_used = slot_clock_;
+
+  // The zero-decode paths leave the live logits belonging to some other
+  // sequence; re-decode the final token in place to regenerate them.
+  if (prime_logits && live_logits_slot_ != static_cast<int>(active_slot_)
+      && !target_tokens.empty()) {
+    llama_pos last = static_cast<llama_pos>(target_tokens.size()) - 1;
+    llama_memory_seq_rm(mem, static_cast<llama_seq_id>(active_slot_), last, -1);
+    num_token_eval += decode_extension(active_slot_, last, &target_tokens.back(), 1, id);
+    ++kv_stats_.tokens_primed;
+  }
   return num_token_eval;
 }
 
@@ -330,25 +444,21 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
     return new_tokens.size();
   }
 
-  TokenSequence & loc_tokens = this->get_tokens(id);
-  llama_pos token_pos = loc_tokens.size();
+  check_context_id(id);
+  Slot & slot = this->slots_[active_slot_];
+  int token_pos = static_cast<int>(slot.tokens.size());
   logprobs.clear();
 
   for (auto token: new_tokens) {
   SPDLOG_LOGGER_TRACE(autocog::log(), " > token_pos =");
 
-    llama_batch batch = llama_batch_get_one(&token, 1);
-    batch.pos = &token_pos;
-
-    if (llama_decode(this->get_context(id), batch) != 0) {
-      throw autocog::ModelError("Failed to decode token", id, "decode");
-    }
-
+    decode_extension(active_slot_, token_pos, &token, 1, id);
     logprobs.push_back(retrieve_logprob(this->get_context(id), this->vocab_size(), token));
 
     token_pos++;
   }
-  loc_tokens.insert(loc_tokens.end(), new_tokens.begin(), new_tokens.end());
+  slot.tokens.insert(slot.tokens.end(), new_tokens.begin(), new_tokens.end());
+  slot.last_used = ++slot_clock_;
   return new_tokens.size();
 }
 
@@ -406,6 +516,13 @@ unsigned Model::eval_topk_tokens(
   size_t vocab_size = this->vocab_size();
   if (vocab_mask.size() != vocab_size) {
      throw autocog::ModelError("vocab_mask size mismatch: " + std::to_string(vocab_mask.size()) + " vs " + std::to_string(vocab_size), id, "vocab_mask");
+  }
+
+  // The live logits must be those of the active slot's final position; callers
+  // guarantee it via set_tokens(..., prime_logits=true) or a preceding decode.
+  // Anything else would silently sample from a sibling branch's distribution.
+  if (live_logits_slot_ != static_cast<int>(active_slot_)) {
+    throw autocog::utilities::InternalError("eval_topk_tokens: live logits do not belong to the active KV slot (missing prime_logits on set_tokens?)");
   }
 
   llama_context * ctx = this->get_context(id);
