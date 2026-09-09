@@ -1,7 +1,29 @@
 {
-  "names": [
-    "name-1",
-    "name-2"
+  "buckets": [
+    {
+      "summary": "sum-1",
+      "tag": "b1",
+      "values": [
+        "v1_1",
+        "v1_2"
+      ]
+    },
+    {
+      "summary": "sum-2",
+      "tag": "b2",
+      "values": [
+        "v2_1",
+        "v2_2"
+      ]
+    },
+    {
+      "summary": "sum-3",
+      "tag": "b3",
+      "values": [
+        "v3_1",
+        "v3_2"
+      ]
+    }
   ],
   "items": [
     {
@@ -17,49 +39,27 @@
       "score": "high"
     }
   ],
-  "buckets": [
-    {
-      "tag": "b1",
-      "values": [
-        "v1_1",
-        "v1_2"
-      ],
-      "summary": "sum-1"
-    },
-    {
-      "tag": "b2",
-      "values": [
-        "v2_1",
-        "v2_2"
-      ],
-      "summary": "sum-2"
-    },
-    {
-      "tag": "b3",
-      "values": [
-        "v3_1",
-        "v3_2"
-      ],
-      "summary": "sum-3"
-    }
+  "names": [
+    "name-1",
+    "name-2"
   ],
+  "next": "return",
   "sections": [
     {
+      "footer": "foot-1",
       "heading": "sec-1",
       "paragraphs": [
         "p1-1",
         "p1-2"
-      ],
-      "footer": "foot-1"
+      ]
     },
     {
+      "footer": "foot-2",
       "heading": "sec-2",
       "paragraphs": [
         "p2-1",
         "p2-2"
-      ],
-      "footer": "foot-2"
+      ]
     }
-  ],
-  "next": "return"
+  ]
 }
