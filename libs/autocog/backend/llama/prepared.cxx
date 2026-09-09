@@ -59,6 +59,19 @@ PreparedFTA prepare(ModelID const id, data::FTA const & fta) {
   return prepared;
 }
 
+void tokenize(ModelID const id, data::FTT & ftt) {
+  Model & model = Manager::get_model(id);
+  std::function<void(data::FTTNode &, unsigned)> walk = [&](data::FTTNode & node, unsigned parent_len) {
+    node.tokens = node.text.empty() ? TokenSequence{}
+                                    : model.tokenize(node.text, false, true);
+    node.logprobs.assign(node.tokens.size(), 0.0f);
+    node.logprob = 0.0f;
+    node.length = parent_len + static_cast<unsigned>(node.tokens.size());
+    for (auto & child : node.children) walk(child, node.length);
+  };
+  walk(ftt.root, 0);
+}
+
 void detokenize(ModelID const id, data::FTT & ftt) {
   Model & model = Manager::get_model(id);
   std::function<void(data::FTTNode &)> walk = [&](data::FTTNode & node) {

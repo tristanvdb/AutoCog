@@ -38,6 +38,11 @@ PreparedFTA prepare(ModelID const model, data::FTA const & fta);
 /// after generation completes.
 void detokenize(ModelID const model, data::FTT & ftt);
 
+/// Inverse of detokenize: fill every node's tokens (zero logprobs, cumulative
+/// lengths) from its text, materializing a text-level FTT — e.g. one produced
+/// by the frame encoder — under this model's tokenizer.
+void tokenize(ModelID const model, data::FTT & ftt);
+
 }
 
 #endif // AUTOCOG_BACKEND_LLAMA_PREPARED_HXX
