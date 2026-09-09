@@ -24,13 +24,15 @@ namespace autocog::backend::llama {
 // Number of KV slots (llama sequences) in the pool. More slots keep more
 // branches resident across beam/choice ping-pong; the unified KV cache shares
 // prefix cells between them, so the cost is only the divergent suffixes.
-// Overridable for experiments (AUTOCOG_KV_SLOTS=1 reproduces the historical
-// single-sequence trim-and-redecode behavior).
+// The default covers a full beams=8 lookahead wave (8 beams x 8 candidates):
+// measured on Llama-3.2-1B, beams=8/ahead=2 drops from 20410 to 269 restored
+// tokens going from 16 to 64 slots. Overridable for experiments
+// (AUTOCOG_KV_SLOTS=1 reproduces the historical single-sequence behavior).
 static size_t kv_slot_count() {
-  size_t n = 16;
+  size_t n = 64;
   if (char const * env = std::getenv("AUTOCOG_KV_SLOTS")) {
     long v = std::strtol(env, nullptr, 10);
-    if (v >= 1 && v <= 64) n = static_cast<size_t>(v);
+    if (v >= 1 && v <= 256) n = static_cast<size_t>(v);  // LLAMA_MAX_SEQ = 256
   }
   return n;
 }
