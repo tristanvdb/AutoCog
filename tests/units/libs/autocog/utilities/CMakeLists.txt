@@ -14,3 +14,13 @@ add_test(
     COMMAND utilities_backtrace_test_driver
 )
 set_tests_properties(utilities_backtrace PROPERTIES LABELS "units;utilities")
+
+add_executable(utilities_utf8_test_driver utf8_driver.cxx)
+target_include_directories(utilities_utf8_test_driver PRIVATE
+  ${PROJECT_SOURCE_DIR}/libs
+)
+add_test(
+    NAME utilities_utf8
+    COMMAND utilities_utf8_test_driver
+)
+set_tests_properties(utilities_utf8 PROPERTIES LABELS "units;utilities")
