@@ -1,33 +1,25 @@
 {
   "entry_points": {
     "main": {
-      "inputs": {
-        "input": {
-          "required": true,
-          "type": "text"
-        }
-      },
+      "inputs": {},
       "outputs": {
-        "intermediate": {
-          "required": true,
-          "type": "text"
-        },
-        "output": {
+        "_": {
+          "max_length": 4,
           "required": true,
           "type": "text"
         }
       },
-      "prompt": "processor"
+      "prompt": "main"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "5643347ae5f2ceb4144363ca5cc65d1a661957ea734b6bff649c5be4dfbd6f58",
+    "hash": "6f4280f9c791668b96f8c875e823a1933b41878aca7591521b5520d841e3aee8",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "processor": {
+    "main": {
       "abstracts": [
         {
           "exit": -1,
@@ -55,21 +47,7 @@
           "flow": -1
         }
       ],
-      "channels": [
-        {
-          "source": [
-            {
-              "name": "input"
-            }
-          ],
-          "target": [
-            {
-              "name": "input"
-            }
-          ],
-          "type": "input"
-        }
-      ],
+      "channels": [],
       "desc": [],
       "fields": [
         {
@@ -77,11 +55,13 @@
           "desc": [],
           "flat_index": 0,
           "format": {
-            "type": "completion"
+            "length": 4,
+            "stop": "",
+            "type": "completion",
+            "vocab": "vocab_7a0420aad451c74a"
           },
-          "format_ref": "Data",
           "index": 0,
-          "name": "input",
+          "name": "pin",
           "range": null
         },
         {
@@ -89,10 +69,12 @@
           "desc": [],
           "flat_index": 1,
           "format": {
+            "length": 10,
+            "stop": "END",
             "type": "completion"
           },
           "index": 1,
-          "name": "intermediate",
+          "name": "word",
           "range": null
         },
         {
@@ -100,10 +82,11 @@
           "desc": [],
           "flat_index": 2,
           "format": {
+            "length": 10,
             "type": "completion"
           },
           "index": 2,
-          "name": "result",
+          "name": "line",
           "range": null
         },
         {
@@ -127,18 +110,10 @@
         "return": {
           "fields": [
             {
-              "alias": "output",
+              "alias": "_",
               "path": [
                 {
-                  "name": "result"
-                }
-              ]
-            },
-            {
-              "alias": "intermediate",
-              "path": [
-                {
-                  "name": "intermediate"
+                  "name": "pin"
                 }
               ]
             }
@@ -146,7 +121,24 @@
           "type": "return"
         }
       },
-      "name": "processor"
+      "name": "main",
+      "vocabs": {
+        "vocab_7a0420aad451c74a": {
+          "kind": "tokenize",
+          "strings": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ]
+        }
+      }
     }
   },
   "provenance": {},
