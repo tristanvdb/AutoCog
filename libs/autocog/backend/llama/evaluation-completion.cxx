@@ -117,8 +117,12 @@ static bool beam_search_step(
     expanding.push_back(&beam);
     targets.push_back(std::move(target));
   }
+  // `topk` = candidate tokens sampled per expanded beam; `beams` = hypotheses
+  // surviving the step (prune_beams below). Unset topk keeps the historical
+  // implicit topk == beams.
+  size_t const topk = ca.topk ? *ca.topk : ca.beams;
   std::vector<FrontierResult> expansions;
-  unsigned const decoded = model.topk_frontier(targets, mask, ca.beams, expansions, ctx);
+  unsigned const decoded = model.topk_frontier(targets, mask, topk, expansions, ctx);
   num_token_eval += decoded;
   perf.complete.tokens_eval += static_cast<unsigned>(targets.size());
   perf.complete.tokens_restore += decoded - static_cast<unsigned>(targets.size());
@@ -235,8 +239,11 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
   unsigned count = 0;
   for (auto & beam : beams) {
     data::FTTNode & child = grow(state.parent, state.action, fta, beam.tokens, beam.logprobs);
-    child.pruned = (count >= ca.width) || (count > 0 && beam.proba() < ca.threshold);
-    if (!child.pruned) this->enqueue(p.successors[0], child, state);
+    // Threshold takes precedence: Width marks exactly the survivors-in-quality
+    // that only lost on rank, i.e. what a wider search would have kept.
+    if (count > 0 && beam.proba() < ca.threshold) child.pruned = data::Pruned::Threshold;
+    else if (count >= ca.width)                   child.pruned = data::Pruned::Width;
+    if (child.pruned == data::Pruned::No) this->enqueue(p.successors[0], child, state);
     count++;
   }
   return num_token_eval;

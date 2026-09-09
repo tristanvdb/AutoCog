@@ -1,0 +1,57 @@
+{
+  "actions": [
+    {
+      "uid": "prompt",
+      "type": "text",
+      "text": "Say: ",
+      "evaluate": false,
+      "successors": [
+        "pick"
+      ]
+    },
+    {
+      "uid": "pick",
+      "type": "choose",
+      "threshold": 0.0,
+      "width": 2,
+      "choices": [
+        "a",
+        "b"
+      ],
+      "successors": [
+        "gen",
+        "gen"
+      ]
+    },
+    {
+      "uid": "gen",
+      "type": "complete",
+      "threshold": 0.1,
+      "length": 3,
+      "beams": 1,
+      "ahead": 1,
+      "width": 1,
+      "successors": [
+        "end"
+      ]
+    },
+    {
+      "uid": "end",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    }
+  ],
+  "queue": {
+    "metric": [
+      "deepest"
+    ],
+    "stop": {
+      "ge": [
+        "not_a_scalar",
+        1
+      ]
+    }
+  }
+}

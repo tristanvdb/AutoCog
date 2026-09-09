@@ -1,0 +1,49 @@
+{
+  "actions": [
+    {
+      "uid": "prompt",
+      "type": "text",
+      "text": "Hello ",
+      "evaluate": false,
+      "successors": [
+        "response"
+      ]
+    },
+    {
+      "uid": "response",
+      "type": "complete",
+      "threshold": 0.1,
+      "length": 10,
+      "beams": 4,
+      "ahead": 1,
+      "width": 1,
+      "vocab": "vocab_test_lower",
+      "successors": [
+        "end"
+      ],
+      "stop": "vocab_stop",
+      "topk": 1
+    },
+    {
+      "uid": "end",
+      "type": "text",
+      "text": "",
+      "evaluate": false,
+      "successors": []
+    }
+  ],
+  "vocabs": {
+    "vocab_test_lower": {
+      "kind": "regex",
+      "strings": [
+        "^[a-z]+$"
+      ]
+    },
+    "vocab_stop": {
+      "kind": "tokenize",
+      "strings": [
+        "<|eot_id|>"
+      ]
+    }
+  }
+}

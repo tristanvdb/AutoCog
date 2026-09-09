@@ -15,7 +15,7 @@ std::string FTTNode::hash() const {
    .put(logprob)
    .put(logprobs)
    .put(length)
-   .put(pruned)
+   .put(static_cast<unsigned>(pruned))
    .put(tokens);
   h.put(static_cast<unsigned>(children.size()));
   // Child order reflects an exploration heuristic (possibly parallel) and is not

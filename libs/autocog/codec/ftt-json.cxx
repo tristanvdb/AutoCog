@@ -3,6 +3,26 @@
 namespace autocog::codec {
 using namespace autocog::data;
 
+namespace {
+nlohmann::json pruned_to_json(Pruned p) {
+  switch (p) {
+    case Pruned::No:        return nullptr;
+    case Pruned::Width:     return "width";
+    case Pruned::Threshold: return "threshold";
+    case Pruned::Abandoned: return "abandoned";
+  }
+  return nullptr;
+}
+Pruned pruned_from_json(nlohmann::json const & j) {
+  if (j.is_null()) return Pruned::No;
+  auto const s = j.get<std::string>();
+  if (s == "width")     return Pruned::Width;
+  if (s == "threshold") return Pruned::Threshold;
+  if (s == "abandoned") return Pruned::Abandoned;
+  throw autocog::SchemaError("autocog::data: unknown prune reason '" + s + "'", s);
+}
+}  // namespace
+
 // File-local node conversion (FTTNode is FTT's content, used only here).
 template <>
 nlohmann::json to_json(FTTNode const & n) {
@@ -15,7 +35,7 @@ nlohmann::json to_json(FTTNode const & n) {
   j["logprob"]  = n.logprob;
   j["logprobs"] = n.logprobs;
   j["length"]   = n.length;
-  j["pruned"]   = n.pruned;
+  j["pruned"]   = pruned_to_json(n.pruned);
   j["tokens"]   = n.tokens;
   nlohmann::json kids = nlohmann::json::array();
   for (auto const & c : n.children) kids.push_back(to_json(c));
@@ -33,7 +53,7 @@ void from_json(nlohmann::json const & dom, FTTNode & n) {
   n.logprob  = dom.at("logprob").get<float>();
   n.logprobs = dom.at("logprobs").get<std::vector<float>>();
   n.length   = dom.at("length").get<unsigned>();
-  n.pruned   = dom.at("pruned").get<bool>();
+  n.pruned   = pruned_from_json(dom.at("pruned"));
   n.tokens   = dom.at("tokens").get<std::vector<TokenID>>();
   for (auto const & c : dom.at("children")) {
     n.children.emplace_back();

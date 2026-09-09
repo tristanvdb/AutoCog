@@ -9,6 +9,7 @@ nlohmann::json to_json(TextSearch const & t) {
   nlohmann::json j;
   j["threshold"] = t.threshold;
   j["beams"]     = t.beams;
+  if (t.topk) j["topk"] = *t.topk;
   j["ahead"]     = t.ahead;
   j["width"]     = t.width;
   if (t.repetition) j["repetition"] = *t.repetition;
@@ -20,6 +21,7 @@ void from_json(nlohmann::json const & t, TextSearch & out) {
   autocog::codec::read_guarded("TextSearch", [&]{
   out.threshold = t.at("threshold").get<float>();
   out.beams     = t.at("beams").get<unsigned>();
+  if (t.contains("topk") && !t.at("topk").is_null()) out.topk = t.at("topk").get<unsigned>();
   out.ahead     = t.at("ahead").get<unsigned>();
   out.width     = t.at("width").get<unsigned>();
   if (t.contains("repetition") && !t.at("repetition").is_null()) out.repetition = t.at("repetition").get<float>();
@@ -41,12 +43,22 @@ void from_json(nlohmann::json const & c, ChoiceSearch & out) {
 
 template <>
 nlohmann::json to_json(QueueSearch const & q) {
-  return nlohmann::json{{"metric", q.metric}};
+  nlohmann::json j{{"metric", q.metric}};
+  if (q.stop) j["stop"] = to_json(*q.stop);
+  return j;
 }
 template <>
 void from_json(nlohmann::json const & q, QueueSearch & out) {
   autocog::codec::read_guarded("QueueSearch", [&]{
-  out.metric = q.at("metric").get<std::string>();
+  // A single metric may be given as a bare string; a list is lexicographic.
+  auto const & m = q.at("metric");
+  out.metric.clear();
+  if (m.is_string()) out.metric.push_back(m.get<std::string>());
+  else out.metric = m.get<std::vector<std::string>>();
+  if (q.contains("stop") && !q.at("stop").is_null()) {
+    out.stop.emplace();
+    from_json(q.at("stop"), *out.stop);
+  }
   });
 }
 

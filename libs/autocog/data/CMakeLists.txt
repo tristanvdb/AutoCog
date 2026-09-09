@@ -2,6 +2,7 @@
 # conversion lives in autocog::codec (libs/autocog/codec).
 add_library(autocog_data_lib STATIC
     utility.cxx
+    term.cxx
     vocab.cxx
     path.cxx
     channel.cxx

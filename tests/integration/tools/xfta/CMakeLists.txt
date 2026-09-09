@@ -51,6 +51,95 @@ print('OK: completion constrained to digits:', joined)
 \"")
 set_tests_properties(xfta_vocab_digits PROPERTIES LABELS "xfta;vocab")
 
+# topk vs beams: `topk` bounds the candidates sampled per beam expansion,
+# `beams` the surviving hypotheses. With topk=1 a beam search of any width
+# degenerates to greedy — the completion grows exactly one child. Without
+# topk the historical tie (topk == beams == 4) fans out to several children.
+add_test(NAME xfta_topk_narrow
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_xfta> --rng --seed 7 --fta ${FTA_FIXTURES}/test_topk_narrow.json --ftt /dev/stdout | grep -v libgcov | ${Python_EXECUTABLE} -c \"
+import json, sys
+d = json.load(sys.stdin)
+n = 0
+def walk(o):
+    global n
+    if isinstance(o, dict):
+        if o.get('uid') == 'response': n += 1
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(d)
+if n != 1:
+    print('topk=1 should force greedy: expected 1 completion child, got', n); sys.exit(1)
+print('OK: topk=1 degenerates beams=4 to greedy (1 child)')
+\"")
+set_tests_properties(xfta_topk_narrow PROPERTIES LABELS "xfta;search")
+
+add_test(NAME xfta_topk_wide
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_xfta> --rng --seed 7 --fta ${FTA_FIXTURES}/test_topk_wide.json --ftt /dev/stdout | grep -v libgcov | ${Python_EXECUTABLE} -c \"
+import json, sys
+d = json.load(sys.stdin)
+n = 0
+def walk(o):
+    global n
+    if isinstance(o, dict):
+        if o.get('uid') == 'response': n += 1
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(d)
+if n < 2:
+    print('implicit topk==beams should fan out: expected >=2 completion children, got', n); sys.exit(1)
+print('OK: beams=4 without topk fans out to', n, 'children')
+\"")
+set_tests_properties(xfta_topk_wide PROPERTIES LABELS "xfta;search")
+
+# Queue ordering: a lexicographic metric list evaluates cleanly; an unknown
+# metric name is rejected when the evaluation is created.
+add_test(NAME xfta_queue_metric
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_metric.json --ftt /dev/null)
+set_tests_properties(xfta_queue_metric PROPERTIES LABELS "xfta;queue")
+
+add_test(NAME xfta_queue_metric_unknown
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_metric_unknown.json --ftt /dev/null)
+set_tests_properties(xfta_queue_metric_unknown PROPERTIES WILL_FAIL TRUE LABELS "xfta;queue")
+
+# Early termination: choice fans out two branches; `deepest` ordering rides
+# the first one down to its terminal before touching the sibling, and
+# stop-after-1-terminal then abandons the sibling at the *choice* child (uid
+# "pick") — under FIFO both completions would have run first and the
+# abandoned node would be a "gen" child. Pins ordering AND stop semantics.
+add_test(NAME xfta_queue_stop
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta ${FTA_FIXTURES}/test_queue_stop.json --ftt /dev/stdout | grep -v libgcov | ${Python_EXECUTABLE} -c \"
+import json, sys
+d = json.load(sys.stdin)
+abandoned, complete = [], 0
+def walk(o):
+    global complete
+    if isinstance(o, dict):
+        if o.get('pruned') == 'abandoned': abandoned.append(o.get('uid'))
+        if not o.get('children') and o.get('pruned') is None and 'uid' in o: complete += 1
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(d)
+if abandoned != ['pick']:
+    print('expected exactly the un-descended choice child abandoned, got', abandoned); sys.exit(1)
+if complete != 1:
+    print('expected exactly 1 complete path, got', complete); sys.exit(1)
+print('OK: depth-first found 1 terminal, sibling branch abandoned at the choice')
+\"")
+set_tests_properties(xfta_queue_stop PROPERTIES LABELS "xfta;queue")
+
+add_test(NAME xfta_queue_stop_unknown_scalar
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_stop_unknown.json --ftt /dev/null)
+set_tests_properties(xfta_queue_stop_unknown_scalar PROPERTIES WILL_FAIL TRUE LABELS "xfta;queue")
+
 # Error paths (must exit non-zero)
 add_test(NAME xfta_err_missing_fta
          COMMAND $<TARGET_FILE:autocog_xfta> --rng --ftt /dev/null)

@@ -18,7 +18,7 @@ std::string Action::hash() const {
       h.put(a.text).put(a.evaluate);
     },
     [&](CompleteAction const & a) {
-      h.put(a.length).put(a.threshold).put(a.beams).put(a.ahead).put(a.width)
+      h.put(a.length).put(a.threshold).put(a.beams).put(a.topk).put(a.ahead).put(a.width)
        .put(a.repetition).put(a.diversity).put(a.vocab).put(a.stop);
     },
     [&](ChooseAction const & a) {
@@ -34,6 +34,7 @@ std::string FTA::content_hash() const {
   h.put(static_cast<unsigned>(actions.size()));
   for (auto const & a : actions) h.put(a.hash());   // positional: actions[0] is the entry
   h.put(queue_metric);
+  h.put(queue_stop ? queue_stop->hash() : std::string{});
   h.put(static_cast<unsigned>(vocabs.size()));
   for (auto const & [k, ve] : vocabs) h.put(k).put(ve.hash());  // std::map: canonical by key
   return h.hash();

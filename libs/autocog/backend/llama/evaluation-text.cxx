@@ -24,6 +24,8 @@ unsigned Evaluation::evaluate_text(PathState & state) {
     this->enqueue(p.successors[0], child, state);
   } else if (p.successors.size() > 1) {
     throw autocog::utilities::InternalError("Text action should never have more than 1 successor");
+  } else {
+    this->on_terminal(child, state.action);  // successor-less: a completed path
   }
   return num_token_eval;
 }

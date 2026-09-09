@@ -716,6 +716,7 @@ struct FTABuilder {
         TextSearch r = search.text;  // config defaults
         if (auto v = pol_f(pol, "text", "threshold")) r.threshold = *v;
         if (auto v = pol_u(pol, "text", "beams"))     r.beams = *v;
+        if (auto v = pol_u(pol, "text", "topk"))      r.topk = *v;
         if (auto v = pol_u(pol, "text", "ahead"))     r.ahead = *v;
         if (auto v = pol_u(pol, "text", "width"))     r.width = *v;
         if (auto v = pol_f(pol, "text", "repetition")) r.repetition = *v;
@@ -746,6 +747,7 @@ struct FTABuilder {
         body.length     = cf.length.has_value() ? static_cast<unsigned>(*cf.length) : 50u;
         body.threshold  = ts.threshold;
         body.beams      = ts.beams;
+        body.topk       = ts.topk;
         body.ahead      = ts.ahead;
         body.width      = ts.width;
         body.repetition = ts.repetition;
@@ -1017,15 +1019,16 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         b.connect(header_id, first_branch);
     }
 
-    // Queue params (prompt-scope): carried into the FTA even though the current
-    // xfta queue does not consume them yet. Policy (prompt.search["queue"]) wins
-    // over the config default. TODO(xfta-queue).
-    std::string metric = search.queue.metric;
+    // Queue params (prompt-scope). Policy (prompt.search["queue"]) wins over
+    // the config default; an STL policy provides a single metric name, which
+    // becomes a one-element lexicographic list. The stop predicate only comes
+    // from the search config (no STL surface syntax for expressions).
+    std::vector<std::string> metric = search.queue.metric;
     auto qit = prompt.search.categories.find("queue");
     if (qit != prompt.search.categories.end()) {
         auto mit = qit->second.find("metric");
         if (mit != qit->second.end())
-            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = *s;
+            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = {*s};
     }
 
     // Assemble the finalized FTA. The vocab table is carried so the backend
@@ -1033,7 +1036,8 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     // complete actions reference an entry by its key.
     autocog::data::FTA fta;
     fta.actions = std::move(b.actions);
-    fta.queue_metric = metric;
+    fta.queue_metric = std::move(metric);
+    fta.queue_stop = search.queue.stop;
     fta.vocabs = prompt.vocabs;
     for (auto & [ref, expr] : b.minted_vocabs) fta.vocabs.emplace(ref, std::move(expr));
 

@@ -177,6 +177,10 @@
         "beams": {
           "type": "integer"
         },
+        "topk": {
+          "type": "integer",
+          "description": "Candidate tokens sampled per beam expansion; absent = same as beams."
+        },
         "ahead": {
           "type": "integer"
         },
