@@ -23,6 +23,12 @@ struct KvStats {
   unsigned tokens_primed = 0;  ///< single-token re-decodes refreshing final-position logits
 };
 
+// Masked top-k candidates at one frontier position (see Model::topk_frontier).
+struct FrontierResult {
+  std::vector<TokenID> tokens;
+  std::vector<float> logprobs;
+};
+
 class Model {
   public:
     ModelID const id;
@@ -142,6 +148,25 @@ class Model {
       std::vector<TokenID> & topk_tokens,
       std::vector<float> & topk_logprobs,
       ContextID const id
+    );
+
+    // Masked top-k over a whole frontier of alternative continuations in as
+    // few llama_decode calls as slot capacity allows. Each target is routed
+    // to a slot like set_tokens (slots already carrying batch-pending tokens
+    // are pinned: never trimmed or victimized, and fork points are clamped to
+    // materialized cells); all extensions plus a final-token re-decode for
+    // fully-cached targets form one batch, with a logits row per target's
+    // final position. On CPU a decode call streams the full weights whatever
+    // its size, so one call for N frontier tokens costs roughly one token's
+    // wall time. Returns the number of tokens decoded (>= targets.size();
+    // the excess is fork/suffix restoration work). The RNG model runs the
+    // targets sequentially, preserving the historical draw order.
+    unsigned topk_frontier(
+      std::vector<TokenSequence> const & targets,
+      std::vector<bool> const & vocab_mask,
+      size_t max_candidates,
+      std::vector<FrontierResult> & results,
+      ContextID const id = 0
     );
 };
 

@@ -5,6 +5,7 @@
 #include "autocog/data/vocab.hxx"
 
 #include <regex>
+#include <set>
 
 #include <llama.h>
 
@@ -273,6 +274,28 @@ static void sample_logprobs(float const * logits, std::vector<bool> const & mask
 // -log P(token) from one logits row.
 static float row_logprob(float const * logits, unsigned vocab_size, TokenID token) {
   return logit_to_log_sum_exp(logits, vocab_size) - logits[token];
+}
+
+// Masked top-k candidates (ascending -log P) from one logits row.
+static void topk_from_row(float const * row, std::vector<bool> const & mask,
+                          size_t k, FrontierResult & out, ModelID model_id) {
+  std::vector<std::pair<TokenID, float>> candidates;
+  sample_logprobs(row, mask, candidates);
+  if (candidates.empty()) {
+    throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", model_id, "vocab_mask");
+  }
+  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
+    return a.second < b.second;
+  });
+  size_t const kk = std::min(k, candidates.size());
+  out.tokens.clear();
+  out.logprobs.clear();
+  out.tokens.reserve(kk);
+  out.logprobs.reserve(kk);
+  for (size_t i = 0; i < kk; ++i) {
+    out.tokens.push_back(candidates[i].first);
+    out.logprobs.push_back(candidates[i].second);
+  }
 }
 
 static llama_pos find_common_prefix(const TokenSequence& a, const TokenSequence& b) {
@@ -571,6 +594,190 @@ unsigned Model::eval_topk_tokens(
   }
     
   return 1;
+}
+
+unsigned Model::topk_frontier(
+  std::vector<TokenSequence> const & targets,
+  std::vector<bool> const & vocab_mask,
+  size_t max_candidates,
+  std::vector<FrontierResult> & results,
+  ContextID const id
+) {
+  check_context_id(id);
+  results.assign(targets.size(), FrontierResult{});
+  if (targets.empty()) return 0;
+
+  if (this->id == 0) {
+    // RNG model: sequential, preserving the historical per-beam draw order.
+    // The returned count mirrors the legacy accounting (a full target restore
+    // plus one scored token each).
+    unsigned decoded = 0;
+    for (size_t t = 0; t < targets.size(); ++t) {
+      decoded += set_tokens(targets[t], id);
+      eval_topk_tokens(vocab_mask, max_candidates, results[t].tokens, results[t].logprobs, id);
+      decoded += 1;
+    }
+    return decoded;
+  }
+
+  size_t const vocab = vocab_size();
+  if (vocab_mask.size() != vocab) {
+    throw autocog::ModelError("vocab_mask size mismatch: " + std::to_string(vocab_mask.size()) + " vs " + std::to_string(vocab), id, "vocab_mask");
+  }
+  llama_context * ctx = get_context(id);
+  llama_memory_t mem = llama_get_memory(ctx);
+  unsigned const n_ctx = llama_n_ctx(ctx);
+
+  struct Item { TokenID token; int pos; size_t slot; bool want_row; };
+  struct Planned { size_t target; size_t slot; int final_idx; };
+
+  unsigned decoded_total = 0;
+  size_t t = 0;
+  while (t < targets.size()) {
+    ++slot_clock_;
+    std::vector<Item> items;
+    std::vector<Planned> planned;
+    std::set<size_t> pinned;                 // slots carrying batch-pending tokens
+    std::map<size_t, size_t> pending_from;   // slot -> first not-yet-decoded position
+
+    auto materialized = [&](size_t s) -> size_t {
+      auto it = pending_from.find(s);
+      return it == pending_from.end() ? slots_[s].tokens.size() : it->second;
+    };
+    auto push_extension = [&](size_t slot, size_t from, TokenSequence const & target) {
+      for (size_t p = from; p < target.size(); ++p)
+        items.push_back({target[p], static_cast<int>(p), slot, p + 1 == target.size()});
+    };
+
+    size_t const batch_start = t;
+    for (; t < targets.size(); ++t) {
+      TokenSequence const & target = targets[t];
+      if (target.empty())
+        throw autocog::utilities::InternalError("topk_frontier: empty target");
+      if (target.size() > n_ctx)
+        throw autocog::ModelError("Token sequence too long: " + std::to_string(target.size()) + " > " + std::to_string(n_ctx), id, "context_overflow");
+
+      // Route like set_tokens. Fork/copy points must land on already-decoded
+      // cells, so each slot's usable common prefix is clamped to what is
+      // materialized (pending batch tokens have no KV cells yet).
+      size_t best = 0, best_cp = 0;
+      for (size_t s = 0; s < slots_.size(); ++s) {
+        size_t cp = std::min<size_t>(find_common_prefix(slots_[s].tokens, target), materialized(s));
+        bool const s_ext = (cp == slots_[s].tokens.size());
+        bool const b_ext = (best_cp == slots_[best].tokens.size());
+        if (s == 0 || cp > best_cp
+            || (cp == best_cp && s_ext && !b_ext)
+            || (cp == best_cp && s_ext == b_ext && slots_[s].last_used > slots_[best].last_used)) {
+          best = s;
+          best_cp = cp;
+        }
+      }
+
+      size_t dest;
+      if (best_cp == target.size() && !pinned.count(best)) {
+        // Fully cached in an unpinned slot: reuse in place; the final token is
+        // re-decoded to produce this target's logits row.
+        if (slots_[best].tokens.size() > best_cp) ++kv_stats_.trims; else ++kv_stats_.exact;
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp - 1), -1);
+        slots_[best].tokens = target;
+        ++kv_stats_.tokens_primed;
+        pending_from[best] = best_cp - 1;
+        items.push_back({target.back(), static_cast<int>(best_cp - 1), best, true});
+        dest = best;
+      } else if (best_cp == slots_[best].tokens.size() && best_cp < target.size()) {
+        // Strict-prefix slot: contiguous append. (A pinned slot's record
+        // already includes its pending tokens, so appending after them keeps
+        // batch positions contiguous — causal attention within one decode
+        // covers the pending prefix.)
+        push_extension(best, best_cp, target);
+        if (!pending_from.count(best)) pending_from[best] = best_cp;
+        slots_[best].tokens = target;
+        ++kv_stats_.extends;
+        dest = best;
+      } else {
+        // Divergent target (or fully cached in a pinned slot): fork the
+        // usable prefix into an unpinned LRU victim and decode the rest.
+        size_t victim = slots_.size();
+        for (size_t s = 0; s < slots_.size(); ++s) {
+          if (s == best || pinned.count(s)) continue;
+          if (victim == slots_.size() || slots_[s].last_used < slots_[victim].last_used) victim = s;
+        }
+        if (victim == slots_.size()) {
+          if (!planned.empty()) break;  // out of unpinned slots: flush, continue
+          // Single-slot pool, nothing planned: legacy in-place trim+redecode.
+          llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
+          slots_[best].tokens.resize(best_cp);
+          push_extension(best, best_cp, target);
+          pending_from[best] = best_cp;
+          slots_[best].tokens = target;
+          ++kv_stats_.trims;
+          dest = best;
+        } else {
+          if (!slots_[victim].tokens.empty()) {
+            llama_memory_seq_rm(mem, static_cast<llama_seq_id>(victim), -1, -1);
+            ++kv_stats_.evictions;
+          }
+          // Copy only cells the fork can use; a fully-cached target still
+          // re-decodes its final token for the logits row.
+          size_t const copy_to = std::min(best_cp, target.size() - 1);
+          if (copy_to > 0)
+            llama_memory_seq_cp(mem, static_cast<llama_seq_id>(best), static_cast<llama_seq_id>(victim),
+                                0, static_cast<llama_pos>(copy_to));
+          push_extension(victim, copy_to, target);
+          pending_from[victim] = copy_to;
+          slots_[victim].tokens = target;
+          ++kv_stats_.forks;
+          if (best_cp == target.size()) ++kv_stats_.tokens_primed;
+          dest = victim;
+        }
+      }
+      pinned.insert(dest);
+      slots_[dest].last_used = slot_clock_;
+      planned.push_back({t, dest, static_cast<int>(items.size()) - 1});
+    }
+
+    if (t == batch_start) {
+      throw autocog::utilities::InternalError("topk_frontier: no progress");
+    }
+
+    // One decode for everything planned; per-target rows at the final tokens.
+    llama_batch batch = llama_batch_init(items.size(), 0, 1);
+    batch.n_tokens = static_cast<int32_t>(items.size());
+    for (size_t i = 0; i < items.size(); ++i) {
+      batch.token[i] = items[i].token;
+      batch.pos[i] = items[i].pos;
+      batch.n_seq_id[i] = 1;
+      batch.seq_id[i][0] = static_cast<llama_seq_id>(items[i].slot);
+      batch.logits[i] = items[i].want_row;
+    }
+    int ret = llama_decode(ctx, batch);
+    if (ret != 0) {
+      // KV cells exhausted: drop unpinned slots, discard any partial
+      // insertion of the pending ranges, and retry once.
+      for (size_t s = 0; s < slots_.size(); ++s) {
+        if (pinned.count(s) || slots_[s].tokens.empty()) continue;
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
+        slots_[s].tokens.clear();
+        ++kv_stats_.evictions;
+      }
+      for (auto const & [s, from] : pending_from)
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), static_cast<llama_pos>(from), -1);
+      ret = llama_decode(ctx, batch);
+    }
+    llama_batch_free(batch);
+    if (ret != 0) {
+      throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
+    }
+    decoded_total += static_cast<unsigned>(items.size());
+
+    for (Planned const & p : planned) {
+      topk_from_row(llama_get_logits_ith(ctx, p.final_idx), vocab_mask,
+                    max_candidates, results[p.target], this->id);
+    }
+    live_logits_slot_ = static_cast<int>(planned.back().slot);
+    live_logits_ith_ = planned.back().final_idx;
+  }
+  return decoded_total;
 }
 
 std::string Model::sha256() const {

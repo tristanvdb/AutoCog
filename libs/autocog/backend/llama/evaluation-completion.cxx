@@ -74,79 +74,16 @@ static void calculate_diversity_bonuses(std::vector<BeamState> & beams, float co
   }
 }
 
-// Score a candidate's continuation: greedily roll out up to `steps` tokens
-// (masked) from `prefix`, returning the mean probability of the continuation.
-// The rollout pollutes the context past `prefix`; the next set_tokens call
-// trims it back via the common-prefix logic, so no explicit rewind is needed.
-static float lookahead_rollout(
-  Model & model, ContextID ctx, TokenSequence prefix, unsigned steps,
-  std::vector<bool> const & mask, std::vector<bool> const * stop_mask,
-  PerfCounters & perf
-) {
-  double sum = 0.0;
-  unsigned n = 0;
-  std::vector<TokenID> t1;
-  std::vector<float> l1;
-  for (unsigned a = 0; a < steps; ++a) {
-    perf.complete.tokens_restore += model.set_tokens(prefix, ctx, /*prime_logits=*/true);
-    model.eval_topk_tokens(mask, 1, t1, l1, ctx);
-    perf.lookahead_tokens += 1;
-    perf.complete.tokens_eval += 1;
-    if (t1.empty()) break;
-    sum += l1[0];
-    n += 1;
-    if (stop_mask && (*stop_mask)[t1[0]]) break;  // continuation ends naturally
-    prefix.push_back(t1[0]);
-  }
-  return n ? std::exp(static_cast<float>(-sum / n)) : 0.0f;
-}
-
-static unsigned expand_beam(
-  Model & model, ContextID ctx, BeamState const & beam,
-  data::CompleteAction const & ca, std::vector<bool> const * stop_mask,
-  std::vector<bool> const & mask, TokenSequence const & base_tokens,
-  std::vector<BeamState> & beams, PerfCounters & perf
-) {
-  TokenSequence context_tokens = base_tokens;
-  context_tokens.insert(context_tokens.end(), beam.tokens.begin(), beam.tokens.end());
-  perf.complete.tokens_restore += model.set_tokens(context_tokens, ctx, /*prime_logits=*/true);
-
-  std::vector<TokenID> topk_tokens;
-  std::vector<float> topk_logits;
-  unsigned num_token_eval = model.eval_topk_tokens(mask, ca.beams, topk_tokens, topk_logits, ctx);
-  perf.complete.tokens_eval += 1;
-
-  for (size_t i = 0; i < topk_tokens.size(); ++i) {
-    BeamState & new_beam = beams.emplace_back(beam);
-    new_beam.tokens.push_back(topk_tokens[i]);
-    new_beam.logprobs.push_back(topk_logits[i]);
-    new_beam.logprob += topk_logits[i];
-
-    if (ca.repetition) {
-      TokenSequence beam_tokens;
-      beam_tokens.insert(beam_tokens.end(), base_tokens.begin(), base_tokens.end());
-      beam_tokens.insert(beam_tokens.end(), new_beam.tokens.begin(), new_beam.tokens.end());
-      calculate_repetition_penalty(beam_tokens, new_beam.repetition_penalty, ca.repetition.value());
-    }
-
-    // A completion stops when it emits any token of the stop vocab; the stop
-    // token itself is not part of the output. No stop vocab: never stops early.
-    TokenID const emitted = new_beam.tokens.back();
-    new_beam.stopped = stop_mask && (*stop_mask)[emitted];
-    if (new_beam.stopped)
-      new_beam.tokens.pop_back();
-
-    // ahead > 1: score this candidate's greedy continuation (ahead includes
-    // the candidate itself, so ahead=1 costs nothing extra).
-    if (ca.ahead > 1 && !new_beam.stopped) {
-      TokenSequence prefix = context_tokens;
-      prefix.push_back(emitted);
-      new_beam.lookahead_bonus =
-          lookahead_rollout(model, ctx, std::move(prefix), ca.ahead - 1, mask, stop_mask, perf);
-    }
-  }
-  return num_token_eval;
-}
+// A candidate's greedy continuation being scored across rollout waves: the
+// candidate's context (base + beam + emitted token), the accumulated -log P
+// of the continuation so far, and which pruned-in beam it feeds back into.
+struct RolloutState {
+  size_t beam_index;      // into next_beams
+  TokenSequence prefix;
+  double sum{0.0};
+  unsigned n{0};
+  bool done{false};
+};
 
 static void prune_beams(std::vector<BeamState> & beams, unsigned beam_width) {
   std::sort(beams.begin(), beams.end(), [](BeamState const & a, BeamState const & b) {
@@ -169,11 +106,86 @@ static bool beam_search_step(
   std::vector<BeamState> & current_beams, unsigned & num_token_eval,
   PerfCounters & perf
 ) {
+  // Expand the whole beam frontier with one batched decode.
   std::vector<BeamState> next_beams;
+  std::vector<BeamState const *> expanding;
+  std::vector<TokenSequence> targets;
   for (BeamState const & beam : current_beams) {
-    if (beam.stopped) next_beams.push_back(beam);
-    else num_token_eval += expand_beam(model, ctx, beam, ca, stop_mask, mask, base_tokens, next_beams, perf);
+    if (beam.stopped) { next_beams.push_back(beam); continue; }
+    TokenSequence target = base_tokens;
+    target.insert(target.end(), beam.tokens.begin(), beam.tokens.end());
+    expanding.push_back(&beam);
+    targets.push_back(std::move(target));
   }
+  std::vector<FrontierResult> expansions;
+  unsigned const decoded = model.topk_frontier(targets, mask, ca.beams, expansions, ctx);
+  num_token_eval += decoded;
+  perf.complete.tokens_eval += static_cast<unsigned>(targets.size());
+  perf.complete.tokens_restore += decoded - static_cast<unsigned>(targets.size());
+
+  std::vector<RolloutState> rollouts;
+  for (size_t b = 0; b < expanding.size(); ++b) {
+    BeamState const & beam = *expanding[b];
+    FrontierResult const & fr = expansions[b];
+    for (size_t i = 0; i < fr.tokens.size(); ++i) {
+      BeamState & new_beam = next_beams.emplace_back(beam);
+      new_beam.tokens.push_back(fr.tokens[i]);
+      new_beam.logprobs.push_back(fr.logprobs[i]);
+      new_beam.logprob += fr.logprobs[i];
+
+      if (ca.repetition) {
+        TokenSequence beam_tokens;
+        beam_tokens.insert(beam_tokens.end(), base_tokens.begin(), base_tokens.end());
+        beam_tokens.insert(beam_tokens.end(), new_beam.tokens.begin(), new_beam.tokens.end());
+        calculate_repetition_penalty(beam_tokens, new_beam.repetition_penalty, ca.repetition.value());
+      }
+
+      // A completion stops when it emits any token of the stop vocab; the stop
+      // token itself is not part of the output. No stop vocab: never stops early.
+      TokenID const emitted = new_beam.tokens.back();
+      new_beam.stopped = stop_mask && (*stop_mask)[emitted];
+      if (new_beam.stopped)
+        new_beam.tokens.pop_back();
+
+      // ahead > 1: this candidate's greedy continuation is scored below
+      // (ahead includes the candidate itself, so ahead=1 costs nothing extra).
+      if (ca.ahead > 1 && !new_beam.stopped) {
+        RolloutState r;
+        r.beam_index = next_beams.size() - 1;
+        r.prefix = targets[b];
+        r.prefix.push_back(emitted);
+        rollouts.push_back(std::move(r));
+      }
+    }
+  }
+
+  // Lookahead rollouts advance in waves — one batched decode per depth, all
+  // candidates of all beams at once. A continuation that samples a stop token
+  // ends naturally and leaves its wave.
+  for (unsigned step = 0; ca.ahead > 1 && step + 1 < ca.ahead; ++step) {
+    std::vector<size_t> live;
+    std::vector<TokenSequence> wave;
+    for (size_t r = 0; r < rollouts.size(); ++r)
+      if (!rollouts[r].done) { live.push_back(r); wave.push_back(rollouts[r].prefix); }
+    if (wave.empty()) break;
+    std::vector<FrontierResult> wres;
+    unsigned const wdecoded = model.topk_frontier(wave, mask, 1, wres, ctx);
+    num_token_eval += wdecoded;
+    perf.complete.tokens_eval += static_cast<unsigned>(wave.size());
+    perf.complete.tokens_restore += wdecoded - static_cast<unsigned>(wave.size());
+    perf.lookahead_tokens += static_cast<unsigned>(wave.size());
+    for (size_t k = 0; k < live.size(); ++k) {
+      RolloutState & r = rollouts[live[k]];
+      if (wres[k].tokens.empty()) { r.done = true; continue; }
+      r.sum += wres[k].logprobs[0];
+      r.n += 1;
+      if (stop_mask && (*stop_mask)[wres[k].tokens[0]]) r.done = true;
+      else r.prefix.push_back(wres[k].tokens[0]);
+    }
+  }
+  for (RolloutState const & r : rollouts)
+    if (r.n) next_beams[r.beam_index].lookahead_bonus = std::exp(static_cast<float>(-r.sum / r.n));
+
   if (ca.diversity) calculate_diversity_bonuses(next_beams, ca.diversity.value());
 
   bool all_stopped = std::all_of(next_beams.begin(), next_beams.end(),
