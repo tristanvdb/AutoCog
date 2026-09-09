@@ -191,7 +191,17 @@ Formatting rules for how prompts are rendered as text. Controls field labels, in
 
 **Used by:** `ista`, `psta`, `autocog run`, `autocog serve`, `autocog rpc`
 
-The syntax file format is documented in `share/syntax/default.json`.
+The syntax file format is documented in `share/syntax/default.json`; the shape
+is fixed by `share/schemas/syntax.schema.json`. Two entries govern completions:
+
+- `completion_stop` — the default stop text; instantiation mints it into a
+  stop vocab, and a completion ends when the model emits any of its tokens
+  (a field-level `stop=` overrides it; `stop=""` disables early stop).
+- `completion_vocab` — a vocab expression tree: the default generation mask
+  for completions that declare no field-level `vocab`. The shipped syntaxes
+  restrict generation to ASCII tokens without newlines, so field boundaries
+  cannot split multi-byte characters and a newline is only generable as the
+  bare stop token. Absent: unrestricted.
 
 ## Search Config (`.json`)
 

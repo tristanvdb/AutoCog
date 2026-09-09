@@ -110,6 +110,22 @@ channel {
 }
 ```
 
+## vocabs.stl
+
+Default vocabularies — building blocks for constraining `text` completions,
+defined over token *surfaces* so they adapt to whatever model runs the program:
+
+| Vocab | Tokens |
+|-------|--------|
+| `ascii_token` | Surface entirely printable ASCII (plus tab/newline) — no partial multi-byte characters |
+| `ascii_char` | Single printable-ASCII-character tokens: `text<length=N, vocab=ascii_char>` is exactly N characters |
+| `ascii_inline` | `ascii_token` without newline-carriers (the shape of the syntaxes' default completion vocab) |
+| `digit` | The ten digits — exact-length numeric fields via `text<length=N, vocab=digit, stop="">` |
+
+```
+from "vocabs.stl" import ascii_char, digit;
+```
+
 ## datastore.py
 
 In-memory key-value store for persisting data across prompts within a single execution.

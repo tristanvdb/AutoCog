@@ -64,13 +64,23 @@ alias Thought<mode="rough", goal="brainstorm"> as BrainstormThought;
 ### text
 
 Free-form text generation, up to `length` tokens (the model may stop earlier).
-The only structural parameters are `length` and `vocab`:
+The structural parameters are `length`, `vocab`, and `stop`:
 
 ```
-name is text;                         // unbounded
-name is text<length=50>;              // up to 50 tokens
-name is text<length=8, vocab=alnum>;  // restricted to a vocabulary
+name is text;                              // unbounded
+name is text<length=50>;                   // up to 50 tokens
+name is text<length=8, vocab=alnum>;       // restricted to a vocabulary
+pin  is text<length=4, vocab=digit, stop="">;  // exactly 4 digit tokens
+word is text<length=10, stop="END">;       // per-field stop text
 ```
+
+Generation ends early when the model emits a *stop token* (the token is not
+part of the field's value). The stop defaults to the rendering syntax's
+`completion_stop` (`"\n"` in the shipped syntaxes); `stop="..."` overrides it
+per field, and `stop=""` disables early stopping entirely — the field fills
+its exact token budget, which is how exact-length fields are expressed. Stop
+tokens are always generable even under a restrictive `vocab` (the stop set is
+unioned into the generation mask).
 
 Sampling/search controls (`threshold`, `beams`, `ahead`, `width`, …) are **search
 policies**, not field parameters — set them in a `search { }` block (see
@@ -159,6 +169,18 @@ pin  is text<length=4, vocab=(digit - tokenize("0"))>;
 
 Identical vocabulary expressions are deduplicated into a single entry in the
 compiled artifact.
+
+Vocabularies are importable like any other symbol, and the stdlib ships a set
+of defaults (see [Standard Library](stdlib.md#vocabsstl)):
+
+```
+from "vocabs.stl" import ascii_char, digit;
+```
+
+A field with no `vocab` falls back to the rendering syntax's
+`completion_vocab` (the shipped syntaxes default to ASCII tokens without
+newlines, so field boundaries can never split a multi-byte character); an
+explicit field-level `vocab` overrides it.
 
 ## Prompts
 
