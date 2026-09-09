@@ -17,6 +17,31 @@ set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
 
 file(GLOB_RECURSE GOLDEN_FILES "${E2E_GOLDEN}/*.golden.json")
 
+# Quality-benchmark smoke: the v0.7.2 scorer pipeline (engine run with
+# recorder -> batched efta --score -> accuracy/overhead/friction events)
+# holds together end to end on the RNG model.
+add_test(
+    NAME quality_bench_smoke
+    COMMAND ${CMAKE_COMMAND} -E env
+        bash -c "
+            set -e
+            OUT=$(mktemp -d)
+            ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/benchmarks/quality/run.py \
+                --build ${CMAKE_BINARY_DIR} --rng --syntaxes default \
+                --demos select --questions 1 --out \$OUT
+            test -s \$OUT/results-*.ndjson
+            ${Python_EXECUTABLE} -c \"
+import glob, json
+[e] = [json.loads(l) for l in open(glob.glob('\$OUT/results-*.ndjson')[0])]
+assert e['autocog.bench.tokens.structure'] > 0, e
+assert e['autocog.bench.friction.structure'] is not None, e
+print('OK: quality scorer emits overhead + friction')
+\"
+            rm -rf \$OUT
+        "
+)
+set_tests_properties(quality_bench_smoke PROPERTIES LABELS "efta;quality" TIMEOUT 120)
+
 # Scored encode: with --score every non-root node's logprobs carry
 # P(token | prefix) — the constraint-friction raw data. RNG smoke: values are
 # random but must be present and per-token.

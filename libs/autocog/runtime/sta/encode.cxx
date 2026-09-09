@@ -1,4 +1,5 @@
 #include "autocog/runtime/sta/encode.hxx"
+#include "autocog/runtime/sta/walk.hxx"
 
 #include "autocog/utilities/errors.hxx"
 #include "autocog/utilities/exception.hxx"
@@ -20,6 +21,27 @@ bool doc_is_arr(Doc const & d) { return std::holds_alternative<Doc::Array>(d.val
 bool doc_is_null(Doc const & d) {
     auto const * v = std::get_if<autocog::types::Value>(&d.value);
     return v && std::holds_alternative<std::monostate>(*v);
+}
+
+bool doc_equal(Doc const & a, Doc const & b) {
+    if (a.value.index() != b.value.index()) return false;
+    if (auto const * va = std::get_if<autocog::types::Value>(&a.value))
+        return *va == std::get<autocog::types::Value>(b.value);
+    if (auto const * aa = std::get_if<Doc::Array>(&a.value)) {
+        auto const & ba = std::get<Doc::Array>(b.value);
+        if (aa->size() != ba.size()) return false;
+        for (size_t i = 0; i < aa->size(); ++i)
+            if (!doc_equal((*aa)[i], ba[i])) return false;
+        return true;
+    }
+    auto const & ao = std::get<Doc::Object>(a.value);
+    auto const & bo = std::get<Doc::Object>(b.value);
+    if (ao.size() != bo.size()) return false;
+    for (auto const & [k, v] : ao) {
+        auto it = bo.find(k);
+        if (it == bo.end() || !doc_equal(v, it->second)) return false;
+    }
+    return true;
 }
 
 // A scalar frame value as the text it renders to. Frames produced by the
@@ -98,12 +120,13 @@ struct Encoder {
     autocog::data::FTA const & fta;
     std::vector<autocog::data::Field> const & fields;
     Doc const & frame;
+    Doc const & content;
     std::map<std::string, unsigned> uid_to_index;
 
     Encoder(autocog::data::FTA const & fta_,
             std::vector<autocog::data::Field> const & fields_,
-            Doc const & frame_)
-        : fta(fta_), fields(fields_), frame(frame_) {
+            Doc const & frame_, Doc const & content_)
+        : fta(fta_), fields(fields_), frame(frame_), content(content_) {
         for (unsigned i = 0; i < fta.actions.size(); ++i)
             uid_to_index.emplace(fta.actions[i].uid, i);
     }
@@ -173,6 +196,20 @@ struct Encoder {
                 std::string const want = doc_to_text(*v, act.uid);
                 for (size_t i = 0; i < ch->choices.size(); ++i)
                     if (ch->choices[i] == want) { idx = i; break; }
+                if (idx == ch->choices.size()) {
+                    // Engine-produced frames hold *resolved* select values;
+                    // probe each index through the walker's resolver.
+                    auto const * cf = std::get_if<autocog::data::ChoiceFormat>(
+                        &fields[*act.field].format.value);
+                    if (cf && cf->mode == "select") {
+                        for (size_t i = 0; i < ch->choices.size(); ++i) {
+                            if (doc_equal(resolve_select(ch->choices[i], *cf, content), *v)) {
+                                idx = i;
+                                break;
+                            }
+                        }
+                    }
+                }
                 if (idx == ch->choices.size())
                     throw autocog::ConfigError("Frame value '" + want + "' matches no choice of '" + act.uid + "'", act.uid);
             } else {
@@ -194,7 +231,8 @@ autocog::data::FTT encode_frame_to_ftt(
     autocog::data::FTA const & fta,
     autocog::data::STA const & sta,
     std::string const & prompt_name,
-    autocog::types::Document const & frame
+    autocog::types::Document const & frame,
+    autocog::types::Document const & content
 ) {
     auto pit = sta.prompts.find(prompt_name);
     if (pit == sta.prompts.end())
@@ -202,7 +240,7 @@ autocog::data::FTT encode_frame_to_ftt(
     if (fta.actions.empty())
         throw autocog::ConfigError("Cannot encode against an empty FTA", prompt_name);
 
-    Encoder enc(fta, pit->second.fields, frame);
+    Encoder enc(fta, pit->second.fields, frame, content);
 
     autocog::data::FTT ftt;
     std::optional<unsigned> next = enc.fill(ftt.root, 0);

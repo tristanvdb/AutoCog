@@ -27,6 +27,16 @@ namespace autocog::runtime::sta {
 ///                     whose leaf has the highest score (matching FTT::proba()).
 ///                     Unknown values raise ConfigError.
 /// @return The frame: a nested Document of field name -> value.
+/// Resolve a `select` choice index to the actual value from `content` by
+/// walking the choice format's path. On any miss the raw index string comes
+/// back unchanged. Shared by the walker (index -> value) and the frame
+/// encoder (value -> index, by probing each index).
+autocog::types::Document resolve_select(
+    std::string const & index_str,
+    autocog::data::ChoiceFormat const & cf,
+    autocog::types::Document const & content
+);
+
 autocog::types::Document walk_ftt_to_frame(
     autocog::data::FTT const & ftt,
     autocog::data::STA const & sta,

@@ -1,0 +1,12 @@
+[
+  {"id": "water",   "topic": "Science",    "question": "What is H2O?",                                   "choices": ["Water", "Fire", "Air", "Earth"],                     "answer": "Water"},
+  {"id": "paris",   "topic": "Geography",  "question": "What is the capital of France?",                 "choices": ["Berlin", "Paris", "Rome", "Madrid"],                 "answer": "Paris"},
+  {"id": "red",     "topic": "Physics",    "question": "Which color has the longest wavelength?",        "choices": ["Blue", "Green", "Red", "Violet"],                    "answer": "Red"},
+  {"id": "mars",    "topic": "Astronomy",  "question": "Which planet is known as the Red Planet?",       "choices": ["Venus", "Mars", "Jupiter", "Mercury"],               "answer": "Mars"},
+  {"id": "eight",   "topic": "Math",       "question": "What is 3 + 5?",                                 "choices": ["Six", "Seven", "Eight", "Nine"],                     "answer": "Eight"},
+  {"id": "oxygen",  "topic": "Chemistry",  "question": "Which element has the symbol O?",                "choices": ["Gold", "Oxygen", "Osmium", "Iron"],                  "answer": "Oxygen"},
+  {"id": "heart",   "topic": "Biology",    "question": "Which organ pumps blood through the body?",      "choices": ["Liver", "Lung", "Heart", "Kidney"],                  "answer": "Heart"},
+  {"id": "pacific", "topic": "Geography",  "question": "What is the largest ocean on Earth?",            "choices": ["Atlantic", "Indian", "Arctic", "Pacific"],           "answer": "Pacific"},
+  {"id": "python",  "topic": "Computing",  "question": "Which of these is a programming language?",      "choices": ["Python", "Cobra", "Viper", "Boa"],                   "answer": "Python"},
+  {"id": "seven",   "topic": "Math",       "question": "How many days are in a week?",                   "choices": ["Five", "Six", "Seven", "Eight"],                     "answer": "Seven"}
+]

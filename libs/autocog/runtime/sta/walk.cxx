@@ -58,6 +58,8 @@ double leaf_score(autocog::data::FTTNode const & leaf) {
     return std::exp(-logprob / length);
 }
 
+} // namespace
+
 // Resolve a `select` choice index to the actual value from content, by walking
 // the choice format's path into the content document. On any miss, the raw
 // index string is returned unchanged.
@@ -106,6 +108,8 @@ Doc resolve_select(std::string const & index_str,
     }
     return str_doc(index_str);
 }
+
+namespace {
 
 // Set a value into the nested frame using the field hierarchy (depth + indices).
 void set_field_value(Doc & frame,
