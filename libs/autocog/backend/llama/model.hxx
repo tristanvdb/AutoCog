@@ -53,15 +53,20 @@ class Model {
     std::vector<Slot> slots_;
     size_t active_slot_ = 0;
     int live_logits_slot_ = -1;  ///< slot whose final position produced the live logits
+    int live_logits_ith_ = -1;   ///< batch index of that final position's logits row
     uint64_t slot_clock_ = 0;
     KvStats kv_stats_;
 
-    // Decode `n` tokens into `slot` starting at position `pos0` (final-position
-    // logits requested). On KV-cell exhaustion, evicts every other slot and
-    // retries once. Returns n.
+    // Decode `n` tokens into `slot` starting at position `pos0`, requesting
+    // logits at the final position (or, with `all_logits`, at every position —
+    // rows then read back via llama_get_logits_ith by batch index). On KV-cell
+    // exhaustion, evicts every other slot and retries once. Returns n.
     unsigned decode_extension(size_t slot, int pos0, TokenID const * toks, size_t n,
-                              ContextID const id);
+                              ContextID const id, bool all_logits = false);
     size_t pick_victim(size_t keep) const;
+
+    // The live logits row: the active slot's final-position distribution.
+    float const * live_row(ContextID const id) const;
     std::string source_;                 // GGUF path ("" for the RNG model)
     mutable std::string sha_cache_;      // lazily-computed full SHA-256 of the GGUF
 

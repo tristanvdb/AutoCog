@@ -248,7 +248,7 @@ size_t Model::vocab_size() const {
   return llama_vocab_n_tokens(this->get_vocab());
 }
 
-static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
+static float logit_to_log_sum_exp(float const * logit, unsigned vocab_size) {
   // Find max logit for numerical stability
   float max_logit = *std::max_element(logit, logit + vocab_size);
 
@@ -260,8 +260,7 @@ static float logit_to_log_sum_exp(float * logit, unsigned vocab_size) {
   return max_logit + std::log(log_sum_exp);
 }
 
-static void sample_logprobs(llama_context * ctx, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
-  float * logits = llama_get_logits(ctx);
+static void sample_logprobs(float const * logits, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
   float log_sum_exp = logit_to_log_sum_exp(logits, mask.size());
 
   for (unsigned tok = 0; tok < mask.size(); tok++) {
@@ -271,8 +270,8 @@ static void sample_logprobs(llama_context * ctx, std::vector<bool> const & mask,
   }
 }
 
-static float retrieve_logprob(llama_context * ctx, unsigned vocab_size, TokenID token) {
-  float * logits = llama_get_logits(ctx);
+// -log P(token) from one logits row.
+static float row_logprob(float const * logits, unsigned vocab_size, TokenID token) {
   return logit_to_log_sum_exp(logits, vocab_size) - logits[token];
 }
 
@@ -294,8 +293,12 @@ size_t Model::pick_victim(size_t keep) const {
   return victim;
 }
 
+float const * Model::live_row(ContextID const id) const {
+  return llama_get_logits_ith(this->get_context(id), live_logits_ith_);
+}
+
 unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, size_t n,
-                                 ContextID const id) {
+                                 ContextID const id, bool all_logits) {
   if (n == 0) return 0;
   llama_context * ctx = this->get_context(id);
   llama_memory_t mem = llama_get_memory(ctx);
@@ -307,7 +310,7 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     batch.pos[i] = pos0 + static_cast<int>(i);
     batch.n_seq_id[i] = 1;
     batch.seq_id[i][0] = static_cast<llama_seq_id>(slot);
-    batch.logits[i] = (i + 1 == n);
+    batch.logits[i] = all_logits || (i + 1 == n);
   }
 
   int ret = llama_decode(ctx, batch);
@@ -328,6 +331,7 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
   }
   live_logits_slot_ = static_cast<int>(slot);
+  live_logits_ith_ = static_cast<int>(n) - 1;
   return n;
 }
 
@@ -447,27 +451,36 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   check_context_id(id);
   // Forced scoring: P(token_i | prefix, token_<i). The distribution for each
   // token is the one produced *before* it is decoded — the prefix's primed
-  // final-position logits for the first token, then each decode's output for
-  // the next. (Decoding the last token keeps the slot's logits live for
-  // whatever follows.)
+  // final-position logits for the first token, then the previous position's
+  // row of a whole-sequence decode with per-position logits. Chunked so the
+  // per-position logits buffer (chunk × vocab floats) stays bounded.
   if (live_logits_slot_ != static_cast<int>(active_slot_)) {
     throw autocog::utilities::InternalError("eval_sequences: live logits do not belong to the active KV slot (missing prime_logits on set_tokens?)");
   }
   Slot & slot = this->slots_[active_slot_];
-  int token_pos = static_cast<int>(slot.tokens.size());
+  int const pos0 = static_cast<int>(slot.tokens.size());
+  size_t const n = new_tokens.size();
+  unsigned const vocab = this->vocab_size();
+  llama_context * ctx = this->get_context(id);
   logprobs.clear();
+  if (n == 0) return 0;
 
-  for (auto token: new_tokens) {
-  SPDLOG_LOGGER_TRACE(autocog::log(), " > token_pos =");
-
-    logprobs.push_back(retrieve_logprob(this->get_context(id), this->vocab_size(), token));
-    decode_extension(active_slot_, token_pos, &token, 1, id);
-
-    token_pos++;
+  size_t constexpr CHUNK = 256;
+  logprobs.push_back(row_logprob(live_row(id), vocab, new_tokens[0]));
+  for (size_t done = 0; done < n; done += CHUNK) {
+    size_t const len = std::min(CHUNK, n - done);
+    decode_extension(active_slot_, pos0 + static_cast<int>(done),
+                     new_tokens.data() + done, len, id, /*all_logits=*/true);
+    for (size_t j = 0; j < len; ++j) {
+      size_t const scored = done + j + 1;  // row j predicts the next token
+      if (scored < n)
+        logprobs.push_back(row_logprob(llama_get_logits_ith(ctx, static_cast<int>(j)),
+                                       vocab, new_tokens[scored]));
+    }
   }
   slot.tokens.insert(slot.tokens.end(), new_tokens.begin(), new_tokens.end());
   slot.last_used = ++slot_clock_;
-  return new_tokens.size();
+  return n;
 }
 
 
@@ -533,13 +546,11 @@ unsigned Model::eval_topk_tokens(
     throw autocog::utilities::InternalError("eval_topk_tokens: live logits do not belong to the active KV slot (missing prime_logits on set_tokens?)");
   }
 
-  llama_context * ctx = this->get_context(id);
-
   topk_tokens.clear();
   topk_lobprobs.clear();
 
   std::vector<std::pair<TokenID, float>> candidates;
-  sample_logprobs(ctx, vocab_mask, candidates);
+  sample_logprobs(live_row(id), vocab_mask, candidates);
 
   // Handle edge case: no valid candidates
   if (candidates.empty()) {
