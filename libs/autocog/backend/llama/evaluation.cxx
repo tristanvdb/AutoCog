@@ -111,7 +111,9 @@ void Evaluation::enqueue(ActionID const action, data::FTTNode & parent, PathStat
 std::pair<Model &, ContextID> Evaluation::restore(PathState & state, PerfCounters::KindStats & stats) {
   Model & model = Manager::get_model(this->model);
   if (!state.context) state.context = 0;
-  stats.tokens_restore += model.set_tokens(state.tokens, state.context.value());
+  // Every action starts scoring or sampling from the restored prefix's
+  // final-position distribution, so restoring always primes the logits.
+  stats.tokens_restore += model.set_tokens(state.tokens, state.context.value(), /*prime_logits=*/true);
   return std::pair<Model &, ContextID>(model, state.context.value());
 }
 

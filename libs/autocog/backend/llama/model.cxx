@@ -445,6 +445,14 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   }
 
   check_context_id(id);
+  // Forced scoring: P(token_i | prefix, token_<i). The distribution for each
+  // token is the one produced *before* it is decoded — the prefix's primed
+  // final-position logits for the first token, then each decode's output for
+  // the next. (Decoding the last token keeps the slot's logits live for
+  // whatever follows.)
+  if (live_logits_slot_ != static_cast<int>(active_slot_)) {
+    throw autocog::utilities::InternalError("eval_sequences: live logits do not belong to the active KV slot (missing prime_logits on set_tokens?)");
+  }
   Slot & slot = this->slots_[active_slot_];
   int token_pos = static_cast<int>(slot.tokens.size());
   logprobs.clear();
@@ -452,8 +460,8 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   for (auto token: new_tokens) {
   SPDLOG_LOGGER_TRACE(autocog::log(), " > token_pos =");
 
-    decode_extension(active_slot_, token_pos, &token, 1, id);
     logprobs.push_back(retrieve_logprob(this->get_context(id), this->vocab_size(), token));
+    decode_extension(active_slot_, token_pos, &token, 1, id);
 
     token_pos++;
   }
