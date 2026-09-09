@@ -48,7 +48,7 @@ print('OK: scored encode carries per-token logprobs')
 )
 set_tests_properties(efta_score_smoke PROPERTIES LABELS "efta;score" TIMEOUT 30)
 
-foreach(syntax_name default chatml llama2chat plain)
+foreach(syntax_name default chatml llama2chat plain special)
   set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/${syntax_name}.json)
   foreach(golden_path ${GOLDEN_FILES})
     file(RELATIVE_PATH golden_rel "${E2E_GOLDEN}" "${golden_path}")
