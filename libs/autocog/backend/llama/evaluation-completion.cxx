@@ -117,8 +117,12 @@ static bool beam_search_step(
     expanding.push_back(&beam);
     targets.push_back(std::move(target));
   }
+  // `topk` = candidate tokens sampled per expanded beam; `beams` = hypotheses
+  // surviving the step (prune_beams below). Unset topk keeps the historical
+  // implicit topk == beams.
+  size_t const topk = ca.topk ? *ca.topk : ca.beams;
   std::vector<FrontierResult> expansions;
-  unsigned const decoded = model.topk_frontier(targets, mask, ca.beams, expansions, ctx);
+  unsigned const decoded = model.topk_frontier(targets, mask, topk, expansions, ctx);
   num_token_eval += decoded;
   perf.complete.tokens_eval += static_cast<unsigned>(targets.size());
   perf.complete.tokens_restore += decoded - static_cast<unsigned>(targets.size());

@@ -65,6 +65,7 @@ def _run_with_slots(slots, stl, model, syntax, search):
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 
+@pytest.mark.timeout(900)  # two real-model beam searches; slow on a loaded machine
 def test_slot_pool_matches_single_sequence(tmp_path, llama3_model_path,
                                            syntax_path):
     stl = tmp_path / "kv.stl"

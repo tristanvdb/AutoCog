@@ -18,6 +18,7 @@
       "properties": {
         "threshold":  { "type": "number", "description": "Probability threshold for pruning." },
         "beams":      { "type": "integer", "minimum": 0, "description": "Number of beams (0 = disabled)." },
+        "topk":       { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }], "description": "Candidate tokens sampled per beam expansion (null = same as beams)." },
         "ahead":      { "type": "integer", "minimum": 0, "description": "Look-ahead depth (0 = disabled)." },
         "width":      { "type": "integer", "minimum": 1, "description": "Beam width." },
         "repetition": { "oneOf": [{ "type": "number" }, { "type": "null" }], "description": "Repetition penalty (null = disabled)." },

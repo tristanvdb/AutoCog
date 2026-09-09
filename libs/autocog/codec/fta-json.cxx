@@ -26,6 +26,7 @@ nlohmann::json to_json(Action const & act) {
       j["length"]    = a.length;
       j["threshold"] = a.threshold;
       j["beams"]     = a.beams;
+      if (a.topk) j["topk"] = *a.topk;
       j["ahead"]     = a.ahead;
       j["width"]     = a.width;
       if (a.repetition) j["repetition"] = *a.repetition;
@@ -60,6 +61,7 @@ void from_json(nlohmann::json const & dom, Action & a) {
     c.length    = dom.at("length").get<unsigned>();
     c.threshold = dom.at("threshold").get<float>();
     c.beams     = dom.at("beams").get<unsigned>();
+    if (dom.contains("topk") && !dom["topk"].is_null()) c.topk = dom["topk"].get<unsigned>();
     c.ahead     = dom.at("ahead").get<unsigned>();
     c.width     = dom.at("width").get<unsigned>();
     if (dom.contains("repetition") && !dom["repetition"].is_null()) c.repetition = dom["repetition"].get<float>();

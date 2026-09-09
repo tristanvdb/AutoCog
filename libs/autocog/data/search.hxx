@@ -12,6 +12,8 @@ namespace autocog::data {
 struct TextSearch {
   float threshold = 0.0f;
   unsigned beams = 0;
+  std::optional<unsigned> topk;  ///< Candidate tokens sampled per beam expansion.
+                                 ///< Unset = `beams` (the historical implicit tie).
   unsigned ahead = 0;
   unsigned width = 0;
   std::optional<float> repetition;  ///< Unset = not used (avoids a near-zero float).

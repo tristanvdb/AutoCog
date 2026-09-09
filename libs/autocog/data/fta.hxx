@@ -23,6 +23,8 @@ struct CompleteAction {
   unsigned length = 0;
   float threshold = 0.0f;
   unsigned beams = 0;
+  std::optional<unsigned> topk;  ///< Candidate tokens sampled per beam expansion;
+                                 ///< unset = `beams` (the historical implicit tie).
   unsigned ahead = 0;
   unsigned width = 0;
   std::optional<float> repetition;

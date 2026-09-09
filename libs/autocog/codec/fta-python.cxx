@@ -27,6 +27,7 @@ pybind11::object to_py(Action const & act) {
       d["length"]    = a.length;
       d["threshold"] = a.threshold;
       d["beams"]     = a.beams;
+      if (a.topk) d["topk"] = *a.topk;
       d["ahead"]     = a.ahead;
       d["width"]     = a.width;
       if (a.repetition) d["repetition"] = *a.repetition;
@@ -62,6 +63,7 @@ void from_py(pybind11::object const & obj, Action & a) {
     c.length    = d["length"].cast<unsigned>();
     c.threshold = d["threshold"].cast<float>();
     c.beams     = d["beams"].cast<unsigned>();
+    if (d.contains("topk") && !d["topk"].is_none()) c.topk = d["topk"].cast<unsigned>();
     c.ahead     = d["ahead"].cast<unsigned>();
     c.width     = d["width"].cast<unsigned>();
     if (d.contains("repetition") && !d["repetition"].is_none()) c.repetition = d["repetition"].cast<float>();

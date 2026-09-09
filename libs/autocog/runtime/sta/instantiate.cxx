@@ -716,6 +716,7 @@ struct FTABuilder {
         TextSearch r = search.text;  // config defaults
         if (auto v = pol_f(pol, "text", "threshold")) r.threshold = *v;
         if (auto v = pol_u(pol, "text", "beams"))     r.beams = *v;
+        if (auto v = pol_u(pol, "text", "topk"))      r.topk = *v;
         if (auto v = pol_u(pol, "text", "ahead"))     r.ahead = *v;
         if (auto v = pol_u(pol, "text", "width"))     r.width = *v;
         if (auto v = pol_f(pol, "text", "repetition")) r.repetition = *v;
@@ -746,6 +747,7 @@ struct FTABuilder {
         body.length     = cf.length.has_value() ? static_cast<unsigned>(*cf.length) : 50u;
         body.threshold  = ts.threshold;
         body.beams      = ts.beams;
+        body.topk       = ts.topk;
         body.ahead      = ts.ahead;
         body.width      = ts.width;
         body.repetition = ts.repetition;

@@ -9,6 +9,7 @@ nlohmann::json to_json(TextSearch const & t) {
   nlohmann::json j;
   j["threshold"] = t.threshold;
   j["beams"]     = t.beams;
+  if (t.topk) j["topk"] = *t.topk;
   j["ahead"]     = t.ahead;
   j["width"]     = t.width;
   if (t.repetition) j["repetition"] = *t.repetition;
@@ -20,6 +21,7 @@ void from_json(nlohmann::json const & t, TextSearch & out) {
   autocog::codec::read_guarded("TextSearch", [&]{
   out.threshold = t.at("threshold").get<float>();
   out.beams     = t.at("beams").get<unsigned>();
+  if (t.contains("topk") && !t.at("topk").is_null()) out.topk = t.at("topk").get<unsigned>();
   out.ahead     = t.at("ahead").get<unsigned>();
   out.width     = t.at("width").get<unsigned>();
   if (t.contains("repetition") && !t.at("repetition").is_null()) out.repetition = t.at("repetition").get<float>();

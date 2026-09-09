@@ -18,7 +18,7 @@ std::string Action::hash() const {
       h.put(a.text).put(a.evaluate);
     },
     [&](CompleteAction const & a) {
-      h.put(a.length).put(a.threshold).put(a.beams).put(a.ahead).put(a.width)
+      h.put(a.length).put(a.threshold).put(a.beams).put(a.topk).put(a.ahead).put(a.width)
        .put(a.repetition).put(a.diversity).put(a.vocab).put(a.stop);
     },
     [&](ChooseAction const & a) {

@@ -10,6 +10,7 @@ pybind11::object to_py(TextSearch const & t) {
   py::dict d;
   d["threshold"] = t.threshold;
   d["beams"]     = t.beams;
+  if (t.topk) d["topk"] = *t.topk;
   d["ahead"]     = t.ahead;
   d["width"]     = t.width;
   if (t.repetition) d["repetition"] = *t.repetition;
@@ -22,6 +23,7 @@ void from_py(pybind11::object const & obj, TextSearch & out) {
   py::dict t = obj.cast<py::dict>();
   out.threshold = t["threshold"].cast<float>();
   out.beams     = t["beams"].cast<unsigned>();
+  if (t.contains("topk") && !t["topk"].is_none()) out.topk = t["topk"].cast<unsigned>();
   out.ahead     = t["ahead"].cast<unsigned>();
   out.width     = t["width"].cast<unsigned>();
   if (t.contains("repetition")) out.repetition = t["repetition"].cast<float>();
