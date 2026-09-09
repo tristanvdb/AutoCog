@@ -54,8 +54,14 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   rng(0),
   source_(model_path)
 {
-  // Load model
+  // Load model. GPU offload is opt-in via AUTOCOG_NGL (number of layers to
+  // offload; 99 = whole model) so CPU-only environments stay the default and
+  // benchmarks state their hardware explicitly.
   llama_model_params model_params = llama_model_default_params();
+  if (char const * env = std::getenv("AUTOCOG_NGL")) {
+    long v = std::strtol(env, nullptr, 10);
+    if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
+  }
   this->model = llama_model_load_from_file(model_path.c_str(), model_params);
   if (!this->model) {
     throw autocog::ModelError("Failed to load model from: " + model_path, id, "load");
