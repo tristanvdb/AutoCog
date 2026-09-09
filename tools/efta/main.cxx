@@ -36,6 +36,9 @@ static void print_usage(char const * prog) {
               << "  --frame <file|json>    Frame of field values: a file path or inline JSON\n"
               << "  --model <file>         GGUF model file (tokenizer)\n"
               << "  --rng                  Built-in RNG model (byte-level tokenizer)\n"
+              << "  --score                Score the encoded path against the model:\n"
+              << "                         every node's logprobs become P(token | prefix),\n"
+              << "                         measuring constraint friction on forced tokens\n"
               << "  --ftt <file>           Output FTT JSON (/dev/stdout for stdout)\n"
               << "  --ctx N                Maximum context size for the model\n"
               << "  --verbose [LEVEL]      Log level (trace,debug,info,warn,error; default: debug)\n"
@@ -48,6 +51,7 @@ static int run(int argc, char ** argv) {
     std::string sta_file, fta_file, prompt_name, frame_arg, model_path, ftt_file;
     unsigned ctx_size = 4096;
     bool use_rng = false;
+    bool do_score = false;
 
     autocog::init_console_logger();
 
@@ -57,6 +61,7 @@ static int run(int argc, char ** argv) {
         if (arg == "--version") { std::cout << "efta " << autocog::version() << "\n"; return 0; }
         if (arg == "--build-info") { std::cout << autocog::build_info(); return 0; }
         if (arg == "--rng") { use_rng = true; continue; }
+        if (arg == "--score") { do_score = true; continue; }
         if (arg == "--sta"    && i + 1 < argc) { sta_file    = argv[++i]; continue; }
         if (arg == "--fta"    && i + 1 < argc) { fta_file    = argv[++i]; continue; }
         if (arg == "--prompt" && i + 1 < argc) { prompt_name = argv[++i]; continue; }
@@ -99,6 +104,7 @@ static int run(int argc, char ** argv) {
     llama::ModelID model_id = 0;
     if (!use_rng) model_id = llama::Manager::add_model(model_path, ctx_size);
     llama::tokenize(model_id, ftt);
+    if (do_score) llama::score(model_id, ftt);
     ftt.finalize();
 
     std::ostream * out = &std::cout;

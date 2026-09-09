@@ -43,6 +43,13 @@ void detokenize(ModelID const model, data::FTT & ftt);
 /// by the frame encoder — under this model's tokenizer.
 void tokenize(ModelID const model, data::FTT & ftt);
 
+/// Score every node's tokens against the model as a forced path:
+/// P(token | everything above it in the tree), filling logprobs/logprob in
+/// place. On an encoded FTT this measures constraint friction — how hard the
+/// model fights the structural tokens it never chose. The root (the
+/// unconditioned prompt) keeps zero logprobs.
+void score(ModelID const model, data::FTT & ftt);
+
 }
 
 #endif // AUTOCOG_BACKEND_LLAMA_PREPARED_HXX

@@ -17,6 +17,37 @@ set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
 
 file(GLOB_RECURSE GOLDEN_FILES "${E2E_GOLDEN}/*.golden.json")
 
+# Scored encode: with --score every non-root node's logprobs carry
+# P(token | prefix) — the constraint-friction raw data. RNG smoke: values are
+# random but must be present and per-token.
+set(SC_STL ${STL_FIXTURES}/language/structures/test_basic_record.stl)
+set(SC_GOLDEN ${E2E_GOLDEN}/language/structures/test_basic_record.test.golden.json)
+add_test(
+    NAME efta_score_smoke
+    COMMAND ${CMAKE_COMMAND} -E env
+        bash -c "
+            set -e
+            STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp)
+            $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${SC_STL} 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_efta> --sta \$STA --fta \$FTA --prompt test --frame ${SC_GOLDEN} --rng --score --ftt \$FTT 2>/dev/null
+            ${Python_EXECUTABLE} -c \"
+import json, sys
+d = json.load(open('\$FTT'))
+def walk(n, depth):
+    if depth > 0 and n['tokens'] and not n['logprobs']:
+        print('unscored node:', n.get('uid')); sys.exit(1)
+    if depth > 0 and len(n['logprobs']) != len(n['tokens']):
+        print('logprob/token mismatch:', n.get('uid')); sys.exit(1)
+    for c in n['children']: walk(c, depth + 1)
+walk(d, 0)
+print('OK: scored encode carries per-token logprobs')
+\"
+            rm -f \$STA \$FTA \$FTT
+        "
+)
+set_tests_properties(efta_score_smoke PROPERTIES LABELS "efta;score" TIMEOUT 30)
+
 foreach(syntax_name default chatml llama2chat plain)
   set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/${syntax_name}.json)
   foreach(golden_path ${GOLDEN_FILES})

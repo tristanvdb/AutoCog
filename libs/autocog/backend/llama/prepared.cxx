@@ -72,6 +72,28 @@ void tokenize(ModelID const id, data::FTT & ftt) {
   walk(ftt.root, 0);
 }
 
+void score(ModelID const id, data::FTT & ftt) {
+  Model & model = Manager::get_model(id);
+  std::function<void(data::FTTNode &, TokenSequence const &, float)> walk =
+      [&](data::FTTNode & node, TokenSequence const & prefix, float parent_logprob) {
+    if (!node.tokens.empty() && !prefix.empty()) {
+      model.set_tokens(prefix, 0, /*prime_logits=*/true);
+      ProbaSequence logprobs;
+      model.eval_sequences(node.tokens, logprobs, 0);
+      node.logprobs = std::move(logprobs);
+    } else {
+      node.logprobs.assign(node.tokens.size(), 0.0f);
+    }
+    float lp = parent_logprob;
+    for (float l : node.logprobs) lp += l;
+    node.logprob = lp;
+    TokenSequence extended = prefix;
+    extended.insert(extended.end(), node.tokens.begin(), node.tokens.end());
+    for (auto & child : node.children) walk(child, extended, lp);
+  };
+  walk(ftt.root, {}, 0.0f);
+}
+
 void detokenize(ModelID const id, data::FTT & ftt) {
   Model & model = Manager::get_model(id);
   std::function<void(data::FTTNode &)> walk = [&](data::FTTNode & node) {
