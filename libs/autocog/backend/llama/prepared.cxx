@@ -36,13 +36,15 @@ PreparedFTA prepare(ModelID const id, data::FTA const & fta) {
     if (auto const * t = std::get_if<data::TextAction>(&a.body)) {
       if (!t->text.empty()) p.tokens = model.tokenize(t->text, false, true);
     } else if (auto const * c = std::get_if<data::CompleteAction>(&a.body)) {
-      p.stop = model.tokenize(c->stop_text, false, true);
-      if (c->vocab) {  // prime the per-model mask cache so it is ready at gen time
-        auto vit = fta.vocabs.find(*c->vocab);
+      // Prime the per-model mask cache (generation and stop vocabs) so the
+      // masks are ready at generation time.
+      for (auto const & ref : {c->vocab, c->stop}) {
+        if (!ref) continue;
+        auto vit = fta.vocabs.find(*ref);
         if (vit == fta.vocabs.end())
           throw autocog::ConfigError(
-            "FTA action '" + a.uid + "' references unknown vocab '" + *c->vocab + "'", a.uid);
-        model.vocab_mask(*c->vocab, vit->second);
+            "FTA action '" + a.uid + "' references unknown vocab '" + *ref + "'", a.uid);
+        model.vocab_mask(*ref, vit->second);
       }
     } else if (auto const * ch = std::get_if<data::ChooseAction>(&a.body)) {
       p.choices.reserve(ch->choices.size());

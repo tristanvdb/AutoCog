@@ -25,10 +25,15 @@ struct CompleteAction {
   unsigned beams = 0;
   unsigned ahead = 0;
   unsigned width = 0;
-  std::string stop_text;
   std::optional<float> repetition;
   std::optional<float> diversity;
-  std::optional<std::string> vocab;   ///< Reference into FTA::vocabs.
+  std::optional<std::string> vocab;   ///< Reference into FTA::vocabs; masks generation.
+  std::optional<std::string> stop;    ///< Reference into FTA::vocabs: emitting any member
+                                      ///< token ends the completion (the token is dropped
+                                      ///< from the output). The stop set is unioned into
+                                      ///< the generation mask so it stays reachable under
+                                      ///< restrictive vocabs. Absent: no early stop — the
+                                      ///< completion runs to exactly `length` tokens.
 };
 
 /// Constrained selection among a fixed list of choices.

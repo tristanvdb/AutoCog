@@ -626,6 +626,13 @@ struct FTABuilder {
     std::set<int> described_fields;
     std::map<std::string, int> memo;  // state_tag → entry action ID
 
+    // Stop vocab minted from the syntax's completion_stop: complete actions
+    // reference it, and the assembly adds it to the FTA vocab table when used.
+    // An empty completion_stop mints nothing — completions have no early stop.
+    std::optional<std::string> stop_ref;
+    autocog::data::VocabExpr stop_expr;
+    bool stop_used = false;
+
     // Create field+endl for a successor, with UIDs scoped to the parent.
     // Returns the field entry ID (or -1 for records).
     // Connects field → endl. Does NOT connect branch → field (caller does that).
@@ -657,7 +664,13 @@ struct FTABuilder {
 
     FTABuilder(autocog::data::Prompt const & p, std::map<std::string, ConcreteState> const & st,
                Doc const & c, Syntax const & s, SearchConfig const & sc)
-        : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
+        : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {
+        if (!s.completion_stop.empty()) {
+            stop_expr.kind = autocog::data::VocabExpr::Kind::Tokenize;
+            stop_expr.strings = {s.completion_stop};
+            stop_ref = "vocab_" + stop_expr.hash();
+        }
+    }
 
     int add_text(std::string const & uid, std::string const & text) {
         int id = action_id++;
@@ -726,10 +739,11 @@ struct FTABuilder {
         body.beams      = ts.beams;
         body.ahead      = ts.ahead;
         body.width      = ts.width;
-        body.stop_text  = syntax.completion_stop;
         body.repetition = ts.repetition;
         body.diversity  = ts.diversity;
         body.vocab      = cf.vocab;
+        body.stop       = stop_ref;
+        if (stop_ref) stop_used = true;
         actions.push_back(autocog::data::Action{
             uid, {}, std::nullopt, std::nullopt, std::move(body)
         });
@@ -1011,6 +1025,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     fta.actions = std::move(b.actions);
     fta.queue_metric = metric;
     fta.vocabs = prompt.vocabs;
+    if (b.stop_used) fta.vocabs.emplace(*b.stop_ref, b.stop_expr);
 
     // Finalize as a derived artifact. Provenance is the three inputs this FTA
     // was instantiated from; the sta/syntax/search uids are read from the

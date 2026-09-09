@@ -28,10 +28,10 @@ nlohmann::json to_json(Action const & act) {
       j["beams"]     = a.beams;
       j["ahead"]     = a.ahead;
       j["width"]     = a.width;
-      j["stop_text"] = a.stop_text;
       if (a.repetition) j["repetition"] = *a.repetition;
       if (a.diversity)  j["diversity"]  = *a.diversity;
       if (a.vocab)      j["vocab"]      = *a.vocab;
+      if (a.stop)       j["stop"]       = *a.stop;
     },
     [&](ChooseAction const & a) {
       j["type"]      = "choose";
@@ -62,10 +62,10 @@ void from_json(nlohmann::json const & dom, Action & a) {
     c.beams     = dom.at("beams").get<unsigned>();
     c.ahead     = dom.at("ahead").get<unsigned>();
     c.width     = dom.at("width").get<unsigned>();
-    c.stop_text = dom.at("stop_text").get<std::string>();
     if (dom.contains("repetition") && !dom["repetition"].is_null()) c.repetition = dom["repetition"].get<float>();
     if (dom.contains("diversity")  && !dom["diversity"].is_null())  c.diversity  = dom["diversity"].get<float>();
     if (dom.contains("vocab")      && !dom["vocab"].is_null())      c.vocab      = dom["vocab"].get<std::string>();
+    if (dom.contains("stop")       && !dom["stop"].is_null())       c.stop       = dom["stop"].get<std::string>();
   } else if (type == "choose") {
     auto & ch = a.body.emplace<ChooseAction>();
     if (dom.contains("choices")) ch.choices = dom.at("choices").get<std::vector<std::string>>();

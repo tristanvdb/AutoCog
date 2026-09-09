@@ -19,7 +19,7 @@ std::string Action::hash() const {
     },
     [&](CompleteAction const & a) {
       h.put(a.length).put(a.threshold).put(a.beams).put(a.ahead).put(a.width)
-       .put(a.stop_text).put(a.repetition).put(a.diversity).put(a.vocab);
+       .put(a.repetition).put(a.diversity).put(a.vocab).put(a.stop);
     },
     [&](ChooseAction const & a) {
       h.put(a.choices).put(a.threshold).put(a.width);

@@ -17,7 +17,6 @@ namespace autocog::backend::llama {
 struct PreparedAction {
   std::vector<unsigned> successors;     ///< FTA successor uids resolved to dense indices.
   TokenSequence tokens;                 ///< Text: tokenized text.
-  TokenSequence stop;                   ///< Complete: tokenized stop sequence.
   std::vector<TokenSequence> choices;   ///< Choose: tokenized choices.
 };
 
@@ -29,8 +28,9 @@ struct PreparedFTA {
   std::vector<PreparedAction> actions;  ///< Parallel to fta.actions.
 };
 
-/// Tokenize an FTA for a model: resolve successors and tokenize text/stop/
-/// choices. Vocab masks are resolved lazily by the engine via the model cache.
+/// Tokenize an FTA for a model: resolve successors and tokenize text/choices,
+/// and prime the model's mask cache for each action's generation and stop
+/// vocabs. Masks are resolved by the engine via the model cache.
 PreparedFTA prepare(ModelID const model, data::FTA const & fta);
 
 /// Fill every node's detokenized `text` from its `tokens`, in place. Run once
