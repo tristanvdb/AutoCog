@@ -2,7 +2,9 @@
 #define AUTOCOG_DATA_SYNTAX_HXX
 
 #include "autocog/data/base.hxx"
+#include "autocog/data/vocab.hxx"
 
+#include <optional>
 #include <string>
 
 namespace autocog::data {
@@ -38,6 +40,12 @@ class Syntax : public Base<Syntax> {
     bool detailed_formats = false;
 
     std::string completion_stop;
+
+    // Default generation vocab for completions that declare none: the token
+    // set a text field may emit under this rendering. Deliberately a rendering
+    // concern (per-syntax, evolving); an explicit field-level vocab overrides
+    // it. Absent: unrestricted (full model vocabulary).
+    std::optional<VocabExpr> completion_vocab;
 
   public:
     std::string content_hash() const;

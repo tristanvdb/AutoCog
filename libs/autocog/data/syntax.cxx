@@ -24,6 +24,7 @@ std::string Syntax::content_hash() const {
     .put(prompt_zero_index)
     .put(detailed_formats)
     .put(completion_stop)
+    .put(completion_vocab ? std::optional<std::string>(completion_vocab->hash()) : std::nullopt)
     .hash();
 }
 

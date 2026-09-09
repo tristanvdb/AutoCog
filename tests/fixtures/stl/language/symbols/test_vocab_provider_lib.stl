@@ -1,0 +1,4 @@
+// Vocab provider for the imported-vocab tests (library, not a fixture).
+
+vocab digits = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+vocab letters = regex("^[a-z]+$");

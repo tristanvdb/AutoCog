@@ -1,0 +1,5 @@
+// Vocab re-export hub: builds on the provider (library, not a fixture).
+
+from "test_vocab_provider_lib.stl" import digits, letters;
+
+vocab alnum = (digits | letters);

@@ -465,6 +465,26 @@ std::unique_ptr<ir::VocabExpr> Evaluator::resolve_vocab(
     throw CompileError("undefined vocab `" + name + "`.", loc);
     return nullptr;
   }
+  // A vocab imported from another file (or aliased locally): follow the
+  // reference and resolve the target lexically, in its own file scope —
+  // mirroring how retrieve_value() follows imported defines. Cross-file
+  // cycles trip the vocab_in_progress guard above.
+  if (auto const * imp = std::get_if<UnresolvedImport>(&sym_it->second)) {
+    if (!imp->target.data.config.empty()) {
+      throw CompileError("imported vocab `" + name + "` cannot be parametrized.", loc);
+    }
+    auto target_scope = std::to_string(imp->fileid);
+    return resolve_vocab(target_scope, imp->target.data.name.data.name,
+                         this->tables.contexts[target_scope], loc);
+  }
+  if (auto const * ali = std::get_if<UnresolvedAlias>(&sym_it->second)) {
+    if (!ali->target.data.config.empty()) {
+      throw CompileError("alias `" + name + "` of a parametrized object is not a vocab.", loc);
+    }
+    auto target_scope = std::to_string(ali->fileid);
+    return resolve_vocab(target_scope, ali->target.data.name.data.name,
+                         this->tables.contexts[target_scope], loc);
+  }
   if (!std::holds_alternative<DefineSymbol>(sym_it->second)) {
     throw CompileError("`" + name + "` is not a vocab.", loc);
     return nullptr;

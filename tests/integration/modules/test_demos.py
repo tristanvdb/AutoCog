@@ -47,3 +47,18 @@ def test_mcq_demo_runs_rng(demo, engine, repo_root):
         # identifying the choice — asserted loosely until those semantics are
         # settled (select over struct arrays is a flagged follow-up).
         assert isinstance(result, dict) and result, f"{demo}: {result!r}"
+
+
+@pytest.mark.parametrize("demo", ["repeat-cot", "select-iter"])
+def test_mcq_demo_runs_real(demo, real_engine, repo_root):
+    """Free-text-heavy demos on the real tokenizer.
+
+    Regression for the UnicodeDecodeError crash: without the syntax's default
+    completion vocab, a length-bounded field could end mid-token-stream inside
+    a multi-byte UTF-8 sequence and the frame walk died decoding it. The
+    ASCII default vocab makes that structurally impossible.
+    """
+    import autocog
+    prog = autocog.compile(str(repo_root / f"share/demos/mcq/{demo}.stl"))
+    result = real_engine.run(prog, **MCQ_INPUTS)
+    assert result is not None
