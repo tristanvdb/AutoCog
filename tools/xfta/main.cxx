@@ -236,6 +236,12 @@ static int run(int argc, char** argv) {
     f["autocog.perf.kv.forks"] = kv.forks;
     f["autocog.perf.kv.evictions"] = kv.evictions;
     f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
+    SearchStats const st = Manager::get_eval(eval_id).search_stats();
+    f["autocog.perf.search.terminals"] = st.terminals;
+    f["autocog.perf.search.coverage.fta"] = st.coverage_fta;
+    f["autocog.perf.search.coverage.sta"] = st.coverage_sta;
+    f["autocog.perf.search.stopped"] = st.stopped;
+    f["autocog.perf.search.abandoned"] = st.abandoned;
     perf.emit("eval.summary", "evaluation complete", std::move(f));
   }
 

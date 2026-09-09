@@ -107,6 +107,39 @@ add_test(NAME xfta_queue_metric_unknown
              --fta ${FTA_FIXTURES}/test_queue_metric_unknown.json --ftt /dev/null)
 set_tests_properties(xfta_queue_metric_unknown PROPERTIES WILL_FAIL TRUE LABELS "xfta;queue")
 
+# Early termination: choice fans out two branches; `deepest` ordering rides
+# the first one down to its terminal before touching the sibling, and
+# stop-after-1-terminal then abandons the sibling at the *choice* child (uid
+# "pick") — under FIFO both completions would have run first and the
+# abandoned node would be a "gen" child. Pins ordering AND stop semantics.
+add_test(NAME xfta_queue_stop
+         COMMAND ${CMAKE_COMMAND} -E env
+             bash -c "$<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta ${FTA_FIXTURES}/test_queue_stop.json --ftt /dev/stdout | grep -v libgcov | ${Python_EXECUTABLE} -c \"
+import json, sys
+d = json.load(sys.stdin)
+abandoned, complete = [], 0
+def walk(o):
+    global complete
+    if isinstance(o, dict):
+        if o.get('pruned') == 'abandoned': abandoned.append(o.get('uid'))
+        if not o.get('children') and o.get('pruned') is None and 'uid' in o: complete += 1
+        for v in o.values(): walk(v)
+    elif isinstance(o, list):
+        for v in o: walk(v)
+walk(d)
+if abandoned != ['pick']:
+    print('expected exactly the un-descended choice child abandoned, got', abandoned); sys.exit(1)
+if complete != 1:
+    print('expected exactly 1 complete path, got', complete); sys.exit(1)
+print('OK: depth-first found 1 terminal, sibling branch abandoned at the choice')
+\"")
+set_tests_properties(xfta_queue_stop PROPERTIES LABELS "xfta;queue")
+
+add_test(NAME xfta_queue_stop_unknown_scalar
+         COMMAND $<TARGET_FILE:autocog_xfta> --rng --seed 42
+             --fta ${FTA_FIXTURES}/test_queue_stop_unknown.json --ftt /dev/null)
+set_tests_properties(xfta_queue_stop_unknown_scalar PROPERTIES WILL_FAIL TRUE LABELS "xfta;queue")
+
 # Error paths (must exit non-zero)
 add_test(NAME xfta_err_missing_fta
          COMMAND $<TARGET_FILE:autocog_xfta> --rng --ftt /dev/null)
