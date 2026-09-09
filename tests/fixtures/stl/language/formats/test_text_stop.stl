@@ -1,0 +1,20 @@
+// text<stop=...>: per-field stop overrides.
+// - stop="" disables early stop: the field fills its exact token budget
+//   (with a digits vocab: exactly four digit tokens).
+// - stop="END" replaces the syntax's completion_stop for one field.
+// - no stop kwarg: the syntax default applies.
+
+vocab digit = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+
+prompt main {
+  is {
+    pin is text<length=4, vocab=digit, stop="">;
+    word is text<length=10, stop="END">;
+    line is text<length=10>;
+  }
+  return {
+    use pin;
+  }
+}
+
+export main;

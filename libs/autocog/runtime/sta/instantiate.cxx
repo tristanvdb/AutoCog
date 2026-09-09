@@ -626,12 +626,22 @@ struct FTABuilder {
     std::set<int> described_fields;
     std::map<std::string, int> memo;  // state_tag → entry action ID
 
-    // Stop vocab minted from the syntax's completion_stop: complete actions
-    // reference it, and the assembly adds it to the FTA vocab table when used.
-    // An empty completion_stop mints nothing — completions have no early stop.
-    std::optional<std::string> stop_ref;
-    autocog::data::VocabExpr stop_expr;
-    bool stop_used = false;
+    // Stop vocabs minted per stop text — the syntax's completion_stop, or a
+    // field's stop= override. Complete actions reference an entry; the
+    // assembly adds every minted entry to the FTA vocab table. An empty stop
+    // text mints nothing: that completion has no early stop and fills its
+    // exact token budget.
+    std::map<std::string, autocog::data::VocabExpr> stop_vocabs;
+
+    std::optional<std::string> mint_stop(std::string const & text) {
+        if (text.empty()) return std::nullopt;
+        autocog::data::VocabExpr expr;
+        expr.kind = autocog::data::VocabExpr::Kind::Tokenize;
+        expr.strings = {text};
+        std::string ref = "vocab_" + expr.hash().substr(0, 16);  // match the compiler's vocab_<16-hex> refs
+        stop_vocabs.emplace(ref, std::move(expr));
+        return ref;
+    }
 
     // Create field+endl for a successor, with UIDs scoped to the parent.
     // Returns the field entry ID (or -1 for records).
@@ -664,13 +674,7 @@ struct FTABuilder {
 
     FTABuilder(autocog::data::Prompt const & p, std::map<std::string, ConcreteState> const & st,
                Doc const & c, Syntax const & s, SearchConfig const & sc)
-        : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {
-        if (!s.completion_stop.empty()) {
-            stop_expr.kind = autocog::data::VocabExpr::Kind::Tokenize;
-            stop_expr.strings = {s.completion_stop};
-            stop_ref = "vocab_" + stop_expr.hash();
-        }
-    }
+        : prompt(p), states(st), content(c), syntax(s), search(sc), parent_map(build_parent_map(p.fields)) {}
 
     int add_text(std::string const & uid, std::string const & text) {
         int id = action_id++;
@@ -742,8 +746,7 @@ struct FTABuilder {
         body.repetition = ts.repetition;
         body.diversity  = ts.diversity;
         body.vocab      = cf.vocab;
-        body.stop       = stop_ref;
-        if (stop_ref) stop_used = true;
+        body.stop       = mint_stop(cf.stop ? *cf.stop : syntax.completion_stop);
         actions.push_back(autocog::data::Action{
             uid, {}, std::nullopt, std::nullopt, std::move(body)
         });
@@ -1025,7 +1028,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     fta.actions = std::move(b.actions);
     fta.queue_metric = metric;
     fta.vocabs = prompt.vocabs;
-    if (b.stop_used) fta.vocabs.emplace(*b.stop_ref, b.stop_expr);
+    for (auto & [ref, expr] : b.stop_vocabs) fta.vocabs.emplace(ref, std::move(expr));
 
     // Finalize as a derived artifact. Provenance is the three inputs this FTA
     // was instantiated from; the sta/syntax/search uids are read from the

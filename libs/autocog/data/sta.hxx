@@ -32,7 +32,13 @@ struct SearchParams {
 
 // --- Field format ------------------------------------------------------------
 
-struct CompletionFormat { std::optional<int> length; std::optional<std::string> vocab; };
+struct CompletionFormat {
+  std::optional<int> length;
+  std::optional<std::string> vocab;
+  // Stop override: absent = the syntax's completion_stop; "" = no early stop
+  // (the completion fills its exact token budget); other = per-field stop text.
+  std::optional<std::string> stop;
+};
 struct EnumFormat       { std::vector<std::string> values; };
 struct ChoiceFormat     { std::string mode; std::vector<PathStep> path; };
 
