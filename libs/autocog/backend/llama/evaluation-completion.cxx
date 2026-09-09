@@ -239,8 +239,11 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
   unsigned count = 0;
   for (auto & beam : beams) {
     data::FTTNode & child = grow(state.parent, state.action, fta, beam.tokens, beam.logprobs);
-    child.pruned = (count >= ca.width) || (count > 0 && beam.proba() < ca.threshold);
-    if (!child.pruned) this->enqueue(p.successors[0], child, state);
+    // Threshold takes precedence: Width marks exactly the survivors-in-quality
+    // that only lost on rank, i.e. what a wider search would have kept.
+    if (count > 0 && beam.proba() < ca.threshold) child.pruned = data::Pruned::Threshold;
+    else if (count >= ca.width)                   child.pruned = data::Pruned::Width;
+    if (child.pruned == data::Pruned::No) this->enqueue(p.successors[0], child, state);
     count++;
   }
   return num_token_eval;

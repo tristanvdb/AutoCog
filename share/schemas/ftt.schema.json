@@ -32,7 +32,7 @@
     "logprob": { "type": "number", "description": "Cumulative log-probability from the root." },
     "logprobs": { "type": "array", "items": { "type": "number" }, "description": "Per-token log-probabilities at this node." },
     "length": { "type": "integer", "minimum": 0, "description": "Total length from the root." },
-    "pruned": { "type": "boolean" },
+    "pruned": { "oneOf": [ { "type": "null" }, { "enum": ["width", "threshold", "abandoned"] } ], "description": "Why this node was pruned (null = live). threshold takes precedence over width; abandoned = dropped by early termination." },
     "tokens": { "type": "array", "items": { "type": "integer" }, "description": "Tokens generated at this node." },
     "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
   },
@@ -61,7 +61,7 @@
         "logprob": { "type": "number" },
         "logprobs": { "type": "array", "items": { "type": "number" } },
         "length": { "type": "integer", "minimum": 0 },
-        "pruned": { "type": "boolean" },
+        "pruned": { "oneOf": [ { "type": "null" }, { "enum": ["width", "threshold", "abandoned"] } ], "description": "Why this node was pruned (null = live). threshold takes precedence over width; abandoned = dropped by early termination." },
         "tokens": { "type": "array", "items": { "type": "integer" } },
         "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
       },

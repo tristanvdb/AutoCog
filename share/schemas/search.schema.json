@@ -32,9 +32,19 @@
     "flow":   { "$ref": "#/$defs/choice", "description": "Defaults for the flow / next `choose` action." },
     "queue": {
       "type": "object",
-      "description": "Prompt-scope queue parameters (carried to the FTA; not yet consumed).",
+      "description": "Prompt-scope queue parameters: exploration order and early termination.",
       "properties": {
-        "metric": { "type": "string", "description": "Scoring metric for the queue." }
+        "metric": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          ],
+          "description": "Lexicographic ordering keys (perplexity, probability, shortest, longest, shallowest, deepest, near_leaf, far_leaf, fifo); a bare string is a one-element list; fifo is the implicit final tie-break."
+        },
+        "stop": {
+          "oneOf": [ { "$ref": "#/$defs/term" }, { "type": "null" } ],
+          "description": "Early-termination predicate; null/absent = run the queue to exhaustion."
+        }
       },
       "required": ["metric"],
       "additionalProperties": false
@@ -51,6 +61,28 @@
       },
       "required": ["threshold", "width"],
       "additionalProperties": false
+    },
+    "term": {
+      "description": "Termination predicate: a single-key object — all/any of sub-predicates, not of one, or a comparison [scalar-name, constant] with ge/gt/le/lt. Scalars: terminals, coverage.fta, coverage.sta, best.proba, mean.proba, std.proba, best.zscore, tokens, queue.size, seconds.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "all": { "type": "array", "items": { "$ref": "#/$defs/term" }, "minItems": 1 },
+        "any": { "type": "array", "items": { "$ref": "#/$defs/term" }, "minItems": 1 },
+        "not": { "$ref": "#/$defs/term" },
+        "ge":  { "$ref": "#/$defs/cmp" },
+        "gt":  { "$ref": "#/$defs/cmp" },
+        "le":  { "$ref": "#/$defs/cmp" },
+        "lt":  { "$ref": "#/$defs/cmp" }
+      },
+      "additionalProperties": false
+    },
+    "cmp": {
+      "type": "array",
+      "prefixItems": [ { "type": "string" }, { "type": "number" } ],
+      "minItems": 2,
+      "maxItems": 2
     }
   }
 }

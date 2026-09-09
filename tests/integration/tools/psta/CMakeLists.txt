@@ -8,7 +8,7 @@ set(BR ${STA_GOLDEN}/language/structures/test_basic_record.golden.json)
 # A minimal (metadata-less) FTT: a single empty root node.
 set(MIN_FTT ${CMAKE_CURRENT_BINARY_DIR}/min_ftt.json)
 file(WRITE ${MIN_FTT}
-  "{\"action\":0,\"uid\":\"header\",\"text\":\"\",\"logprob\":0,\"logprobs\":[],\"length\":0,\"pruned\":false,\"tokens\":[],\"children\":[],\"provenance\":{}}")
+  "{\"action\":0,\"uid\":\"header\",\"text\":\"\",\"logprob\":0,\"logprobs\":[],\"length\":0,\"pruned\":null,\"tokens\":[],\"children\":[],\"provenance\":{}}")
 
 add_test(NAME psta_smoke COMMAND $<TARGET_FILE:autocog_psta> --help)
 set_tests_properties(psta_smoke PROPERTIES LABELS "smoke;psta")

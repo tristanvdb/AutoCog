@@ -14,6 +14,13 @@ namespace autocog::data {
 using ActionID = unsigned;
 using TokenID  = std::int32_t;
 
+/// Why a node was pruned (No = live). Serialized as null | "width" |
+/// "threshold" | "abandoned". Threshold takes precedence over width when both
+/// apply, so Width marks exactly the nodes a wider search would have kept;
+/// Abandoned marks subtrees dropped by early termination (search gave up,
+/// not rejected).
+enum class Pruned : std::uint8_t { No = 0, Width, Threshold, Abandoned };
+
 /// One node of a finite thought tree. Mirrors the self-contained document the
 /// backend produces and walk_ftt_to_frame consumes: raw generation data plus
 /// the FTA/model-derived enrichment (uid/field/indices/text) needed to map the
@@ -28,7 +35,7 @@ struct FTTNode {
   float logprob = 0.0f;                      ///< Cumulative logprob from the root.
   std::vector<float> logprobs;               ///< Per-token logprobs at this node.
   unsigned length = 0;                       ///< Total length from the root.
-  bool pruned = false;
+  Pruned pruned = Pruned::No;
   std::vector<TokenID> tokens;               ///< Tokens generated at this node.
   std::list<FTTNode> children;
 

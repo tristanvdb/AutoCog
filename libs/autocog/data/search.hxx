@@ -2,9 +2,11 @@
 #define AUTOCOG_DATA_SEARCH_HXX
 
 #include "autocog/data/base.hxx"
+#include "autocog/data/term.hxx"
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace autocog::data {
 
@@ -28,7 +30,12 @@ struct ChoiceSearch {
 
 /// Queue-scope (prompt-global) parameters.
 struct QueueSearch {
-  std::string metric;
+  /// Lexicographic ordering keys for the evaluation queue (perplexity,
+  /// probability, shortest/longest, shallowest/deepest, near_leaf/far_leaf,
+  /// fifo); earlier entries dominate, "fifo" is the implicit final tie-break.
+  std::vector<std::string> metric;
+  /// Early-termination predicate; absent = run the queue to exhaustion.
+  std::optional<TermExpr> stop;
 };
 
 /// Search configuration: per-category search parameters. Conversion lives in

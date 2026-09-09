@@ -12,6 +12,7 @@ std::string SearchConfig::content_hash() const {
   h.put(branch.threshold).put(branch.width);
   h.put(flow.threshold).put(flow.width);
   h.put(queue.metric);
+  h.put(queue.stop ? queue.stop->hash() : std::string{});
   return h.hash();
 }
 

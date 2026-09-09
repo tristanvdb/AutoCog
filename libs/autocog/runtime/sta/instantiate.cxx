@@ -1019,15 +1019,16 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         b.connect(header_id, first_branch);
     }
 
-    // Queue params (prompt-scope): carried into the FTA even though the current
-    // xfta queue does not consume them yet. Policy (prompt.search["queue"]) wins
-    // over the config default. TODO(xfta-queue).
-    std::string metric = search.queue.metric;
+    // Queue params (prompt-scope). Policy (prompt.search["queue"]) wins over
+    // the config default; an STL policy provides a single metric name, which
+    // becomes a one-element lexicographic list. The stop predicate only comes
+    // from the search config (no STL surface syntax for expressions).
+    std::vector<std::string> metric = search.queue.metric;
     auto qit = prompt.search.categories.find("queue");
     if (qit != prompt.search.categories.end()) {
         auto mit = qit->second.find("metric");
         if (mit != qit->second.end())
-            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = *s;
+            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = {*s};
     }
 
     // Assemble the finalized FTA. The vocab table is carried so the backend
@@ -1035,7 +1036,8 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     // complete actions reference an entry by its key.
     autocog::data::FTA fta;
     fta.actions = std::move(b.actions);
-    fta.queue_metric = metric;
+    fta.queue_metric = std::move(metric);
+    fta.queue_stop = search.queue.stop;
     fta.vocabs = prompt.vocabs;
     for (auto & [ref, expr] : b.minted_vocabs) fta.vocabs.emplace(ref, std::move(expr));
 

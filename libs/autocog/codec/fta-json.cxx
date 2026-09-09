@@ -89,6 +89,7 @@ nlohmann::json to_json(FTA const & s) {
   for (auto const & a : s.actions) arr.push_back(to_json(a));
   j["actions"] = arr;
   j["queue"] = nlohmann::json{{"metric", s.queue_metric}};
+  if (s.queue_stop) j["queue"]["stop"] = to_json(*s.queue_stop);
   if (!s.vocabs.empty()) {
     nlohmann::json vj = nlohmann::json::object();
     for (auto const & [k, ve] : s.vocabs) vj[k] = to_json(ve);
@@ -106,8 +107,18 @@ void from_json(nlohmann::json const & dom, FTA & s) {
     s.actions.emplace_back();
     from_json(aj, s.actions.back());
   }
-  if (dom.contains("queue") && dom["queue"].contains("metric"))
-    s.queue_metric = dom["queue"]["metric"].get<std::string>();
+  if (dom.contains("queue")) {
+    auto const & q = dom["queue"];
+    if (q.contains("metric")) {
+      s.queue_metric.clear();
+      if (q["metric"].is_string()) s.queue_metric.push_back(q["metric"].get<std::string>());
+      else s.queue_metric = q["metric"].get<std::vector<std::string>>();
+    }
+    if (q.contains("stop") && !q["stop"].is_null()) {
+      s.queue_stop.emplace();
+      from_json(q["stop"], *s.queue_stop);
+    }
+  }
   if (dom.contains("vocabs"))
     for (auto const & [k, vj] : dom["vocabs"].items()) from_json(vj, s.vocabs[k]);
   if (dom.contains("metadata")) { s.metadata.emplace(); from_json(dom.at("metadata"), *s.metadata); }

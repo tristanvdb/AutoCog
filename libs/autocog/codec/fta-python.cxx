@@ -92,6 +92,7 @@ pybind11::object to_py(FTA const & s) {
   d["actions"] = arr;
   py::dict q;
   q["metric"] = s.queue_metric;
+  if (s.queue_stop) q["stop"] = to_py(*s.queue_stop);
   d["queue"] = q;
   if (!s.vocabs.empty()) {
     py::dict vj;
@@ -113,7 +114,15 @@ void from_py(pybind11::object const & obj, FTA & s) {
   }
   if (d.contains("queue")) {
     py::dict q = d["queue"].cast<py::dict>();
-    if (q.contains("metric")) s.queue_metric = q["metric"].cast<std::string>();
+    if (q.contains("metric")) {
+      s.queue_metric.clear();
+      if (py::isinstance<py::str>(q["metric"])) s.queue_metric.push_back(q["metric"].cast<std::string>());
+      else s.queue_metric = q["metric"].cast<std::vector<std::string>>();
+    }
+    if (q.contains("stop") && !q["stop"].is_none()) {
+      s.queue_stop.emplace();
+      from_py(py::reinterpret_borrow<py::object>(q["stop"]), *s.queue_stop);
+    }
   }
   if (d.contains("vocabs")) {
     py::dict vj = d["vocabs"].cast<py::dict>();

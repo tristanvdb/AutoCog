@@ -51,13 +51,21 @@ pybind11::object to_py(QueueSearch const & q) {
   namespace py = pybind11;
   py::dict d;
   d["metric"] = q.metric;
+  if (q.stop) d["stop"] = to_py(*q.stop);
   return d;
 }
 template <>
 void from_py(pybind11::object const & obj, QueueSearch & out) {
   namespace py = pybind11;
   py::dict q = obj.cast<py::dict>();
-  out.metric = q["metric"].cast<std::string>();
+  // A single metric may be given as a bare string; a list is lexicographic.
+  out.metric.clear();
+  if (py::isinstance<py::str>(q["metric"])) out.metric.push_back(q["metric"].cast<std::string>());
+  else out.metric = q["metric"].cast<std::vector<std::string>>();
+  if (q.contains("stop") && !q["stop"].is_none()) {
+    out.stop.emplace();
+    from_py(py::reinterpret_borrow<py::object>(q["stop"]), *out.stop);
+  }
 }
 
 template <>

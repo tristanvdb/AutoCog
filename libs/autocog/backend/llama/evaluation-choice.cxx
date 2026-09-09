@@ -51,8 +51,9 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   for (const auto & result : results) {
     auto & choice_tokens = p.choices[result.index];
     data::FTTNode & child = grow(state.parent, state.action, prepared.fta, choice_tokens, result.logprobs);
-    child.pruned = (count >= ca.width) || (count > 0 && result.proba < ca.threshold);
-    if (!child.pruned) {
+    if (count > 0 && result.proba < ca.threshold) child.pruned = data::Pruned::Threshold;
+    else if (count >= ca.width)                   child.pruned = data::Pruned::Width;
+    if (child.pruned == data::Pruned::No) {
       this->enqueue(p.successors[result.index], child, state);
     }
     count++;

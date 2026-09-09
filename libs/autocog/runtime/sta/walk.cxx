@@ -40,7 +40,7 @@ void collect_complete_paths(autocog::data::FTTNode const & node,
                             std::vector<std::vector<autocog::data::FTTNode const *>> & paths) {
     current.push_back(&node);
     if (node.children.empty()) {
-        if (!node.pruned) paths.push_back(current);
+        if (node.pruned == autocog::data::Pruned::No) paths.push_back(current);
     } else {
         for (auto const & child : node.children) {
             collect_complete_paths(child, current, paths);

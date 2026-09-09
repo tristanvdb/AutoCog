@@ -2,6 +2,7 @@
 #define AUTOCOG_DATA_FTA_HXX
 
 #include "autocog/data/base.hxx"
+#include "autocog/data/term.hxx"
 #include "autocog/data/vocab.hxx"
 
 #include <map>
@@ -60,14 +61,15 @@ struct Action {
 };
 
 /// A finite thought automaton: a DAG of actions (edges by successor uid, entry
-/// at actions[0]), a queue metric, and the vocab table the complete actions
-/// reference.
+/// at actions[0]), queue ordering/termination, and the vocab table the
+/// complete actions reference.
 class FTA : public Base<FTA> {
   public:
     static constexpr char const * format = "fta";
 
     std::vector<Action> actions;                ///< actions[0] is the entry point.
-    std::string queue_metric;
+    std::vector<std::string> queue_metric;      ///< Lexicographic ordering keys (see QueueSearch).
+    std::optional<TermExpr> queue_stop;         ///< Early-termination predicate.
     std::map<std::string, VocabExpr> vocabs;    ///< ref -> expression tree.
 
   public:

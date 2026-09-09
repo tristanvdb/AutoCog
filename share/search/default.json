@@ -3,5 +3,5 @@
   "enum":   { "threshold": 0.1, "width": 1 },
   "branch": { "threshold": 0.1, "width": 1 },
   "flow":   { "threshold": 0.1, "width": 1 },
-  "queue":  { "metric": "perplexity" }
+  "queue":  { "metric": ["perplexity"] }
 }

@@ -20,7 +20,7 @@ data::FTTNode & grow(data::FTTNode & parent, ActionID const id, data::FTA const 
   for (float l : logprobs) lp += l;
   child.logprob = lp;
   child.length  = parent.length + static_cast<unsigned>(tokens.size());
-  child.pruned  = false;
+  child.pruned  = data::Pruned::No;
   data::Action const & a = fta.actions[id];
   child.uid     = a.uid;
   child.field   = a.field;
