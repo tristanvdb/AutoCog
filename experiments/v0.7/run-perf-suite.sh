@@ -10,6 +10,9 @@
 #   E1_BUDGET..E4_BUDGET   per-experiment seconds (override the split)
 #   MODEL_1B, MODEL_3B     model paths (defaults below)
 #   E5_QUESTIONS           questions per cell in the accuracy-budget probe
+#   EXPERIMENTS            subset to run, e.g. "e3 e4 e5" (default: all) —
+#                          with OUT_DIR pointed at an existing results dir,
+#                          this resumes a partial run in place
 #
 # Experiments:
 #   E1  core beams x ahead x width matrix on 1B (minus the two b8 w2
@@ -32,8 +35,11 @@ MODEL_1B="${MODEL_1B:-$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf}"
 MODEL_3B="${MODEL_3B:-$MODELS_DIR/Llama-3.2-3B-Instruct-Q8_0.gguf}"
 BUILD="$BUILD_EXP"
 CELLS="$SCRIPT_DIR/cells"
-OUT="$RESULTS_DIR/perf-$(date +%Y%m%d-%H%M%S)"
+OUT="${OUT_DIR:-$RESULTS_DIR/perf-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUT"
+
+EXPERIMENTS="${EXPERIMENTS:-e1 e2 e3 e4 e5}"
+run_if() { case " $EXPERIMENTS " in *" $1 "*) ;; *) return 1 ;; esac; }
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
@@ -50,7 +56,7 @@ E5_QUESTIONS="${E5_QUESTIONS:-10}"
     echo "host: $(hostname)"
     command -v nvidia-smi > /dev/null && nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
     echo "commit: $(git -C "$REPO" rev-parse HEAD)"
-    echo "ngl: $AUTOCOG_NGL  total_hours: $TOTAL_HOURS"
+    echo "ngl: $AUTOCOG_NGL  total_hours: $TOTAL_HOURS  experiments: $EXPERIMENTS"
     echo "budgets: E1=$E1_BUDGET E2=$E2_BUDGET E3=$E3_BUDGET E4=$E4_BUDGET E5_questions=$E5_QUESTIONS"
 } > "$OUT/machine.txt" 2>&1 || true
 cat "$OUT/machine.txt"
@@ -66,28 +72,32 @@ sweep() {  # sweep NAME BUDGET MODEL CELLS_FILE
         || echo "!!! $name failed — continuing" | tee -a "$OUT/$name.log"
 }
 
-sweep e1 "$E1_BUDGET" "$MODEL_1B" "$CELLS/e1-core.json"
-sweep e2 "$E2_BUDGET" "$MODEL_1B" "$CELLS/e2-mech.json"
-sweep e3 "$E3_BUDGET" "$MODEL_1B" "$CELLS/e3-workload.json"
+run_if e1 && sweep e1 "$E1_BUDGET" "$MODEL_1B" "$CELLS/e1-core.json"
+run_if e2 && sweep e2 "$E2_BUDGET" "$MODEL_1B" "$CELLS/e2-mech.json"
+run_if e3 && sweep e3 "$E3_BUDGET" "$MODEL_1B" "$CELLS/e3-workload.json"
 
-if [ -s "$MODEL_3B" ]; then
-    sweep e4 "$E4_BUDGET" "$MODEL_3B" "$CELLS/e4-3b.json"
-else
-    echo "=== e4 skipped: $MODEL_3B not found ===" | tee "$OUT/e4.log"
+if run_if e4; then
+    if [ -s "$MODEL_3B" ]; then
+        sweep e4 "$E4_BUDGET" "$MODEL_3B" "$CELLS/e4-3b.json"
+    else
+        echo "=== e4 skipped: $MODEL_3B not found ===" | tee "$OUT/e4.log"
+    fi
 fi
 
-echo "=== e5: accuracy-budget probe ==="
-python3 "$REPO/benchmarks/quality/run.py" \
-    --build "$BUILD" --model "$MODEL_1B" \
-    --syntaxes default,special --demos select,select-cot \
-    --questions "$E5_QUESTIONS" --out "$OUT/e5-1b" 2>&1 | tee "$OUT/e5.log" \
-    || echo "!!! e5 (1B) failed — continuing" | tee -a "$OUT/e5.log"
-if [ -s "$MODEL_3B" ]; then
+if run_if e5; then
+    echo "=== e5: accuracy-budget probe ==="
     python3 "$REPO/benchmarks/quality/run.py" \
-        --build "$BUILD" --model "$MODEL_3B" \
-        --syntaxes default --demos select \
-        --questions 5 --out "$OUT/e5-3b" 2>&1 | tee -a "$OUT/e5.log" \
-        || echo "!!! e5 (3B) failed — continuing" | tee -a "$OUT/e5.log"
+        --build "$BUILD" --model "$MODEL_1B" \
+        --syntaxes default,special --demos select,select-cot \
+        --questions "$E5_QUESTIONS" --out "$OUT/e5-1b" 2>&1 | tee "$OUT/e5.log" \
+        || echo "!!! e5 (1B) failed — continuing" | tee -a "$OUT/e5.log"
+    if [ -s "$MODEL_3B" ]; then
+        python3 "$REPO/benchmarks/quality/run.py" \
+            --build "$BUILD" --model "$MODEL_3B" \
+            --syntaxes default --demos select \
+            --questions 5 --out "$OUT/e5-3b" 2>&1 | tee -a "$OUT/e5.log" \
+            || echo "!!! e5 (3B) failed — continuing" | tee -a "$OUT/e5.log"
+    fi
 fi
 
 tar -czf "$OUT/../$(basename "$OUT")-results.tar.gz" -C "$OUT/.." "$(basename "$OUT")"
