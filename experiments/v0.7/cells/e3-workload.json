@@ -1,0 +1,69 @@
+[
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-len100.stl",
+  "label": "len100 b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-len300.stl",
+  "label": "len300 b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-len300.stl",
+  "repetition": 0.5,
+  "label": "len300+rep b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-prefix2k.stl",
+  "ctx": 16384,
+  "label": "prefix2k b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-prefix8k.stl",
+  "ctx": 16384,
+  "label": "prefix8k b4a1w1"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-prefix8k.stl",
+  "ctx": 16384,
+  "label": "prefix8k b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-digits.stl",
+  "label": "digits b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "syntax": "experiments/v0.7/syntax-full.json",
+  "label": "fullvocab b4a1w1"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "syntax": "experiments/v0.7/syntax-full.json",
+  "label": "fullvocab b8a2w1"
+ }
+]

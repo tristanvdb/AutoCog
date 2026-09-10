@@ -236,6 +236,10 @@ static int run(int argc, char** argv) {
     f["autocog.perf.kv.forks"] = kv.forks;
     f["autocog.perf.kv.evictions"] = kv.evictions;
     f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
+    DecodeStats const & ds = Manager::get_model(model_id).decode_stats();
+    f["autocog.perf.decode.calls"] = ds.calls;
+    f["autocog.perf.decode.seconds"] = ds.decode_seconds;
+    f["autocog.perf.sample.seconds"] = ds.sample_seconds;
     SearchStats const st = Manager::get_eval(eval_id).search_stats();
     f["autocog.perf.search.terminals"] = st.terminals;
     f["autocog.perf.search.coverage.fta"] = st.coverage_fta;

@@ -9,6 +9,7 @@
 
 #include <llama.h>
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -109,6 +110,7 @@ Model::Model(Model && o) noexcept
     live_logits_slot_(o.live_logits_slot_),
     slot_clock_(o.slot_clock_),
     kv_stats_(o.kv_stats_),
+    decode_stats_(o.decode_stats_),
     source_(std::move(o.source_)),
     sha_cache_(std::move(o.sha_cache_)),
     vocab_mask_cache_(std::move(o.vocab_mask_cache_)),
@@ -344,7 +346,9 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     batch.logits[i] = all_logits || (i + 1 == n);
   }
 
+  auto const t_dec = std::chrono::steady_clock::now();
   int ret = llama_decode(ctx, batch);
+  ++decode_stats_.calls;
   if (ret != 0) {
     // KV cells exhausted (divergent suffixes accumulate across slots): drop
     // every other slot, discard any partial insertion, and retry once.
@@ -356,7 +360,10 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     }
     llama_memory_seq_rm(mem, static_cast<llama_seq_id>(slot), pos0, -1);
     ret = llama_decode(ctx, batch);
+    ++decode_stats_.calls;
   }
+  decode_stats_.decode_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
   llama_batch_free(batch);
   if (ret != 0) {
     throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
@@ -497,17 +504,23 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   if (n == 0) return 0;
 
   size_t constexpr CHUNK = 256;
+  auto t_smp = std::chrono::steady_clock::now();
   logprobs.push_back(row_logprob(live_row(id), vocab, new_tokens[0]));
+  decode_stats_.sample_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   for (size_t done = 0; done < n; done += CHUNK) {
     size_t const len = std::min(CHUNK, n - done);
     decode_extension(active_slot_, pos0 + static_cast<int>(done),
                      new_tokens.data() + done, len, id, /*all_logits=*/true);
+    t_smp = std::chrono::steady_clock::now();
     for (size_t j = 0; j < len; ++j) {
       size_t const scored = done + j + 1;  // row j predicts the next token
       if (scored < n)
         logprobs.push_back(row_logprob(llama_get_logits_ith(ctx, static_cast<int>(j)),
                                        vocab, new_tokens[scored]));
     }
+    decode_stats_.sample_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   }
   slot.tokens.insert(slot.tokens.end(), new_tokens.begin(), new_tokens.end());
   slot.last_used = ++slot_clock_;
@@ -580,6 +593,7 @@ unsigned Model::eval_topk_tokens(
   topk_tokens.clear();
   topk_lobprobs.clear();
 
+  auto const t_smp = std::chrono::steady_clock::now();
   std::vector<std::pair<TokenID, float>> candidates;
   sample_logprobs(live_row(id), vocab_mask, candidates);
 
@@ -600,7 +614,9 @@ unsigned Model::eval_topk_tokens(
     topk_tokens.push_back(candidates[i].first);
     topk_lobprobs.push_back(candidates[i].second);
   }
-    
+  decode_stats_.sample_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
+
   return 1;
 }
 
@@ -758,7 +774,9 @@ unsigned Model::topk_frontier(
       batch.seq_id[i][0] = static_cast<llama_seq_id>(items[i].slot);
       batch.logits[i] = items[i].want_row;
     }
+    auto const t_dec = std::chrono::steady_clock::now();
     int ret = llama_decode(ctx, batch);
+    ++decode_stats_.calls;
     if (ret != 0) {
       // KV cells exhausted: drop unpinned slots, discard any partial
       // insertion of the pending ranges, and retry once.
@@ -771,17 +789,23 @@ unsigned Model::topk_frontier(
       for (auto const & [s, from] : pending_from)
         llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), static_cast<llama_pos>(from), -1);
       ret = llama_decode(ctx, batch);
+      ++decode_stats_.calls;
     }
+    decode_stats_.decode_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
     llama_batch_free(batch);
     if (ret != 0) {
       throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
     }
     decoded_total += static_cast<unsigned>(items.size());
 
+    auto const t_smp = std::chrono::steady_clock::now();
     for (Planned const & p : planned) {
       topk_from_row(llama_get_logits_ith(ctx, p.final_idx), vocab_mask,
                     max_candidates, results[p.target], this->id);
     }
+    decode_stats_.sample_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
     live_logits_slot_ = static_cast<int>(planned.back().slot);
     live_logits_ith_ = planned.back().final_idx;
   }

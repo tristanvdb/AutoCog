@@ -12,6 +12,17 @@ namespace autocog::data { struct VocabExpr; }
 
 namespace autocog::backend::llama {
 
+// Decode-level cost split, reported by xfta --perf. On CPU a llama_decode
+// call streams the full weights whatever its size, so `calls` is the cost
+// driver; `sample_seconds` isolates the CPU-side O(vocab) logits sweeps
+// (softmax/top-k/forced scoring), which do NOT shrink when decode moves to
+// a GPU. Real models only (the RNG model decodes nothing).
+struct DecodeStats {
+  unsigned calls = 0;            ///< llama_decode invocations
+  double   decode_seconds = 0.0; ///< wall time inside llama_decode
+  double   sample_seconds = 0.0; ///< wall time in CPU-side logits sweeps
+};
+
 // Counters for the KV sequence-slot pool, reported by xfta --perf. Each
 // set_tokens call resolves to exactly one of exact/extend/trim/fork.
 struct KvStats {
@@ -62,6 +73,7 @@ class Model {
     int live_logits_ith_ = -1;   ///< batch index of that final position's logits row
     uint64_t slot_clock_ = 0;
     KvStats kv_stats_;
+    DecodeStats decode_stats_;
 
     // Decode `n` tokens into `slot` starting at position `pos0`, requesting
     // logits at the final position (or, with `all_logits`, at every position —
@@ -123,6 +135,7 @@ class Model {
     std::string sha256() const;
 
     KvStats const & kv_stats() const { return kv_stats_; }
+    DecodeStats const & decode_stats() const { return decode_stats_; }
     size_t kv_slots() const { return slots_.size(); }
 
     // Route `tokens` to a KV slot (see the slot-pool comment above), returning

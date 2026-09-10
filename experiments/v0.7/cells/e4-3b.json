@@ -1,0 +1,36 @@
+[
+ {
+  "beams": 1,
+  "ahead": 1,
+  "width": 1
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 1,
+  "label": "slots1 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-len300.stl",
+  "label": "len300 b4a1w1"
+ }
+]
