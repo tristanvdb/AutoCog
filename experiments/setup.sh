@@ -67,19 +67,44 @@ else
     echo "=== no GPU detected — CPU build ==="
 fi
 
+# The checkout may live on a networked FS and persist across (different)
+# machines: models and the ccache survive — a win — but a venv whose
+# interpreter changed and a CMake cache pinning another machine's
+# compilers/CUDA must be detected and rebuilt, not trusted.
+STAMP="$(uname -sr) py=$(python3 -V 2>&1) gxx=$(g++ -dumpversion 2>/dev/null) cuda=${CUDA_ARGS[*]:-none}"
+export CCACHE_DIR="${CCACHE_DIR:-$REPO/.ccache}"
+
 echo "=== python venv + package (Release) ==="
+if [ -d .venv ]; then
+    if ! .venv/bin/python3 -c pass > /dev/null 2>&1 \
+       || [ "$(cat .venv/.autocog-stamp 2>/dev/null)" != "$STAMP" ]; then
+        echo "stale venv (machine/python changed) — recreating"
+        rm -rf .venv
+    fi
+fi
 python3 -m venv .venv
 # shellcheck disable=SC1091
 source .venv/bin/activate
 pip install --upgrade pip > /dev/null
-CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install .
+CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install .   # local-dir install: always rebuilt
+echo "$STAMP" > .venv/.autocog-stamp
 
 echo "=== Release tools tree (build-exp) ==="
+if [ -f build-exp/CMakeCache.txt ] \
+   && [ "$(cat build-exp/.autocog-stamp 2>/dev/null)" != "$STAMP" ]; then
+    echo "stale build tree (machine/toolchain changed) — wiping build-exp"
+    rm -rf build-exp
+fi
+LAUNCHER_ARGS=()
+command -v ccache > /dev/null 2>&1 && \
+    LAUNCHER_ARGS=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache)
 cmake -B build-exp -S "$REPO" \
     -DCMAKE_BUILD_TYPE=Release \
     -DAUTOCOG_BUILD_TESTS=OFF \
+    "${LAUNCHER_ARGS[@]}" \
     "${CUDA_ARGS[@]}"
 cmake --build build-exp --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
+echo "$STAMP" > build-exp/.autocog-stamp
 
 echo "=== models ==="
 "$SCRIPT_DIR/models.sh"

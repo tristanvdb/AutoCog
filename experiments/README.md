@@ -17,7 +17,11 @@ experiments/calibrate.sh      # 2: two-cell rate check — paste the printed blo
   `nvidia-smi` is present), builds the Release CLI tools tree in
   `build-exp/`, and downloads the models via `models.sh`. The CUDA
   *toolkit* is never auto-installed — use a CUDA image; a GPU-without-
-  nvcc situation is diagnosed with a warning.
+  nvcc situation is diagnosed with a warning. **Safe to re-run, and
+  networked-FS aware**: models and the repo-local ccache (`.ccache/`)
+  persist as wins across machines, while a stale `.venv` or `build-exp/`
+  (interpreter, toolchain, or CUDA state changed since the stamp) is
+  detected and rebuilt rather than trusted.
 - `models.sh` — the model list is the single edit point; **verify the
   Hugging Face URLs before a paid run**. Ships: tiny-llama3 (smoke),
   Llama-3.2-1B base (the non-finetuned datapoint), 1B/3B Instruct (Q8_0).

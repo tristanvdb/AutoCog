@@ -32,6 +32,7 @@ shift $(( $# > 2 ? 2 : $# )) || true
 echo "=== Building Release tools into $BUILD_DIR ==="
 LAUNCHER_ARGS=()
 if command -v ccache > /dev/null 2>&1; then
+    export CCACHE_DIR="${CCACHE_DIR:-$REPO_ROOT/.ccache}"
     LAUNCHER_ARGS=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache)
 fi
 cmake -B "$BUILD_DIR" -S "$REPO_ROOT" \

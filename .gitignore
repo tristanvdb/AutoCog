@@ -22,3 +22,4 @@ tests/coverage*.json
 
 # Planning / scratch docs — never tracked
 docs/_planning/
+.ccache/
