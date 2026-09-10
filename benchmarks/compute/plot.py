@@ -6,10 +6,15 @@
 Each labeled series is one sweep (an era of the backend, a machine, a
 model...). Rows are matched on (beams, ahead, width). Four figures:
 
-    wall.png      evaluation seconds per configuration (log scale)
-    restore.png   restore share of decoded tokens — the KV-caching story
-    pertoken.png  milliseconds per decoded token — the batching story
-    work.png      productive (eval) tokens — whether runs did the same work
+    wall.png        evaluation seconds per configuration (log scale)
+    restore.png     restore share of decoded tokens — the KV-caching story
+    pertoken.png    milliseconds per decoded token — the batching story
+    work.png        productive (eval) tokens — whether runs did the same work
+    productive.png  milliseconds per *productive* token — the bottom line:
+                    total cost divided by useful output, so it stays
+                    comparable across series even when the amount of work
+                    changed (restore waste and per-call overhead both count
+                    against the numerator)
 
 Configurations where eval-token counts differ across series are marked *
 in wall.png: their timing ratios include a change of work, not just of
@@ -101,8 +106,10 @@ def main():
                  "ms per decoded token", "pertoken.png")
     grouped_bars(lambda r: r and r["eval"],
                  "productive (eval) tokens (log)", "work.png", log=True)
+    grouped_bars(lambda r: r and (1000.0 * r["seconds"] / max(1, r["eval"])),
+                 "ms per productive token", "productive.png", log=True)
 
-    print(f"wrote wall.png restore.png pertoken.png work.png -> {args.out}")
+    print(f"wrote wall.png restore.png pertoken.png work.png productive.png -> {args.out}")
 
 
 if __name__ == "__main__":
