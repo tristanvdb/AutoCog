@@ -82,10 +82,14 @@ def search_config(cell):
     }
 
 
+class CellFailure(Exception):
+    pass
+
+
 def run(cmd, env=None):
     r = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if r.returncode != 0:
-        sys.exit(f"FAILED ({r.returncode}): {' '.join(cmd)}\n{r.stderr[-2000:]}")
+        raise CellFailure(f"FAILED ({r.returncode}): {' '.join(cmd)}\n{r.stderr[-2000:]}")
     return r
 
 
@@ -144,6 +148,7 @@ def main():
         return stas[stl]
 
     results = []
+    failed = []
     t_start = time.time()
     nd = open(nd_path, "a")
     for i, cell in enumerate(cells):
@@ -160,23 +165,30 @@ def main():
             syntax = os.path.join(REPO, syntax)
         ctx = cell.get("ctx", args.ctx)
 
-        scfg = os.path.join(work, "search.json")
-        with open(scfg, "w") as f:
-            json.dump(search_config(cell), f)
-        fta = os.path.join(work, "bench.fta")
-        run([tools["ista"], "--sta", sta_for(stl), "--prompt", "main", "--syntax", syntax,
-             "--search", scfg, "--content", CONTENT, "--fta", fta])
+        # A failed cell must not take down an unattended sweep: log it,
+        # keep every completed cell, move on.
+        try:
+            scfg = os.path.join(work, "search.json")
+            with open(scfg, "w") as f:
+                json.dump(search_config(cell), f)
+            fta = os.path.join(work, "bench.fta")
+            run([tools["ista"], "--sta", sta_for(stl), "--prompt", "main", "--syntax", syntax,
+                 "--search", scfg, "--content", CONTENT, "--fta", fta])
 
-        env = dict(os.environ)
-        if cell.get("slots"):
-            env["AUTOCOG_KV_SLOTS"] = str(cell["slots"])
-        perf = os.path.join(work, "perf.ndjson")
-        t0 = time.time()
-        cmd = [tools["xfta"], "--fta", fta, "--ftt", os.path.join(work, "out.ftt"),
-               "--perf", perf, "--ctx", str(ctx), "--seed", "42"]
-        cmd += ["--rng"] if args.rng else ["--model", args.model]
-        run(cmd, env=env)
-        wall = time.time() - t0
+            env = dict(os.environ)
+            if cell.get("slots"):
+                env["AUTOCOG_KV_SLOTS"] = str(cell["slots"])
+            perf = os.path.join(work, "perf.ndjson")
+            t0 = time.time()
+            cmd = [tools["xfta"], "--fta", fta, "--ftt", os.path.join(work, "out.ftt"),
+                   "--perf", perf, "--ctx", str(ctx), "--seed", "42"]
+            cmd += ["--rng"] if args.rng else ["--model", args.model]
+            run(cmd, env=env)
+            wall = time.time() - t0
+        except CellFailure as e:
+            failed.append(cell_name(cell))
+            print(f"[{i + 1}/{len(cells)}] {cell_name(cell)} {e}", flush=True)
+            continue
 
         events = [json.loads(l) for l in open(perf)]
         summary = next(e for e in events if e["event.action"] == "eval.summary")
@@ -197,6 +209,8 @@ def main():
               f"decode_calls={summary.get('autocog.perf.decode.calls', '-')}", flush=True)
     nd.close()
 
+    if failed:
+        print(f"[failed] {len(failed)} cell(s): " + ", ".join(failed), flush=True)
     if not results:
         sys.exit("no cells completed")
     md = os.path.join(args.out, f"results-{stamp}.md")

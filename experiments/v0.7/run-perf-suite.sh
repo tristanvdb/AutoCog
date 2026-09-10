@@ -58,10 +58,12 @@ cat "$OUT/machine.txt"
 sweep() {  # sweep NAME BUDGET MODEL CELLS_FILE
     local name="$1" budget="$2" model="$3" cellsf="$4"
     echo "=== $name (budget ${budget}s, $(basename "$model")) ==="
+    # One experiment failing must not take down the unattended suite.
     python3 "$REPO/benchmarks/compute/sweep.py" \
         --build "$BUILD" --model "$model" --cells "$cellsf" \
         --budget-seconds "$budget" --tag "$name" --out "$OUT" \
-        2>&1 | tee "$OUT/$name.log"
+        2>&1 | tee "$OUT/$name.log" \
+        || echo "!!! $name failed — continuing" | tee -a "$OUT/$name.log"
 }
 
 sweep e1 "$E1_BUDGET" "$MODEL_1B" "$CELLS/e1-core.json"
@@ -78,12 +80,14 @@ echo "=== e5: accuracy-budget probe ==="
 python3 "$REPO/benchmarks/quality/run.py" \
     --build "$BUILD" --model "$MODEL_1B" \
     --syntaxes default,special --demos select,select-cot \
-    --questions "$E5_QUESTIONS" --out "$OUT/e5-1b" 2>&1 | tee "$OUT/e5.log"
+    --questions "$E5_QUESTIONS" --out "$OUT/e5-1b" 2>&1 | tee "$OUT/e5.log" \
+    || echo "!!! e5 (1B) failed — continuing" | tee -a "$OUT/e5.log"
 if [ -s "$MODEL_3B" ]; then
     python3 "$REPO/benchmarks/quality/run.py" \
         --build "$BUILD" --model "$MODEL_3B" \
         --syntaxes default --demos select \
-        --questions 5 --out "$OUT/e5-3b" 2>&1 | tee -a "$OUT/e5.log"
+        --questions 5 --out "$OUT/e5-3b" 2>&1 | tee -a "$OUT/e5.log" \
+        || echo "!!! e5 (3B) failed — continuing" | tee -a "$OUT/e5.log"
 fi
 
 tar -czf "$OUT/../$(basename "$OUT")-results.tar.gz" -C "$OUT/.." "$(basename "$OUT")"

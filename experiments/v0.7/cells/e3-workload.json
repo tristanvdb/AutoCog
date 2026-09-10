@@ -11,6 +11,7 @@
   "ahead": 1,
   "width": 1,
   "stl": "benchmarks/compute/benchmark-len300.stl",
+  "ctx": 8192,
   "label": "len300 b4a1w1"
  },
  {
@@ -18,6 +19,7 @@
   "ahead": 1,
   "width": 1,
   "stl": "benchmarks/compute/benchmark-len300.stl",
+  "ctx": 8192,
   "repetition": 0.5,
   "label": "len300+rep b4a1w1"
  },
