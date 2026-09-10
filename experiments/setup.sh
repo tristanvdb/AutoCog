@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 # Machine setup — the first of the two commands that start any experiment
-# campaign (then: experiments/calibrate.sh, then the campaign's script).
+# campaign (then: calibrate.sh, then the campaign's script). Run it from
+# your working directory with the repo as a subdirectory:
+#
+#     cd ~/my-nfs && autocog/experiments/setup.sh
+#
+# Artifacts (.venv, build-exp, models, results, .ccache) land alongside
+# the repo — see env.sh for the layout and overrides. Safe to re-run and
+# networked-FS aware: persisted models/ccache are reused, while a venv or
+# build tree stamped by a different machine/toolchain is rebuilt.
 #
 # Assumes a clean clone with submodules initialized:
 #   git submodule update --init --recursive
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$REPO"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/env.sh"
 
-if [ ! -e vendors/llama/include/llama.h ]; then
-    echo "vendored submodules missing — run: git submodule update --init --recursive" >&2
+if [ ! -e "$REPO/vendors/llama/include/llama.h" ]; then
+    echo "vendored submodules missing — run: git -C $REPO submodule update --init --recursive" >&2
     exit 1
 fi
 
@@ -67,47 +74,46 @@ else
     echo "=== no GPU detected — CPU build ==="
 fi
 
-# The checkout may live on a networked FS and persist across (different)
+# The workdir may live on a networked FS and persist across (different)
 # machines: models and the ccache survive — a win — but a venv whose
 # interpreter changed and a CMake cache pinning another machine's
 # compilers/CUDA must be detected and rebuilt, not trusted.
 STAMP="$(uname -sr) py=$(python3 -V 2>&1) gxx=$(g++ -dumpversion 2>/dev/null) cuda=${CUDA_ARGS[*]:-none}"
-export CCACHE_DIR="${CCACHE_DIR:-$REPO/.ccache}"
 
-echo "=== python venv + package (Release) ==="
-if [ -d .venv ]; then
-    if ! .venv/bin/python3 -c pass > /dev/null 2>&1 \
-       || [ "$(cat .venv/.autocog-stamp 2>/dev/null)" != "$STAMP" ]; then
+echo "=== python venv + package (Release) into $VENV ==="
+if [ -d "$VENV" ]; then
+    if ! "$VENV/bin/python3" -c pass > /dev/null 2>&1 \
+       || [ "$(cat "$VENV/.autocog-stamp" 2>/dev/null)" != "$STAMP" ]; then
         echo "stale venv (machine/python changed) — recreating"
-        rm -rf .venv
+        rm -rf "$VENV"
     fi
 fi
-python3 -m venv .venv
+python3 -m venv "$VENV"
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source "$VENV/bin/activate"
 pip install --upgrade pip > /dev/null
-CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install .   # local-dir install: always rebuilt
-echo "$STAMP" > .venv/.autocog-stamp
+CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install "$REPO"   # local-dir install: always rebuilt
+echo "$STAMP" > "$VENV/.autocog-stamp"
 
-echo "=== Release tools tree (build-exp) ==="
-if [ -f build-exp/CMakeCache.txt ] \
-   && [ "$(cat build-exp/.autocog-stamp 2>/dev/null)" != "$STAMP" ]; then
-    echo "stale build tree (machine/toolchain changed) — wiping build-exp"
-    rm -rf build-exp
+echo "=== Release tools tree into $BUILD_EXP ==="
+if [ -f "$BUILD_EXP/CMakeCache.txt" ] \
+   && [ "$(cat "$BUILD_EXP/.autocog-stamp" 2>/dev/null)" != "$STAMP" ]; then
+    echo "stale build tree (machine/toolchain changed) — wiping"
+    rm -rf "$BUILD_EXP"
 fi
 LAUNCHER_ARGS=()
 command -v ccache > /dev/null 2>&1 && \
     LAUNCHER_ARGS=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache)
-cmake -B build-exp -S "$REPO" \
+cmake -B "$BUILD_EXP" -S "$REPO" \
     -DCMAKE_BUILD_TYPE=Release \
     -DAUTOCOG_BUILD_TESTS=OFF \
     "${LAUNCHER_ARGS[@]}" \
     "${CUDA_ARGS[@]}"
-cmake --build build-exp --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
-echo "$STAMP" > build-exp/.autocog-stamp
+cmake --build "$BUILD_EXP" --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
+echo "$STAMP" > "$BUILD_EXP/.autocog-stamp"
 
-echo "=== models ==="
-"$SCRIPT_DIR/models.sh"
+echo "=== models into $MODELS_DIR ==="
+"$EXP_DIR/models.sh"
 
 echo
-echo "setup complete. next: experiments/calibrate.sh"
+echo "setup complete. next: $(realpath --relative-to="$PWD" "$EXP_DIR" 2>/dev/null || echo "$EXP_DIR")/calibrate.sh"

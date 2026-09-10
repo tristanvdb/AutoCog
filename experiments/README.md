@@ -4,11 +4,24 @@ Every experiment campaign on a fresh machine starts with the same two
 commands, then its own (unattended) campaign script:
 
 ```bash
-git clone <repo-url> autocog && cd autocog
-git submodule update --init --recursive
-experiments/setup.sh          # 1: venv + Release builds (CUDA if present) + models
-experiments/calibrate.sh      # 2: two-cell rate check — paste the printed block back
+cd ~/my-nfs                              # your working directory (may persist)
+git clone --recurse-submodules <repo-url> autocog
+autocog/experiments/setup.sh             # 1: deps + venv + Release builds + models
+autocog/experiments/calibrate.sh         # 2: two-cell rate check — paste the block back
 ```
+
+The repo stays a clean subdirectory; every artifact lands alongside it:
+
+```
+~/my-nfs/
+  autocog/                     the checkout
+  .venv/  build-exp/  models/  results/  .ccache/
+```
+
+That resolution lives in `env.sh` (sourced by every script): the working
+directory is wherever you invoke from — invoking from *inside* the repo
+falls back to the old self-contained layout — with `AUTOCOG_WORKDIR`
+overriding everything and `MODELS_PATH` just the models directory.
 
 - `setup.sh` — installs missing system dependencies (toolchain, cmake,
   curl, python3-venv; `apt`/`dnf` auto-detected, `sudo` only when not

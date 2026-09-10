@@ -8,18 +8,19 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
-OUT="${1:-$SCRIPT_DIR/results/$(date +%Y%m%d-%H%M%S)}"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../env.sh"
+OUT="${1:-$RESULTS_DIR/$(date +%Y%m%d-%H%M%S)}"
 shift $(( $# > 0 ? 1 : 0 )) || true
 mkdir -p "$OUT/quality"
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
-source "$REPO/.venv/bin/activate"
+source "$VENV/bin/activate"
 
 MODELS=("$@")
 if [ ${#MODELS[@]} -eq 0 ]; then
-    for m in "$REPO"/models/*.gguf; do
+    for m in "$MODELS_DIR"/*.gguf; do
         [[ "$m" == *tiny-llama3* ]] && continue
         MODELS+=("$m")
     done
@@ -28,7 +29,7 @@ fi
 for model in "${MODELS[@]}"; do
     echo "=== quality benchmark: $(basename "$model") (NGL=$AUTOCOG_NGL) ==="
     python3 "$REPO/benchmarks/quality/run.py" \
-        --build "$REPO/build-exp" \
+        --build "$BUILD_EXP" \
         --model "$model" \
         --out "$OUT/quality"
 done

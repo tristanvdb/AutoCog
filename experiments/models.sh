@@ -8,9 +8,10 @@
 # datapoint.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
-mkdir -p "$REPO/models"
-cd "$REPO/models"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/env.sh"
+mkdir -p "$MODELS_DIR"
+cd "$MODELS_DIR"
 
 declare -A MODELS=(
   [tiny-llama3-test-Q2_K.gguf]="https://huggingface.co/TensorBlock/tiny-llama3-test-GGUF/resolve/main/tiny-llama3-test-Q2_K.gguf"
@@ -29,4 +30,4 @@ for name in "${!MODELS[@]}"; do
     mv "$name.part" "$name"
 done
 
-ls -lh "$REPO"/models/*.gguf
+ls -lh "$MODELS_DIR"/*.gguf

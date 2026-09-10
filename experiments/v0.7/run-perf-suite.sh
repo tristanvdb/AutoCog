@@ -23,20 +23,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../env.sh"
 TOTAL_HOURS="${1:-7}"
 TOTAL_S=$(python3 -c "print(int($TOTAL_HOURS * 3600))")
 
-MODEL_1B="${MODEL_1B:-$REPO/models/Llama-3.2-1B-Instruct-Q8_0.gguf}"
-MODEL_3B="${MODEL_3B:-$REPO/models/Llama-3.2-3B-Instruct-Q8_0.gguf}"
-BUILD="$REPO/build-exp"
+MODEL_1B="${MODEL_1B:-$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf}"
+MODEL_3B="${MODEL_3B:-$MODELS_DIR/Llama-3.2-3B-Instruct-Q8_0.gguf}"
+BUILD="$BUILD_EXP"
 CELLS="$SCRIPT_DIR/cells"
-OUT="$SCRIPT_DIR/results/perf-$(date +%Y%m%d-%H%M%S)"
+OUT="$RESULTS_DIR/perf-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
-source "$REPO/.venv/bin/activate"
+source "$VENV/bin/activate"
 
 # Budget split (seconds); override any via env.
 E1_BUDGET="${E1_BUDGET:-$(( TOTAL_S * 35 / 100 ))}"

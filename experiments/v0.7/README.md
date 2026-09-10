@@ -13,15 +13,15 @@ fine-tune has to beat.
 ## Quick start (clean machine)
 
 ```bash
-git clone <repo-url> autocog && cd autocog
-git submodule update --init --recursive
-experiments/setup.sh               # venv + CUDA Release build + models
-experiments/calibrate.sh           # two-cell rate check — paste the block back
+cd ~/my-nfs                                  # working dir; artifacts land here
+git clone --recurse-submodules <repo-url> autocog
+autocog/experiments/setup.sh                 # deps + venv + CUDA build + models
+autocog/experiments/calibrate.sh             # rate check — paste the block back
 # after retuning (budgets are env/args only):
-nohup experiments/v0.7/run-perf-suite.sh 7 > perf-suite.log 2>&1 &
+nohup autocog/experiments/v0.7/run-perf-suite.sh 7 > perf-suite.log 2>&1 &
 ```
 
-Results land in `experiments/v0.7/results/<run-id>/` (gitignored), one
+Results land in `<workdir>/results/<run-id>/`, one
 NDJSON + markdown pair per benchmark per model, plus a `results.tar.gz`
 to pull off the machine.
 

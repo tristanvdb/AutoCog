@@ -4,8 +4,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
-OUT="$SCRIPT_DIR/results/$(date +%Y%m%d-%H%M%S)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../env.sh"
+OUT="$RESULTS_DIR/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
 {
@@ -16,7 +17,7 @@ mkdir -p "$OUT"
 } > "$OUT/machine.txt" 2>&1 || true
 
 # Smoke first: the tiny model exercises the whole quality pipeline in minutes.
-"$SCRIPT_DIR/run-quality.sh" "$OUT" "$REPO/models/tiny-llama3-test-Q2_K.gguf"
+"$SCRIPT_DIR/run-quality.sh" "$OUT" "$MODELS_DIR/tiny-llama3-test-Q2_K.gguf"
 
 "$SCRIPT_DIR/run-compute.sh" "$OUT"
 "$SCRIPT_DIR/run-quality.sh" "$OUT"

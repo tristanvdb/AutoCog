@@ -9,15 +9,15 @@
 #   MODEL=models/foo.gguf experiments/calibrate.sh
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
-MODEL="${MODEL:-$REPO/models/Llama-3.2-1B-Instruct-Q8_0.gguf}"
-CAL="$SCRIPT_DIR/calibration-results"
+# shellcheck disable=SC1091
+source "$(dirname "$0")/env.sh"
+MODEL="${MODEL:-$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf}"
+CAL="$RESULTS_DIR/calibration"
 mkdir -p "$CAL"
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
-source "$REPO/.venv/bin/activate"
+source "$VENV/bin/activate"
 
 CELLS="$(mktemp)"
 cat > "$CELLS" <<'EOF'
@@ -27,7 +27,7 @@ cat > "$CELLS" <<'EOF'
 ]
 EOF
 
-python3 "$REPO/benchmarks/compute/sweep.py" --build "$REPO/build-exp" \
+python3 "$REPO/benchmarks/compute/sweep.py" --build "$BUILD_EXP" \
     --model "$MODEL" --cells "$CELLS" --tag calib --out "$CAL"
 rm -f "$CELLS"
 
