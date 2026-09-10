@@ -24,11 +24,13 @@ fi
 
 echo "=== system dependencies ==="
 SUDO=""
+CAN_INSTALL=1
 if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo > /dev/null 2>&1; then
         SUDO="sudo"
     else
         echo "warning: not root and no sudo — skipping package installation" >&2
+        CAN_INSTALL=0
     fi
 fi
 
@@ -44,11 +46,10 @@ if need_tools; then
     if command -v apt-get > /dev/null 2>&1; then
         $SUDO apt-get update -qq
         $SUDO apt-get install -y -qq build-essential cmake git curl \
-            python3-venv python3-dev python3-pip ccache
+            python3-venv python3-dev python3-pip
     elif command -v dnf > /dev/null 2>&1; then
         $SUDO dnf install -y -q gcc-c++ make cmake git curl \
             python3-devel python3-pip
-        $SUDO dnf install -y -q ccache || true   # EPEL-only on RHEL-likes; optional
     else
         echo "warning: no apt-get/dnf found — install a C++ toolchain, cmake, curl," >&2
         echo "         and python3 (with venv) manually, then re-run" >&2
@@ -56,6 +57,18 @@ if need_tools; then
     fi
 else
     echo "toolchain present — nothing to install"
+fi
+
+# ccache is optional but wanted regardless of whether the toolchain check
+# passed (a stock image has the toolchain but rarely ccache); best-effort —
+# EPEL-only on RHEL-likes.
+if ! command -v ccache > /dev/null 2>&1 && [ "$CAN_INSTALL" -eq 1 ]; then
+    echo "installing ccache (optional)"
+    if command -v apt-get > /dev/null 2>&1; then
+        $SUDO apt-get install -y -qq ccache || true
+    elif command -v dnf > /dev/null 2>&1; then
+        $SUDO dnf install -y -q ccache || true
+    fi
 fi
 
 # CUDA toolkit is never auto-installed (driver/toolkit setup is image
