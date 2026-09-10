@@ -29,46 +29,104 @@ if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo > /dev/null 2>&1; then
         SUDO="sudo"
     else
-        echo "warning: not root and no sudo — skipping package installation" >&2
+        echo "warning: not root and no sudo — cannot install packages" >&2
         CAN_INSTALL=0
     fi
 fi
 
-need_tools() {  # commands that must exist before we build
-    for c in g++ make cmake git curl python3; do
-        command -v "$c" > /dev/null 2>&1 || return 0
-    done
-    python3 -m venv --help > /dev/null 2>&1 || return 0
-    return 1
+PKG_MGR=""
+command -v apt-get > /dev/null 2>&1 && PKG_MGR=apt
+[ -z "$PKG_MGR" ] && command -v dnf > /dev/null 2>&1 && PKG_MGR=dnf
+
+# name : probe : apt package : dnf package
+DEPS='
+g++:g++:g++:gcc-c++
+make:make:make:make
+cmake:cmake:cmake:cmake
+git:git:git:git
+curl:curl:curl:curl
+python3:python3:python3:python3
+python3-venv:@venv:python3-venv:python3
+python3-dev:@pydev:python3-dev:python3-devel
+pip:@pip:python3-pip:python3-pip
+ccache:ccache:ccache:ccache
+'
+
+probe() {  # probe NAME -> 0 if present
+    case "$1" in
+        @venv)  python3 -m venv --help > /dev/null 2>&1 ;;
+        @pydev) command -v python3-config > /dev/null 2>&1 ;;
+        @pip)   python3 -m pip --version > /dev/null 2>&1 ;;
+        *)      command -v "$1" > /dev/null 2>&1 ;;
+    esac
 }
 
-if need_tools; then
-    if command -v apt-get > /dev/null 2>&1; then
-        $SUDO apt-get update -qq
-        $SUDO apt-get install -y -qq build-essential cmake git curl \
-            python3-venv python3-dev python3-pip
-    elif command -v dnf > /dev/null 2>&1; then
-        $SUDO dnf install -y -q gcc-c++ make cmake git curl \
-            python3-devel python3-pip
-    else
-        echo "warning: no apt-get/dnf found — install a C++ toolchain, cmake, curl," >&2
-        echo "         and python3 (with venv) manually, then re-run" >&2
-        exit 1
-    fi
+collect_missing() {  # fills MISSING_NAMES / MISSING_PKGS from the current state
+    MISSING_NAMES=()
+    MISSING_PKGS=()
+    while IFS=: read -r name check aptpkg dnfpkg; do
+        [ -z "$name" ] && continue
+        if ! probe "$check"; then
+            MISSING_NAMES+=("$name")
+            case "$PKG_MGR" in
+                apt) MISSING_PKGS+=("$aptpkg") ;;
+                dnf) MISSING_PKGS+=("$dnfpkg") ;;
+            esac
+        fi
+    done <<< "$DEPS"
+}
+
+collect_missing
+if [ ${#MISSING_NAMES[@]} -eq 0 ]; then
+    echo "toolchain complete — nothing to install"
+elif [ -z "$PKG_MGR" ]; then
+    echo "error: missing (${MISSING_NAMES[*]}) and no apt-get/dnf found — install manually, then re-run" >&2
+    exit 1
+elif [ "$CAN_INSTALL" -eq 0 ]; then
+    echo "error: missing (${MISSING_NAMES[*]}) but cannot install (no root/sudo)" >&2
+    exit 1
 else
-    echo "toolchain present — nothing to install"
+    echo "missing: ${MISSING_NAMES[*]}"
+    readarray -t PKGS < <(printf '%s\n' "${MISSING_PKGS[@]}" | sort -u)
+    case "$PKG_MGR" in
+        apt) $SUDO apt-get update -qq
+             $SUDO apt-get install -y -qq "${PKGS[@]}" ;;
+        dnf) $SUDO dnf install -y -q "${PKGS[@]}" ;;
+    esac
 fi
 
-# ccache is optional but wanted regardless of whether the toolchain check
-# passed (a stock image has the toolchain but rarely ccache); best-effort —
-# EPEL-only on RHEL-likes.
-if ! command -v ccache > /dev/null 2>&1 && [ "$CAN_INSTALL" -eq 1 ]; then
-    echo "installing ccache (optional)"
-    if command -v apt-get > /dev/null 2>&1; then
-        $SUDO apt-get install -y -qq ccache || true
-    elif command -v dnf > /dev/null 2>&1; then
-        $SUDO dnf install -y -q ccache || true
+# Re-probe and report every version; anything still missing is fatal.
+echo "--- toolchain ---"
+version_of() {
+    case "$1" in
+        g++)          g++ --version | head -1 ;;
+        make)         make --version | head -1 ;;
+        cmake)        cmake --version | head -1 ;;
+        git)          git --version ;;
+        curl)         curl --version | head -1 ;;
+        python3)      python3 -V ;;
+        python3-venv) echo "ok ($(python3 -V 2>&1))" ;;
+        python3-dev)  echo "ok ($(python3-config --prefix))" ;;
+        pip)          python3 -m pip --version ;;
+        ccache)       ccache --version | head -1 ;;
+    esac
+}
+FAIL=0
+while IFS=: read -r name check _ _; do
+    [ -z "$name" ] && continue
+    if probe "$check"; then
+        printf '  %-13s %s\n' "$name" "$(version_of "$name")"
+    else
+        printf '  %-13s MISSING\n' "$name"
+        FAIL=1
     fi
+done <<< "$DEPS"
+if command -v nvcc > /dev/null 2>&1; then
+    printf '  %-13s %s\n' "nvcc" "$(nvcc --version | grep -o 'release.*' | head -1)"
+fi
+if [ "$FAIL" -ne 0 ]; then
+    echo "error: toolchain still incomplete after installation" >&2
+    exit 1
 fi
 
 # CUDA toolkit is never auto-installed (driver/toolkit setup is image
