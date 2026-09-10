@@ -8,7 +8,7 @@
 # datapoint.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p "$REPO/models"
 cd "$REPO/models"
 

@@ -15,8 +15,10 @@ fine-tune has to beat.
 ```bash
 git clone <repo-url> autocog && cd autocog
 git submodule update --init --recursive
-experiments/v0.7/setup.sh          # venv + CUDA Release build + models
-experiments/v0.7/run-all.sh        # compute sweeps, then quality benchmarks
+experiments/setup.sh               # venv + CUDA Release build + models
+experiments/calibrate.sh           # two-cell rate check — paste the block back
+# after retuning (budgets are env/args only):
+nohup experiments/v0.7/run-perf-suite.sh 7 > perf-suite.log 2>&1 &
 ```
 
 Results land in `experiments/v0.7/results/<run-id>/` (gitignored), one
@@ -25,15 +27,14 @@ to pull off the machine.
 
 ## What the scripts do
 
-- `setup.sh` — creates `.venv`, `pip install .` (Release; adds
-  `-DGGML_CUDA=ON` when `nvidia-smi` is present), builds a separate
-  Release tools tree in `build-exp/` (stlc/ista/xfta/psta/efta for the
-  benchmark drivers), and downloads the models via `models.sh`.
-- `models.sh` — fetches the GGUFs into `models/`. **Verify the URLs /
-  quant choices before a paid run** — Hugging Face repo layouts move; the
-  list at the top of the script is the single place to edit. The set:
-  tiny-llama3 (pipeline smoke), Llama-3.2-1B **base**, Llama-3.2-1B
-  Instruct, Llama-3.2-3B Instruct (all Q8_0).
+- `experiments/setup.sh` + `experiments/calibrate.sh` (one level up,
+  shared by every campaign) prepare the machine and print the calibration
+  block; see `experiments/README.md`.
+- `run-perf-suite.sh [HOURS]` — the unattended performance suite
+  (E1 core matrix, E2 mechanism ablations, E3 workload scaling on 1B;
+  E4 3B anchors; E5 accuracy-budget probe), per-experiment second-budgets
+  as env overrides (`E1_BUDGET`..`E4_BUDGET`, `E5_QUESTIONS`), cells
+  defined in `cells/*.json`.
 - `run-compute.sh [model.gguf ...]` — the search-parameter sweep
   (`benchmarks/compute/run.sh`: beams x ahead x width, xfta `--perf`
   ECS events) per model, plus the RNG harness floor once.
