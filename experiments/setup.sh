@@ -141,6 +141,11 @@ if command -v nvidia-smi > /dev/null 2>&1; then
     echo "=== CUDA GPU detected — building with GGML_CUDA ==="
     nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
     CUDA_ARGS=(-DGGML_CUDA=ON)
+    # Compile only for the GPU that is actually here: ggml's default is a
+    # list of legacy architectures (sm_50..), which multiplies CUDA compile
+    # time and spams nvcc deprecation warnings on CUDA >= 12.8.
+    ARCH="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d '. ')"
+    [ -n "$ARCH" ] && CUDA_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=$ARCH")
 else
     echo "=== no GPU detected — CPU build ==="
 fi
