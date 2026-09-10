@@ -163,6 +163,10 @@ python3 -m venv "$VENV"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 pip install --upgrade pip > /dev/null
+# pybind11 is a pyproject build-requires, so pip's isolated build env has it
+# but the venv does not — and the standalone tools tree finds it through the
+# active interpreter (import pybind11), so it must live in the venv too.
+pip install pybind11 > /dev/null
 CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install "$REPO"   # local-dir install: always rebuilt
 echo "$STAMP" > "$VENV/.autocog-stamp"
 
