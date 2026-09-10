@@ -30,11 +30,14 @@ MODEL="${2:---rng}"
 shift $(( $# > 2 ? 2 : $# )) || true
 
 echo "=== Building Release tools into $BUILD_DIR ==="
+LAUNCHER_ARGS=()
+if command -v ccache > /dev/null 2>&1; then
+    LAUNCHER_ARGS=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache)
+fi
 cmake -B "$BUILD_DIR" -S "$REPO_ROOT" \
     -DCMAKE_BUILD_TYPE=Release \
     -DAUTOCOG_BUILD_TESTS=OFF \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache > "$BUILD_DIR.cmake.log" 2>&1
+    "${LAUNCHER_ARGS[@]}" > "$BUILD_DIR.cmake.log" 2>&1
 cmake --build "$BUILD_DIR" --target autocog_stlc autocog_ista autocog_xfta \
     -j"$(nproc)" > "$BUILD_DIR.build.log" 2>&1
 
