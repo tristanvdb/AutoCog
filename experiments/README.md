@@ -5,7 +5,7 @@ commands, then its own (unattended) campaign script:
 
 ```bash
 cd ~/my-nfs                              # your working directory (may persist)
-git clone --recurse-submodules <repo-url> autocog
+git clone --recursive -b benchmarking https://github.com/tristanvdb/AutoCog autocog
 autocog/experiments/setup.sh             # 1: deps + venv + Release builds + models
 autocog/experiments/calibrate.sh         # 2: two-cell rate check — paste the block back
 ```

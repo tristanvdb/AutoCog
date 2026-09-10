@@ -14,7 +14,7 @@ fine-tune has to beat.
 
 ```bash
 cd ~/my-nfs                                  # working dir; artifacts land here
-git clone --recurse-submodules <repo-url> autocog
+git clone --recursive -b benchmarking https://github.com/tristanvdb/AutoCog autocog
 autocog/experiments/setup.sh                 # deps + venv + CUDA build + models
 autocog/experiments/calibrate.sh             # rate check — paste the block back
 # after retuning (budgets are env/args only):
