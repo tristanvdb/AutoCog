@@ -42,10 +42,10 @@ overriding everything and `MODELS_PATH` just the models directory.
   ARC-V1-Feb2018.zip`) and MMLU (`people.eecs.berkeley.edu/~hendrycks/
   data.tar`), both canonical no-auth distributions.
 - `models.sh` — the model list is the single edit point; **verify the
-  Hugging Face URLs before a paid run**. Ships: tiny-llama3 (smoke),
-  Llama-3.2-1B/3B base (the non-finetuned datapoints), 1B/3B Instruct
-  (Q8_0). `MODELS_BIG=1` adds the Llama-3.1-8B, Qwen2.5-14B, and
-  Qwen2.5-32B base+instruct pairs (~90 GB; 32B at Q6_K to fit a 40 GB
+  Hugging Face URLs before a paid run**. Base+instruct pairs by scale
+  tier via `MODEL_SIZE`: `0` (default) tiny smoke + Llama-3.2-1B
+  (~2.7 GB), `1` adds Llama-3.2-3B and Llama-3.1-8B (~24 GB more), `2`
+  adds Qwen2.5-14B and 32B (~85 GB more; 32B at Q6_K to fit a 40 GB
   A100 with KV headroom).
 - `calibrate.sh` — one narrow and one wide cell on the 1B model
   (~3-6 min): fits per-token/per-call rates, proves GPU offload

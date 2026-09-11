@@ -36,9 +36,9 @@ to pull off the machine.
   as env overrides (`E1_BUDGET`..`E4_BUDGET`, `E5_QUESTIONS`), cells
   defined in `cells/*.json`.
 - `run-accuracy.sh [OUT_DIR]` — the small accuracy campaign: 100
-  questions on every base/instruct pair present in `models/` (1B/3B
-  always; 8B/14B/32B when fetched with `MODELS_BIG=1`; missing models
-  skipped with a note), patterns default,special x select,select-cot
+  questions on every base/instruct pair present in `models/` (which
+  pairs exist follows the `MODEL_SIZE` tier used at download; missing
+  models skipped with a note), patterns default,special x select,select-cot
   (`SYNTAXES`/`DEMOS`/`QUESTIONS` env overrides), then
   `benchmarks/quality/summarize.py` writes the model x pattern accuracy
   matrix and the delta-vs-instruct table to `summary.md`. The product is

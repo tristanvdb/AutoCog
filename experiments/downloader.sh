@@ -6,7 +6,8 @@
 #     autocog/experiments/downloader.sh [--datasets-only]
 #
 #   --datasets-only   skip the models (e.g. gguf already in place)
-#   MODELS_BIG=1      also fetch the 8B/14B/32B base+instruct pairs (~90 GB)
+#   MODEL_SIZE={0,1,2}  scale tier (see models.sh): 0 = tiny + 1B pair
+#                       (default), 1 adds the 3B/8B pairs, 2 adds 14B/32B
 #
 # Everything is skip-if-present, so pre-placing archives by hand works too.
 # Datasets are the canonical no-auth distributions:

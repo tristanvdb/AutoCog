@@ -38,7 +38,7 @@ MODELS=(
     "$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf"
     "$MODELS_DIR/Llama-3.2-3B.Q8_0.gguf"
     "$MODELS_DIR/Llama-3.2-3B-Instruct-Q8_0.gguf"
-    # the MODELS_BIG=1 tier (skipped unless downloaded); Qwen pairs run
+    # higher MODEL_SIZE tiers (skipped unless downloaded); Qwen pairs run
     # default syntax only — special.json is Llama-3 reserved tokens
     "$MODELS_DIR/Meta-Llama-3.1-8B.Q8_0.gguf"
     "$MODELS_DIR/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
