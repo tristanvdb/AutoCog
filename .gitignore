@@ -3,7 +3,7 @@
 /models
 /Pipfile
 /modules/autocog/*.so
-/build/
+/build*/
 ftt.svg
 venv/
 .venv/
