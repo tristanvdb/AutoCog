@@ -1,6 +1,6 @@
 
 set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
-set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
+set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/complete.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 
 add_test(NAME demo-stlc-story-writer

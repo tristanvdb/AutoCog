@@ -176,7 +176,7 @@ def main():
         stl = cell.get("stl") or os.path.join(HERE, "benchmark.stl")
         if not os.path.isabs(stl):
             stl = os.path.join(REPO, stl)
-        syntax = cell.get("syntax") or os.path.join(REPO, "share", "syntax", "default.json")
+        syntax = cell.get("syntax") or os.path.join(REPO, "share", "syntax", "complete.json")
         if not os.path.isabs(syntax):
             syntax = os.path.join(REPO, syntax)
         ctx = cell.get("ctx", args.ctx)

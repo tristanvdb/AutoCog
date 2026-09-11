@@ -70,7 +70,7 @@ def test_harvest_and_export(tmp_path, engine, repo_root, build_dir):
 
     out = tmp_path / "harvest"
     manifest = harvest(str(rec.path), str(stl), str(out),
-                       syntaxes=["default", "special"], rng=True,
+                       syntaxes=["complete", "special"], rng=True,
                        tools_dir=build_dir, share=str(repo_root / "share"))
     assert manifest["version"] == 1
     assert len(manifest["steps"]) == 2  # 1 recorded step x 2 syntaxes

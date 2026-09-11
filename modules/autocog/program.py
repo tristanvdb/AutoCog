@@ -155,13 +155,13 @@ def _stdlib_path():
 def _default_syntax_path():
     """Return the path to the default syntax JSON file."""
     pkg_dir = os.path.dirname(os.path.abspath(__file__))
-    # Installed layout: autocog/syntax/default.json
-    candidate = os.path.join(pkg_dir, "syntax", "default.json")
+    # Installed layout: autocog/syntax/complete.json
+    candidate = os.path.join(pkg_dir, "syntax", "complete.json")
     if os.path.isfile(candidate):
         return candidate
-    # Dev layout: share/syntax/default.json
+    # Dev layout: share/syntax/complete.json
     repo = os.path.dirname(os.path.dirname(pkg_dir))
-    candidate = os.path.join(repo, "share", "syntax", "default.json")
+    candidate = os.path.join(repo, "share", "syntax", "complete.json")
     if os.path.isfile(candidate):
         return candidate
     return None

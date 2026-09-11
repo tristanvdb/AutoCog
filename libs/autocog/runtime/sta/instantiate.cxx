@@ -561,7 +561,7 @@ static std::string prompt_label(ConcreteState const & state,
     if (syntax.prompt_with_format) {
         label += "(" + format_label(fld) + ")";
     }
-    if (fld.is_list() && !state.indices.empty()) {
+    if (syntax.prompt_with_index && fld.is_list() && !state.indices.empty()) {
         int idx = state.indices.back();
         if (!syntax.prompt_zero_index) idx += 1;
         label += "[" + std::to_string(idx) + "]";
@@ -972,9 +972,9 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     for (auto const & d : prompt.desc) hdr << d << " ";
     hdr << "\n";
 
-    // Mechanics: schema preview in a code block
+    // Mechanics: schema preview in a code block. The entry label ("start:")
+    // belongs to the actual run, not to the syntax presentation.
     hdr << syntax.header_mechanic << "\n```\n";
-    hdr << "start:\n";
     for (auto const & fld : prompt.fields) {
         std::string indent;
         for (int i = 1; i < fld.depth; ++i) indent += syntax.prompt_indent;

@@ -20,7 +20,7 @@ Results: ECS-flavored NDJSON (one event per run) + a markdown summary,
 written as results-<host>-<model>.{ndjson,md}.
 
     run.py --build <release-build-dir> (--model <gguf> | --rng)
-           [--syntaxes default,special,...] [--demos select,...]
+           [--syntaxes complete,stripped,...] [--demos select,...]
            [--questions N] [--out DIR]
 
 NEVER benchmark a Debug/coverage build (see benchmarks/compute/run.sh).
@@ -40,7 +40,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 
-SYNTAXES = ["default", "chatml", "llama2chat", "plain", "special"]
+SYNTAXES = ["complete", "indent-index", "indent", "stripped", "chatml", "llama2chat", "special"]
 DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot", "repeat-hyp"]
 
 

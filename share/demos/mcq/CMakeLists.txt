@@ -2,7 +2,7 @@
 file(GLOB MCQ_STL_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.stl)
 
 set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
-set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
+set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/complete.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 
 foreach(STL_FILE ${MCQ_STL_FILES})

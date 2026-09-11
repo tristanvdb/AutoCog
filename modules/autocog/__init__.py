@@ -5,7 +5,7 @@ Usage:
     import autocog
 
     program = autocog.compile("program.stl", includes=["share/library"])
-    engine = autocog.Engine(model="model.gguf", syntax="share/syntax/default.json")
+    engine = autocog.Engine(model="model.gguf", syntax="share/syntax/complete.json")
     result = engine.run(program, topic="Science", question="2+2?")
 """
 

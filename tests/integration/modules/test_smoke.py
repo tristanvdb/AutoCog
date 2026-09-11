@@ -314,7 +314,7 @@ class TestStapp:
             prog, manifest, temp_dir, inc = load_stapp(stapp_path)
             try:
                 assert "main" in prog.entry_points
-                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
                 result = engine.run(prog, externals={}, topic="Sci", question="2+2?", choices=["3","4","5","6"])
                 assert isinstance(result, str)
             finally:
@@ -398,7 +398,7 @@ class TestStapp:
             pack(stl, inc, stapp_path)
             prog, manifest, temp_dir, inc_paths = load_stapp(stapp_path)
             try:
-                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+                engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
                 externals = load_externals(prog, inc_paths)
                 from autocog.context import Context
                 ctx = Context(prog, engine, prog.entry_prompt("main"),
@@ -427,7 +427,7 @@ class TestRemoteEngine:
         from autocog.__main__ import load_externals
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             result = autocog.remote_run(
@@ -443,7 +443,7 @@ class TestRemoteEngine:
         from autocog.server.rpc import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             engine = autocog.RemoteEngine(f"http://127.0.0.1:{port}")
@@ -467,7 +467,7 @@ class TestBackendServer:
         # Compile and instantiate to an FTA, then fetch it as JSON straight from
         # the datastore (dump_fta) -- no need to shell out to the ista tool.
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         search = str(repo_root / "share/search/default.json")
         engine = autocog.Engine(syntax=syntax, search=search)
         content = {"topic": "Science", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
@@ -524,7 +524,7 @@ class TestBackendServer:
         with running_server(app) as port:
             engine = autocog.RemoteBackend(
                 f"http://127.0.0.1:{port}",
-                syntax=str(repo_root / "share/syntax/default.json"),
+                syntax=str(repo_root / "share/syntax/complete.json"),
                 search=str(repo_root / "share/search/default.json"),
             )
             result = engine.run(
@@ -544,7 +544,7 @@ class TestServeServer:
         from autocog.server.serve import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp:
@@ -560,7 +560,7 @@ class TestServeServer:
         from autocog.server.serve import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/schema") as resp:
@@ -893,7 +893,7 @@ class TestCoverageEdgeCases:
         """Calling step() on a completed context is a no-op."""
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
         ctx = autocog.Context(prog, engine, "main",
                               {"topic": "X", "question": "Y", "choices": ["a", "b", "c", "d"]})
         while not ctx.done:
@@ -912,7 +912,7 @@ class TestCoverageEdgeCases:
             str(repo_root / "share/demos/story-writer/writer.stl"),
             includes=[str(repo_root / "share/demos/story-writer")]
         )
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
         externals = load_externals(prog, [str(repo_root / "share/demos/story-writer")])
         ctx = autocog.Context(prog, engine, prog.entry_prompt("main"),
                               {"query": "test", "age": "3"}, externals)
@@ -929,7 +929,7 @@ class TestCoverageEdgeCases:
         """Test async run path."""
         import asyncio, autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
         result = asyncio.run(engine.run_async(
             prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
         ))
@@ -941,7 +941,7 @@ class TestCoverageEdgeCases:
         from autocog.server.rpc import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             # Request with bad prompt name should cause error
@@ -958,7 +958,7 @@ class TestCoverageEdgeCases:
         from autocog.server.serve import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        syntax = str(repo_root / "share/syntax/default.json")
+        syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
             try:
@@ -1004,7 +1004,7 @@ class TestRecorder:
         from autocog.recorder import Recorder
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
             recorder = Recorder(kinds="frame", path=tmpdir)
@@ -1035,7 +1035,7 @@ class TestRecorder:
         from autocog.recorder import Recorder
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
             recorder = Recorder(kinds="input", path=tmpdir)
@@ -1081,10 +1081,12 @@ class TestRecorder:
 class TestSyntaxVariants:
     """Test different syntax files."""
 
-    def test_plain_syntax(self, repo_root):
+    @pytest.mark.parametrize("syntax", ["stripped", "indent", "indent-index"])
+    def test_lever_syntaxes(self, repo_root, syntax):
+        # The basic-lever family: complete minus type/index/indent subsets.
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/plain.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / f"share/syntax/{syntax}.json"), search=str(repo_root / "share/search/default.json"))
         result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         assert result in ["3", "4", "5", "6"]
 
@@ -1123,7 +1125,7 @@ class TestRecorderFtaFtt:
         from autocog.recorder import Recorder
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/default.json"), search=str(repo_root / "share/search/default.json"))
+        engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
             recorder = Recorder(kinds="input,frame,fta,ftt", path=tmpdir)

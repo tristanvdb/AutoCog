@@ -27,7 +27,7 @@ add_test(
             set -e
             OUT=$(mktemp -d)
             ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/benchmarks/quality/run.py \
-                --build ${CMAKE_BINARY_DIR} --rng --syntaxes default \
+                --build ${CMAKE_BINARY_DIR} --rng --syntaxes complete \
                 --demos select --questions 1 --out \$OUT
             test -s \$OUT/results-*.ndjson
             ${Python_EXECUTABLE} -c \"
@@ -54,7 +54,7 @@ add_test(
             set -e
             STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${SC_STL} 2>/dev/null
-            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/default.json --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/complete.json --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
             $<TARGET_FILE:autocog_efta> --sta \$STA --fta \$FTA --prompt test --frame ${SC_GOLDEN} --rng --score --ftt \$FTT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -73,7 +73,7 @@ print('OK: scored encode carries per-token logprobs')
 )
 set_tests_properties(efta_score_smoke PROPERTIES LABELS "efta;score" TIMEOUT 30)
 
-foreach(syntax_name default chatml llama2chat plain special)
+foreach(syntax_name complete indent-index indent stripped chatml llama2chat special)
   set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/${syntax_name}.json)
   foreach(golden_path ${GOLDEN_FILES})
     file(RELATIVE_PATH golden_rel "${E2E_GOLDEN}" "${golden_path}")

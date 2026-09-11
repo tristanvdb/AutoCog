@@ -2,7 +2,7 @@
 # Each test feeds a checked-in STA golden through ista with empty content.
 
 set(STA_GOLDEN ${PROJECT_SOURCE_DIR}/tests/integration/tools/stlc/sta)
-set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
+set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/complete.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 
 function(add_ista_test test_name sta_golden prompt)

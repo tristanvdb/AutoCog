@@ -18,7 +18,7 @@ Output layout (self-contained; the dataset exporter consumes it alone)::
 Usage::
 
     python -m autocog.harvest --records DIR --stl PROG.stl [-I DIR]...
-        --syntaxes default,special --out DIR (--model GGUF | --rng)
+        --syntaxes complete,special --out DIR (--model GGUF | --rng)
         [--score] [--search FILE] [--tools DIR]
 """
 

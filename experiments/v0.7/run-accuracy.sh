@@ -11,7 +11,7 @@
 # note (models.sh fetches them; base-model URLs are the ones to verify).
 #
 #   QUESTIONS   questions per pattern (default 100)
-#   SYNTAXES    comma list (default default,special)
+#   SYNTAXES    comma list (default complete,indent-index,indent,stripped)
 #   DEMOS       comma list (default select,select-cot)
 #   DATASET     builtin (default) | arc-easy | arc-challenge | mmlu —
 #               the public sets need datasets/ (experiments/downloader.sh)
@@ -26,7 +26,7 @@ OUT="${1:-$RESULTS_DIR/accuracy-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$OUT"
 
 QUESTIONS="${QUESTIONS:-100}"
-SYNTAXES="${SYNTAXES:-default,special}"
+SYNTAXES="${SYNTAXES:-complete,indent-index,indent,stripped}"
 DEMOS="${DEMOS:-select,select-cot}"
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
@@ -39,7 +39,7 @@ MODELS=(
     "$MODELS_DIR/Llama-3.2-3B.Q8_0.gguf"
     "$MODELS_DIR/Llama-3.2-3B-Instruct-Q8_0.gguf"
     # higher MODEL_SIZE tiers (skipped unless downloaded); Qwen pairs run
-    # default syntax only — special.json is Llama-3 reserved tokens
+    # non-special syntaxes only — special.json is Llama-3 reserved tokens
     "$MODELS_DIR/Meta-Llama-3.1-8B.Q8_0.gguf"
     "$MODELS_DIR/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
     "$MODELS_DIR/Qwen2.5-14B.Q8_0.gguf"

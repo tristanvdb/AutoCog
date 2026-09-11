@@ -368,7 +368,7 @@ def main():
     p_run.add_argument("--rng", action="store_true", help="Use built-in RNG model")
     p_run.add_argument(
         "--syntax", default=None,
-        help="Syntax description JSON (default: share/syntax/default.json)",
+        help="Syntax description JSON (default: share/syntax/complete.json)",
     )
     p_run.add_argument(
         "--search", default=None,
@@ -409,14 +409,14 @@ def main():
     p_rpc = subparsers.add_parser("rpc", help="Serve prompt evaluation (level 2)")
     _add_program_args(p_rpc)
     _add_server_args(p_rpc)
-    p_rpc.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/default.json)")
+    p_rpc.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/complete.json)")
     p_rpc.add_argument("--search", default=None, help="Search config JSON (default: share/search/default.json)")
 
     # --- serve (level 1) ---
     p_serve = subparsers.add_parser("serve", help="Serve full app with web UI (level 1)")
     _add_program_args(p_serve)
     _add_server_args(p_serve)
-    p_serve.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/default.json)")
+    p_serve.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/complete.json)")
     p_serve.add_argument("--search", default=None, help="Search config JSON (default: share/search/default.json)")
 
     args = parser.parse_args()

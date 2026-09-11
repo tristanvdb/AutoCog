@@ -121,7 +121,7 @@ open(sys.argv[2],'a').write('\n')" "$tmpfile" "$golden"
 }
 
 # --- e2e full-pipeline goldens --------------------------------------------
-SYNTAX="${PROJECT_DIR}/share/syntax/default.json"
+SYNTAX="${PROJECT_DIR}/share/syntax/complete.json"
 SEARCH="${PROJECT_DIR}/share/search/default.json"
 STLIB="${PROJECT_DIR}/share/library/stlib"
 ISTA="${BUILD_DIR}/tools/ista/ista"
