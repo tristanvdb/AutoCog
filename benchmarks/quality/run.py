@@ -40,7 +40,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 
-SYNTAXES = ["complete", "indent-index", "indent", "stripped", "chatml", "llama2chat", "special"]
+SYNTAXES = ["complete", "indent-index", "indent", "stripped", "chatml", "llama2chat", "llama3chat", "special"]
 DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot", "repeat-hyp"]
 
 

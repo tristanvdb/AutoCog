@@ -12,6 +12,9 @@
 #
 #   QUESTIONS   questions per pattern (default 100)
 #   SYNTAXES    comma list (default complete,indent-index,indent,stripped)
+#   INSTRUCT_SYNTAXES  appended for *Instruct* models only (default
+#               llama3chat — those models' actual trained chat template;
+#               add chatml,llama2chat for wrong-template controls)
 #   DEMOS       comma list (default select,select-cot)
 #   DATASET     builtin (default) | arc-easy | arc-challenge | mmlu —
 #               the public sets need datasets/ (experiments/downloader.sh)
@@ -27,6 +30,7 @@ mkdir -p "$OUT"
 
 QUESTIONS="${QUESTIONS:-100}"
 SYNTAXES="${SYNTAXES:-complete,indent-index,indent,stripped}"
+INSTRUCT_SYNTAXES="${INSTRUCT_SYNTAXES:-llama3chat}"
 DEMOS="${DEMOS:-select,select-cot}"
 
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
@@ -70,7 +74,7 @@ esac
     echo "host: $(hostname)"
     command -v nvidia-smi > /dev/null && nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
     echo "commit: $(git -C "$REPO" rev-parse HEAD)"
-    echo "ngl: $AUTOCOG_NGL  dataset: $DATASET  questions: $QUESTIONS  syntaxes: $SYNTAXES  demos: $DEMOS"
+    echo "ngl: $AUTOCOG_NGL  dataset: $DATASET  questions: $QUESTIONS  syntaxes: $SYNTAXES  instruct+: $INSTRUCT_SYNTAXES  demos: $DEMOS"
 } > "$OUT/machine.txt" 2>&1 || true
 cat "$OUT/machine.txt"
 
@@ -81,10 +85,12 @@ for model in "${MODELS[@]}"; do
         echo "=== skipped (not found): $name ===" | tee -a "$OUT/accuracy.log"
         continue
     fi
-    echo "=== $name ===" | tee -a "$OUT/accuracy.log"
+    syntaxes="$SYNTAXES"
+    case "$name" in *Instruct*) syntaxes="$SYNTAXES,$INSTRUCT_SYNTAXES" ;; esac
+    echo "=== $name (syntaxes: $syntaxes) ===" | tee -a "$OUT/accuracy.log"
     python3 "$REPO/benchmarks/quality/run.py" \
         --build "$BUILD_EXP" --model "$model" \
-        --syntaxes "$SYNTAXES" --demos "$DEMOS" \
+        --syntaxes "$syntaxes" --demos "$DEMOS" \
         --questions "$QUESTIONS" --questions-file "$QFILE" --out "$OUT/$name" \
         2>&1 | tee -a "$OUT/accuracy.log" \
         || { echo "!!! $name failed — continuing" | tee -a "$OUT/accuracy.log"; continue; }
