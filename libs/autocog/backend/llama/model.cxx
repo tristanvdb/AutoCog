@@ -1,5 +1,6 @@
 
 #include "autocog/backend/llama/model.hxx"
+#include "autocog/backend/llama/sampling.hxx"
 #include "autocog/logging.hxx"
 
 #include "autocog/data/vocab.hxx"
@@ -259,52 +260,26 @@ size_t Model::vocab_size() const {
   return llama_vocab_n_tokens(this->get_vocab());
 }
 
-static float logit_to_log_sum_exp(float const * logit, unsigned vocab_size) {
-  // Find max logit for numerical stability
-  float max_logit = *std::max_element(logit, logit + vocab_size);
-
-  // Compute log-sum-exp for normalization
-  float log_sum_exp = 0.0f;
-  for (unsigned i = 0; i < vocab_size; ++i) {
-    log_sum_exp += std::exp(logit[i] - max_logit);
-  }
-  return max_logit + std::log(log_sum_exp);
-}
-
-static void sample_logprobs(float const * logits, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
-  float log_sum_exp = logit_to_log_sum_exp(logits, mask.size());
-
-  for (unsigned tok = 0; tok < mask.size(); tok++) {
-    if (mask[tok]) {
-      candidates.emplace_back(tok, log_sum_exp - logits[tok]);
-    }
-  }
-}
-
-// -log P(token) from one logits row.
-static float row_logprob(float const * logits, unsigned vocab_size, TokenID token) {
-  return logit_to_log_sum_exp(logits, vocab_size) - logits[token];
-}
+using sampling::log_sum_exp;
+using sampling::row_logprob;
+using sampling::topk_masked;
 
 // Masked top-k candidates (ascending -log P) from one logits row.
 static void topk_from_row(float const * row, std::vector<bool> const & mask,
                           size_t k, FrontierResult & out, ModelID model_id) {
-  std::vector<std::pair<TokenID, float>> candidates;
-  sample_logprobs(row, mask, candidates);
-  if (candidates.empty()) {
+  std::vector<std::pair<unsigned, float>> top;
+  topk_masked(row, mask, k, top);
+  if (top.empty()) {
     throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", model_id, "vocab_mask");
   }
-  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-    return a.second < b.second;
-  });
-  size_t const kk = std::min(k, candidates.size());
+  float const lse = log_sum_exp(row, mask.size());
   out.tokens.clear();
   out.logprobs.clear();
-  out.tokens.reserve(kk);
-  out.logprobs.reserve(kk);
-  for (size_t i = 0; i < kk; ++i) {
-    out.tokens.push_back(candidates[i].first);
-    out.logprobs.push_back(candidates[i].second);
+  out.tokens.reserve(top.size());
+  out.logprobs.reserve(top.size());
+  for (auto const & [tok, logit] : top) {
+    out.tokens.push_back(static_cast<TokenID>(tok));
+    out.logprobs.push_back(lse - logit);
   }
 }
 
@@ -506,7 +481,7 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   size_t constexpr CHUNK = 256;
   auto t_smp = std::chrono::steady_clock::now();
   logprobs.push_back(row_logprob(live_row(id), vocab, new_tokens[0]));
-  decode_stats_.sample_seconds +=
+  decode_stats_.score_seconds +=
       std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   for (size_t done = 0; done < n; done += CHUNK) {
     size_t const len = std::min(CHUNK, n - done);
@@ -519,7 +494,7 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
         logprobs.push_back(row_logprob(llama_get_logits_ith(ctx, static_cast<int>(j)),
                                        vocab, new_tokens[scored]));
     }
-    decode_stats_.sample_seconds +=
+    decode_stats_.score_seconds +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   }
   slot.tokens.insert(slot.tokens.end(), new_tokens.begin(), new_tokens.end());
@@ -594,26 +569,10 @@ unsigned Model::eval_topk_tokens(
   topk_lobprobs.clear();
 
   auto const t_smp = std::chrono::steady_clock::now();
-  std::vector<std::pair<TokenID, float>> candidates;
-  sample_logprobs(live_row(id), vocab_mask, candidates);
-
-  // Handle edge case: no valid candidates
-  if (candidates.empty()) {
-    throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", id, "vocab_mask");
-  }
-    
-  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-    return a.second < b.second;
-  });
-    
-  size_t k = std::min(max_candidates, candidates.size());
-  topk_tokens.reserve(k);
-  topk_lobprobs.reserve(k);
-    
-  for (size_t i = 0; i < k; ++i) {
-    topk_tokens.push_back(candidates[i].first);
-    topk_lobprobs.push_back(candidates[i].second);
-  }
+  FrontierResult top;
+  topk_from_row(live_row(id), vocab_mask, max_candidates, top, this->id);
+  topk_tokens = std::move(top.tokens);
+  topk_lobprobs = std::move(top.logprobs);
   decode_stats_.sample_seconds +=
       std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
 

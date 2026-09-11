@@ -14,13 +14,16 @@ namespace autocog::backend::llama {
 
 // Decode-level cost split, reported by xfta --perf. On CPU a llama_decode
 // call streams the full weights whatever its size, so `calls` is the cost
-// driver; `sample_seconds` isolates the CPU-side O(vocab) logits sweeps
-// (softmax/top-k/forced scoring), which do NOT shrink when decode moves to
-// a GPU. Real models only (the RNG model decodes nothing).
+// driver; `sample_seconds` and `score_seconds` isolate the CPU-side
+// O(vocab) logits sweeps, which do NOT shrink when decode moves to a GPU:
+// `sample` is the masked top-k of completion search, `score` the forced
+// scoring of imposed tokens (P(token|prefix) in eval_sequences). Real
+// models only (the RNG model decodes nothing).
 struct DecodeStats {
   unsigned calls = 0;            ///< llama_decode invocations
   double   decode_seconds = 0.0; ///< wall time inside llama_decode
-  double   sample_seconds = 0.0; ///< wall time in CPU-side logits sweeps
+  double   sample_seconds = 0.0; ///< wall time in top-k candidate sweeps
+  double   score_seconds = 0.0;  ///< wall time in forced-scoring sweeps
 };
 
 // Counters for the KV sequence-slot pool, reported by xfta --perf. Each

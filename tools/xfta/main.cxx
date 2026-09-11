@@ -240,6 +240,7 @@ static int run(int argc, char** argv) {
     f["autocog.perf.decode.calls"] = ds.calls;
     f["autocog.perf.decode.seconds"] = ds.decode_seconds;
     f["autocog.perf.sample.seconds"] = ds.sample_seconds;
+    f["autocog.perf.score.seconds"] = ds.score_seconds;
     SearchStats const st = Manager::get_eval(eval_id).search_stats();
     f["autocog.perf.search.terminals"] = st.terminals;
     f["autocog.perf.search.coverage.fta"] = st.coverage_fta;
