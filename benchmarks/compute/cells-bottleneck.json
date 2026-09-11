@@ -18,7 +18,16 @@
   "width": 1,
   "stl": "benchmarks/compute/benchmark-prefix8k.stl",
   "ctx": 16384,
-  "label": "score-bound prefix8k b4a1w1"
+  "label": "prefill-bound prefix8k b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-score.stl",
+  "ctx": 8192,
+  "content_pad": {"question": 2500},
+  "label": "score-bound qpad2.5k b4a1w1"
  },
  {
   "beams": 4,

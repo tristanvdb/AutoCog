@@ -39,11 +39,23 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 
-CONTENT = json.dumps({
+DEFAULT_CONTENT = {
     "topic": "Science",
     "question": "What is H2O?",
     "choices": ["Water", "Fire", "Air", "Earth"],
-})
+}
+
+
+def cell_content(cell):
+    """Channel content for one cell: DEFAULT_CONTENT, overridden verbatim by
+    the cell's "content" dict, then padded by "content_pad" ({field: n} adds
+    n filler words) — the lever for forced-scoring-bound cells."""
+    content = dict(DEFAULT_CONTENT)
+    content.update(cell.get("content", {}))
+    for field, n in cell.get("content_pad", {}).items():
+        content[field] = (str(content.get(field, "")) + " "
+                          + " ".join(["lorem"] * int(n))).strip()
+    return json.dumps(content)
 
 # The classic matrix: each axis stresses a different part of the machinery.
 #   beams — branch fan-out (branch ping-pong cost)
@@ -173,7 +185,7 @@ def main():
                 json.dump(search_config(cell), f)
             fta = os.path.join(work, "bench.fta")
             run([tools["ista"], "--sta", sta_for(stl), "--prompt", "main", "--syntax", syntax,
-                 "--search", scfg, "--content", CONTENT, "--fta", fta])
+                 "--search", scfg, "--content", cell_content(cell), "--fta", fta])
 
             env = dict(os.environ)
             if cell.get("slots"):
