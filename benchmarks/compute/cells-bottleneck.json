@@ -1,0 +1,45 @@
+[
+ {
+  "beams": 1,
+  "ahead": 1,
+  "width": 1,
+  "label": "decode-bound b1a1w1"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "syntax": "experiments/v0.7/syntax-full.json",
+  "label": "sample-bound fullvocab b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-prefix8k.stl",
+  "ctx": 16384,
+  "label": "score-bound prefix8k b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 1,
+  "label": "restore-bound slots1 b4a1w2"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-digits.stl",
+  "label": "overhead-bound digits b4a1w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 1,
+  "stl": "benchmarks/compute/benchmark-len300.stl",
+  "ctx": 8192,
+  "label": "depth-bound len300 b4a1w1"
+ }
+]

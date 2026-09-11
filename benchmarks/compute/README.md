@@ -57,6 +57,16 @@ Each axis stresses a different part of the machinery:
 
 `--quick` runs beams {1,4} x ahead {1,2} x width {1}.
 
+Explicit cell lists replace the matrix with `sweep.py --cells FILE.json`
+(each cell: `beams/ahead/width/topk/threshold/repetition/metric/slots/
+stl/syntax/ctx/label`; see `experiments/v0.7/cells/`). One curated list
+lives here: **`cells-bottleneck.json`**, six cells each engineered to be
+dominated by a different subsystem (decode / sample / score / restore /
+harness overhead / completion depth). Run it after any performance work,
+plus the RNG floor: whichever column grew tells you where the next
+bottleneck lives — that is how the ~10ms/token sampling sweep was found
+and verified (see `benchmarks/micro/`).
+
 ## Outputs
 
 `results-<host>-<model>.ndjson` — one ECS-flavored event per configuration
@@ -73,6 +83,14 @@ Metric glossary (the `autocog.perf.*` fields):
   *scoring/generating* (useful work). The central diagnostic.
 - `<kind>.{calls,seconds,tokens.*}` — the same, per action kind
   (`text` / `complete` / `choose`).
+- `decode.{calls,seconds}` — `llama_decode` invocations and wall time:
+  the model-compute term (per *call* on CPU, near-free per call on GPU).
+- `sample.seconds` / `score.seconds` — CPU-side logits sweeps that do
+  NOT shrink on GPU: masked top-k of completion search vs forced scoring
+  of imposed tokens. The md table adds a computed `other s` column
+  (`advance - decode - sample - score`): the unattributed residual
+  (queue, mask building, bookkeeping). A growing residual is the next
+  bottleneck announcing itself.
 - `complete.tokens.lookahead` — subset of eval tokens spent on `ahead`
   rollouts.
 - `kv.{exact,extends,trims,forks,evictions,tokens.primed}` — KV

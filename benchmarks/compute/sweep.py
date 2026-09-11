@@ -215,7 +215,8 @@ def main():
         sys.exit("no cells completed")
     md = os.path.join(args.out, f"results-{stamp}.md")
     cols = ["cell", "eval s", "wall s", "tok restore", "tok eval", "decode calls",
-            "decode s", "sample s", "score s", "kv forks", "complete s", "choose s"]
+            "decode s", "sample s", "score s", "other s", "kv forks",
+            "complete s", "choose s"]
     with open(md, "w") as f:
         f.write(f"# Compute benchmark — {host} — {model_tag}"
                 + (f" — {args.tag}" if args.tag else "") + "\n\n")
@@ -237,6 +238,8 @@ def main():
                    f"{r.get('autocog.perf.decode.seconds', 0):.2f}",
                    f"{r.get('autocog.perf.sample.seconds', 0):.2f}",
                    f"{r.get('autocog.perf.score.seconds', 0):.2f}",
+                   # the unattributed residual: queue/mask/bookkeeping costs
+                   f"{r['autocog.perf.advance_seconds'] - sum(r.get(f'autocog.perf.{k}.seconds', 0) for k in ('decode', 'sample', 'score')):.2f}",
                    str(r.get("autocog.perf.kv.forks", "-")),
                    f"{r['autocog.perf.complete.seconds']:.2f}",
                    f"{r['autocog.perf.choose.seconds']:.2f}"]

@@ -252,6 +252,7 @@ add_subdirectory(tools/ista)
 add_subdirectory(tools/psta)
 add_subdirectory(tools/efta)
 add_subdirectory(bindings/backend-llama)
+add_subdirectory(benchmarks/micro)
 
 if(AUTOCOG_BUILD_TESTS)
 add_subdirectory(tests/units/libs/autocog/compiler/stl/parser)
