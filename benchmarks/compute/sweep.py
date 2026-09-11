@@ -53,8 +53,12 @@ def cell_content(cell):
     content = dict(DEFAULT_CONTENT)
     content.update(cell.get("content", {}))
     for field, n in cell.get("content_pad", {}).items():
-        content[field] = (str(content.get(field, "")) + " "
-                          + " ".join(["lorem"] * int(n))).strip()
+        pad = " ".join(["lorem"] * int(n))
+        value = content.get(field, "")
+        if isinstance(value, list):  # e.g. choices: pad every element
+            content[field] = [f"{v} {pad}".strip() for v in value]
+        else:
+            content[field] = f"{value} {pad}".strip()
     return json.dumps(content)
 
 # The classic matrix: each axis stresses a different part of the machinery.
@@ -184,8 +188,13 @@ def main():
             with open(scfg, "w") as f:
                 json.dump(search_config(cell), f)
             fta = os.path.join(work, "bench.fta")
+            # via file: inline JSON above ~4KB trips ista's path-probe
+            # (filesystem_error on an over-long "filename")
+            content = os.path.join(work, "content.json")
+            with open(content, "w") as f:
+                f.write(cell_content(cell))
             run([tools["ista"], "--sta", sta_for(stl), "--prompt", "main", "--syntax", syntax,
-                 "--search", scfg, "--content", cell_content(cell), "--fta", fta])
+                 "--search", scfg, "--content", content, "--fta", fta])
 
             env = dict(os.environ)
             if cell.get("slots"):

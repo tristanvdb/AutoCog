@@ -24,17 +24,18 @@
   "beams": 4,
   "ahead": 1,
   "width": 1,
-  "stl": "benchmarks/compute/benchmark-score.stl",
+  "stl": "benchmarks/compute/benchmark-choices.stl",
   "ctx": 8192,
-  "content_pad": {"question": 2500},
-  "label": "score-bound qpad2.5k b4a1w1"
+  "content": {"choices": ["Water", "Fire", "Air", "Earth", "Metal", "Wood", "Ice", "Steam", "Lightning", "Sand", "Stone", "Lava", "Mist", "Crystal", "Shadow", "Light", "Salt", "Iron", "Copper", "Gold", "Silver", "Lead", "Tin", "Zinc", "Mercury", "Sulfur", "Carbon", "Oxygen", "Hydrogen", "Helium", "Neon", "Argon"]},
+  "content_pad": {"choices": 40},
+  "label": "choose-bound choices32 b4a1w1"
  },
  {
-  "beams": 4,
-  "ahead": 1,
-  "width": 2,
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
   "slots": 1,
-  "label": "restore-bound slots1 b4a1w2"
+  "label": "restore-bound slots1 b8a2w1"
  },
  {
   "beams": 4,

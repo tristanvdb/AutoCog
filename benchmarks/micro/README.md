@@ -36,7 +36,7 @@ The run verifies, for every row and mask, that the heap selects exactly the
 tokens the sort selected and that logprobs agree within the cutoff bound;
 it exits non-zero on any mismatch, so it doubles as a regression test.
 
-Reference numbers (Release, AMD EPYC 7J13, vocab 128256, k=8):
+Reference numbers (Release, Intel i7-10875H 16t, vocab 128256, k=8):
 
 | mask | sort+LSE ms/row | heap+cutoff ms/row | speedup |
 |---|---|---|---|

@@ -119,7 +119,10 @@ template <class T> std::unique_ptr<T> from_file(std::string const & path) {
 // JSON text. Convenient for the dev/debug command-line tools, where small
 // configs/content can be passed directly on the command line.
 inline nlohmann::json json_from_file_or_string(std::string const & arg) {
-    if (std::filesystem::exists(arg)) {
+    // Non-throwing exists: inline JSON longer than the OS path limit would
+    // otherwise raise filesystem_error (ENAMETOOLONG) instead of parsing.
+    std::error_code ec;
+    if (std::filesystem::exists(arg, ec)) {
         std::ifstream in(arg);
         if (!in)
             throw autocog::FileError("autocog::data: cannot open '" + arg + "' for reading", arg);

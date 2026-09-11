@@ -64,8 +64,12 @@ channel content: `"content"` (verbatim dict) and `"content_pad"`
 (`{field: n}` appends n filler words — the lever for forced-scoring
 loads). One curated list lives here: **`cells-bottleneck.json`**, seven
 cells each engineered to be dominated by a different subsystem (decode /
-sample / prefill / score / restore / harness overhead / completion
-depth). Run it after any performance work,
+sample / prefill / choose / restore / harness overhead / completion
+depth). Note: text actions in these programs carry `evaluate=false`, so
+imposed text is decoded (prefill/restore), never forced-scored — the
+production forced-scoring path is *choice* scoring, and a select answers
+by index string, so its cost is per-choice restore + small-decode
+ping-pong (`choose s`), not `score s` volume. Run it after any performance work,
 plus the RNG floor: whichever column grew tells you where the next
 bottleneck lives — that is how the ~10ms/token sampling sweep was found
 and verified (see `benchmarks/micro/`).
