@@ -3,9 +3,10 @@
 # into datasets/ — both alongside the repo (see env.sh; NFS-persistent, so
 # each download happens once). Run it directly, or let setup.sh call it.
 #
-#     autocog/experiments/downloader.sh
+#     autocog/experiments/downloader.sh [--datasets-only]
 #
-#   MODELS_BIG=1   also fetch the 8B/14B/32B base+instruct pairs (~90 GB)
+#   --datasets-only   skip the models (e.g. gguf already in place)
+#   MODELS_BIG=1      also fetch the 8B/14B/32B base+instruct pairs (~90 GB)
 #
 # Everything is skip-if-present, so pre-placing archives by hand works too.
 # Datasets are the canonical no-auth distributions:
@@ -17,8 +18,17 @@ EXP_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
 source "$EXP_DIR/env.sh"
 
-echo "=== models into $MODELS_DIR ==="
-"$EXP_DIR/models.sh"
+DATASETS_ONLY=0
+case "${1:-}" in
+    --datasets-only) DATASETS_ONLY=1 ;;
+    "") ;;
+    *) echo "usage: $0 [--datasets-only]" >&2; exit 1 ;;
+esac
+
+if [ "$DATASETS_ONLY" -eq 0 ]; then
+    echo "=== models into $MODELS_DIR ==="
+    "$EXP_DIR/models.sh"
+fi
 
 echo "=== datasets into $DATASETS_DIR ==="
 mkdir -p "$DATASETS_DIR"
