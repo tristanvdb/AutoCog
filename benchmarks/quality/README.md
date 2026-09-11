@@ -53,13 +53,18 @@ campaigns see `experiments/v0.7/`.
 
 ## The question set
 
-`questions.json`: ten unambiguous general-knowledge MCQs, each
-`{id, topic, question, choices[4], answer}` with `answer` the exact
-choice text. They feed the demos' `(topic, question, choices)` inputs;
-correctness compares the returned answer (or its `answer` field for
-struct-returning demos) against `answer`. Add questions freely — keep
-them unambiguous, keep the answer verbatim among the choices, and expect
-accuracy resolution of 1/N per demo cell.
+`questions.json`: 100 unambiguous general-knowledge MCQs across ~16
+topics, each `{id, topic, question, choices[4], answer}` with `answer`
+the exact choice text. Correct-answer positions are balanced exactly
+25/25/25/25 across the four slots, so a positional prior scores chance —
+verified: the tiny smoke model lands at 25% over the full set. The first
+ten questions are the original v0.7.2 set (order preserved, choices
+reshuffled), so `--questions 10` stays comparable to earlier runs in
+spirit but not byte-for-byte. They feed the demos'
+`(topic, question, choices)` inputs; correctness compares the returned
+answer (or its `answer` field for struct-returning demos) against
+`answer`. Add questions freely — keep them unambiguous, keep the answer
+verbatim among the choices, and re-balance positions when you add.
 
 ## Outputs
 
@@ -68,6 +73,15 @@ per (syntax, demo, question): correctness, wall seconds, step count,
 token split, friction split. `results-<host>-<model>.md` — per
 (syntax, demo) aggregate: accuracy %, mean tokens, mean frictions. Both
 gitignored.
+
+`summarize.py results1.ndjson results2.ndjson ... [--ref MODEL]` builds
+the cross-model view from any number of result files: the model x
+(syntax, demo) accuracy matrix plus a delta table in percentage points
+against a reference model. That delta table is the product for the
+base-vs-instruct question — how much a pattern extracts from a base
+model relative to its instruct sibling, and how the gap moves with
+scale. `experiments/v0.7/run-accuracy.sh` drives the whole campaign
+(four Llama-3.2 models x patterns x the full set) as one command.
 
 ## Reading the numbers
 

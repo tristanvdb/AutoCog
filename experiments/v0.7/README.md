@@ -35,6 +35,13 @@ to pull off the machine.
   E4 3B anchors; E5 accuracy-budget probe), per-experiment second-budgets
   as env overrides (`E1_BUDGET`..`E4_BUDGET`, `E5_QUESTIONS`), cells
   defined in `cells/*.json`.
+- `run-accuracy.sh [OUT_DIR]` — the small accuracy campaign: the
+  100-question MCQ set on the base/instruct x 1B/3B Llama-3.2 four-way
+  (missing models skipped with a note), patterns default,special x
+  select,select-cot (`SYNTAXES`/`DEMOS`/`QUESTIONS` env overrides), then
+  `benchmarks/quality/summarize.py` writes the model x pattern accuracy
+  matrix and the delta-vs-instruct table to `summary.md`. The product is
+  relative accuracy: what constraints extract from BASE models.
 - `run-compute.sh [model.gguf ...]` — the search-parameter sweep
   (`benchmarks/compute/run.sh`: beams x ahead x width, xfta `--perf`
   ECS events) per model, plus the RNG harness floor once.
