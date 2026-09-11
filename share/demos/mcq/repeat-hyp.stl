@@ -28,11 +28,12 @@ prompt main {
 }
 
 prompt choose {
+  argument max_choices = 8;
   is {
     topic is text<length=20>;
     question is text<length=50>;
     hyphothesis is thought;
-    choices[4] is text<length=40>;
+    choices[2:max_choices] is text<length=40>;
     answer is repeat(choices);
   }
   channel {
@@ -49,9 +50,9 @@ prompt choose {
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
     hyphothesis as "your guess at what the answer should be";
-    choices as "the four possible choices to answer the question, only one is correct";
+    choices as "the possible choices to answer the question, only one is correct";
     answer as "you repeat verbatim of the choice that best answer the question";
   }
 }
 
-export main;
+export main<> as main;

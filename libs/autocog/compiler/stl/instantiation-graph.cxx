@@ -432,6 +432,7 @@ void InstantiationGraphBuilder::build() {
         auto mangled = driver.mangle(resolved->name, arguments);
 
         driver.entry_point_map[entry_name] = mangled;
+        if (mangled != resolved->name) driver.specialized_entry_points.insert(entry_name);
 
         if (graph.nodes.find(mangled) != graph.nodes.end()) continue;
 

@@ -175,7 +175,7 @@ class TestErrorPaths:
     def test_content_range_violation_is_orchestration_error(self, engine, repo_root):
         """Input content that violates a field's range raises OrchestrationError.
 
-        select.stl requires at least 4 choices; supplying 3 is an
+        select.stl requires 2..max_choices choices; supplying 1 is an
         orchestration failure located at the offending field — not a bare
         ExecutionError/RuntimeError. This is deterministic (input validation,
         independent of token sampling).
@@ -183,7 +183,7 @@ class TestErrorPaths:
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
         with pytest.raises(autocog.errors.OrchestrationError) as exc_info:
-            engine.run(prog, question="What is 2+2?", choices=["3", "4", "5"])
+            engine.run(prog, question="What is 2+2?", choices=["4"])
         e = exc_info.value
         assert getattr(e, "field", None) == "choices"
 

@@ -261,7 +261,9 @@ class TestSchema:
         assert s["topic"]["required"] is True
         assert s["choices"]["type"] == "array"
         assert s["choices"]["items"]["type"] == "text"
-        assert s["choices"]["length"] == 4
+        # variable range since the choices[2:max_choices] redesign
+        assert s["choices"]["min_items"] == 2
+        assert s["choices"]["max_items"] == 8
         # Output schema
         o = prog.output_schema("main")
         assert "_" in o

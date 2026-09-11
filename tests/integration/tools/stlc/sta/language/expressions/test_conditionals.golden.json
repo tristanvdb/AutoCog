@@ -9,17 +9,17 @@
           "type": "text"
         }
       },
-      "prompt": "test__1_true"
+      "prompt": "main"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "2bbb6b7314bb26274ba9f18410f434e18b4e97850f086e90fefe16786626c4e9",
+    "hash": "935f61d27a0061948868f59ed0029798a301c7c6a6a1466428603e9092293824",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "test__1_true": {
+    "main": {
       "abstracts": [
         {
           "exit": -1,
@@ -121,7 +121,7 @@
           "type": "return"
         }
       },
-      "name": "test__1_true"
+      "name": "main"
     }
   },
   "provenance": {},

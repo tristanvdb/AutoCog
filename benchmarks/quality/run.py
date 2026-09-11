@@ -152,6 +152,7 @@ def main():
                     "autocog.bench.syntax": syntax,
                     "autocog.bench.demo": demo,
                     "autocog.bench.question": q["id"],
+                    "autocog.bench.n_choices": len(q["choices"]),
                     "autocog.bench.wall_seconds": round(wall, 3),
                     "autocog.bench.answer": answer,
                     "autocog.bench.correct": (answer == q["answer"]) if answer is not None else None,

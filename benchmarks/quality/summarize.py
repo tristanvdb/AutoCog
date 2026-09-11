@@ -24,6 +24,7 @@ def main():
 
     # (model, syntax, demo) -> [correct, total]
     acc = collections.defaultdict(lambda: [0, 0])
+    inv_n = []  # 1/n_choices per record: chance = mean (mixed-count sets)
     for path in args.files:
         for line in open(path):
             r = json.loads(line)
@@ -32,6 +33,8 @@ def main():
             key = (r["autocog.bench.model"], r["autocog.bench.syntax"], r["autocog.bench.demo"])
             acc[key][1] += 1
             acc[key][0] += bool(r["autocog.bench.correct"])
+            if r.get("autocog.bench.n_choices"):
+                inv_n.append(1.0 / r["autocog.bench.n_choices"])
 
     models = sorted({m for m, _, _ in acc})
     patterns = sorted({(s, d) for _, s, d in acc})
@@ -65,8 +68,9 @@ def main():
             a, b = cell(m, p), cell(ref, p)
             row.append(f"{100 * (a - b):+.0f}" if a is not None and b is not None else "-")
         print(f"| {m} | " + " | ".join(row) + " |")
-    print("\n(positive = model beats the reference on that pattern; "
-          "chance is 25% on 4-choice questions)")
+    chance = (100 * sum(inv_n) / len(inv_n)) if inv_n else 25.0
+    print(f"\n(positive = model beats the reference on that pattern; "
+          f"chance level is {chance:.1f}% for this question mix)")
 
 
 if __name__ == "__main__":

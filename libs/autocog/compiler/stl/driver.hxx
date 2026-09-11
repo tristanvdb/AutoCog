@@ -11,6 +11,7 @@
 #include "autocog/data/sta.hxx"
 
 #include <list>
+#include <set>
 #include <memory>
 #include <string>
 #include <optional>
@@ -75,6 +76,10 @@ class Driver {
     // Stage 4: Instantiate
     InstantiationGraph graph;
     std::unordered_map<std::string, std::string> entry_point_map;
+    // Entry points whose target prompt got a mangled specialization name
+    // (arguments were bound): these publish under the export name in the STA
+    // (`export main<> as main;` yields a prompt literally named "main").
+    std::set<std::string> specialized_entry_points;
 
     // Stage 5: Assemble (IR)
     std::unordered_map<std::string, std::unique_ptr<ir::Record>> records;

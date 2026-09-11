@@ -6,10 +6,11 @@ from "thinking/thought.stl" import Thought;
 alias Thought<goal="reason toward the answer"> as thought;
 
 prompt main {
+  argument max_choices = 8;
   is {
     topic is text<length=20>;
     question is text<length=50>;
-    choices[4] is text<length=40>;
+    choices[2:max_choices] is text<length=40>;
     work[1:10] is thought;
     answer is repeat(choices);
   }
@@ -25,8 +26,10 @@ prompt main {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
-    choices as "the four possible choices to answer the question, only one is correct";
+    choices as "the possible choices to answer the question, only one is correct";
     work as "show your work step-by-step";
     answer as "you repeat verbatim of the choice that best answer the question";
   }
 }
+
+export main<> as main;

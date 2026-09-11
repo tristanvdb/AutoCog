@@ -8,7 +8,7 @@
           "type": "text"
         }
       },
-      "prompt": "worker__10_3a3127f5ea0269b5"
+      "prompt": "default_worker"
     },
     "fast_worker": {
       "inputs": {},
@@ -18,7 +18,7 @@
           "type": "text"
         }
       },
-      "prompt": "worker__5_acd85c97bf4d40bd"
+      "prompt": "fast_worker"
     },
     "main": {
       "inputs": {},
@@ -28,17 +28,17 @@
           "type": "text"
         }
       },
-      "prompt": "worker__10_3a3127f5ea0269b5"
+      "prompt": "default_worker"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "ca18315185f0f5dd785c7163eb8fa87c6dfb11a1d821823bcfdfe4416510df51",
+    "hash": "881e2522376d0ecc60efbdfa0280d3364aa9691ef5a4b2baf5363e6a4200da21",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "worker__10_3a3127f5ea0269b5": {
+    "default_worker": {
       "abstracts": [
         {
           "exit": -1,
@@ -121,9 +121,9 @@
           "type": "return"
         }
       },
-      "name": "worker__10_3a3127f5ea0269b5"
+      "name": "default_worker"
     },
-    "worker__5_acd85c97bf4d40bd": {
+    "fast_worker": {
       "abstracts": [
         {
           "exit": -1,
@@ -206,7 +206,7 @@
           "type": "return"
         }
       },
-      "name": "worker__5_acd85c97bf4d40bd"
+      "name": "fast_worker"
     }
   },
   "provenance": {},
