@@ -54,9 +54,10 @@ case "$DATASET" in
     builtin) ;;
     arc-easy|arc-challenge)
         name="ARC-Easy"; [ "$DATASET" = "arc-challenge" ] && name="ARC-Challenge"
+        arcfile="$(ls "$DATASETS_DIR"/ARC-V1-Feb2018*/"$name/$name-Test.jsonl" 2>/dev/null | head -1)"
+        [ -n "$arcfile" ] || { echo "error: $name not found under $DATASETS_DIR — run experiments/downloader.sh --datasets-only" >&2; exit 1; }
         QFILE="$OUT/questions-$DATASET.json"
-        python3 "$REPO/benchmarks/quality/convert.py" arc \
-            "$DATASETS_DIR/ARC-V1-Feb2018/$name/$name-Test.jsonl" \
+        python3 "$REPO/benchmarks/quality/convert.py" arc "$arcfile" \
             --limit "$QUESTIONS" --out "$QFILE" ;;
     mmlu)
         QFILE="$OUT/questions-mmlu.json"

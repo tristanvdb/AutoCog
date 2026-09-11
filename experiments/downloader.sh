@@ -41,13 +41,14 @@ fetch() {  # fetch FILE URL
     mv "$1.part" "$1"
 }
 
-# ARC: the zip unpacks to ARC-V1-Feb2018/ with ARC-Easy/ARC-Challenge
-# train/dev/test JSONL (plus the ARC corpus, which we ignore).
-if [ ! -s ARC-V1-Feb2018/ARC-Easy/ARC-Easy-Test.jsonl ]; then
+# ARC: the zip unpacks to a versioned top dir (observed: ARC-V1-Feb2018-2/)
+# with ARC-Easy/ARC-Challenge train/dev/test JSONL (plus the ARC corpus and
+# __MACOSX junk, which we ignore) — glob, don't assume the exact name.
+if ! ls ARC-V1-Feb2018*/ARC-Easy/ARC-Easy-Test.jsonl > /dev/null 2>&1; then
     fetch ARC-V1-Feb2018.zip "https://ai2-public-datasets.s3.amazonaws.com/arc/ARC-V1-Feb2018.zip"
-    unzip -q -o ARC-V1-Feb2018.zip
+    unzip -q -o ARC-V1-Feb2018.zip -x "__MACOSX/*"
 else
-    echo "have: ARC-V1-Feb2018/"
+    echo "have: $(ls -d ARC-V1-Feb2018*/ | head -1)"
 fi
 
 # MMLU: data.tar unpacks to data/{test,val,dev,auxiliary_train}; keep it
@@ -62,4 +63,4 @@ fi
 
 echo
 echo "datasets ready:"
-ls -d "$DATASETS_DIR"/ARC-V1-Feb2018 "$DATASETS_DIR"/mmlu 2>/dev/null || true
+ls -d "$DATASETS_DIR"/ARC-V1-Feb2018*/ "$DATASETS_DIR"/mmlu 2>/dev/null || true
