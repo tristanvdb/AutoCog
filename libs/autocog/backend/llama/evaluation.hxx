@@ -28,6 +28,22 @@ struct EvaluationConfig {
   bool evaluate_text{true};
 };
 
+// Coarse-grain performance counters, accumulated during advance(). Cheap
+// enough to be always-on (a few clock reads per action against milliseconds
+// of model work); exported by xfta --perf as ECS-flavored NDJSON.
+struct PerfCounters {
+  struct KindStats {
+    unsigned calls = 0;
+    double   seconds = 0.0;         ///< wall time inside this action kind
+    unsigned tokens_restore = 0;    ///< decoded restoring a branch prefix (set_tokens)
+    unsigned tokens_eval = 0;       ///< decoded scoring/generating within the action
+  };
+  KindStats text, complete, choose;
+  unsigned lookahead_tokens = 0;    ///< subset of complete.tokens_eval spent on ahead rollouts
+  double   prepare_seconds = 0.0;   ///< prepare(): tokenization + mask priming
+  double   advance_seconds = 0.0;   ///< total wall time inside advance()
+};
+
 // Append a child to `parent`: cumulative logprob/length, and the at-creation
 // enrichment (uid/field/indices) from the FTA action. `text` is filled later.
 data::FTTNode & grow(data::FTTNode & parent, ActionID const id, data::FTA const & fta,
@@ -45,9 +61,12 @@ class Evaluation {
 
     Queue queue;
     bool started{false};
+    PerfCounters perf_;
 
   protected:
-    std::pair<Model &, ContextID> restore(PathState & state) const;
+    // Restore the branch prefix into the state's context; tokens decoded doing
+    // so are charged to `stats.tokens_restore`.
+    std::pair<Model &, ContextID> restore(PathState & state, PerfCounters::KindStats & stats);
 
     void initial();
     void enqueue(ActionID const action, data::FTTNode & parent, PathState const & current);
@@ -60,6 +79,7 @@ class Evaluation {
     Evaluation(EvaluationConfig const & config_, ModelID const model_, data::FTA const & fta_);
     unsigned advance(std::optional<unsigned> max_token_eval);
     data::FTT const & retrieve() const;
+    PerfCounters const & perf() const { return perf_; }
 };
 
 }
