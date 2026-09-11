@@ -209,6 +209,12 @@ add_compile_definitions(AUTOCOG_VULKAN=$<BOOL:${AUTOCOG_VULKAN}>)
 add_compile_definitions(AUTOCOG_METAL=$<BOOL:${AUTOCOG_METAL}>)
 add_compile_definitions(AUTOCOG_SYCL=$<BOOL:${AUTOCOG_SYCL}>)
 
+set(AUTOCOG_LSE_CUTOFF "" CACHE STRING
+    "Sampling log-sum-exp cutoff in nats (empty = built-in default 20; 30 pushes the error bound under float epsilon)")
+if(AUTOCOG_LSE_CUTOFF)
+    add_compile_definitions(AUTOCOG_LSE_CUTOFF=${AUTOCOG_LSE_CUTOFF})
+endif()
+
 # Tests configure by default for a direct CMake build (developer workflow), but
 # NOT inside a scikit-build (pip/wheel) build: the manylinux wheel's Python has
 # only Development.Module, not Development.Embed (the data smoke test embeds the

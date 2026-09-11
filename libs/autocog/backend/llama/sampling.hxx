@@ -23,8 +23,14 @@ namespace autocog::backend::llama::sampling {
 
 // Entries below max-LSE_CUTOFF are skipped by log_sum_exp; the resulting
 // absolute error in nats is bounded by vocab_size * exp(-LSE_CUTOFF)
-// (~3e-4 for a 128k vocab) — far below anything the search reacts to.
-float constexpr LSE_CUTOFF = 20.0f;
+// (~3e-4 for a 128k vocab at the default 20) — far below anything the
+// search reacts to. Adjustable at build time: -DAUTOCOG_LSE_CUTOFF=30.0f
+// (or the CMake cache variable AUTOCOG_LSE_CUTOFF); 30 pushes the bound
+// under float epsilon, larger values effectively disable the cutoff.
+#ifndef AUTOCOG_LSE_CUTOFF
+#define AUTOCOG_LSE_CUTOFF 20.0
+#endif
+float constexpr LSE_CUTOFF = static_cast<float>(AUTOCOG_LSE_CUTOFF);
 
 inline float log_sum_exp(float const * logit, std::size_t vocab_size) {
   float const max_logit = *std::max_element(logit, logit + vocab_size);
