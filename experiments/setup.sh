@@ -50,6 +50,7 @@ python3-venv:@venv:python3-venv:python3
 python3-dev:@pydev:python3-dev:python3-devel
 pip:@pip:python3-pip:python3-pip
 ccache:ccache:ccache:ccache
+unzip:unzip:unzip:unzip
 '
 
 probe() {  # probe NAME -> 0 if present
@@ -109,6 +110,7 @@ version_of() {
         python3-dev)  echo "ok ($(python3-config --prefix))" ;;
         pip)          python3 -m pip --version ;;
         ccache)       ccache --version | head -1 ;;
+        unzip)        unzip -v | head -1 ;;
     esac
 }
 FAIL=0
@@ -192,8 +194,7 @@ cmake -B "$BUILD_EXP" -S "$REPO" \
 cmake --build "$BUILD_EXP" --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
 echo "$STAMP" > "$BUILD_EXP/.autocog-stamp"
 
-echo "=== models into $MODELS_DIR ==="
-"$EXP_DIR/models.sh"
+"$EXP_DIR/downloader.sh"
 
 echo
 echo "setup complete. next: $(realpath --relative-to="$PWD" "$EXP_DIR" 2>/dev/null || echo "$EXP_DIR")/calibrate.sh"

@@ -35,13 +35,18 @@ to pull off the machine.
   E4 3B anchors; E5 accuracy-budget probe), per-experiment second-budgets
   as env overrides (`E1_BUDGET`..`E4_BUDGET`, `E5_QUESTIONS`), cells
   defined in `cells/*.json`.
-- `run-accuracy.sh [OUT_DIR]` — the small accuracy campaign: the
-  100-question MCQ set on the base/instruct x 1B/3B Llama-3.2 four-way
-  (missing models skipped with a note), patterns default,special x
-  select,select-cot (`SYNTAXES`/`DEMOS`/`QUESTIONS` env overrides), then
+- `run-accuracy.sh [OUT_DIR]` — the small accuracy campaign: 100
+  questions on every base/instruct pair present in `models/` (1B/3B
+  always; 8B/14B/32B when fetched with `MODELS_BIG=1`; missing models
+  skipped with a note), patterns default,special x select,select-cot
+  (`SYNTAXES`/`DEMOS`/`QUESTIONS` env overrides), then
   `benchmarks/quality/summarize.py` writes the model x pattern accuracy
   matrix and the delta-vs-instruct table to `summary.md`. The product is
   relative accuracy: what constraints extract from BASE models.
+  `DATASET=arc-easy|arc-challenge|mmlu` swaps the built-in trivia set
+  for a stratified sample of a public dataset (fetched into `datasets/`
+  by `experiments/downloader.sh`; conversion via
+  `benchmarks/quality/convert.py`).
 - `run-compute.sh [model.gguf ...]` — the search-parameter sweep
   (`benchmarks/compute/run.sh`: beams x ahead x width, xfta `--perf`
   ECS events) per model, plus the RNG harness floor once.

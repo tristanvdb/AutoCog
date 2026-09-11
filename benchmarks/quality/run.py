@@ -71,6 +71,8 @@ def main():
     ap.add_argument("--syntaxes", default=",".join(SYNTAXES))
     ap.add_argument("--demos", default=",".join(DEMOS))
     ap.add_argument("--questions", type=int, default=0, help="limit (0 = all)")
+    ap.add_argument("--questions-file", default=os.path.join(HERE, "questions.json"),
+                    help="question set (default: the built-in 100; see convert.py for ARC/MMLU)")
     ap.add_argument("--out", default=HERE)
     ap.add_argument("--ctx", type=int, default=2048)
     args = ap.parse_args()
@@ -85,7 +87,7 @@ def main():
         if not os.path.exists(p):
             sys.exit(f"missing tool: {p} (build the Release tree first)")
 
-    questions = json.load(open(os.path.join(HERE, "questions.json")))
+    questions = json.load(open(args.questions_file))
     if args.questions:
         questions = questions[: args.questions]
     syntaxes = args.syntaxes.split(",")

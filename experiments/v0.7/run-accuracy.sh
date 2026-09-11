@@ -10,9 +10,12 @@
 # and how the gap moves from 1B to 3B. Absent models are skipped with a
 # note (models.sh fetches them; base-model URLs are the ones to verify).
 #
-#   QUESTIONS   questions per pattern (default 100 = the full set)
+#   QUESTIONS   questions per pattern (default 100)
 #   SYNTAXES    comma list (default default,special)
 #   DEMOS       comma list (default select,select-cot)
+#   DATASET     builtin (default) | arc-easy | arc-challenge | mmlu —
+#               the public sets need datasets/ (experiments/downloader.sh)
+#               and are stratified-sampled down to QUESTIONS
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -35,13 +38,38 @@ MODELS=(
     "$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf"
     "$MODELS_DIR/Llama-3.2-3B.Q8_0.gguf"
     "$MODELS_DIR/Llama-3.2-3B-Instruct-Q8_0.gguf"
+    # the MODELS_BIG=1 tier (skipped unless downloaded); Qwen pairs run
+    # default syntax only — special.json is Llama-3 reserved tokens
+    "$MODELS_DIR/Meta-Llama-3.1-8B.Q8_0.gguf"
+    "$MODELS_DIR/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
+    "$MODELS_DIR/Qwen2.5-14B.Q8_0.gguf"
+    "$MODELS_DIR/Qwen2.5-14B-Instruct-Q8_0.gguf"
+    "$MODELS_DIR/Qwen2.5-32B.Q6_K.gguf"
+    "$MODELS_DIR/Qwen2.5-32B-Instruct-Q6_K.gguf"
 )
+
+DATASET="${DATASET:-builtin}"
+QFILE="$REPO/benchmarks/quality/questions.json"
+case "$DATASET" in
+    builtin) ;;
+    arc-easy|arc-challenge)
+        name="ARC-Easy"; [ "$DATASET" = "arc-challenge" ] && name="ARC-Challenge"
+        QFILE="$OUT/questions-$DATASET.json"
+        python3 "$REPO/benchmarks/quality/convert.py" arc \
+            "$DATASETS_DIR/ARC-V1-Feb2018/$name/$name-Test.jsonl" \
+            --limit "$QUESTIONS" --out "$QFILE" ;;
+    mmlu)
+        QFILE="$OUT/questions-mmlu.json"
+        python3 "$REPO/benchmarks/quality/convert.py" mmlu \
+            "$DATASETS_DIR/mmlu/test" --limit "$QUESTIONS" --out "$QFILE" ;;
+    *) echo "unknown DATASET: $DATASET" >&2; exit 1 ;;
+esac
 
 {
     echo "host: $(hostname)"
     command -v nvidia-smi > /dev/null && nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
     echo "commit: $(git -C "$REPO" rev-parse HEAD)"
-    echo "ngl: $AUTOCOG_NGL  questions: $QUESTIONS  syntaxes: $SYNTAXES  demos: $DEMOS"
+    echo "ngl: $AUTOCOG_NGL  dataset: $DATASET  questions: $QUESTIONS  syntaxes: $SYNTAXES  demos: $DEMOS"
 } > "$OUT/machine.txt" 2>&1 || true
 cat "$OUT/machine.txt"
 
@@ -56,7 +84,7 @@ for model in "${MODELS[@]}"; do
     python3 "$REPO/benchmarks/quality/run.py" \
         --build "$BUILD_EXP" --model "$model" \
         --syntaxes "$SYNTAXES" --demos "$DEMOS" \
-        --questions "$QUESTIONS" --out "$OUT/$name" \
+        --questions "$QUESTIONS" --questions-file "$QFILE" --out "$OUT/$name" \
         2>&1 | tee -a "$OUT/accuracy.log" \
         || { echo "!!! $name failed — continuing" | tee -a "$OUT/accuracy.log"; continue; }
     RESULTS+=("$OUT/$name"/*.ndjson)
