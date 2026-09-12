@@ -1,0 +1,9 @@
+// Error: `on` targets cannot carry indices or ranges (per-element search
+// interacts with ravel and is deferred).
+// expect-error: cannot carry indices or ranges
+prompt main {
+  is { items[3] is text<length=4>; }
+  search { text.beams is 2; } on items[0];
+  channel { items get items; }
+  return { use items; }
+}

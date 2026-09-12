@@ -205,19 +205,109 @@ static std::string annotate_path_text(ast::Path const & path) {
 // Collect an inline struct's own `search { }` constructs into a SearchPolicies
 // (merged in document order). Constructs live on ast::Struct.constructs as a
 // variant of Annotate|Search; only Search contributes here.
+// A lowered search block aimed at specific fields by an `on` clause:
+// (target path, lowered policies), applied once the field tree exists.
+using TargetedSearch = std::vector<std::pair<ast::Path const *, ir::SearchPolicies>>;
+
+// `_` (one bare step named "_") targets the enclosing scope.
+static bool is_scope_target(ast::Path const & p) {
+    return p.data.steps.size() == 1
+        && p.data.steps.front().data.field.data.name == "_"
+        && !p.data.steps.front().data.lower
+        && !p.data.steps.front().data.upper;
+}
+
+// Route one search block by its `on` clause: no clause or `_` -> the scope
+// policies (today's cascade); a path -> the targeted list (applied above the
+// cascade once fields exist). Scopes without fields pass targeted=nullptr and
+// reject path targets.
+static void route_search(
+    ast::Search const & c,
+    ir::SearchPolicies const & pol,
+    ir::SearchPolicies & scope_out,
+    TargetedSearch * targeted,
+    Driver & driver
+) {
+    if (c.data.targets.empty()) {
+        scope_out = merge_search(std::move(scope_out), pol);
+        return;
+    }
+    for (auto const & t : c.data.targets) {
+        if (is_scope_target(t)) {
+            scope_out = merge_search(std::move(scope_out), pol);
+        } else if (targeted) {
+            targeted->push_back({&t, pol});
+        } else {
+            driver.emit_error(
+                "search target paths require prompt or record scope "
+                "(only `_` is meaningful here)", t.location);
+        }
+    }
+}
+
+// Apply targeted blocks onto a resolved field tree. Targeting sits ABOVE the
+// scope cascade: applied after Field.search is populated, so its params win
+// over everything the field inherited (including a record's own blocks).
+// Placement mirrors the scope rules: leaf fields take text/enum/branch,
+// containers take branch only.
+static void apply_targeted(
+    TargetedSearch const & targeted,
+    std::vector<std::unique_ptr<ir::Field>> & fields,
+    std::string const & scope_desc,
+    Driver & driver
+) {
+    for (auto const & [tpath, pol] : targeted) {
+        bool selector = false;
+        for (auto const & st : tpath->data.steps)
+            if (st.data.is_range || st.data.lower || st.data.upper) selector = true;
+        if (selector) {
+            driver.emit_error(
+                "search target '" + annotate_path_text(*tpath)
+                + "' cannot carry indices or ranges", tpath->location);
+            continue;
+        }
+        auto * f = resolve_annotate_path(*tpath, fields);
+        if (!f) {
+            driver.emit_error(
+                "search target '" + annotate_path_text(*tpath)
+                + "' does not name a field of " + scope_desc, tpath->location);
+            continue;
+        }
+        bool const container =
+            std::holds_alternative<std::vector<std::unique_ptr<ir::Field>>>(f->format);
+        for (auto const & [cat, params] : pol) {
+            bool const ok = container ? (cat == "branch")
+                                      : (cat == "text" || cat == "enum" || cat == "branch");
+            if (!ok) {
+                driver.emit_error(
+                    "search category '" + cat + "' cannot target field '"
+                    + annotate_path_text(*tpath) + "' ("
+                    + (container ? "container fields take only branch"
+                                 : "leaf fields take text/enum/branch") + ")",
+                    tpath->location);
+                continue;
+            }
+            for (auto const & [key, val] : params) f->search[cat][key] = val;
+        }
+    }
+}
+
 static ir::SearchPolicies collect_struct_search(
     ast::Struct const & s,
     Evaluator & evaluator,
     std::string const & scope,
     ir::VarMap & ctx,
-    Driver & driver
+    Driver & driver,
+    TargetedSearch * targeted = nullptr
 ) {
     ir::SearchPolicies out;
     for (auto const & construct : s.data.constructs) {
         std::visit([&](auto const & c) {
             using T = std::decay_t<decltype(c)>;
             if constexpr (std::is_same_v<T, ast::Search>) {
-                lower_search(c, evaluator, scope, ctx, SearchScope::Record, driver, out);
+                ir::SearchPolicies pol;
+                lower_search(c, evaluator, scope, ctx, SearchScope::Record, driver, pol);
+                route_search(c, pol, out, targeted, driver);
             }
         }, construct);
     }
@@ -351,8 +441,9 @@ static void generate_fields(
 ) {
     // The policy in scope for this struct's fields = enclosing (file/prompt/
     // outer structs) merged with this struct's own search { } (innermost wins).
+    TargetedSearch targeted;
     ir::SearchPolicies here = merge_search(enclosing,
-        collect_struct_search(s, evaluator, scope, ctx, driver));
+        collect_struct_search(s, evaluator, scope, ctx, driver, &targeted));
 
     int index = 0;
     std::set<std::string> sibling_names;
@@ -445,6 +536,9 @@ static void generate_fields(
 
         out.push_back(std::move(f));
     }
+
+    // `on`-targeted blocks of this struct, applied above the cascade.
+    apply_targeted(targeted, out, "this scope", driver);
 }
 
 static FormatResult generate_format(
@@ -638,6 +732,7 @@ static void assemble_records(
             }
         }, decl.data.record);
 
+        TargetedSearch rec_targeted;
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
@@ -658,11 +753,15 @@ static void assemble_records(
                         }
                     }
                 } else if constexpr (std::is_same_v<T, ast::Search>) {
-                    lower_search(c, evaluator, scope, node.context, SearchScope::Record, driver, rec->search);
+                    ir::SearchPolicies pol;
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Record, driver, pol);
+                    route_search(c, pol, rec->search, &rec_targeted, driver);
                 }
             }, construct);
         }
 
+        apply_targeted(rec_targeted, rec->fields,
+                       "record '" + node.base_name + "'", driver);
         driver.records[mangled] = std::move(rec);
     }
 }
@@ -690,7 +789,11 @@ static void assemble_prompts(
                 using T = std::decay_t<decltype(s)>;
                 if constexpr (std::is_same_v<T, ast::Search>) {
                     // File scope is outside any record; flow/queue are allowed.
-                    lower_search(s, evaluator, fscope, fctx, SearchScope::File, driver, file_policies[fid]);
+                    {
+                        ir::SearchPolicies pol;
+                        lower_search(s, evaluator, fscope, fctx, SearchScope::File, driver, pol);
+                        route_search(s, pol, file_policies[fid], nullptr, driver);
+                    }
                 }
             }, stmt);
         }
@@ -718,11 +821,14 @@ static void assemble_prompts(
         ir::SearchPolicies prompt_policy;
         auto fit = file_policies.find(node.fileid);
         if (fit != file_policies.end()) prompt_policy = fit->second;
+        TargetedSearch prompt_targeted;
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Search>) {
-                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, prompt_policy);
+                    ir::SearchPolicies pol;
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, pol);
+                    route_search(c, pol, prompt_policy, &prompt_targeted, driver);
                 }
             }, construct);
         }
@@ -732,6 +838,10 @@ static void assemble_prompts(
         if (decl.data.fields) {
             generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields, field_enclosing, pmt->vocabs);
         }
+        // Prompt-level `on` targets: closest to the use site, strongest --
+        // applied last, over everything the fields inherited.
+        apply_targeted(prompt_targeted, pmt->fields,
+                       "prompt '" + node.base_name + "'", driver);
 
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {

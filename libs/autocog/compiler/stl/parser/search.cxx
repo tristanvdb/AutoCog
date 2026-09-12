@@ -40,6 +40,18 @@ void Parser::parse<ast::Tag::Search>(ParserState & state, ast::Data<ast::Tag::Se
     search.params.emplace_back();
     parse(state, search.params.back().data);
   }
+  // Postfix target clause: `search { ... } on a.b, c, _;`. `on` is contextual
+  // (an IDENTIFIER, like annotate's `_`): after a search block's `}` every
+  // statement starts with a keyword, so a bare identifier is unambiguous —
+  // no reserved word, no break for fields named `on`.
+  if (state.check(TokenType::IDENTIFIER) && state.current.text == "on") {
+    state.advance();
+    do {
+      search.targets.emplace_back();
+      parse(state, search.targets.back().data);
+    } while (state.match(TokenType::COMMA));
+    state.expect(TokenType::SEMICOLON, " to end the `on` clause of a search block.");
+  }
 }
 
 }

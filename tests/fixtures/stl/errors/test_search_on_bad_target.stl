@@ -1,0 +1,8 @@
+// Error: an `on` target that names no field.
+// expect-error: search target 'nonexistent' does not name a field of prompt 'main'
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is 2; } on nonexistent;
+  channel { q get q; }
+  return { use q; }
+}

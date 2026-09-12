@@ -11,8 +11,12 @@ TRAVERSE_CHILDREN(Param, locator, value)
 
 DATA(Search) {
   NODES(Param) params;
+  /// Postfix `on` clause: `search { ... } on a.b, c, _;` — each target is a
+  /// field path or `_` (a one-step path named "_", the enclosing scope).
+  /// Empty = plain block, sugar for `on _;`.
+  NODES(Path) targets;
 };
-TRAVERSE_CHILDREN(Search, params)
+TRAVERSE_CHILDREN(Search, params, targets)
 
 }
 
