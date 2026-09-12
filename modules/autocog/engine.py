@@ -14,7 +14,8 @@ from .context import Context
 class Engine:
     """Execution engine: model + syntax."""
 
-    def __init__(self, model=None, syntax=None, search=None, n_ctx=4096):
+    def __init__(self, model=None, syntax=None, search=None, n_ctx=4096,
+                 model_id=None):
         """
         Create an engine.
 
@@ -23,8 +24,13 @@ class Engine:
             syntax: path to syntax JSON file (required)
             search: path to search config JSON file (required)
             n_ctx: context size for the model
+            model_id: share an already-loaded model (overrides `model`) —
+                several engines differing only in syntax/search then reuse
+                one set of weights instead of reloading per engine
         """
-        if model is not None:
+        if model_id is not None:
+            self.model_id = model_id
+        elif model is not None:
             self.model_id = backend_llama_cxx.create(model, n_ctx)
         else:
             self.model_id = 0  # RNG model

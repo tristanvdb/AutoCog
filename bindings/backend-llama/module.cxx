@@ -133,6 +133,9 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
             // --score semantics. The input artifact is immutable in the store,
             // so the scored tree is stored as a new artifact.
             data::FTT ftt = data::datastore().ftt.get(ftt_id);   // copy
+            // Encoder output is text-level; tokenization needs the model
+            // (same pipeline as efta: encode -> tokenize -> score).
+            autocog::backend::llama::tokenize(model, ftt);
             autocog::backend::llama::score(model, ftt);
             detokenize(model, ftt);
             ftt.provenance["model"] = Manager::get_model(model).sha256();

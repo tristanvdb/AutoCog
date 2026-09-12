@@ -783,7 +783,11 @@ void Model::clear_kv() {
         llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
     }
   }
-  for (auto & slot : slots_) slot.tokens.clear();
+  // Full pool reset, including per-slot LRU stamps: stale last_used values
+  // against a rewound slot_clock_ would perturb victim choice relative to a
+  // freshly constructed model (observed as fork-count drift between an
+  // in-process re-run and a fresh xfta process).
+  for (auto & slot : slots_) { slot.tokens.clear(); slot.last_used = 0; }
   live_logits_slot_ = -1;
   active_slot_ = 0;
   slot_clock_ = 0;
