@@ -1,0 +1,16 @@
+// Error: a call argument that is not an input of the callee prompt.
+// expect-error: call argument 'wrong' is not an input of prompt 'helper'
+prompt helper {
+  is { h is text<length=4>; }
+  channel { h get right; }
+  return { use h; }
+}
+prompt main {
+  is { q is text<length=4>; out is text<length=4>; }
+  channel {
+    q get q;
+    out call helper { wrong get q; };
+  }
+  return { use out; }
+}
+export main;

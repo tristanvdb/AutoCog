@@ -168,7 +168,7 @@ prompt loop_dispatch {
     book.pages call edit_page {
       task use loop_cond.task;
       topic use loop_cond.topic;
-      edit use loop_analyse.edits;
+      edits use loop_analyse.edits;
       page use loop_cond.book.pages mapped;
     };
   }

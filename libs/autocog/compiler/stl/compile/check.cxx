@@ -2,6 +2,7 @@
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/logging.hxx"
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,45 @@ std::string path_text(std::vector<ir::PathStep> const & steps) {
         out += s.name;
     }
     return out;
+}
+
+// --- C3 shape helpers -------------------------------------------------------
+// Shape checks are conservative: clauses (ravel/bind/wrap/prune) transform
+// shapes in ways this stage does not model, so any clause suppresses the
+// check. Only statically provable mismatches are flagged.
+
+bool is_struct_field(ir::Field const & f) {
+    return std::holds_alternative<std::vector<std::unique_ptr<ir::Field>>>(f.format);
+}
+
+// Minimum element count the field requires (1 for non-arrays).
+int min_count(ir::Field const & f) {
+    return f.range ? f.range->first : 1;
+}
+// Maximum element count the field can hold (1 for non-arrays).
+int max_count(ir::Field const & f) {
+    return f.range ? f.range->second : 1;
+}
+
+// The callee-side input signature: names pulled from the calling frame by
+// `get` channels and by `get`-sourced call arguments.
+std::set<std::string> input_signature(ir::Prompt const & pmt) {
+    std::set<std::string> names;
+    for (auto const & ch : pmt.channels) {
+        std::visit([&](auto const & c) {
+            using T = std::decay_t<decltype(c)>;
+            if constexpr (std::is_same_v<T, ir::InputChannel>) {
+                if (!c.source.empty()) names.insert(c.source.front().name);
+            } else if constexpr (std::is_same_v<T, ir::CallChannel>) {
+                for (auto const & [kw, arg] : c.kwargs) {
+                    (void)kw;
+                    if (arg.is_input && !arg.path.empty())
+                        names.insert(arg.path.front().name);
+                }
+            }
+        }, ch);
+    }
+    return names;
 }
 
 bool has_top_field(ir::Prompt const & pmt, std::string const & name) {
@@ -146,14 +186,75 @@ std::optional<int> Driver::run_check() {
                             std::nullopt);
                     }
                 } else if constexpr (std::is_same_v<T, ir::DataflowChannel>) {
-                    check_path(c.target.steps, std::nullopt, "channel target");
-                    check_path(c.source, c.prompt, "channel `use` source");
+                    bool const ok_t = check_path(c.target.steps, std::nullopt,
+                                                 "channel target");
+                    bool const ok_s = check_path(c.source, c.prompt,
+                                                 "channel `use` source");
+                    // C3: shape compatibility, only when both ends resolved
+                    // and no clause reshapes the flow.
+                    if (ok_t && ok_s && c.clauses.empty()
+                            && !c.target.steps.empty() && !c.source.empty()) {
+                        auto const * tgt = resolve_steps(c.target.steps, pmt.fields);
+                        ir::Prompt const * src_pmt = c.prompt ? find_prompt(*c.prompt) : &pmt;
+                        auto const * src = src_pmt
+                            ? resolve_steps(c.source, src_pmt->fields) : nullptr;
+                        if (tgt && src) {
+                            if (is_struct_field(*tgt) != is_struct_field(*src)) {
+                                emit_error(
+                                    "channel '" + path_text(c.target.steps)
+                                    + "' connects a struct field and a leaf field"
+                                    + where, std::nullopt);
+                            } else if (min_count(*tgt) > max_count(*src)) {
+                                emit_error(
+                                    "channel '" + path_text(c.target.steps)
+                                    + "' requires at least "
+                                    + std::to_string(min_count(*tgt))
+                                    + " element(s) but its source '"
+                                    + path_text(c.source) + "' provides at most "
+                                    + std::to_string(max_count(*src)) + where,
+                                    std::nullopt);
+                            }
+                        }
+                    }
                 } else if constexpr (std::is_same_v<T, ir::CallChannel>) {
                     check_path(c.target.steps, std::nullopt, "channel target");
                     for (auto const & [kw, arg] : c.kwargs) {
                         if (arg.value || arg.is_input) continue;
                         check_path(arg.path, arg.prompt,
                                    "call argument '" + kw + "' source");
+                    }
+                    // C3: call-site coverage against a callee PROMPT's input
+                    // signature (extern python calls have no checkable
+                    // signature). Unknown kwarg = error; missing input =
+                    // warning (a missing input leaves the target field to
+                    // free-generate, which may be intended).
+                    if (c.entry) {
+                        if (auto const * callee = find_prompt(*c.entry)) {
+                            auto const sig = input_signature(*callee);
+                            for (auto const & [kw, arg] : c.kwargs) {
+                                (void)arg;
+                                if (!sig.count(kw)) {
+                                    emit_error(
+                                        "call argument '" + kw + "' is not an "
+                                        "input of prompt '" + callee->name + "' "
+                                        "(inputs: " + [&]{
+                                            std::string s;
+                                            for (auto const & n : sig)
+                                                s += (s.empty() ? "" : ", ") + n;
+                                            return s.empty() ? std::string("none") : s;
+                                        }() + ")" + where, std::nullopt);
+                                }
+                            }
+                            for (auto const & name : sig) {
+                                if (!c.kwargs.count(name)) {
+                                    emit_warning(
+                                        "call to prompt '" + callee->name
+                                        + "' does not bind its input '" + name
+                                        + "'; the fed field will free-generate"
+                                        + where, std::nullopt);
+                                }
+                            }
+                        }
                     }
                 }
             }, ch);
