@@ -64,7 +64,7 @@ prompt init_topic {
       max_response=10
     > {
       task use init_task.task;
-      initial use init_idea.idea;
+      initial use init_idea.ideas;
     } bind(_,response);
   }
   flow init_draft;
@@ -95,7 +95,7 @@ prompt init_commit {
     }
   }
   channel {
-    done call stlib_store {
+    keys call stlib_store {
       pkey is "book";
       data use init_draft.book;
     };
@@ -183,7 +183,7 @@ prompt loop_commit {
     }
   }
   channel {
-    done call stlib_store {
+    keys call stlib_store {
       pkey is "book";
       data use loop_dispatch.book;
     };

@@ -6,6 +6,7 @@
 #include "autocog/logging.hxx"
 
 #include <algorithm>
+#include <set>
 
 namespace autocog::compiler::stl {
 
@@ -324,10 +325,23 @@ static void generate_fields(
         collect_struct_search(s, evaluator, scope, ctx, driver));
 
     int index = 0;
+    std::set<std::string> sibling_names;
     for (auto const & field_ptr : s.data.fields) {
         if (!field_ptr) continue;
         auto const & field = *field_ptr;
         auto name = field.data.name.data.name;
+        // C2: a duplicate sibling would silently shadow its twin at runtime.
+        if (!sibling_names.insert(name).second) {
+            driver.emit_error("Duplicate field '" + name + "' in this scope.",
+                              field.data.name.location);
+            continue;
+        }
+        if (is_reserved_dunder(name)) {
+            driver.emit_error("'" + name + "' uses the reserved __...__ shape "
+                              "(system namespaces); field names cannot use it.",
+                              field.data.name.location);
+            continue;
+        }
         auto f = std::make_unique<ir::Field>(name, depth, index++);
 
         auto lower = eval_opt_int(field.data.lower, evaluator, scope, ctx);

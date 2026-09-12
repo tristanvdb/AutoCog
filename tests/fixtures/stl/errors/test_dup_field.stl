@@ -1,0 +1,3 @@
+// Error: duplicate sibling fields silently shadow each other at runtime
+// expect-error: Duplicate field 'q' in this scope.
+prompt main { is { q is text<length=4>; q is text<length=8>; } channel { q get q; } return { use q; } }

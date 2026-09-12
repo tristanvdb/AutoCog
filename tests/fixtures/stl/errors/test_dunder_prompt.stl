@@ -1,0 +1,3 @@
+// Error: the __...__ shape is reserved for system namespaces
+// expect-error: '__main__' uses the reserved __...__ shape
+prompt __main__ { is { q is text<length=4>; } channel { q get q; } return { use q; } }

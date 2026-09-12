@@ -1,0 +1,7 @@
+// Error: a channel target that names no field was silently dropped.
+// expect-error: channel target 'nonexistent' does not name a field
+prompt main {
+  is { q is text<length=4>; }
+  channel { nonexistent get q; }
+  return { use q; }
+}

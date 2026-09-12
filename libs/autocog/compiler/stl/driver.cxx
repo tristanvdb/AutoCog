@@ -152,7 +152,11 @@ std::optional<int> Driver::compile_stages() {
     if (auto e = run_assemble()) return e;
     if (stage == CompilationStage::Assemble) return std::nullopt;
 
-    // Stage 6: Generate STA
+    // Stage 6: Check (semantic validation over the assembled IR)
+    if (auto e = run_check()) return e;
+    if (stage == CompilationStage::Check) return std::nullopt;
+
+    // Stage 7: Generate STA
     if (auto e = run_generate()) return e;
 
     return std::nullopt;

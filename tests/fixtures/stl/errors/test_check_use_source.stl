@@ -1,0 +1,8 @@
+// Error: a `use` dataflow source referencing an unknown prompt must not
+// silently drop the channel (leaving the field to free-generate).
+// expect-error: channel `use` source references unknown prompt 'nowhere'
+prompt main {
+  is { q is text<length=4>; a is text<length=4>; }
+  channel { q get q; a use nowhere.field; }
+  return { use a; }
+}

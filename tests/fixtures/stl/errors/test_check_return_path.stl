@@ -1,0 +1,4 @@
+// Error: a return path that names no field must fail at compile time,
+// not as an ExecutionError after the model evaluation is paid for.
+// expect-error: return path 'nonexistent' does not name a field
+prompt main { is { q is text<length=4>; } channel { q get q; } return { use nonexistent; } }

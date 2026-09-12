@@ -22,6 +22,16 @@ namespace autocog::compiler::stl {
 
 class Evaluator;
 
+/// `__…__`-shaped identifiers (leading AND trailing double underscore) are
+/// reserved for system namespaces; the shape is illegal for user-defined
+/// symbols (defines, arguments, vocabs, records, prompts, fields, aliases,
+/// exports). The single `_` of annotate/on-clauses does not match.
+inline bool is_reserved_dunder(std::string const & name) {
+  return name.size() >= 4
+      && name.compare(0, 2, "__") == 0
+      && name.compare(name.size() - 2, 2, "__") == 0;
+}
+
 /**
  * Compilation stage — controls when compile() stops.
  */
@@ -31,7 +41,8 @@ enum class CompilationStage {
   Globals     = 3,
   Instantiate = 4,
   Assemble    = 5,
-  Generate    = 6,
+  Check       = 6,  ///< semantic validation over the assembled IR
+  Generate    = 7,
 };
 
 class Driver {
@@ -141,6 +152,7 @@ class Driver {
     std::optional<int> run_globals();
     std::optional<int> run_instantiate();
     std::optional<int> run_assemble();
+    std::optional<int> run_check();
     std::optional<int> run_generate();
 };
 
