@@ -1074,7 +1074,17 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     if (qit != prompt.search.categories.end()) {
         auto mit = qit->second.find("metric");
         if (mit != qit->second.end())
-            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = {*s};
+            if (auto const * s = std::get_if<std::string>(&mit->second)) {
+                // The policy carries the lexicographic list comma-joined
+                // (STL comma-list RHS); split it back.
+                metric.clear();
+                std::string cur;
+                for (char ch : *s) {
+                    if (ch == ',') { if (!cur.empty()) metric.push_back(cur); cur.clear(); }
+                    else cur += ch;
+                }
+                if (!cur.empty()) metric.push_back(cur);
+            }
     }
     // Registry-validated here (not just at the backend) so a bad metric fails
     // at instantiation with a source-attributable message, not mid-evaluation.

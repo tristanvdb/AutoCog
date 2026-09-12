@@ -1,0 +1,6 @@
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.metric is "longest", "perplexity"; }
+  channel { q get q; }
+  return { use q; }
+}

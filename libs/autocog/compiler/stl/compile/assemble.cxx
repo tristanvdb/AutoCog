@@ -100,7 +100,42 @@ static void lower_search(
                 param.location);
             continue;
         }
-        auto val = evaluator.evaluate_expression(scope, param.data.value, ctx);
+        if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
+        // List-valued params (registry Kind::List, e.g. queue.metric) take a
+        // comma-separated RHS; every element is validated against the string
+        // domain and the list is carried comma-joined in the (scalar) policy
+        // value. Scalar params reject a list.
+        if (info->kind == reg::Kind::List) {
+            std::string joined;
+            bool ok = true;
+            for (auto const & vexpr : param.data.values) {
+                auto v = evaluator.evaluate_expression(scope, vexpr, ctx);
+                auto const * sv = std::get_if<std::string>(&v);
+                if (!sv) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "' takes string values", param.location);
+                    ok = false; break;
+                }
+                if (!reg::in_domain(*info, *sv)) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "': invalid value '" + *sv + "' (allowed: "
+                        + reg::domain_text(*info) + ")", param.location);
+                    ok = false; break;
+                }
+                joined += (joined.empty() ? "" : ",") + *sv;
+            }
+            if (ok) out[category][key] = joined;
+            continue;
+        }
+        if (param.data.values.size() > 1) {
+            driver.emit_error(
+                "search parameter '" + category + "." + key
+                + "' takes a single value", param.location);
+            continue;
+        }
+        auto val = evaluator.evaluate_expression(scope, param.data.values.front(), ctx);
         bool const is_null = std::holds_alternative<std::monostate>(val);
         if (!is_null) {
             bool type_ok = false;

@@ -8,7 +8,9 @@ namespace autocog::data {
 
 /// A termination predicate: the boolean AST deciding when an evaluation stops
 /// early. Leaves compare a named evaluation scalar (terminals, coverage.fta,
-/// coverage.sta, best.proba, best.zscore, tokens, queue.size, seconds)
+/// coverage.sta, best.proba, mean.proba, std.proba, best.zscore, tokens,
+/// queue.size — wall time is deliberately excluded: nondeterministic, and
+/// termination is hashed into program identity)
 /// against a constant; inner nodes compose with all/any/not. Shared by
 /// SearchConfig and FTA. Conversion lives in the free functions in
 /// json.hxx / python.hxx.

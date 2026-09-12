@@ -5,9 +5,11 @@ namespace autocog::compiler::stl::ast {
 
 DATA(Param) {
   NODES(Identifier) locator;
-  NODE(Expression)  value;
+  /// One value for scalar params; several (comma-separated) for
+  /// registry-marked list params such as queue.metric.
+  NODES(Expression) values;
 };
-TRAVERSE_CHILDREN(Param, locator, value)
+TRAVERSE_CHILDREN(Param, locator, values)
 
 DATA(Search) {
   NODES(Param) params;

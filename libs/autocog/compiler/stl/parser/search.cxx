@@ -28,7 +28,10 @@ void Parser::parse<ast::Tag::Param>(ParserState & state, ast::Data<ast::Tag::Par
     take_segment("parameter locator needs an identifier or keyword after '.'.");
   }
   state.expect(TokenType::IS, " to set value of search parameter.");
-  parse(state, param.value.data);
+  do {
+    param.values.emplace_back();
+    parse(state, param.values.back().data);
+  } while (state.match(TokenType::COMMA));
   state.expect(TokenType::SEMICOLON, " to finish search parameter assignment.");
 }
 

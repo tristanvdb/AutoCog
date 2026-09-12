@@ -1,0 +1,117 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {
+        "q": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "52050fed93ba79136cac16a947b8ddf8d2598d861f7f18e9b691113f45bfbc03",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 1,
+          "flow": -1
+        }
+      ],
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "q"
+            }
+          ],
+          "target": [
+            {
+              "name": "q"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "q",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "q"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": "longest,perplexity"
+        }
+      }
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}

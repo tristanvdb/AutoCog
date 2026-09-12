@@ -52,11 +52,14 @@ static MetricKey parse_metric_key(std::string const & name) {
   throw autocog::SchemaError("Unknown queue metric '" + name + "'", name);
 }
 
+// Wall time is deliberately NOT a stop scalar: a time-based stop makes runs
+// nondeterministic and machine-dependent, and termination is part of program
+// identity (hashed into the FTA). Wall-clock limits belong to the engine /
+// bench budget layer.
 static bool known_stop_scalar(std::string const & name) {
   return name == "terminals" || name == "coverage.fta" || name == "coverage.sta"
       || name == "best.proba" || name == "mean.proba" || name == "std.proba"
-      || name == "best.zscore" || name == "tokens" || name == "queue.size"
-      || name == "seconds";
+      || name == "best.zscore" || name == "tokens" || name == "queue.size";
 }
 
 static void validate_stop(data::TermExpr const & e) {
@@ -174,7 +177,7 @@ void Evaluation::on_terminal(data::FTTNode const & node, ActionID action) {
   }
 }
 
-double Evaluation::scalar_value(std::string const & name, double seconds_now) const {
+double Evaluation::scalar_value(std::string const & name) const {
   double const n = static_cast<double>(terminals_);
   double const mean = terminals_ ? proba_sum_ / n : 0.0;
   if (name == "terminals")    return n;
@@ -196,29 +199,28 @@ double Evaluation::scalar_value(std::string const & name, double seconds_now) co
     double const sd = var > 0.0 ? std::sqrt(var) : 0.0;
     if (name == "std.proba") return sd;
     if (terminals_ < 3 || sd <= 0.0) return 0.0;   // undefined on a tiny field
-    return (scalar_value("best.proba", seconds_now) - mean) / sd;
+    return (scalar_value("best.proba") - mean) / sd;
   }
   if (name == "tokens")     return static_cast<double>(tokens_total_);
   if (name == "queue.size") return static_cast<double>(queue.size());
-  if (name == "seconds")    return seconds_now;
   return 0.0;  // unreachable: validated at construction
 }
 
-bool Evaluation::eval_stop(data::TermExpr const & e, double seconds_now) const {
+bool Evaluation::eval_stop(data::TermExpr const & e) const {
   using Kind = data::TermExpr::Kind;
   switch (e.kind) {
     case Kind::All:
-      for (auto const & op : e.operands) if (!eval_stop(op, seconds_now)) return false;
+      for (auto const & op : e.operands) if (!eval_stop(op)) return false;
       return true;
     case Kind::Any:
-      for (auto const & op : e.operands) if (eval_stop(op, seconds_now)) return true;
+      for (auto const & op : e.operands) if (eval_stop(op)) return true;
       return false;
     case Kind::Not:
-      return e.operands.empty() ? true : !eval_stop(e.operands[0], seconds_now);
-    case Kind::Ge: return scalar_value(e.scalar, seconds_now) >= e.value;
-    case Kind::Gt: return scalar_value(e.scalar, seconds_now) >  e.value;
-    case Kind::Le: return scalar_value(e.scalar, seconds_now) <= e.value;
-    case Kind::Lt: return scalar_value(e.scalar, seconds_now) <  e.value;
+      return e.operands.empty() ? true : !eval_stop(e.operands[0]);
+    case Kind::Ge: return scalar_value(e.scalar) >= e.value;
+    case Kind::Gt: return scalar_value(e.scalar) >  e.value;
+    case Kind::Le: return scalar_value(e.scalar) <= e.value;
+    case Kind::Lt: return scalar_value(e.scalar) <  e.value;
   }
   return false;
 }
@@ -226,8 +228,8 @@ bool Evaluation::eval_stop(data::TermExpr const & e, double seconds_now) const {
 SearchStats Evaluation::search_stats() const {
   SearchStats s;
   s.terminals = terminals_;
-  s.coverage_fta = scalar_value("coverage.fta", 0.0);
-  s.coverage_sta = scalar_value("coverage.sta", 0.0);
+  s.coverage_fta = scalar_value("coverage.fta");
+  s.coverage_sta = scalar_value("coverage.sta");
   s.stopped = stopped_;
   s.abandoned = abandoned_;
   return s;
@@ -276,9 +278,7 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
     // subtrees are abandoned: their roots are marked pruned so the FTT stays
     // well-formed, distinguishable from threshold/width rejection.
     if (prepared.fta.queue_stop && terminals_ >= 1) {
-      double const seconds_now = perf_.advance_seconds
-          + std::chrono::duration<double>(clock::now() - advance_start).count();
-      if (eval_stop(*prepared.fta.queue_stop, seconds_now)) {
+      if (eval_stop(*prepared.fta.queue_stop)) {
         for (auto const & pending : queue) pending->parent.pruned = data::Pruned::Abandoned;
         abandoned_ = static_cast<unsigned>(queue.size());
         queue.clear();
