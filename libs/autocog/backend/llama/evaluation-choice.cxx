@@ -35,8 +35,14 @@ unsigned Evaluation::evaluate_choice(PathState & state) {
   data::ChooseAction const & ca = std::get<data::ChooseAction>(prepared.fta.actions[state.action].body);
   PreparedAction const & p = prepared.actions[state.action];
 
+  // User-attributable, not a backend invariant: an empty candidate list means
+  // the choice source resolved to zero values in this instantiation's content.
   if (p.choices.empty())
-    throw autocog::utilities::InternalError("Choice action has no choices");
+    throw autocog::ConfigError(
+        "choose action '" + prepared.fta.actions[state.action].uid
+        + "' has no candidates: the choice source resolved to zero values "
+        "(missing content?)",
+        prepared.fta.actions[state.action].uid);
   if (p.successors.size() != p.choices.size())
     throw autocog::utilities::InternalError("Choice action must have as many successors as choices");
 

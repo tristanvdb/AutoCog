@@ -172,6 +172,36 @@ static ir::SearchPolicies prune_search(
     return out;
 }
 
+// Resolve an annotate path (names only) against a field tree, descending
+// struct sub-fields. Returns the terminal field or nullptr.
+static ir::Field * resolve_annotate_path(
+    ast::Path const & path,
+    std::vector<std::unique_ptr<ir::Field>> & fields
+) {
+    auto * level = &fields;
+    ir::Field * hit = nullptr;
+    for (auto const & step : path.data.steps) {
+        auto const & name = step.data.field.data.name;
+        hit = nullptr;
+        if (!level) return nullptr;  // walked past a leaf
+        for (auto & f : *level) {
+            if (f && f->name == name) { hit = f.get(); break; }
+        }
+        if (!hit) return nullptr;
+        level = std::get_if<std::vector<std::unique_ptr<ir::Field>>>(&hit->format);
+    }
+    return hit;
+}
+
+static std::string annotate_path_text(ast::Path const & path) {
+    std::string out;
+    for (auto const & step : path.data.steps) {
+        if (!out.empty()) out += ".";
+        out += step.data.field.data.name;
+    }
+    return out;
+}
+
 // Collect an inline struct's own `search { }` constructs into a SearchPolicies
 // (merged in document order). Constructs live on ast::Struct.constructs as a
 // variant of Annotate|Search; only Search contributes here.
@@ -613,11 +643,18 @@ static void assemble_records(
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
+                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
+                        auto * sv = std::get_if<std::string>(&val);
+                        if (!sv) continue;
                         if (!ann.data.path) {
-                            auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                            if (auto * sv = std::get_if<std::string>(&val)) {
-                                rec->desc.push_back(*sv);
-                            }
+                            rec->desc.push_back(*sv);
+                        } else if (auto * target = resolve_annotate_path(*ann.data.path, rec->fields)) {
+                            target->desc.push_back(*sv);
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of record '" + node.base_name + "'",
+                                ann.location);
                         }
                     }
                 } else if constexpr (std::is_same_v<T, ast::Search>) {
@@ -850,21 +887,21 @@ static void assemble_prompts(
                 } else if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
                         auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        if (auto * sv = std::get_if<std::string>(&val)) {
-                            if (!ann.data.path) {
-                                pmt->desc.push_back(*sv);
-                            } else {
-                                auto const & path = ann.data.path.value();
-                                if (!path.data.steps.empty()) {
-                                    auto field_name = path.data.steps.front().data.field.data.name;
-                                    for (auto & f : pmt->fields) {
-                                        if (f->name == field_name) {
-                                            f->desc.push_back(*sv);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
+                        auto * sv = std::get_if<std::string>(&val);
+                        if (!sv) continue;
+                        if (!ann.data.path) {
+                            pmt->desc.push_back(*sv);
+                        } else if (auto * target = resolve_annotate_path(*ann.data.path, pmt->fields)) {
+                            // Full-path resolution: `annotate { a.b as ...; }`
+                            // lands on the nested field (previously only the
+                            // first step was matched, silently annotating the
+                            // container).
+                            target->desc.push_back(*sv);
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of prompt '" + node.base_name + "'",
+                                ann.location);
                         }
                     }
                 }

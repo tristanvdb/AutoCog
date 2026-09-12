@@ -866,6 +866,9 @@ struct FTABuilder {
                 if (val && !doc_is_null(*val)) {
                     field_id = add_text("field." + succ_safe, value_to_text(*val, fld.name));
                 } else {
+                    // An empty candidate list is legal HERE (the ista tooling
+                    // instantiates without content to inspect FTAs); it only
+                    // becomes an error if such a choose is evaluated.
                     auto choices = ravel_choices(content, fmt, syntax);
                     field_id = add_choose("field." + succ_safe, choices,
                                           resolve_choice(pol, "enum", search.enums));

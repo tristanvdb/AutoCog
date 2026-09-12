@@ -132,3 +132,22 @@ def test_sum_ranking_prefers_short_choice_on_rng(repo_root, tmp_path):
     result = engine.run(prog, topic="t", question="pick one", choices=choices)
     answer = result if isinstance(result, str) else result.get("answer")
     assert answer == "tiny"
+
+
+def test_empty_choices_is_user_error(repo_root):
+    """C5: running a choice program with zero candidates fails with a
+    user-attributable message (the array-range guard), never the backend's
+    former InternalError('Choice action has no choices') — which is now a
+    ConfigError naming the action, kept as defense-in-depth for choice
+    sources that bypass ranged arrays. (Instantiation itself stays
+    permissive: the ista tooling inspects FTAs without content.)"""
+    from autocog.engine import Engine
+    from autocog.errors import AutoCogError
+
+    prog = autocog.compile(str(repo_root / "share" / "demos" / "mcq" / "select.stl"),
+                           includes=[str(repo_root / "share" / "demos" / "mcq")])
+    engine = Engine(model=None,
+                    syntax=str(repo_root / "share" / "syntax" / "complete.json"),
+                    search=str(repo_root / "share" / "search" / "default.json"))
+    with pytest.raises(AutoCogError, match="requires at least"):
+        engine.run(prog, topic="t", question="q", choices=[])
