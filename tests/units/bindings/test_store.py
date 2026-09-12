@@ -100,7 +100,7 @@ scid   = runtime_sta_cxx.load_search(SEARCH)
 pid    = compiler_stl_cxx.compile(SELECT)                          # STA
 content = {"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
 fta_id = runtime_sta_cxx.instantiate(pid, "main", content, sid, scid)  # FTA
-ftt_id = backend_llama_cxx.evaluate(0, fta_id)                     # FTT (RNG model 0)
+ftt_id, _perf = backend_llama_cxx.evaluate(0, fta_id)              # FTT (RNG model 0)
 
 for prefix, handle in [("syntax", sid), ("search", scid), ("sta", pid),
                        ("fta", fta_id), ("ftt", ftt_id)]:

@@ -771,6 +771,24 @@ unsigned Model::topk_frontier(
   return decoded_total;
 }
 
+void Model::clear_kv() {
+  if (this->id == 0) {          // RNG model: token records only, no KV cache
+    for (auto & t : this->tokens) t.clear();
+    return;
+  }
+  for (size_t c = 0; c < contexts.size(); ++c) {
+    llama_memory_t mem = llama_get_memory(get_context(static_cast<ContextID>(c)));
+    for (size_t s = 0; s < slots_.size(); ++s) {
+      if (!slots_[s].tokens.empty())
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
+    }
+  }
+  for (auto & slot : slots_) slot.tokens.clear();
+  live_logits_slot_ = -1;
+  active_slot_ = 0;
+  slot_clock_ = 0;
+}
+
 std::string Model::sha256() const {
   // The RNG model has no backing file; report a stable sentinel so an FTT it
   // produced still records which "model" evaluated it.

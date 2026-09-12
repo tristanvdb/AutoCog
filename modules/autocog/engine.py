@@ -2,6 +2,8 @@
 Engine — holds a model and syntax, drives program execution.
 """
 
+import json
+
 from autocog.runtime.sta import runtime_sta_cxx
 from autocog.backend.llama import backend_llama_cxx
 
@@ -35,9 +37,19 @@ class Engine:
             raise ConfigError("search is required — pass a path to a search config JSON file")
         self.search_id = runtime_sta_cxx.load_search(search)
 
+        #: autocog.perf.* field map of the most recent prompt evaluation
+        #: (per-evaluation deltas, same keys as `xfta --perf`), or None.
+        self.last_perf = None
+
     def set_seed(self, seed):
         """Set the RNG seed for the underlying model."""
         backend_llama_cxx.set_seed(self.model_id, seed)
+
+    def reset(self, kv=True):
+        """Zero the model's accumulated kv/decode counters; with kv=True also
+        drop every KV slot, so the next evaluation starts from a cold cache
+        (measurement isolation between runs sharing this engine)."""
+        backend_llama_cxx.reset(self.model_id, kv)
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         """
@@ -60,7 +72,10 @@ class Engine:
             if record_kinds and "fta" in record_kinds:
                 artifacts["fta"] = runtime_sta_cxx.get_fta(fta_id)
 
-            ftt_id = backend_llama_cxx.evaluate(self.model_id, fta_id)
+            ftt_id, perf_json = backend_llama_cxx.evaluate(self.model_id, fta_id)
+            self.last_perf = json.loads(perf_json)
+            if record_kinds and "perf" in record_kinds:
+                artifacts["perf"] = self.last_perf
             try:
                 # The backend stored the FTT; walk it from the store (model-free).
                 frame = runtime_sta_cxx.walk_ftt_to_frame(
@@ -80,6 +95,37 @@ class Engine:
         if record_kinds is not None:
             return frame, artifacts
         return frame
+
+    def score_frame(self, program, prompt_name, frame, content=None):
+        """Encode a frame into its canonical forced path under this engine's
+        syntax and score every token against the model (the `efta --score`
+        semantics). Returns the scored FTT as a dict.
+
+        Args:
+            program: Program object
+            prompt_name: prompt the frame corresponds to
+            frame: dict of field values (a recorded or constructed frame)
+            content: input content dict; resolves select values back to
+                indices when the frame holds resolved values
+        """
+        content = content or {}
+        fta_id = runtime_sta_cxx.instantiate(
+            program.id, prompt_name, content, self.syntax_id, self.search_id
+        )
+        try:
+            ftt_id = runtime_sta_cxx.encode_frame(
+                program.id, prompt_name, fta_id, frame, content
+            )
+            try:
+                scored_id = backend_llama_cxx.score(self.model_id, ftt_id)
+                try:
+                    return runtime_sta_cxx.get_ftt(scored_id)
+                finally:
+                    runtime_sta_cxx.release_ftt(scored_id)
+            finally:
+                runtime_sta_cxx.release_ftt(ftt_id)
+        finally:
+            runtime_sta_cxx.release_fta(fta_id)
 
     def run(self, program, entry="main", externals=None, max_steps=100,
             recorder=None, **inputs):

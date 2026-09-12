@@ -3,6 +3,7 @@
 #include "autocog/backend/llama/evaluation.hxx"
 #include "autocog/backend/llama/manager.hxx"
 #include "autocog/backend/llama/prepared.hxx"
+#include "autocog/backend/llama/perf-fields.hxx"
 
 #include "autocog/codec/json.hxx"
 #include "autocog/data/store.hxx"
@@ -86,14 +87,21 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     );
 
     module.def("evaluate",
-        [](ModelID model, std::string const & fta_id) -> std::string {
+        [](ModelID model, std::string const & fta_id) -> py::tuple {
             // Evaluate the stored FTA, detokenize the resulting FTT with the
             // model (only possible here, where it is loaded), and hand it to the
             // store. The Manager's working evaluation is a transient: once the
             // FTT is materialized we release it (resuming is not implemented).
             auto const & fta = data::datastore().fta.get(fta_id);
+            // Model-level stats accumulate across evaluations on a shared
+            // model: snapshot here so the returned perf holds per-eval deltas.
+            DecodeStats const ds_base = Manager::get_model(model).decode_stats();
+            KvStats const kv_base = Manager::get_model(model).kv_stats();
             EvalID eval_id = Manager::add_eval(model, fta);
             Manager::advance(eval_id, std::nullopt);
+            std::string const perf_json = perf_fields(
+                Manager::get_model(model), Manager::get_eval(eval_id),
+                ds_base, kv_base).dump();
             data::FTT ftt = Manager::retrieve(eval_id);
             detokenize(model, ftt);
             Manager::rm_eval(eval_id);
@@ -106,12 +114,45 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
             ftt.provenance["fta"]   = fta.metadata ? fta.metadata->hash : std::string{};
             ftt.provenance["model"] = Manager::get_model(model).sha256();
 
-            return data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
+            auto handle = data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
+            return py::make_tuple(handle, perf_json);
         },
         "Evaluate a stored FTA (by handle) with a model; detokenizes the FTT and "
-        "stores it, returning its handle. Read it back via the runtime-sta FTT "
-        "verbs (get_ftt / dump_ftt / walk_ftt_to_frame), which need no model.",
+        "stores it. Returns (ftt_handle, perf_json): the same autocog.perf.* "
+        "field map xfta --perf emits, as per-evaluation deltas. Read the FTT "
+        "back via the runtime-sta FTT verbs (get_ftt / dump_ftt / "
+        "walk_ftt_to_frame), which need no model.",
         py::arg("model"),
         py::arg("fta_id")
+    );
+
+    module.def("score",
+        [](ModelID model, std::string const & ftt_id) -> std::string {
+            // Score a stored (typically encoder-produced) FTT: every node's
+            // logprobs become P(token | prefix) under this model — the efta
+            // --score semantics. The input artifact is immutable in the store,
+            // so the scored tree is stored as a new artifact.
+            data::FTT ftt = data::datastore().ftt.get(ftt_id);   // copy
+            autocog::backend::llama::score(model, ftt);
+            detokenize(model, ftt);
+            ftt.provenance["model"] = Manager::get_model(model).sha256();
+            ftt.metadata.reset();   // scored content differs: re-finalize fresh
+            return data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
+        },
+        "Score a stored FTT against the model (forced P(token|prefix) on every "
+        "node, the efta --score semantics); returns the scored FTT's handle.",
+        py::arg("model"),
+        py::arg("ftt_id")
+    );
+
+    module.def("reset",
+        [](ModelID model, bool kv) {
+            Manager::get_model(model).reset_stats();
+            if (kv) Manager::get_model(model).clear_kv();
+        },
+        "Zero the model's accumulated kv/decode counters; with kv=True also "
+        "drop every KV slot (cold-cache isolation between measured runs).",
+        py::arg("model"),
+        py::arg("kv") = true
     );
 }

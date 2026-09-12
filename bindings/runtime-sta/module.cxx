@@ -1,6 +1,7 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/runtime/sta/walk.hxx"
+#include "autocog/runtime/sta/encode.hxx"
 #include "autocog/codec/json.hxx"      // load/store/dump: file + JSON-string boundary
 #include "autocog/codec/python.hxx"    // read/get: direct data:: <-> py::object
 #include "autocog/data/store.hxx"
@@ -125,6 +126,27 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
         "Instantiate an STA prompt into an FTA; returns a handle",
         py::arg("program_id"), py::arg("prompt"), py::arg("content"),
         py::arg("syntax_id"), py::arg("search_id"));
+
+    // ===== frame -> FTT (the efta encode: inverse of walk) =====
+    module.def("encode_frame",
+        [](std::string const & program_id, std::string const & prompt_name,
+           std::string const & fta_id, py::object frame, py::object content)
+            -> std::string {
+            auto const & program = data::datastore().sta.get(program_id);
+            auto const & fta     = data::datastore().fta.get(fta_id);
+            auto frame_doc = to_document(frame);
+            auto content_doc = to_document(content);
+            auto ftt = sta::encode_frame_to_ftt(
+                fta, program, prompt_name, frame_doc, content_doc);
+            ftt.provenance = fta.provenance;
+            ftt.provenance["fta"] = fta.metadata ? fta.metadata->hash : std::string{};
+            return data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
+        },
+        "Encode a frame into the FTT of the canonical path that produces it "
+        "(the efta encode; token logprobs are zero until backend score). "
+        "Returns the FTT's handle.",
+        py::arg("program_id"), py::arg("prompt"), py::arg("fta_id"),
+        py::arg("frame"), py::arg("content"));
 
     // ===== FTT -> frame =====
     module.def("walk_ftt_to_frame",

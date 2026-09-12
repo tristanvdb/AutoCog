@@ -18,7 +18,7 @@ class Recorder:
     reflects progress even when execution crashes mid-way.
     """
 
-    VALID_KINDS = {"input", "frame", "fta", "ftt"}
+    VALID_KINDS = {"input", "frame", "fta", "ftt", "perf"}
 
     def __init__(self, kinds, path=None):
         if isinstance(kinds, str):
@@ -97,6 +97,7 @@ class Recorder:
             {step}.ftt.json   — the FTT document
             {step}.frame.json — the frame
             {step}.input.json — the input content (raw JSON; not a tracked type)
+            {step}.perf.json  — autocog.perf.* deltas of the evaluation
         """
         step_dir = os.path.join(self.path, f"ctx-{ctx_id}", prompt_name)
         os.makedirs(step_dir, exist_ok=True)

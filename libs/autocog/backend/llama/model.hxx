@@ -141,6 +141,13 @@ class Model {
     DecodeStats const & decode_stats() const { return decode_stats_; }
     size_t kv_slots() const { return slots_.size(); }
 
+    /// Zero the accumulated model-level counters (kv + decode stats).
+    void reset_stats() { kv_stats_ = {}; decode_stats_ = {}; }
+
+    /// Drop every KV slot (worker isolation between measured evaluations:
+    /// the next evaluation starts from a cold cache, not a warm sibling's).
+    void clear_kv();
+
     // Route `tokens` to a KV slot (see the slot-pool comment above), returning
     // the number of tokens decoded doing so. With `prime_logits`, guarantees
     // the live logits are those of the target's final position on return —

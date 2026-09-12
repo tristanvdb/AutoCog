@@ -507,10 +507,14 @@ class TestBackendServer:
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/status/{request_id}") as resp:
                     status = json.loads(resp.read())
                 if status["state"] == "complete":
-                    # Backend returns the FTT (xfta over the wire), not text.
-                    ftt = status["result"]
-                    assert isinstance(ftt, dict)
+                    # Backend returns {"ftt", "perf"} (xfta over the wire:
+                    # the tree plus the evaluation's autocog.perf.* deltas).
+                    reply = status["result"]
+                    assert isinstance(reply, dict)
+                    ftt = reply["ftt"]
                     assert "children" in ftt and "text" in ftt
+                    perf = reply["perf"]
+                    assert perf["autocog.perf.tokens.eval"] > 0
                     return
                 elif status["state"] == "error":
                     raise AssertionError(f"Backend error: {status['error']}")

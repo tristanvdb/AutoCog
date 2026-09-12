@@ -189,7 +189,7 @@ check("detokenize roundtrip", backend_llama_cxx.detokenize(0, tokens) == "hello"
 pid6 = compiler_stl_cxx.compile(f"{SHARE}/demos/mcq/select.stl")
 content = {"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
 fta_id3 = runtime_sta_cxx.instantiate(pid6, "main", content, sid, scid)
-ftt_id = backend_llama_cxx.evaluate(0, fta_id3)
+ftt_id, _perf = backend_llama_cxx.evaluate(0, fta_id3)
 check("evaluate returns str handle", isinstance(ftt_id, str))
 ftt = runtime_sta_cxx.get_ftt(ftt_id)
 check("get_ftt returns dict", isinstance(ftt, dict))
@@ -215,7 +215,7 @@ runtime_sta_cxx.release_fta(fta_id3)
 
 scid_full = runtime_sta_cxx.load_search(os.path.join(SHARE, "search", "full.json"))
 fta_id4 = runtime_sta_cxx.instantiate(pid6, "main", content, sid, scid_full)
-ftt_id2 = backend_llama_cxx.evaluate(0, fta_id4)
+ftt_id2, _perf2 = backend_llama_cxx.evaluate(0, fta_id4)
 check("evaluate with full search", isinstance(ftt_id2, str))
 runtime_sta_cxx.release_ftt(ftt_id2)
 runtime_sta_cxx.release_fta(fta_id4)

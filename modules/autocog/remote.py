@@ -134,6 +134,9 @@ class RemoteBackend:
         self.search_id = (runtime_sta_cxx.load_search(search)
                           if search else None)
         self.model_id = None  # evaluation is remote
+        #: autocog.perf.* deltas of the most recent remote evaluation, as
+        #: reported by the worker (worker clock), or None. Mirrors Engine.
+        self.last_perf = None
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         """Instantiate locally, evaluate remotely, walk the returned FTT locally."""
@@ -148,7 +151,11 @@ class RemoteBackend:
             if record_kinds and "fta" in record_kinds:
                 artifacts["fta"] = fta
 
-            ftt = self._evaluate_remote(fta)
+            reply = self._evaluate_remote(fta)
+            ftt = reply["ftt"]
+            self.last_perf = reply.get("perf")
+            if record_kinds and "perf" in record_kinds:
+                artifacts["perf"] = self.last_perf
 
             # Land the received FTT in the local store, then walk it locally
             # (model-free; this client may run where no model is loaded).
@@ -173,7 +180,7 @@ class RemoteBackend:
         return frame
 
     def _evaluate_remote(self, fta):
-        """POST an FTA to the backend's /evaluate and return the resulting FTT."""
+        """POST an FTA to /evaluate; returns the {"ftt", "perf"} reply."""
         req_data = json.dumps({"fta": fta}).encode()
         req = urllib.request.Request(
             f"{self.server_url}/evaluate",

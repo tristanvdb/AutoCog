@@ -51,22 +51,27 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         default_tag = tag
 
     def evaluate_fta(fta: dict) -> dict:
-        """Evaluate an FTA and return the resulting FTT.
+        """Evaluate an FTA; reply is {"ftt": ..., "perf": ...}.
 
         The backend is xfta over the wire: it evaluates the FTA against the
-        model and returns the FTT. The client walks the FTT into a frame using
-        the program it holds locally (single FTT->frame implementation in the
-        runtime), so the backend does not walk it here.
+        model and returns the FTT plus the evaluation's autocog.perf.* deltas
+        (the same field map xfta --perf emits — timing/counters ride the
+        response, no side-channel). The client walks the FTT into a frame
+        using the program it holds locally (single FTT->frame implementation
+        in the runtime), so the backend does not walk it here.
         """
+        import json as _json
+
         from autocog.runtime.sta import runtime_sta_cxx
 
         # The FTA arrived as a dict (FastAPI parsed the HTTP body). Hand it to
         # C++ to translate+store; C++ owns the structure from here.
         fta_id = runtime_sta_cxx.read_fta(fta)
         model_id = models[default_tag]
-        ftt_id = backend_llama_cxx.evaluate(model_id, fta_id)
+        ftt_id, perf_json = backend_llama_cxx.evaluate(model_id, fta_id)
         try:
-            return runtime_sta_cxx.get_ftt(ftt_id)
+            return {"ftt": runtime_sta_cxx.get_ftt(ftt_id),
+                    "perf": _json.loads(perf_json)}
         finally:
             runtime_sta_cxx.release_ftt(ftt_id)
             runtime_sta_cxx.release_fta(fta_id)
