@@ -23,9 +23,15 @@ struct TextSearch {
 };
 
 /// Parameters of a `choose` action; the same shape governs enum / branch / flow.
+/// Candidates are scored by a metric ("mean" per-token geometric mean, "sum"
+/// joint log-probability, "bytes" per-byte): `ranking` orders the candidates,
+/// `threshold`+`threshold_metric` prune them. The two metrics are independent
+/// so a ranking sweep does not silently change how much of the tree survives.
 struct ChoiceSearch {
   float threshold = 0.0f;
   unsigned width = 0;
+  std::string ranking = "mean";           ///< registry: ranking.metric
+  std::string threshold_metric = "mean";  ///< registry: threshold.metric
 };
 
 /// Queue-scope (prompt-global) parameters.

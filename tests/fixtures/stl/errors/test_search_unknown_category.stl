@@ -1,0 +1,4 @@
+// Error: unknown search category
+// expect-error: search category 'speed' is not known
+search { speed.fast is 1; }
+prompt main { is { q is text<length=4>; } channel { q get q; } return { use q; } }

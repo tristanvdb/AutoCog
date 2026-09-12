@@ -39,6 +39,9 @@ nlohmann::json to_json(Action const & act) {
       j["choices"]   = a.choices;
       j["threshold"] = a.threshold;
       j["width"]     = a.width;
+      // Emitted only when non-default: pre-knob artifacts stay byte-stable.
+      if (a.ranking != "mean")          j["ranking"]          = a.ranking;
+      if (a.threshold_metric != "mean") j["threshold.metric"] = a.threshold_metric;
     },
   }, act.body);
   if (act.field)   j["field"]   = *act.field;
@@ -73,6 +76,10 @@ void from_json(nlohmann::json const & dom, Action & a) {
     if (dom.contains("choices")) ch.choices = dom.at("choices").get<std::vector<std::string>>();
     ch.threshold = dom.at("threshold").get<float>();
     ch.width     = dom.at("width").get<unsigned>();
+    if (dom.contains("ranking") && !dom["ranking"].is_null())
+      ch.ranking = dom["ranking"].get<std::string>();
+    if (dom.contains("threshold.metric") && !dom["threshold.metric"].is_null())
+      ch.threshold_metric = dom["threshold.metric"].get<std::string>();
   } else {
     throw autocog::SchemaError("autocog::data: unknown action type '" + type + "'", type);
   }

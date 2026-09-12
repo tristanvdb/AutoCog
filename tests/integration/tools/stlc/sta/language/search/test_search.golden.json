@@ -25,7 +25,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "fc09f1ed69ea9abd58b0c8295ca8757d7e367dc48024fcb2c25fffeaa24c6231",
+    "hash": "0dc80617b10702258b4dbbf904fc6e28a995fec5a759550229cdf75357494571",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -115,6 +115,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
@@ -142,6 +144,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
@@ -184,6 +188,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 2
             },
             "text": {
@@ -207,6 +213,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 2
             },
             "text": {
@@ -261,7 +269,7 @@
           "threshold": 0.05000000074505806
         },
         "queue": {
-          "metric": "mean_logprob"
+          "metric": "probability"
         }
       }
     }

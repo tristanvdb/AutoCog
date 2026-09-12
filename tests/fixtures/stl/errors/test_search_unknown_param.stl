@@ -1,0 +1,4 @@
+// Error: a typo'd search parameter must not be silently dropped
+// expect-error: 'beems' is not a parameter of search category 'text'
+search { text.beems is 4; }
+prompt main { is { q is text<length=4>; } channel { q get q; } return { use q; } }

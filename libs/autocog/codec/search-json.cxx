@@ -1,7 +1,28 @@
 #include "autocog/codec/json.hxx"
 
+#include "autocog/data/search-registry.hxx"
+
 namespace autocog::codec {
 using namespace autocog::data;
+
+namespace {
+// Domain checks against the registry (the choice categories share domains,
+// so the "enum" rows stand for all three).
+void check_score_metric(char const * key, std::string const & value) {
+  auto const * param = registry::find("enum", key);
+  if (param && !registry::in_domain(*param, value))
+    throw autocog::SchemaError(
+        std::string("search: invalid ") + key + " '" + value + "' (allowed: "
+        + registry::domain_text(*param) + ")", value);
+}
+void check_queue_metric(std::string const & value) {
+  auto const * param = registry::find("queue", "metric");
+  if (param && !registry::in_domain(*param, value))
+    throw autocog::SchemaError(
+        "search: unknown queue metric '" + value + "' (allowed: "
+        + registry::domain_text(*param) + ")", value);
+}
+}
 
 // File-local sub-struct conversions.
 template <>
@@ -31,13 +52,37 @@ void from_json(nlohmann::json const & t, TextSearch & out) {
 
 template <>
 nlohmann::json to_json(ChoiceSearch const & c) {
-  return nlohmann::json{{"threshold", c.threshold}, {"width", c.width}};
+  nlohmann::json j;
+  // Scalar threshold is the shorthand for the default metric; the object
+  // form carries a non-default one.
+  if (c.threshold_metric != "mean")
+    j["threshold"] = nlohmann::json{{"value", c.threshold},
+                                    {"metric", c.threshold_metric}};
+  else
+    j["threshold"] = c.threshold;
+  j["width"] = c.width;
+  if (c.ranking != "mean") j["ranking"] = nlohmann::json{{"metric", c.ranking}};
+  return j;
 }
 template <>
 void from_json(nlohmann::json const & c, ChoiceSearch & out) {
   autocog::codec::read_guarded("ChoiceSearch", [&]{
-  out.threshold = c.at("threshold").get<float>();
-  out.width     = c.at("width").get<unsigned>();
+  auto const & th = c.at("threshold");
+  if (th.is_object()) {
+    out.threshold = th.at("value").get<float>();
+    if (th.contains("metric") && !th.at("metric").is_null())
+      out.threshold_metric = th.at("metric").get<std::string>();
+  } else {
+    out.threshold = th.get<float>();
+  }
+  out.width = c.at("width").get<unsigned>();
+  if (c.contains("ranking") && !c.at("ranking").is_null()) {
+    auto const & r = c.at("ranking");
+    out.ranking = r.is_object() ? r.at("metric").get<std::string>()
+                                : r.get<std::string>();
+  }
+  check_score_metric("threshold.metric", out.threshold_metric);
+  check_score_metric("ranking.metric", out.ranking);
   });
 }
 
@@ -55,6 +100,7 @@ void from_json(nlohmann::json const & q, QueueSearch & out) {
   out.metric.clear();
   if (m.is_string()) out.metric.push_back(m.get<std::string>());
   else out.metric = m.get<std::vector<std::string>>();
+  for (auto const & name : out.metric) check_queue_metric(name);
   if (q.contains("stop") && !q.at("stop").is_null()) {
     out.stop.emplace();
     from_json(q.at("stop"), *out.stop);

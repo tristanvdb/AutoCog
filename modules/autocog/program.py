@@ -182,8 +182,12 @@ def _default_search_path():
     return None
 
 
-def compile(filepath, includes=None, entry_points=None):
-    """Compile an STL file into a Program."""
+def compile(filepath, includes=None, entry_points=None, defines=None):
+    """Compile an STL file into a Program.
+
+    `defines` overrides program arguments by name (the CLI's -D): the values
+    may be int, float, bool, or str.
+    """
     # A missing top-level input is a file error, not a compile diagnostic:
     # there is no source to point into. (Imports that fail to resolve are
     # reported as located CompileError diagnostics by the compiler instead.)
@@ -198,7 +202,8 @@ def compile(filepath, includes=None, entry_points=None):
     pid = compiler_stl_cxx.compile(
         filepath,
         includes=inc,
-        entry_points=entry_points or []
+        entry_points=entry_points or [],
+        defines=defines or {}
     )
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).

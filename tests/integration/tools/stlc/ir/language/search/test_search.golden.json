@@ -60,6 +60,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
@@ -86,6 +88,8 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
@@ -116,6 +120,8 @@
                     "width": 2
                   },
                   "enum": {
+                    "ranking.metric": "sum",
+                    "threshold.metric": "mean",
                     "width": 2
                   },
                   "text": {
@@ -138,6 +144,8 @@
                     "width": 2
                   },
                   "enum": {
+                    "ranking.metric": "sum",
+                    "threshold.metric": "mean",
                     "width": 2
                   },
                   "text": {
@@ -198,7 +206,7 @@
           "threshold": 0.05
         },
         "queue": {
-          "metric": "mean_logprob"
+          "metric": "probability"
         }
       }
     }

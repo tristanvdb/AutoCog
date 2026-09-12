@@ -2,6 +2,7 @@
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
+#include "autocog/data/search-registry.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
@@ -79,7 +80,64 @@ static void lower_search(
                 param.location);
             continue;
         }
+        // Registry validation: unknown category/key, wrong value type, or an
+        // out-of-domain string is a compile error — never a silently dropped
+        // policy.
+        namespace reg = autocog::data::registry;
+        if (!reg::known_category(category)) {
+            driver.emit_error(
+                "search category '" + category + "' is not known "
+                "(text, enum, branch, flow, queue)",
+                param.location);
+            continue;
+        }
+        auto const * info = reg::find(category, key);
+        if (!info) {
+            driver.emit_error(
+                "'" + key + "' is not a parameter of search category '"
+                + category + "'",
+                param.location);
+            continue;
+        }
         auto val = evaluator.evaluate_expression(scope, param.data.value, ctx);
+        bool const is_null = std::holds_alternative<std::monostate>(val);
+        if (!is_null) {
+            bool type_ok = false;
+            switch (info->type) {
+                case reg::Type::Float:
+                    type_ok = std::holds_alternative<float>(val)
+                           || std::holds_alternative<int>(val);
+                    break;
+                case reg::Type::UInt:
+                    type_ok = std::holds_alternative<int>(val);
+                    break;
+                case reg::Type::Str:
+                    type_ok = std::holds_alternative<std::string>(val);
+                    break;
+            }
+            if (!type_ok) {
+                driver.emit_error(
+                    "search parameter '" + category + "." + key
+                    + "' has the wrong value type",
+                    param.location);
+                continue;
+            }
+            if (auto const * s = std::get_if<std::string>(&val)) {
+                if (!reg::in_domain(*info, *s)) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "': invalid value '" + *s + "' (allowed: "
+                        + reg::domain_text(*info) + ")",
+                        param.location);
+                    continue;
+                }
+            }
+        } else if (!info->nullable) {
+            driver.emit_error(
+                "search parameter '" + category + "." + key + "' cannot be null",
+                param.location);
+            continue;
+        }
         out[category][key] = val;
     }
 }

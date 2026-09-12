@@ -56,9 +56,11 @@ prompt main {
   search {
     text.threshold is 0.2;
     enum.width is 3;
+    enum.ranking.metric is "sum";
+    enum.threshold.metric is "mean";
     branch.width is 2;
     flow.threshold is 0.05;
-    queue.metric is "mean_logprob";
+    queue.metric is "probability";
   }
 
   channel {

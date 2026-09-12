@@ -9,6 +9,7 @@ add_library(autocog_data_lib STATIC
     sta.cxx
     syntax.cxx
     search.cxx
+    search-registry.cxx
     ftt.cxx
     fta.cxx
 )

@@ -40,6 +40,9 @@ pybind11::object to_py(Action const & act) {
       d["choices"]   = a.choices;
       d["threshold"] = a.threshold;
       d["width"]     = a.width;
+      // Emitted only when non-default: pre-knob artifacts stay stable.
+      if (a.ranking != "mean")          d["ranking"]          = a.ranking;
+      if (a.threshold_metric != "mean") d["threshold.metric"] = a.threshold_metric;
     },
   }, act.body);
   if (act.field)   d["field"]   = *act.field;
@@ -75,6 +78,10 @@ void from_py(pybind11::object const & obj, Action & a) {
     if (d.contains("choices")) ch.choices = d["choices"].cast<std::vector<std::string>>();
     ch.threshold = d["threshold"].cast<float>();
     ch.width     = d["width"].cast<unsigned>();
+    if (d.contains("ranking") && !d["ranking"].is_none())
+      ch.ranking = d["ranking"].cast<std::string>();
+    if (d.contains("threshold.metric") && !d["threshold.metric"].is_none())
+      ch.threshold_metric = d["threshold.metric"].cast<std::string>();
   } else {
     throw autocog::SchemaError("autocog::data: unknown action type '" + type + "'", type);
   }
