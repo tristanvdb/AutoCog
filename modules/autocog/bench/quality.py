@@ -16,7 +16,7 @@ from autocog.recorder import Recorder
 from . import results
 from .formatters import load_formatter, load_questions
 from .perf import find_root
-from .workers import LocalWorker
+from .workers import LocalWorker, pick_worker
 
 SYNTAXES = ["complete", "indent-index", "indent", "stripped",
             "chatml", "llama2chat", "llama3chat", "special"]
@@ -44,7 +44,7 @@ def walk_tokens(node, depth, acc):
 
 def run_quality(model=None, data=None, formatter="", questions=0,
                 syntaxes=None, demos=None, out=".", root=None, seed=42,
-                n_ctx=2048, log=print):
+                n_ctx=2048, workers=None, log=print):
     """Run the quality matrix; returns the list of events."""
     root = root or find_root(os.getcwd())
     if root is None:
@@ -61,7 +61,11 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     stamp = f"{results.host_name()}-{model_tag}"
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
-    worker = LocalWorker(model=model, n_ctx=n_ctx)
+    if workers:
+        worker = pick_worker(workers, model)
+        log(f"worker: {worker.url} hosts {worker.capabilities()['models']}")
+    else:
+        worker = LocalWorker(model=model, n_ctx=n_ctx)
     programs = {demo: autocog.compile(os.path.join(mcq_dir, f"{demo}.stl"),
                                       includes=[mcq_dir])
                 for demo in demos}

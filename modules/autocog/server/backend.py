@@ -1,24 +1,46 @@
 """
 Level 3 server — Backend.
 
-Receives FTA JSON, evaluates against the model, returns the resulting FTT.
-Thinnest server — just model inference (xfta over the wire). Walking the FTT
-into a frame is the client's responsibility, using the program it holds locally.
+Receives FTA JSON, evaluates against the model, returns the resulting FTT
+plus the evaluation's perf deltas. Thinnest server — just model inference
+(xfta over the wire). Walking the FTT into a frame is the client's
+responsibility, using the program it holds locally.
 
-    autocog backend --model model.gguf [--ctx N] [--port 8080]
+    autocog backend --model model.gguf [--ctx N] [--port 8080] [--cpus 0-3]
+
+A backend is a bench *worker*: models are pre-assigned here (loaded once at
+startup), while syntax/search/instantiation stay client-side (level 3).
+/capabilities advertises what this worker hosts so a bench scheduler can
+route jobs by model.
 """
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from . import RequestQueue, add_status_endpoint
 
 
 class EvaluateRequest(BaseModel):
     fta: Dict[str, Any]
+    model: Optional[str] = None    # model tag; default = the worker's default
+
+
+class ScoreRequest(BaseModel):
+    ftt: Dict[str, Any]            # encoder-produced (text-level) FTT
+    model: Optional[str] = None
+
+
+class SeedRequest(BaseModel):
+    seed: int
+    model: Optional[str] = None
+
+
+class ResetRequest(BaseModel):
+    kv: bool = True
+    model: Optional[str] = None
 
 
 class SubmitResponse(BaseModel):
@@ -50,7 +72,14 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         models[tag] = model_id
         default_tag = tag
 
-    def evaluate_fta(fta: dict) -> dict:
+    def resolve_model(tag):
+        tag = tag or default_tag
+        if tag not in models:
+            raise HTTPException(404, f"model {tag!r} not hosted here "
+                                     f"(available: {list(models)})")
+        return models[tag]
+
+    def evaluate_fta(fta: dict, model: str = None) -> dict:
         """Evaluate an FTA; reply is {"ftt": ..., "perf": ...}.
 
         The backend is xfta over the wire: it evaluates the FTA against the
@@ -67,7 +96,7 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         # The FTA arrived as a dict (FastAPI parsed the HTTP body). Hand it to
         # C++ to translate+store; C++ owns the structure from here.
         fta_id = runtime_sta_cxx.read_fta(fta)
-        model_id = models[default_tag]
+        model_id = resolve_model(model)
         ftt_id, perf_json = backend_llama_cxx.evaluate(model_id, fta_id)
         try:
             return {"ftt": runtime_sta_cxx.get_ftt(ftt_id),
@@ -75,6 +104,23 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         finally:
             runtime_sta_cxx.release_ftt(ftt_id)
             runtime_sta_cxx.release_fta(fta_id)
+
+    def score_ftt(ftt: dict, model: str = None) -> dict:
+        """Score an encoder-produced FTT (tokenize + forced P(token|prefix));
+        reply is {"ftt": <scored>}. The client encodes frames locally (the
+        runtime is model-free) and ships the text-level tree here."""
+        from autocog.runtime.sta import runtime_sta_cxx
+
+        ftt_id = runtime_sta_cxx.read_ftt(ftt)
+        model_id = resolve_model(model)
+        try:
+            scored_id = backend_llama_cxx.score(model_id, ftt_id)
+            try:
+                return {"ftt": runtime_sta_cxx.get_ftt(scored_id)}
+            finally:
+                runtime_sta_cxx.release_ftt(scored_id)
+        finally:
+            runtime_sta_cxx.release_ftt(ftt_id)
 
     @app.on_event("startup")
     async def startup():
@@ -89,9 +135,41 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         """List available model tags."""
         return {"models": list(models.keys()), "default": default_tag}
 
+    @app.get("/capabilities")
+    async def capabilities():
+        """What this worker hosts and how it is pinned — the routing surface."""
+        try:
+            cpus = sorted(os.sched_getaffinity(0))
+        except (AttributeError, OSError):  # non-Linux
+            cpus = None
+        return {
+            "models": list(models.keys()),
+            "default": default_tag,
+            "n_ctx": n_ctx,
+            "kv_slots": int(os.environ.get("AUTOCOG_KV_SLOTS", 0)) or None,
+            "cpus": cpus,
+            "pid": os.getpid(),
+        }
+
+    @app.post("/seed")
+    async def seed(req: SeedRequest):
+        backend_llama_cxx.set_seed(resolve_model(req.model), req.seed)
+        return {"ok": True}
+
+    @app.post("/reset")
+    async def reset(req: ResetRequest):
+        """Zero counters (and optionally drop KV) — measurement isolation."""
+        backend_llama_cxx.reset(resolve_model(req.model), req.kv)
+        return {"ok": True}
+
     @app.post("/evaluate")
     async def evaluate(req: EvaluateRequest) -> SubmitResponse:
-        request_id = queue.submit(evaluate_fta, fta=req.fta)
+        request_id = queue.submit(evaluate_fta, fta=req.fta, model=req.model)
+        return SubmitResponse(request_id=request_id)
+
+    @app.post("/score")
+    async def score(req: ScoreRequest) -> SubmitResponse:
+        request_id = queue.submit(score_ftt, ftt=req.ftt, model=req.model)
         return SubmitResponse(request_id=request_id)
 
     add_status_endpoint(app, queue)

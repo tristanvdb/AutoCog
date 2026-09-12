@@ -78,6 +78,15 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   ctx_params.n_batch = n_ctx;
   ctx_params.n_seq_max = kv_slot_count();
   ctx_params.kv_unified = true;
+  // CPU-pinned workers must not spawn hardware_concurrency threads onto a
+  // two-CPU affinity mask; AUTOCOG_THREADS caps the llama thread pools.
+  if (char const * env = std::getenv("AUTOCOG_THREADS")) {
+    int const n = std::atoi(env);
+    if (n > 0) {
+      ctx_params.n_threads = n;
+      ctx_params.n_threads_batch = n;
+    }
+  }
 
   // Create single context with ID=0 (and associated token sequence)
   llama_context * ctx = llama_init_from_model(this->model, ctx_params);

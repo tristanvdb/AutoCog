@@ -134,6 +134,8 @@ class RemoteBackend:
         self.search_id = (runtime_sta_cxx.load_search(search)
                           if search else None)
         self.model_id = None  # evaluation is remote
+        #: model tag on the worker (None = the worker's default model)
+        self.model_tag = None
         #: autocog.perf.* deltas of the most recent remote evaluation, as
         #: reported by the worker (worker clock), or None. Mirrors Engine.
         self.last_perf = None
@@ -179,12 +181,11 @@ class RemoteBackend:
             return frame, artifacts
         return frame
 
-    def _evaluate_remote(self, fta):
-        """POST an FTA to /evaluate; returns the {"ftt", "perf"} reply."""
-        req_data = json.dumps({"fta": fta}).encode()
+    def _submit(self, endpoint, payload):
+        """POST a job payload to a queued endpoint and poll for its result."""
         req = urllib.request.Request(
-            f"{self.server_url}/evaluate",
-            data=req_data,
+            f"{self.server_url}{endpoint}",
+            data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -193,12 +194,62 @@ class RemoteBackend:
         return _poll(self.server_url, submit_result["request_id"],
                      self.poll_interval, self.timeout)
 
-    def run(self, program, entry="main", externals=None, max_steps=100, **inputs):
+    def _evaluate_remote(self, fta):
+        """POST an FTA to /evaluate; returns the {"ftt", "perf"} reply."""
+        return self._submit("/evaluate", {"fta": fta, "model": self.model_tag})
+
+    def _post(self, endpoint, payload):
+        req = urllib.request.Request(
+            f"{self.server_url}{endpoint}",
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read())
+
+    def set_seed(self, seed):
+        """Seed the remote model's RNG (worker-side)."""
+        self._post("/seed", {"seed": seed, "model": self.model_tag})
+
+    def reset(self, kv=True):
+        """Zero the remote model's counters (and optionally drop its KV)."""
+        self._post("/reset", {"kv": kv, "model": self.model_tag})
+
+    def capabilities(self):
+        """The worker's routing surface: hosted models, pinning, sizes."""
+        with urllib.request.urlopen(f"{self.server_url}/capabilities") as resp:
+            return json.loads(resp.read())
+
+    def score_frame(self, program, prompt_name, frame, content=None):
+        """Engine.score_frame with the model work remote: instantiate and
+        encode locally (the runtime is model-free), ship the text-level FTT
+        to the worker's /score, return the scored FTT dict."""
+        content = content or {}
+        fta_id = self._sta.instantiate(
+            program.id, prompt_name, content, self.syntax_id, self.search_id
+        )
+        try:
+            ftt_id = self._sta.encode_frame(
+                program.id, prompt_name, fta_id, frame, content
+            )
+            try:
+                ftt = self._sta.get_ftt(ftt_id)
+            finally:
+                self._sta.release_ftt(ftt_id)
+        finally:
+            self._sta.release_fta(fta_id)
+        reply = self._submit("/score", {"ftt": ftt, "model": self.model_tag})
+        return reply["ftt"]
+
+    def run(self, program, entry="main", externals=None, max_steps=100,
+            recorder=None, **inputs):
         """Run a program, dispatching only the evaluation step to the backend."""
         from .context import Context
 
         prompt = program.entry_prompt(entry)
-        ctx = Context(program, self, prompt, inputs, externals or {})
+        ctx = Context(program, self, prompt, inputs, externals or {},
+                      recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:
             ctx.step()

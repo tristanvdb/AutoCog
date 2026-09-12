@@ -16,7 +16,7 @@ import autocog
 from autocog.errors import ConfigError
 
 from . import results
-from .workers import LocalWorker
+from .workers import LocalWorker, pick_worker
 
 DEFAULT_CONTENT = {
     "topic": "Science",
@@ -95,7 +95,7 @@ CELL_KEYS = ("label", "beams", "ahead", "width", "topk", "threshold",
 
 
 def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
-             ctx=2048, seed=42, quick=False, log=print):
+             ctx=2048, seed=42, quick=False, workers=None, log=print):
     """Run perf cells; returns the list of summary events."""
     if cells:
         cell_list = json.load(open(cells))
@@ -117,15 +117,30 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
     os.makedirs(out, exist_ok=True)
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
-    workers = {}   # (slots, ctx) -> LocalWorker
-    programs = {}  # stl path -> Program
+    remote = pick_worker(workers, model) if workers else None
+    if remote:
+        caps = remote.capabilities()
+        log(f"worker: {remote.url} hosts {caps['models']} "
+            f"(cpus={caps.get('cpus')}, n_ctx={caps.get('n_ctx')})")
+    local_workers = {}   # (slots, ctx) -> LocalWorker
+    programs = {}        # stl path -> Program
 
     def worker_for(cell):
         key = (cell.get("slots"), cell.get("ctx", ctx))
-        if key not in workers:
-            workers[key] = LocalWorker(model=model, n_ctx=key[1],
-                                       kv_slots=key[0])
-        return workers[key]
+        if remote:
+            # Models (and their load-time params) are pre-assigned on remote
+            # workers: a cell demanding different slots/ctx cannot be honored.
+            if key[0] is not None and key[0] != caps.get("kv_slots"):
+                raise ConfigError(
+                    f"cell wants kv_slots={key[0]} but worker has {caps.get('kv_slots')}")
+            if cell.get("ctx") is not None and cell["ctx"] > caps.get("n_ctx", 0):
+                raise ConfigError(
+                    f"cell wants ctx={cell['ctx']} but worker loaded n_ctx={caps.get('n_ctx')}")
+            return remote
+        if key not in local_workers:
+            local_workers[key] = LocalWorker(model=model, n_ctx=key[1],
+                                             kv_slots=key[0])
+        return local_workers[key]
 
     def program_for(stl):
         if stl not in programs:
@@ -133,7 +148,6 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
         return programs[stl]
 
     from autocog.runtime.sta import runtime_sta_cxx
-    from autocog.backend.llama import backend_llama_cxx
 
     summaries, failed = [], []
     t_start = time.time()
@@ -157,14 +171,13 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
             fta_id = runtime_sta_cxx.instantiate(
                 prog.id, "main", content, engine.syntax_id, engine.search_id)
             try:
-                ftt_id, perf_json = backend_llama_cxx.evaluate(wk.model_id, fta_id)
-                runtime_sta_cxx.release_ftt(ftt_id)
+                perf = wk.evaluate_fta(fta_id)
             finally:
                 runtime_sta_cxx.release_fta(fta_id)
             wall = time.time() - t0
 
             summary = results.base_event("autocog.bench.perf", "eval.summary")
-            summary.update(json.loads(perf_json))
+            summary.update(perf)
             for k in CELL_KEYS:
                 if cell.get(k) is not None:
                     summary[f"autocog.bench.{k}"] = cell[k]
