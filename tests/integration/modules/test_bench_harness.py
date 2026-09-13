@@ -92,3 +92,42 @@ def test_client_sanity_gate(tmp_path, repo_root):
     assert "never-dispatched" not in r.stdout
     assert not (tmp_path / "results" / "never-dispatched").exists()
     assert (tmp_path / "results" / "sanity" / "worker-0").is_dir()
+
+
+@pytest.mark.timeout(120)
+def test_probe_choices_rng(tmp_path, repo_root):
+    """The adjudication probe: every candidate branch extracted with its
+    forced NLL, all four scoring rules computed offline, select showing
+    zero structural length bias (single-token digit candidates)."""
+    probe = repo_root / "benchmarks" / "campaigns" / "probe_choices.py"
+    data = repo_root / "benchmarks" / "quality" / "questions.json"
+    sel = tmp_path / "sel.ndjson"
+    rep = tmp_path / "rep.ndjson"
+    for demo, out in (("select", sel), ("repeat", rep)):
+        r = subprocess.run(
+            [sys.executable, str(probe), "run", "--demo", demo,
+             "--data", str(data), "--limit", "4", "--out", str(out)],
+            capture_output=True, text=True, cwd=str(repo_root), timeout=110)
+        assert r.returncode == 0, r.stdout + r.stderr
+        rows = [json.loads(l) for l in out.read_text().splitlines()]
+        assert len(rows) == 4
+        for row in rows:
+            idx = sorted(c["i"] for c in row["candidates"])
+            assert idx == list(range(len(idx)))          # every candidate
+            assert all(c["n_tok"] >= 1 for c in row["candidates"])
+
+    r = subprocess.run(
+        [sys.executable, str(probe), "analyze", str(sel), str(rep),
+         "--out", str(tmp_path / "report")],
+        capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stdout + r.stderr
+    report = json.loads((tmp_path / "report.json").read_text())
+    groups = {(e["demo"]): e for e in report}
+    assert set(groups) == {"select", "repeat"}
+    # select candidates are single digits: identical lengths, so every
+    # rule scores identically and length bias is structurally zero.
+    s = groups["select"]
+    assert s["acc.sum"] == s["acc.mean"] == s["acc.bytes"] == s["acc.bayes"]
+    assert s["tau.sum"] == 0.0 and s["b_hat"] == 0.0
+    for rule in ("sum", "mean", "bytes", "bayes"):
+        assert 0.0 <= groups["repeat"][f"acc.{rule}"] <= 1.0

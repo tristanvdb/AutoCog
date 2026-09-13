@@ -1,0 +1,14 @@
+{
+  "name": "arc-cot-8b",
+  "out": "results/arc-cot-8b",
+  "runs": [
+    {"kind": "quality", "model": "models/Llama-3.1-8B-Q8_0.gguf",
+     "data": "datasets/arc-challenge-500.json",
+     "syntaxes": ["complete", "indent-index"],
+     "demos": ["select-cot", "repeat-cot"], "out": "8b-base-cot"},
+    {"kind": "quality", "model": "models/Llama-3.1-8B-Instruct-Q8_0.gguf",
+     "data": "datasets/arc-challenge-500.json",
+     "syntaxes": ["complete", "indent-index"],
+     "demos": ["select-cot", "repeat-cot"], "out": "8b-instr-cot"}
+  ]
+}

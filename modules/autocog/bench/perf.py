@@ -41,6 +41,12 @@ def cell_content(cell):
 
 
 def search_config(cell):
+    queue = {"metric": cell.get("metric", ["perplexity"])}
+    # Termination predicate, in the TermExpr JSON object form the search
+    # codec accepts (e.g. {"ge": ["terminals", 8]}); reaches the FTA as
+    # queue.stop, so cells can sweep early-termination policies.
+    if cell.get("stop") is not None:
+        queue["stop"] = cell["stop"]
     return {
         "text": {
             "threshold": cell.get("threshold", 0.1),
@@ -54,7 +60,7 @@ def search_config(cell):
         "enum":   {"threshold": 0.1, "width": 1},
         "branch": {"threshold": 0.1, "width": 1},
         "flow":   {"threshold": 0.1, "width": 1},
-        "queue":  {"metric": cell.get("metric", ["perplexity"])},
+        "queue":  queue,
     }
 
 
@@ -91,7 +97,7 @@ def resolve(path, bases):
 
 
 CELL_KEYS = ("label", "beams", "ahead", "width", "topk", "threshold",
-             "repetition", "metric", "slots", "stl", "syntax", "ctx")
+             "repetition", "metric", "stop", "slots", "stl", "syntax", "ctx")
 
 
 def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,

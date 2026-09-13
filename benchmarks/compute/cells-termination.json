@@ -1,0 +1,19 @@
+[
+  {"label": "w2 baseline",        "beams": 4, "ahead": 2, "width": 2},
+  {"label": "w2 stop-term-4",     "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"ge": ["terminals", 4]}},
+  {"label": "w2 stop-term-16",    "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"ge": ["terminals", 16]}},
+  {"label": "w2 stop-proba-.25",  "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"ge": ["best.proba", 0.25]}},
+  {"label": "w2 stop-proba-.05",  "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"ge": ["best.proba", 0.05]}},
+  {"label": "w2 stop-combo",      "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"any": [{"ge": ["terminals", 16]}, {"ge": ["best.proba", 0.25]}]}},
+  {"label": "w2 ctx-guard",       "beams": 4, "ahead": 2, "width": 2,
+   "stop": {"ge": ["tokens", {"ref": "model.n_ctx"}]}},
+  {"label": "len300 w2 baseline", "beams": 4, "ahead": 2, "width": 2,
+   "stl": "benchmark-len300.stl"},
+  {"label": "len300 w2 stop-term-16", "beams": 4, "ahead": 2, "width": 2,
+   "stl": "benchmark-len300.stl", "stop": {"ge": ["terminals", 16]}}
+]
