@@ -131,3 +131,35 @@ def test_probe_choices_rng(tmp_path, repo_root):
     assert s["tau.sum"] == 0.0 and s["b_hat"] == 0.0
     for rule in ("sum", "mean", "bytes", "bayes"):
         assert 0.0 <= groups["repeat"][f"acc.{rule}"] <= 1.0
+
+
+@pytest.mark.timeout(600)
+def test_autopilot_smoke_pipeline(repo_root):
+    """The unattended campaign driver end to end on rng: all stages green,
+    checkpoint state written, rerun skips everything, summary emitted."""
+    auto = repo_root / "benchmarks" / "campaigns" / "autopilot.py"
+    outdir = repo_root / "benchmarks" / "campaigns" / "results" / "autopilot-smoke"
+    import shutil
+    shutil.rmtree(outdir.parent, ignore_errors=True)
+
+    r = subprocess.run([sys.executable, str(auto), "--smoke-test"],
+                       capture_output=True, text=True, cwd=str(repo_root),
+                       timeout=580)
+    assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-1000:]
+
+    state = json.loads((outdir / "autopilot-state.json").read_text())
+    assert all(rec["status"] == "ok" for rec in state["stages"].values())
+    assert set(state["stages"]) >= {"preflight", "w1-smoke", "w1-gate",
+                                    "w2-small", "w3-probes", "w3-analysis",
+                                    "w5-termination"}
+    assert "Failed stages: none" in (outdir / "SUMMARY.md").read_text()
+    adjud = outdir.parent / "probe" / "adjudication.json"
+    assert adjud.is_file() and json.loads(adjud.read_text())
+
+    # Resume semantics: a second invocation skips every stage.
+    r2 = subprocess.run([sys.executable, str(auto), "--smoke-test"],
+                        capture_output=True, text=True, cwd=str(repo_root),
+                        timeout=120)
+    assert r2.returncode == 0
+    assert r2.stdout.count("already complete") == len(state["stages"])
+    shutil.rmtree(outdir.parent, ignore_errors=True)
