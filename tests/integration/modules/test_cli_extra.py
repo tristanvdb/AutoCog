@@ -125,3 +125,82 @@ class TestServerCLI:
             assert "main" in schema
         finally:
             self._stop(proc)
+
+
+class TestMainHelpers:
+    """In-process coverage of __main__'s pure helpers and error arms."""
+
+    def test_parse_cpus(self):
+        from autocog.__main__ import parse_cpus
+        assert parse_cpus("0-3,8") == {0, 1, 2, 3, 8}
+        assert parse_cpus("1, 2") == {1, 2}
+        assert parse_cpus("4-4") == {4}
+        assert parse_cpus("0-1,") == {0, 1}  # trailing comma tolerated
+
+    def test_setup_logging_json_handlers(self, tmp_path):
+        import logging
+        from types import SimpleNamespace
+        from autocog.__main__ import setup_logging
+        from autocog._json_formatter import ECSFormatter
+
+        log = logging.getLogger("autocog")
+        saved = (log.handlers[:], log.propagate, log.level)
+        try:
+            logfile = tmp_path / "ecs.ndjson"
+            setup_logging(SimpleNamespace(verbose=True, json=True,
+                                          json_log_file=str(logfile)))
+            assert log.level == logging.DEBUG
+            assert len(log.handlers) == 1
+            assert isinstance(log.handlers[0], logging.FileHandler)
+            assert isinstance(log.handlers[0].formatter, ECSFormatter)
+            log.handlers[0].close()
+
+            setup_logging(SimpleNamespace(verbose=False, json=True,
+                                          json_log_file=None))
+            assert log.level == logging.INFO
+            assert isinstance(log.handlers[0], logging.StreamHandler)
+            assert not log.propagate
+        finally:
+            log.handlers[:] = saved[0]
+            log.propagate = saved[1]
+            log.setLevel(saved[2])
+
+    def test_load_program_missing_files(self, tmp_path):
+        from types import SimpleNamespace
+        from autocog.__main__ import _load_program
+        from autocog.errors import FileError
+
+        with pytest.raises(FileError, match="STL file not found"):
+            _load_program(SimpleNamespace(stl=str(tmp_path / "no.stl"), include=[]))
+        with pytest.raises(FileError, match="STA file not found"):
+            _load_program(SimpleNamespace(stl=None, sta=str(tmp_path / "no.sta"),
+                                          include=[]))
+        with pytest.raises(FileError, match="App file not found"):
+            _load_program(SimpleNamespace(stl=None, sta=None,
+                                          app=str(tmp_path / "no.stapp"),
+                                          include=[]))
+        with pytest.raises(SystemExit):
+            _load_program(SimpleNamespace(stl=None, sta=None, app=None, include=[]))
+
+    def test_load_externals_warnings(self, tmp_path, capsys):
+        from types import SimpleNamespace
+        from autocog.__main__ import load_externals
+
+        # Missing module file -> warning, no external registered.
+        prog = SimpleNamespace(python_imports={
+            "f": {"file": "does_not_exist.py", "target": "f"}})
+        assert load_externals(prog, [str(tmp_path)]) == {}
+        assert "not found in include paths" in capsys.readouterr().err
+
+        # Module present but the function is missing -> warning.
+        (tmp_path / "mod.py").write_text("def other():\n    return 1\n")
+        prog = SimpleNamespace(python_imports={
+            "f": {"file": "mod.py", "target": "f"}})
+        assert load_externals(prog, [str(tmp_path)]) == {}
+        assert "not found in 'mod.py'" in capsys.readouterr().err
+
+        # And the happy path through the same loader.
+        prog = SimpleNamespace(python_imports={
+            "other": {"file": "mod.py", "target": "other"}})
+        ext = load_externals(prog, [str(tmp_path)])
+        assert set(ext) == {"other"} and ext["other"]() == 1

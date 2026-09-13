@@ -288,10 +288,13 @@ class TestSchema:
     def test_loaded_program_schema(self, repo_root):
         import autocog, json, tempfile, os
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(prog.sta, f)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             tmp = f.name
         try:
+            # The C++ file door (store) and string door (dump_json) agree.
+            prog.store(tmp)
+            with open(tmp) as f:
+                assert json.load(f) == json.loads(prog.dump_json())
             prog2 = autocog.load(tmp)
             s = prog2.input_schema("main")
             assert "topic" in s

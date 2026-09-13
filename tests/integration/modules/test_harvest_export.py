@@ -113,3 +113,42 @@ def test_harvest_and_export(tmp_path, engine, repo_root, build_dir):
             assert v["mask"][i] + s["mask"][i] == a["mask"][i]
         assert sum(v["mask"]) > 0 and sum(s["mask"]) > 0
         assert n_prompt > 0  # the prompt is context under every policy
+
+
+def test_pipeline_cli_and_rejections(tmp_path, engine, repo_root, build_dir, capsys):
+    """The harvest/export CLI entries (main) and their rejection arms:
+    unknown mask policy, non-harvest directory, and the --syntaxes filter."""
+    import autocog
+    from autocog.recorder import Recorder
+    from autocog import export as export_mod
+    from autocog import harvest as harvest_mod
+
+    stl = tmp_path / "prog.stl"
+    stl.write_text(PROGRAM)
+    prog = autocog.compile(str(stl))
+    rec = Recorder(kinds={"input", "frame"}, path=str(tmp_path / "records"))
+    engine.set_seed(42)
+    engine.run(prog, recorder=rec, **INPUTS)
+
+    out = tmp_path / "harvest"
+    rc = harvest_mod.main([
+        "--records", str(rec.path), "--stl", str(stl), "--out", str(out),
+        "--syntaxes", "complete,special", "--rng",
+        "--tools", build_dir, "--share", str(repo_root / "share")])
+    assert rc == 0
+    assert "2 step renderings" in capsys.readouterr().out
+
+    data = tmp_path / "data.jsonl"
+    rc = export_mod.main(["--harvest", str(out), "--out", str(data),
+                          "--mask", "value", "--syntaxes", "special"])
+    assert rc == 0
+    assert "exported 1 examples" in capsys.readouterr().out
+    lines = [json.loads(l) for l in data.read_text().splitlines()]
+    assert len(lines) == 2  # header + the one 'special' row
+    assert lines[1]["meta"]["syntax"] == "special"
+
+    with pytest.raises(ValueError, match="unknown mask policy"):
+        export_mod.export(str(out), str(data), policy="everything")
+    not_harvest = tmp_path / "records"  # exists, but no harvest manifest
+    with pytest.raises((ValueError, FileNotFoundError)):
+        export_mod.export(str(not_harvest), str(data))
