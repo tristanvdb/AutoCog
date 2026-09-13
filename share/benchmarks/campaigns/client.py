@@ -216,7 +216,13 @@ class Worker:
 
 
 def build_topology(args, models, log_dir):
-    """Workers from --workers (attach) or spawn (--rng N / one per GPU)."""
+    """Workers from --workers (attach) or spawn (--rng N / per GPU).
+
+    --per-gpu N co-locates N workers on each GPU. The evaluation loop is
+    CPU-bound with the GPU >90% idle (measured), so a single large-VRAM
+    card runs the whole model fleet as co-resident workers — the
+    single-A100 topology. VRAM is the constraint, not compute.
+    """
     if args.workers:
         return [Worker(i, url=u.strip())
                 for i, u in enumerate(args.workers.split(",")) if u.strip()]
@@ -229,10 +235,12 @@ def build_topology(args, models, log_dir):
         if not gpus:
             sys.exit("no GPUs detected: pass --workers to attach, --gpus to "
                      "force a topology, or --rng N for a testing topology")
+        gpus = [g for g in gpus for _ in range(args.per_gpu)]
         count = len(gpus)
         if len(models) > count:
             sys.exit(f"{len(models)} models in the manifest but only {count} "
-                     f"workers — split the campaign or add --workers")
+                     f"worker slot(s) — raise --per-gpu, split the campaign, "
+                     f"or add --workers")
         # Round-robin models over workers; spare workers duplicate models
         # so runs sharing a model can proceed in parallel.
         hosted = [models[i % len(models)] if models else None
@@ -439,6 +447,10 @@ def main(argv=None):
     ap.add_argument("--gpus", default=None,
                     help="comma list of GPU indices to spawn workers on "
                          "(default: autodetect)")
+    ap.add_argument("--per-gpu", type=int, default=1,
+                    help="workers co-located per GPU (CPU-bound loop, "
+                         "GPU mostly idle; bound by VRAM). 6 puts the "
+                         "whole model fleet on one A100-80GB")
     ap.add_argument("--rng", type=int, default=0, metavar="N",
                     help="spawn N RNG-only workers (GPU-less testing)")
     ap.add_argument("--ctx", type=int, default=4096,
@@ -474,12 +486,21 @@ def main(argv=None):
 
     failures = []
     try:
-        for w in workers:
-            if w.spawned:
-                w.spawn()
-        for w in workers:
-            w.wait_ready(args.ready_timeout)
-            log(f"[up] {w.describe()}")
+        if args.per_gpu > 1:
+            # Shared-GPU spawns serialize (spawn -> ready -> next) so each
+            # worker's VRAM delta attributes to its own model load.
+            for w in workers:
+                if w.spawned:
+                    w.spawn()
+                w.wait_ready(args.ready_timeout)
+                log(f"[up] {w.describe()}")
+        else:
+            for w in workers:
+                if w.spawned:
+                    w.spawn()
+            for w in workers:
+                w.wait_ready(args.ready_timeout)
+                log(f"[up] {w.describe()}")
         if args.sanity or args.sanity_only:
             sanity_failures = sanity_check(workers, out, log)
             if sanity_failures:

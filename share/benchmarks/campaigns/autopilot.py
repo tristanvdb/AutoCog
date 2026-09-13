@@ -119,7 +119,15 @@ class Autopilot:
         if r.returncode != 0:
             raise RuntimeError(f"exit {r.returncode} (log: {path})")
 
-    def client(self, manifest, log_name, timeout):
+    def client(self, manifest, log_name, timeout, solo=False):
+        """solo=True pins one worker per GPU regardless of --per-gpu:
+        the perf wave measures timing and must not share the die.
+
+        Otherwise per-gpu is capped at the manifest's DISTINCT model
+        count: waves run sequentially, so co-residency only ever covers
+        one manifest's models — the scale-split manifests keep a
+        40GB card inside budget (1B/3B wave ~12GB, 8B wave ~20GB)
+        without duplicated 8B workers blowing past it."""
         if self.args.smoke_test:
             # Pipeline-shape validation: every wave exercises the same
             # driver machinery against the rng manifest (the real ones
@@ -133,6 +141,11 @@ class Autopilot:
             cmd += ["--ngl", str(self.args.ngl)]
             if self.args.gpus:
                 cmd += ["--gpus", self.args.gpus]
+            if not solo and self.args.per_gpu > 1:
+                m = json.load(open(os.path.join(HERE, manifest)))
+                distinct = len({r["model"] for r in m.get("runs", [])
+                                if r.get("model")}) or 1
+                cmd += ["--per-gpu", str(min(self.args.per_gpu, distinct))]
         self.run_logged(cmd, log_name, timeout)
 
     # -- preflight ---------------------------------------------------------
@@ -216,9 +229,14 @@ class Autopilot:
         outdir = os.path.join(HERE, "results", "probe")
         os.makedirs(outdir, exist_ok=True)
         jobs, running = list(self.probe_jobs()), []
+        # Probe slots: GPUs x per-gpu, capped at 4 concurrent per GPU —
+        # the worst 4-model mix (~28GB incl. overhead) still fits 40GB,
+        # while 6 co-resident probes would not. Jobs are launched in
+        # probe_jobs() order (small models first, from the manifests).
         gpu_count = 1 if self.args.smoke_test else max(
             1, len(subprocess.run(["nvidia-smi", "-L"], capture_output=True,
                                   text=True).stdout.strip().splitlines()))
+        slots_per_gpu = 1 if self.args.smoke_test else min(self.args.per_gpu, 4)
         failures = 0
 
         def launch(job, gpu):
@@ -247,7 +265,7 @@ class Autopilot:
                     subprocess.Popen(cmd, stdout=lf, stderr=subprocess.STDOUT,
                                      cwd=REPO, env=env), lf)
 
-        free_gpus = list(range(gpu_count))
+        free_gpus = [g for g in range(gpu_count) for _ in range(slots_per_gpu)]
         while jobs or running:
             while jobs and free_gpus:
                 started = launch(jobs.pop(0), free_gpus[0])
@@ -332,7 +350,8 @@ class Autopilot:
                                        self.args.wave_timeout * hours))
         self.stage("w5-termination",
                    lambda: self.client("perf-termination.json", "w5.log",
-                                       self.args.wave_timeout * hours))
+                                       self.args.wave_timeout * hours,
+                                       solo=True))
         self.finish()
         failed = [n for n, r in self.state["stages"].items()
                   if r["status"] != "ok"]
@@ -346,6 +365,11 @@ def main(argv=None):
                     help="GPU layers for all workers/probes (default 99)")
     ap.add_argument("--gpus", default=None,
                     help="restrict to these GPU indices (default: all)")
+    ap.add_argument("--per-gpu", type=int, default=1,
+                    help="worker co-residency per GPU for the quality "
+                         "waves (capped per manifest at its distinct "
+                         "model count; perf wave always runs solo). "
+                         "4 is the single-A100-40GB topology")
     ap.add_argument("--wave-timeout", type=float, default=12,
                     help="hard cap per wave, hours (default 12)")
     ap.add_argument("--smoke-test", action="store_true",
