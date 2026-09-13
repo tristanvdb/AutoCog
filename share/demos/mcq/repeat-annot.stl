@@ -15,7 +15,7 @@ prompt main {
       value is text<length=30>;
       correct is correctness;
     }
-    answer is repeat(choices);
+    answer is repeat(choices.value);
   }
   channel {
     topic get topic;

@@ -61,7 +61,7 @@
           "depth": 1,
           "desc": [],
           "format": {
-            "mode": "select",
+            "mode": "repeat",
             "path": [
               {
                 "name": "options"

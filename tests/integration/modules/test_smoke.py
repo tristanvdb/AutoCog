@@ -1740,6 +1740,12 @@ class TestWriterRecording:
         from autocog.context import Context
         from autocog.__main__ import load_externals
 
+        # The writer flow's page count is rng-trajectory dependent: the picked
+        # template's step count drives create_pages, and Book requires
+        # pages[5:100]. Not every seed clears that minimum (a legitimate
+        # runtime rejection, not a bug) — pin one that completes.
+        engine.set_seed(0)
+
         prog = autocog.compile(
             str(repo_root / "share/demos/story-writer/writer.stl"),
             includes=[
@@ -1823,6 +1829,9 @@ class TestWriterRecording:
         from autocog.recorder import Recorder
         from autocog.context import Context
         from autocog.__main__ import load_externals
+
+        # Same seed pin as test_writer_recorded_trace (pages[5:100] minimum).
+        engine.set_seed(0)
 
         prog = autocog.compile(
             str(repo_root / "share/demos/story-writer/writer.stl"),

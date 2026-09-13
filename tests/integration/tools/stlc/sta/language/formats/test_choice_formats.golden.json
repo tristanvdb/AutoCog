@@ -13,7 +13,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "aac4575ff3bc12cd0acb780adc6a85120194a89b1f726ee45b9d274e2be32770",
+    "hash": "8026d5223107b8c04602668430c8f1675bb5e9c54471f3b3dec50cd233949089",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -105,7 +105,7 @@
           "desc": [],
           "flat_index": 2,
           "format": {
-            "mode": "select",
+            "mode": "repeat",
             "path": [
               {
                 "name": "options"
