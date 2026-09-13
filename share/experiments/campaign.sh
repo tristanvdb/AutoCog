@@ -57,6 +57,17 @@ source "$VENV/bin/activate"
 export AUTOCOG_WORKDIR="$WORKDIR" AUTOCOG_REPO="$REPO"
 export DATASETS_PATH="${DATASETS_PATH:-$DATASETS_DIR}"
 export RESULTS_PATH="${RESULTS_PATH:-$RESULTS_DIR}"
+EVENTS="$RESULTS_PATH/campaign-events.ndjson"
+
+emit_event() {  # emit_event '<json>' — launcher lifecycle into the stream
+    python3 -c "
+import json, sys
+from datetime import datetime, timezone
+ev = json.loads(sys.argv[1])
+ev['@timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.') \
+    + f'{datetime.now(timezone.utc).microsecond // 1000:03d}Z'
+print(json.dumps(ev))" "$1" >> "$EVENTS"
+}
 
 # GPU inventory: calibration profile first, then nvidia-smi, then none.
 gpu_count() {
@@ -183,6 +194,20 @@ for DESC in "${DESCRIPTORS[@]}"; do
     MODE=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['mode'])" "$PLAN")
 
     echo "=== campaign $NAME [$MODE, $N_SLOTS worker(s), $GPUS GPU(s)] ==="
+    if [ "$DRYRUN" = 0 ]; then
+        mkdir -p "$RESULTS_PATH"
+        PLAN_EV=$(python3 -c "
+import json, sys
+plan = json.loads(sys.argv[1])
+desc = json.load(open(sys.argv[2]))
+print(json.dumps({'event.action': 'campaign.plan', 'campaign': plan['name'],
+                  'phases': [{'name': p['name'], 'runs': len(p['runs'])}
+                             for p in plan['phases']],
+                  'axes': desc.get('axes', [])}))" "$PLAN" "$DESC")
+        emit_event "$PLAN_EV"
+        emit_event "{\"event.action\": \"campaign.start\", \"campaign\": \"$NAME\"}"
+        echo "status screen:  python3 $REPO/share/benchmarks/monitor.py $EVENTS"
+    fi
     if [ "$DRYRUN" = 1 ]; then
         python3 - "$PLAN" <<'EOF'
 import json, sys
@@ -245,23 +270,46 @@ EOF
         fi
         IS_PROBE=$(python3 -c "import json,sys; p=[p for p in json.loads(sys.argv[1])['phases'] if p['name']==sys.argv[2]][0]; print(1 if p['probe'] else 0)" "$PLAN" "$PH")
         if [ "$IS_PROBE" = 1 ]; then
-            python3 - "$PLAN" "$PH" "$RESULTS_PATH/$NAME" <<'EOF' || echo "!!! probe phase $PH reported failures"
+            python3 - "$PLAN" "$PH" "$RESULTS_PATH/$NAME" "$EVENTS" <<'EOF' || echo "!!! probe phase $PH reported failures"
 import json, os, subprocess, sys
-plan, phase_name, out_root = json.loads(sys.argv[1]), sys.argv[2], sys.argv[3]
+from datetime import datetime, timezone
+plan, phase_name, out_root, events = (json.loads(sys.argv[1]), sys.argv[2],
+                                      sys.argv[3], sys.argv[4])
 repo = os.environ["AUTOCOG_REPO"]
 tool = os.path.join(repo, "share", "benchmarks", "probe_choices.py")
 phase = [p for p in plan["phases"] if p["name"] == phase_name][0]
 urls = [f"127.0.0.1:{17700 + i}" for i in range(len(plan["slots"]))]
 hosted = [{m["tag"] for m in s["models"]} or {"rng"} for s in plan["slots"]]
+
+def lifecycle(action, label, run, **extra):
+    ts = datetime.now(timezone.utc)
+    ev = {"@timestamp": ts.strftime("%Y-%m-%dT%H:%M:%S.")
+          + f"{ts.microsecond // 1000:03d}Z",
+          "event.action": action,
+          "autocog.campaign.name": plan["name"],
+          "autocog.campaign.phase": phase_name,
+          "autocog.campaign.run": label, "autocog.campaign.kind": "probe",
+          "autocog.campaign.model": run.get("model", "rng")}
+    ev.update(extra)
+    with open(events, "a") as f:
+        f.write(json.dumps({"autocog.bench": ev}) + "\n")
+
 rc = 0
 for i, run in enumerate(phase["runs"]):
     tag = run.get("model", "rng")
+    label = run.get("out") or f"{phase_name}-{i}"
     url = next((u for u, h in zip(urls, hosted) if tag in h), None)
     if url is None:
-        print(f"!!! probe {tag}: no worker hosts it"); rc = 1; continue
-    out = os.path.join(out_root, run.get("out") or f"{phase_name}-{i}") + ".ndjson"
+        print(f"!!! probe {tag}: no worker hosts it")
+        lifecycle("run.end", label, run, **{"autocog.campaign.ok": False,
+                  "error.message": f"no worker hosts {tag}"})
+        rc = 1
+        continue
+    out = os.path.join(out_root, label) + ".ndjson"
     if os.path.exists(out) and os.path.getsize(out) > 0:
-        print(f"[{phase_name}/{os.path.basename(out)}] exists — skipping"); continue
+        print(f"[{phase_name}/{os.path.basename(out)}] exists — skipping")
+        lifecycle("run.skip", label, run)
+        continue
     os.makedirs(os.path.dirname(out), exist_ok=True)
     from autocog.bench.campaign import resolve_data
     cmd = [sys.executable, tool, "run", "--demo", run["demo"],
@@ -270,7 +318,10 @@ for i, run in enumerate(phase["runs"]):
            "--model", tag, "--worker", url, "--out", out]
     if run.get("limit"):
         cmd += ["--limit", str(run["limit"])]
-    if subprocess.run(cmd, cwd=repo).returncode != 0:
+    lifecycle("run.start", label, run)
+    ok = subprocess.run(cmd, cwd=repo).returncode == 0
+    lifecycle("run.end", label, run, **{"autocog.campaign.ok": ok})
+    if not ok:
         rc = 1
 probe_outs = [f for f in os.listdir(out_root) if f.endswith(".ndjson")]
 if probe_outs:
@@ -281,6 +332,7 @@ sys.exit(rc)
 EOF
         else
             python3 -m autocog bench campaign "$DESC" --phase "$PH" "${WARGS[@]}" \
+                --json --json-log-file "$EVENTS" \
                 || echo "!!! phase $PH reported failures"
         fi
     done <<< "$PHASE_NAMES"
@@ -291,5 +343,6 @@ EOF
     trap - EXIT
     STAMP=$(date +%Y%m%d-%H%M%S)
     tar -czf "$RESULTS_PATH/$NAME-$STAMP.tar.gz" -C "$RESULTS_PATH" "$NAME"
+    emit_event "{\"event.action\": \"campaign.end\", \"campaign\": \"$NAME\"}"
     echo "=== campaign $NAME done -> $RESULTS_PATH/$NAME-$STAMP.tar.gz ==="
 done

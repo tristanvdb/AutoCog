@@ -46,6 +46,7 @@ import os
 
 from autocog.errors import ConfigError
 
+from . import results
 from .workers import RemoteWorker
 
 
@@ -167,6 +168,15 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
         known = [p.get("name") for p in desc.get("phases", [])]
         raise ConfigError(f"phase(s) {phases} not in {known}")
 
+    def lifecycle(action, phase, label, run, **extra):
+        ev = {"event.action": action, "autocog.campaign.name": name,
+              "autocog.campaign.phase": phase,
+              "autocog.campaign.run": label,
+              "autocog.campaign.kind": run.get("kind"),
+              "autocog.campaign.model": run.get("model", "rng")}
+        ev.update(extra)
+        results.stream_event(ev)
+
     failures = []
     for phase in selected:
         pname = phase.get("name", "phase")
@@ -175,15 +185,21 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
             out_dir = os.path.join(root, label)
             if run_done(out_dir):
                 log(f"[{pname}/{label}] output exists — skipping")
+                lifecycle("run.skip", pname, label, run)
                 continue
             os.makedirs(out_dir, exist_ok=True)
             log(f"=== [{pname}/{label}] {run.get('kind')} "
                 f"model={run.get('model', 'rng')} ===")
+            lifecycle("run.start", pname, label, run)
             try:
                 execute_run(run, defaults, pool, out_dir, log)
+                lifecycle("run.end", pname, label, run, **{"autocog.campaign.ok": True})
             except Exception as e:  # noqa: BLE001 — isolate runs
                 failures.append(f"{pname}/{label}")
                 log(f"!!! {pname}/{label} failed — continuing: {e}")
+                lifecycle("run.end", pname, label, run,
+                          **{"autocog.campaign.ok": False,
+                             "error.message": str(e)[:300]})
 
     if failures:
         log(f"[failed] {len(failures)} run(s): " + ", ".join(failures))

@@ -33,6 +33,23 @@ def timestamp():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
+_stream_log = None
+
+
+def stream_event(event):
+    """Mirror a bench event through the `autocog.bench` logger. With --json
+    (ECSFormatter) every event becomes one NDJSON line on the configured
+    sink — the live feed a campaign monitor tails. Without --json the
+    events stay silent (human logs keep their shape)."""
+    global _stream_log
+    if _stream_log is None:
+        import logging
+
+        _stream_log = logging.getLogger("autocog.bench.stream")
+    _stream_log.info(event.get("event.action", "bench.event"),
+                     extra={"autocog_bench": event})
+
+
 class NdjsonWriter:
     """Appends one event per line as soon as it is recorded — an interrupted
     run keeps everything it measured."""
@@ -48,6 +65,7 @@ class NdjsonWriter:
         self.events.append(event)
         self._f.write(json.dumps(event) + "\n")
         self._f.flush()
+        stream_event(event)
 
     def close(self):
         self._f.close()

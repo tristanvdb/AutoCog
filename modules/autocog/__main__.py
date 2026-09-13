@@ -515,8 +515,15 @@ def main():
 
     p_bench = subparsers.add_parser("bench", help="Run benchmarks")
     bench_sub = p_bench.add_subparsers(dest="bench_command", required=True)
+    bench_json = argparse.ArgumentParser(add_help=False)
+    bench_json.add_argument("--json", action="store_true",
+                            help="Emit the bench event stream as ECS NDJSON")
+    bench_json.add_argument("--json-log-file", default=None,
+                            help="Append the NDJSON stream to this file "
+                                 "(default: stderr)")
 
-    pb_perf = bench_sub.add_parser("perf", help="Computational cells (share/benchmarks/compute semantics)")
+    pb_perf = bench_sub.add_parser("perf", parents=[bench_json],
+                                   help="Computational cells (share/benchmarks/compute semantics)")
     pb_perf.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_perf.add_argument("--cells", default=None, help="Cells JSON (default: the classic matrix)")
     pb_perf.add_argument("--quick", action="store_true", help="Reduced classic matrix")
@@ -529,7 +536,8 @@ def main():
                         help="Remote level-3 worker host:port (repeatable; "
                              "routed by model tag)")
 
-    pb_quality = bench_sub.add_parser("quality", help="MCQ accuracy / friction matrix")
+    pb_quality = bench_sub.add_parser("quality", parents=[bench_json],
+                                       help="MCQ accuracy / friction matrix")
     pb_quality.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_quality.add_argument("--data", default=None,
                             help="Questions .json/.jsonl (default: share/benchmarks/quality/questions.json)")
@@ -546,7 +554,8 @@ def main():
                              "routed by model tag)")
 
     pb_campaign = bench_sub.add_parser(
-        "campaign", help="Execute a campaign descriptor against workers")
+        "campaign", parents=[bench_json],
+        help="Execute a campaign descriptor against workers")
     pb_campaign.add_argument("descriptor", help="Campaign descriptor JSON")
     pb_campaign.add_argument("--phase", action="append", default=None,
                              help="Only these phase(s) (repeatable; "

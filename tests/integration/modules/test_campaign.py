@@ -189,6 +189,24 @@ class TestLauncher:
                 < by["len300 w2 baseline"]["autocog.perf.tokens.eval"])
         assert list((workdir / "results").glob("testing-*.tar.gz"))
 
+        # Event stream + status screen: every run has lifecycle events and
+        # the monitor renders progress, rates and axis-sliced accuracy.
+        events = workdir / "results" / "campaign-events.ndjson"
+        assert events.is_file()
+        stream = [json.loads(l) for l in events.read_text().splitlines()]
+        actions = [(e.get("autocog.bench") or e).get("event.action") for e in stream]
+        assert actions.count("run.end") == 4          # incl. the probe run
+        assert "campaign.plan" in actions and "campaign.end" in actions
+        assert any(a == "quality.run" for a in actions)
+        mon = subprocess.run(
+            [sys.executable, str(workdir / "autocog" / "share" / "benchmarks"
+                                 / "monitor.py"), "--once", str(events)],
+            capture_output=True, text=True, timeout=60)
+        assert mon.returncode == 0, mon.stderr
+        assert "4/4 runs" in mon.stdout
+        assert "accuracy by model" in mon.stdout
+        assert "accuracy by demo" in mon.stdout
+
         r2 = self.launch(workdir, "--ngl", "0", timeout=300)
         assert r2.returncode == 0
         assert r2.stdout.count("skipping") >= 4   # every run resumed as done
