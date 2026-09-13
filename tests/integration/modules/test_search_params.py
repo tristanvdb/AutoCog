@@ -159,8 +159,9 @@ argument max_terms = 5;
 prompt main {
   is { q is text<length=8>; }
   search {
-    queue.stop is ((__status__.tree.terminals >= max_terms)
-                || (__status__.best.proba >= 0.9));
+    queue.stop is (((__status__.tree.terminals >= max_terms)
+                 || (__status__.best.proba >= 0.9))
+                 && (__status__.tree.tokens < 100000));
   }
   channel { q get q; }
   return { use q; }
@@ -177,13 +178,14 @@ def test_queue_stop_translation(repo_root, tmp_path):
 
     fta = instantiate_fta(repo_root, autocog.compile(str(stl)), {"q": "x"})
     stop = fta["queue"]["stop"]
-    assert stop == {"any": [{"ge": ["terminals", 5.0]},
-                            {"ge": ["best.proba", pytest.approx(0.9)]}]}
+    assert stop == {"all": [{"any": [{"ge": ["terminals", 5.0]},
+                                     {"ge": ["best.proba", pytest.approx(0.9)]}]},
+                            {"lt": ["tokens", 100000.0]}]}
 
     fta8 = instantiate_fta(repo_root,
                            autocog.compile(str(stl), defines={"max_terms": 8}),
                            {"q": "x"})
-    assert fta8["queue"]["stop"]["any"][0] == {"ge": ["terminals", 8.0]}
+    assert fta8["queue"]["stop"]["all"][0]["any"][0] == {"ge": ["terminals", 8.0]}
 
 
 def test_model_ref_in_stop(repo_root, tmp_path):
@@ -212,3 +214,37 @@ prompt main {
     engine.set_seed(42)
     result = engine.run(prog, q="hello")
     assert isinstance(result, str) and result
+
+
+def test_search_config_object_forms_roundtrip(repo_root, tmp_path):
+    """Codec coverage for the non-default forms: object threshold
+    {value, metric} and ranking {metric} survive JSON load and the
+    python read/get round-trip; out-of-domain metrics are rejected."""
+    base = json.load(open(repo_root / "share" / "search" / "default.json"))
+    base["enum"]["threshold"] = {"value": 0.2, "metric": "sum"}
+    base["enum"]["ranking"] = {"metric": "bytes"}
+
+    # JSON file path (search-json).
+    f = tmp_path / "obj.json"
+    f.write_text(json.dumps(base))
+    sid = runtime_sta_cxx.load_search(str(f))
+    got = runtime_sta_cxx.get_search(sid)
+    assert got["enum"]["threshold"] == {"value": pytest.approx(0.2), "metric": "sum"}
+    assert got["enum"]["ranking"] == {"metric": "bytes"}
+
+    # Python object path (search-python).
+    sid2 = runtime_sta_cxx.read_search(got)
+    got2 = runtime_sta_cxx.get_search(sid2)
+    assert got2["enum"]["threshold"]["metric"] == "sum"
+    assert got2["enum"]["ranking"] == {"metric": "bytes"}
+
+    # Domain enforcement at the codec.
+    bad = json.loads(json.dumps(base))
+    bad["enum"]["ranking"] = {"metric": "median"}
+    from autocog.errors import AutoCogError
+    with pytest.raises(AutoCogError, match="invalid ranking.metric"):
+        runtime_sta_cxx.read_search(json.dumps(bad))
+    bad2 = json.loads(json.dumps(base))
+    bad2["queue"]["metric"] = ["perplexity", "mean_logprob"]
+    with pytest.raises(AutoCogError, match="unknown queue metric"):
+        runtime_sta_cxx.read_search(json.dumps(bad2))
