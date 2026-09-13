@@ -66,3 +66,29 @@ def test_client_rng_topology(tmp_path, repo_root):
 
     # No mini-manifest droppings next to the manifest.
     assert not [f for f in os.listdir(tmp_path) if f.startswith(".client-")]
+
+
+@pytest.mark.timeout(180)
+def test_client_sanity_gate(tmp_path, repo_root):
+    """--sanity-only: per-worker probes (affinity echo + one-question run)
+    pass on the rng topology and the client exits before dispatching."""
+    client = repo_root / "benchmarks" / "campaigns" / "client.py"
+    manifest = {"name": "sanity-test", "out": str(tmp_path / "results"),
+                "runs": [{"kind": "quality", "questions": 1,
+                          "syntaxes": ["complete"], "demos": ["select"],
+                          "out": "never-dispatched"}]}
+    mpath = tmp_path / "manifest.json"
+    mpath.write_text(json.dumps(manifest))
+
+    r = subprocess.run(
+        [sys.executable, str(client), str(mpath), "--rng", "2",
+         "--sanity-only", "--ready-timeout", "60"],
+        capture_output=True, text=True, cwd=str(repo_root), timeout=160)
+    assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-1000:]
+    assert r.stdout.count("affinity ok") == 2
+    assert r.stdout.count("probe ok") == 2
+    assert "[sanity] all workers pass" in r.stdout
+    # sanity-only: no dispatch happened
+    assert "never-dispatched" not in r.stdout
+    assert not (tmp_path / "results" / "never-dispatched").exists()
+    assert (tmp_path / "results" / "sanity" / "worker-0").is_dir()

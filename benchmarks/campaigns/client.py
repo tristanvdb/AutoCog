@@ -66,6 +66,57 @@ def detect_gpus():
     return list(range(len([l for l in out.stdout.splitlines() if l.strip()])))
 
 
+def gpu_memory_used(gpu):
+    """memory.used (MiB) of one GPU via nvidia-smi; None when unavailable."""
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "-i", str(gpu), "--query-gpu=memory.used",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=15)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    try:
+        return int(out.stdout.strip().splitlines()[0])
+    except (ValueError, IndexError):
+        return None
+
+
+class GpuUtilSampler:
+    """Poll one GPU's utilization in a thread; keeps the peak."""
+
+    def __init__(self, gpu, interval=0.1):
+        self.gpu = gpu
+        self.interval = interval
+        self.peak = None
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+
+    def _loop(self):
+        while not self._stop.is_set():
+            try:
+                out = subprocess.run(
+                    ["nvidia-smi", "-i", str(self.gpu),
+                     "--query-gpu=utilization.gpu",
+                     "--format=csv,noheader,nounits"],
+                    capture_output=True, text=True, timeout=10)
+                util = int(out.stdout.strip().splitlines()[0])
+                if self.peak is None or util > self.peak:
+                    self.peak = util
+            except Exception:  # noqa: BLE001 — sampling is best-effort
+                pass
+            time.sleep(self.interval)
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        self._thread.join(timeout=5)
+
+
 def cpu_slices(n):
     """Split this process's available CPUs into n contiguous slices,
     rendered as taskset-style specs for `autocog backend --cpus`."""
@@ -89,7 +140,7 @@ class Worker:
     """One worker in the topology: either attached (url only) or spawned."""
 
     def __init__(self, index, url=None, model=None, gpu=None, cpus=None,
-                 ctx=4096, kv_slots=None, log_dir=None):
+                 ctx=4096, kv_slots=None, ngl=None, log_dir=None):
         self.index = index
         self.spawned = url is None
         self.url = url or f"127.0.0.1:{free_port()}"
@@ -98,11 +149,13 @@ class Worker:
         self.cpus = cpus
         self.ctx = ctx
         self.kv_slots = kv_slots
+        self.ngl = ngl
         self.log_path = (os.path.join(log_dir, f"worker-{index}.log")
                          if log_dir else None)
         self.proc = None
         self.caps = None
         self._log = None
+        self.vram_before = None   # MiB on self.gpu, sampled just before spawn
 
     def spawn(self):
         cmd = [sys.executable, "-m", "autocog", "backend",
@@ -116,6 +169,11 @@ class Worker:
         env = dict(os.environ)
         if self.gpu is not None:
             env["CUDA_VISIBLE_DEVICES"] = str(self.gpu)
+            self.vram_before = gpu_memory_used(self.gpu)
+        if self.ngl is not None:
+            # Without AUTOCOG_NGL the model loads CPU-only by design; the
+            # GPU offload of a campaign is decided here, per invocation.
+            env["AUTOCOG_NGL"] = str(self.ngl)
         self._log = open(self.log_path, "w")
         self.proc = subprocess.Popen(cmd, env=env, stdout=self._log,
                                      stderr=subprocess.STDOUT)
@@ -153,6 +211,7 @@ class Worker:
         return (f"worker-{self.index} [{kind}] @ {self.url} "
                 f"models={self.caps['models'] if self.caps else '?'} "
                 f"gpu={self.gpu if self.gpu is not None else '-'} "
+                f"ngl={self.ngl if self.ngl is not None else '-'} "
                 f"cpus={self.cpus or (self.caps or {}).get('cpus', 'all') or 'all'}")
 
 
@@ -181,8 +240,104 @@ def build_topology(args, models, log_dir):
 
     slices = cpu_slices(count)
     return [Worker(i, model=hosted[i], gpu=gpus[i], cpus=slices[i],
-                   ctx=args.ctx, kv_slots=args.kv_slots, log_dir=log_dir)
+                   ctx=args.ctx, kv_slots=args.kv_slots, ngl=args.ngl,
+                   log_dir=log_dir)
             for i in range(count)]
+
+
+def repo_root():
+    """The enclosing repo (share/syntax present) — probe runs need it as cwd."""
+    d = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        if os.path.isdir(os.path.join(d, "share", "syntax")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return os.getcwd()
+        d = parent
+
+
+def sanity_check(workers, out, log):
+    """Pre-campaign gate, one worker at a time:
+      * affinity: /capabilities' actual mask == the requested slice;
+      * offload:  VRAM delta across the model load vs the GGUF size;
+      * compute:  a one-question probe run completes, with the GPU's peak
+                  utilization sampled while it runs.
+    Returns the list of failure strings (empty = gate passes)."""
+    failures = []
+    sanity_dir = os.path.join(out, "sanity")
+    os.makedirs(sanity_dir, exist_ok=True)
+
+    for w in workers:
+        checks = []
+
+        # CPU pinning: the worker reports the mask it actually runs under.
+        if w.cpus:
+            want = set()
+            for part in w.cpus.split(","):
+                if "-" in part:
+                    lo, hi = part.split("-", 1)
+                    want.update(range(int(lo), int(hi) + 1))
+                elif part:
+                    want.add(int(part))
+            got = set((w.caps or {}).get("cpus") or [])
+            if got == want:
+                checks.append(f"affinity ok ({len(got)} cpus)")
+            else:
+                checks.append(f"AFFINITY MISMATCH want={sorted(want)} got={sorted(got)}")
+                failures.append(f"worker-{w.index}: affinity mismatch")
+
+        # GPU offload: the load must have claimed VRAM comparable to the file.
+        if w.gpu is not None and w.model:
+            after = gpu_memory_used(w.gpu)
+            if w.vram_before is None or after is None:
+                checks.append("vram: nvidia-smi unavailable")
+                if w.ngl:
+                    failures.append(f"worker-{w.index}: cannot verify offload")
+            else:
+                delta = after - w.vram_before
+                size = os.path.getsize(w.model) // (1024 * 1024)
+                checks.append(f"vram +{delta}MiB (model file {size}MiB)")
+                if w.ngl and delta < 0.5 * size:
+                    failures.append(
+                        f"worker-{w.index}: NGL={w.ngl} but VRAM grew only "
+                        f"{delta}MiB for a {size}MiB model — offload did not happen")
+                if not w.ngl and delta > 0.5 * size:
+                    checks.append("(unexpected offload without --ngl?)")
+
+        # Compute probe: one question through this worker; sample GPU while
+        # it runs. RNG workers probe the rng model (CPU-only by nature).
+        probe_cmd = [sys.executable, "-m", "autocog", "bench", "quality",
+                     "--worker", w.url, "--questions", "1",
+                     "--syntaxes", "complete", "--demos", "select",
+                     "--out", os.path.join(sanity_dir, f"worker-{w.index}")]
+        if w.model:
+            probe_cmd += ["--model", w.model]
+        t0 = time.time()
+        if w.gpu is not None:
+            with GpuUtilSampler(w.gpu) as sampler:
+                probe = subprocess.run(probe_cmd, capture_output=True,
+                                       text=True, cwd=repo_root(), timeout=600)
+            peak = sampler.peak
+        else:
+            probe = subprocess.run(probe_cmd, capture_output=True,
+                                   text=True, cwd=repo_root(), timeout=600)
+            peak = None
+        wall = time.time() - t0
+        if probe.returncode != 0:
+            checks.append("PROBE FAILED")
+            failures.append(f"worker-{w.index}: probe run failed "
+                            f"(see {sanity_dir}) — {probe.stdout[-200:]}")
+        else:
+            checks.append(f"probe ok {wall:.1f}s")
+        if peak is not None:
+            checks.append(f"gpu-util peak {peak}%")
+            if w.ngl and peak == 0:
+                failures.append(f"worker-{w.index}: NGL={w.ngl} but the GPU "
+                                f"never left 0% during the probe")
+
+        log(f"[sanity] worker-{w.index}: " + "; ".join(checks))
+    return failures
 
 
 def load_campaign(manifest_path):
@@ -290,6 +445,16 @@ def main(argv=None):
                     help="context size for spawned workers")
     ap.add_argument("--kv-slots", type=int, default=None,
                     help="KV slot pool for spawned workers")
+    ap.add_argument("--ngl", type=int, default=None,
+                    help="GPU layers to offload (AUTOCOG_NGL) for spawned "
+                         "workers; 99 = whole model. Without it the models "
+                         "load CPU-ONLY — GPU campaigns must pass this")
+    ap.add_argument("--sanity", action="store_true",
+                    help="gate the campaign on per-worker sanity probes "
+                         "(affinity echo, VRAM delta, GPU utilization, "
+                         "one-question probe run)")
+    ap.add_argument("--sanity-only", action="store_true",
+                    help="run the sanity probes and exit")
     ap.add_argument("--ready-timeout", type=float, default=300,
                     help="seconds to wait for each worker's model load")
     ap.add_argument("--keep-workers", action="store_true",
@@ -315,6 +480,15 @@ def main(argv=None):
         for w in workers:
             w.wait_ready(args.ready_timeout)
             log(f"[up] {w.describe()}")
+        if args.sanity or args.sanity_only:
+            sanity_failures = sanity_check(workers, out, log)
+            if sanity_failures:
+                for f in sanity_failures:
+                    log(f"[sanity] FAIL {f}")
+                return 2
+            log("[sanity] all workers pass")
+            if args.sanity_only:
+                return 0
         failures = dispatch(args.manifest, manifest, base, out, workers, log)
     finally:
         if args.keep_workers:
