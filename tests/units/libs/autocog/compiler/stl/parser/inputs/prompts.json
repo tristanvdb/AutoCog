@@ -174,5 +174,23 @@
     "code": "prompt Disorder { flow next; channel { } is { } }",
     "should_pass": true,
     "semantically_correct": false
+  },
+  {
+    "description": "Prompt: fields only",
+    "tag": "Prompt",
+    "code": "prompt p { is { q is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt: fields, channel, return",
+    "tag": "Prompt",
+    "code": "prompt p { is { q is text; } channel { q get q; } return { use q; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Prompt: nested record is not allowed",
+    "tag": "Prompt",
+    "code": "prompt p { record x; }",
+    "should_pass": false
   }
 ]

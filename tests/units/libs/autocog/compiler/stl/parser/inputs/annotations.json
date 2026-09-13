@@ -187,5 +187,35 @@
     "code": "annotate { return as \"Description\"; }",
     "should_pass": false,
     "error_contains": "Expected token `identifier` but found `return`  when parsing path field."
+  },
+  {
+    "description": "Annotation on the prompt itself",
+    "tag": "Annotation",
+    "code": "_ as \"the frame\";",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation on a nested path",
+    "tag": "Annotation",
+    "code": "a.b as \"desc\";",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation on a field",
+    "tag": "Annotation",
+    "code": "answer as \"the pick\";",
+    "should_pass": true
+  },
+  {
+    "description": "Annotation without `as` is an error",
+    "tag": "Annotation",
+    "code": "answer \"d\";",
+    "should_pass": false
+  },
+  {
+    "description": "Annotation without semicolon is an error",
+    "tag": "Annotation",
+    "code": "_ as \"d\"",
+    "should_pass": false
   }
 ]

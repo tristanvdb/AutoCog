@@ -186,5 +186,42 @@
     "code": "argument = \"value\";",
     "should_pass": false,
     "error_contains": "Expected token `identifier` but found `'='`  when parsing identifier."
+  },
+  {
+    "description": "Define with initializer",
+    "tag": "Define",
+    "code": "define x = 5;",
+    "should_pass": true
+  },
+  {
+    "description": "Argument with default",
+    "tag": "Define",
+    "code": "argument beams = 4;",
+    "should_pass": true
+  },
+  {
+    "description": "Argument without default",
+    "tag": "Define",
+    "code": "argument beams;",
+    "should_pass": true
+  },
+  {
+    "description": "Vocab requires an initializer",
+    "tag": "Define",
+    "code": "vocab v;",
+    "should_pass": false,
+    "error_contains": "vocab"
+  },
+  {
+    "description": "Vocab with initializer",
+    "tag": "Define",
+    "code": "vocab v = w;",
+    "should_pass": true
+  },
+  {
+    "description": "Define without a name is an error",
+    "tag": "Define",
+    "code": "define = 5;",
+    "should_pass": false
   }
 ]

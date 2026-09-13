@@ -188,5 +188,59 @@
     "code": "enum(\"string\", 42);",
     "should_pass": false,
     "error_contains": "Expected token `string` but found `integer literal`  when parsing enumerators."
+  },
+  {
+    "description": "Enum body: two enumerators",
+    "tag": "Enum",
+    "code": "(\"yes\", \"no\")",
+    "should_pass": true
+  },
+  {
+    "description": "Enum body: single enumerator",
+    "tag": "Enum",
+    "code": "(\"only\")",
+    "should_pass": true
+  },
+  {
+    "description": "Enum body: empty is an error",
+    "tag": "Enum",
+    "code": "()",
+    "should_pass": false
+  },
+  {
+    "description": "Enum body: missing comma is an error",
+    "tag": "Enum",
+    "code": "(\"a\" \"b\")",
+    "should_pass": false
+  },
+  {
+    "description": "Text body: bare (no vocab source)",
+    "tag": "Text",
+    "code": "",
+    "should_pass": true
+  },
+  {
+    "description": "Text body: empty parens",
+    "tag": "Text",
+    "code": "()",
+    "should_pass": true
+  },
+  {
+    "description": "Choice body: simple path",
+    "tag": "Choice",
+    "code": "(options)",
+    "should_pass": true
+  },
+  {
+    "description": "Choice body: nested path",
+    "tag": "Choice",
+    "code": "(step.options)",
+    "should_pass": true
+  },
+  {
+    "description": "Choice body: missing parens is an error",
+    "tag": "Choice",
+    "code": "options",
+    "should_pass": false
   }
 ]
