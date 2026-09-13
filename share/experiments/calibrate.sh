@@ -21,8 +21,8 @@ mkdir -p "$CAL"
 # same box skips it.
 PROFILE_DIR="$WORKDIR/.calibration"
 mkdir -p "$PROFILE_DIR"
-CONFIG="$( { uname -sr; nproc; command -v nvidia-smi > /dev/null \
-             && nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader; } 2>&1 )"
+CONFIG="$( { uname -sr; nproc; nvidia-smi --query-gpu=name,memory.total,driver_version \
+             --format=csv,noheader 2>/dev/null || true; } 2>&1 )"
 HASH=$(echo "$CONFIG" | sha256sum | cut -c1-12)
 PROFILE="$PROFILE_DIR/profile-$HASH.json"
 if [ -s "$PROFILE" ]; then
@@ -56,6 +56,25 @@ export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 
+# The installed package must match the machine: a non-CUDA build on a GPU
+# box would silently run the whole campaign on CPU. The backend reports
+# its build flags through the bindings (build_options).
+GPUS=$(nvidia-smi -L 2>/dev/null | grep -c . || true)
+python3 - "$GPUS" <<'PYEOF'
+import json, sys
+from autocog.backend.llama import backend_llama_cxx as b
+opts = dict(b.build_options())
+gpus = int(sys.argv[1] or 0)
+print(f"package build: {json.dumps(opts)}")
+if gpus > 0 and not (opts["cuda"] or opts["rocm"] or opts["vulkan"]):
+    sys.exit(f"FATAL: {gpus} GPU(s) present but the installed autocog has no "
+             "GPU backend -- rerun setup.sh (it enables CUDA when nvidia-smi "
+             "is present) or reinstall with CMAKE_ARGS=-DAUTOCOG_CUDA=ON")
+if opts["build_type"] != "Release":
+    print(f"WARNING: package build_type={opts['build_type']} -- timing "
+          "numbers will be meaningless")
+PYEOF
+
 CELLS="$(mktemp)"
 cat > "$CELLS" <<'EOF'
 [
@@ -64,8 +83,9 @@ cat > "$CELLS" <<'EOF'
 ]
 EOF
 
-python3 "$REPO/share/benchmarks/compute/sweep.py" --build "$BUILD_EXP" \
-    --model "$MODEL" --cells "$CELLS" --tag calib --out "$CAL"
+MODEL="$(realpath "$MODEL")"
+( cd "$REPO" && python3 -m autocog bench perf --model "$MODEL" --cells "$CELLS" \
+      --tag calib --out "$CAL" )
 rm -f "$CELLS"
 
 echo

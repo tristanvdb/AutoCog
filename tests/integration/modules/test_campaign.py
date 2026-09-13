@@ -192,3 +192,19 @@ class TestLauncher:
         r2 = self.launch(workdir, "--ngl", "0", timeout=300)
         assert r2.returncode == 0
         assert r2.stdout.count("skipping") >= 4   # every run resumed as done
+
+
+def test_build_options_binding():
+    """The backend reports its build flags structurally (calibration gates
+    GPU boxes on the cuda/rocm/vulkan flags)."""
+    from autocog.backend.llama import backend_llama_cxx as b
+
+    opts = dict(b.build_options())
+    assert set(opts) == {"build_type", "cuda", "rocm", "blas", "vulkan",
+                         "metal", "native", "tuned"}
+    assert isinstance(opts["cuda"], bool)
+    assert opts["build_type"] in ("Debug", "Release", "RelWithDebInfo",
+                                  "MinSizeRel")
+    # Coherence with the human-readable form.
+    info = b.build_info()
+    assert (("cuda:        yes" in info) == opts["cuda"])

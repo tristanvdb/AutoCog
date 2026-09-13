@@ -180,22 +180,9 @@ pip install pybind11 > /dev/null
 CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install "$REPO"   # local-dir install: always rebuilt
 echo "$STAMP" > "$VENV/.autocog-stamp"
 
-echo "=== Release tools tree into $BUILD_EXP ==="
-if [ -f "$BUILD_EXP/CMakeCache.txt" ] \
-   && [ "$(cat "$BUILD_EXP/.autocog-stamp" 2>/dev/null)" != "$STAMP" ]; then
-    echo "stale build tree (machine/toolchain changed) — wiping"
-    rm -rf "$BUILD_EXP"
-fi
-LAUNCHER_ARGS=()
-command -v ccache > /dev/null 2>&1 && \
-    LAUNCHER_ARGS=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache)
-cmake -B "$BUILD_EXP" -S "$REPO" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DAUTOCOG_BUILD_TESTS=OFF \
-    "${LAUNCHER_ARGS[@]}" \
-    "${CUDA_ARGS[@]}"
-cmake --build "$BUILD_EXP" --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
-echo "$STAMP" > "$BUILD_EXP/.autocog-stamp"
+# No separate tools tree: the pip install ships both the bindings and the
+# CLI tools (stlc/ista/xfta/psta/efta land in the venv's bin), and the
+# campaign stack runs entirely through the package.
 
 "$EXP_DIR/downloader.sh" "$@"
 

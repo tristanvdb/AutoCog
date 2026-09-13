@@ -37,6 +37,19 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
 
     module.def("build_info", &autocog::build_info, "Build configuration info");
 
+    module.def("build_options", []() {
+        py::dict d;
+        d["build_type"] = AUTOCOG_BUILD_TYPE;
+        d["cuda"] = static_cast<bool>(AUTOCOG_CUDA);
+        d["rocm"] = static_cast<bool>(AUTOCOG_ROCM);
+        d["blas"] = static_cast<bool>(AUTOCOG_BLAS);
+        d["vulkan"] = static_cast<bool>(AUTOCOG_VULKAN);
+        d["metal"] = static_cast<bool>(AUTOCOG_METAL);
+        d["native"] = static_cast<bool>(AUTOCOG_NATIVE);
+        d["tuned"] = static_cast<bool>(AUTOCOG_TUNED);
+        return d;
+    }, "Build configuration as a dict (backend acceleration flags)");
+
     module.def("create",
         [](std::string const & model_path, int n_ctx, int ngl, int kv_slots) {
             return Manager::add_model(model_path, n_ctx, ngl, kv_slots);
