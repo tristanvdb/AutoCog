@@ -1,0 +1,129 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {
+        "q": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "96db4267652f446af94d21fd84048d66f567340effc15c112d11f5642f0ccb9e",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 1,
+          "flow": -1
+        }
+      ],
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "q"
+            }
+          ],
+          "target": [
+            {
+              "name": "q"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "q",
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "q"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "(ge tokens @model.n_ctx)"
+        }
+      }
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}

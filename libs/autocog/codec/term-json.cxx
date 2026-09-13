@@ -42,7 +42,9 @@ template <>
 nlohmann::json to_json(TermExpr const & e) {
   nlohmann::json body;
   if (term_is_comparison(e.kind)) {
-    body = nlohmann::json::array({e.scalar, e.value});
+    body = e.ref.empty()
+        ? nlohmann::json::array({e.scalar, e.value})
+        : nlohmann::json::array({e.scalar, nlohmann::json{{"ref", e.ref}}});
   } else if (e.kind == TermExpr::Kind::Not) {
     body = e.operands.empty() ? nlohmann::json() : to_json(e.operands[0]);
   } else {
@@ -65,7 +67,9 @@ void from_json(nlohmann::json const & dom, TermExpr & out) {
   out.value = 0.0f;
   if (term_is_comparison(out.kind)) {
     out.scalar = it.value().at(0).get<std::string>();
-    out.value  = it.value().at(1).get<float>();
+    auto const & c = it.value().at(1);
+    if (c.is_object()) out.ref = c.at("ref").get<std::string>();
+    else               out.value = c.get<float>();
   } else if (out.kind == TermExpr::Kind::Not) {
     out.operands.emplace_back();
     from_json(it.value(), out.operands.back());

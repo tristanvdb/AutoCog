@@ -65,7 +65,26 @@ static bool known_stop_scalar(std::string const & name) {
 static void validate_stop(data::TermExpr const & e) {
   if (!e.scalar.empty() && !known_stop_scalar(e.scalar))
     throw autocog::SchemaError("Unknown stop scalar '" + e.scalar + "'", e.scalar);
+  if (!e.ref.empty())
+    throw autocog::SchemaError("Unresolved model reference '" + e.ref
+                               + "' in stop predicate", e.ref);
   for (auto const & op : e.operands) validate_stop(op);
+}
+
+// Fold model-property references (the scalarization boundary): after this,
+// the predicate is pure scalars-vs-constants and the hot loop never sees a
+// ref. Unknown refs throw here, before any model work.
+static void fold_stop_refs(data::TermExpr & e, Model const & model) {
+  if (!e.ref.empty()) {
+    if (e.ref == "model.n_ctx") {
+      e.value = static_cast<float>(model.context_size);
+      e.ref.clear();
+    } else {
+      throw autocog::SchemaError("Unknown model reference '" + e.ref
+                                 + "' in stop predicate", e.ref);
+    }
+  }
+  for (auto & op : e.operands) fold_stop_refs(op, model);
 }
 
 Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, data::FTA const & fta_) :
@@ -81,7 +100,11 @@ Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, d
   for (auto const & name : fta_.queue_metric) metric_.push_back(parse_metric_key(name));
   metric_.push_back(MetricKey::Fifo);  // total, deterministic order
 
-  if (fta_.queue_stop) validate_stop(*fta_.queue_stop);  // fail before model work
+  if (fta_.queue_stop) {
+    stop_ = *fta_.queue_stop;                       // model-bound copy
+    fold_stop_refs(*stop_, Manager::get_model(model_));
+    validate_stop(*stop_);                          // fail before decode work
+  }
   visited_actions_.assign(prepared.actions.size(), false);
   std::set<int> fields;
   for (auto const & a : fta_.actions) if (a.field) fields.insert(*a.field);
@@ -277,8 +300,8 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
     // terminal exists, so a stopped run always has a complete path). Pending
     // subtrees are abandoned: their roots are marked pruned so the FTT stays
     // well-formed, distinguishable from threshold/width rejection.
-    if (prepared.fta.queue_stop && terminals_ >= 1) {
-      if (eval_stop(*prepared.fta.queue_stop)) {
+    if (stop_ && terminals_ >= 1) {
+      if (eval_stop(*stop_)) {
         for (auto const & pending : queue) pending->parent.pruned = data::Pruned::Abandoned;
         abandoned_ = static_cast<unsigned>(queue.size());
         queue.clear();

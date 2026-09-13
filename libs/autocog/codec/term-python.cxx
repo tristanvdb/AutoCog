@@ -74,7 +74,9 @@ void from_py(pybind11::object const & obj, TermExpr & out) {
   if (term_is_comparison(out.kind)) {
     py::sequence s = val.cast<py::sequence>();
     out.scalar = s[0].cast<std::string>();
-    out.value  = s[1].cast<float>();
+    py::object c = s[1];
+    if (py::isinstance<py::dict>(c)) out.ref = c.cast<py::dict>()["ref"].cast<std::string>();
+    else                             out.value = c.cast<float>();
   } else if (out.kind == TermExpr::Kind::Not) {
     out.operands.emplace_back();
     from_py(val, out.operands.back());

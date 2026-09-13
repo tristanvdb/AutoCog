@@ -46,6 +46,9 @@ struct FrontierResult {
 class Model {
   public:
     ModelID const id;
+    /// Context size the model was created with (rng model: the requested
+    /// value). Exposed as the __model__.n_ctx termination-predicate property.
+    unsigned context_size = 0;
 
     // RNG model (id=0): byte-level character model with random logprobs
     static constexpr size_t RNG_VOCAB_SIZE = 258;  // 256 byte values + BOS + EOS

@@ -1,0 +1,83 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "q"
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "q"
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "q",
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "q"
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "(ge tokens @model.n_ctx)"
+        }
+      }
+    }
+  },
+  "records": {}
+}

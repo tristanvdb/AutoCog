@@ -11,6 +11,7 @@ std::string TermExpr::hash() const {
   h.put(static_cast<unsigned>(kind));
   h.put(scalar);
   h.put(value);
+  if (!ref.empty()) h.put(ref);  // conditional: ref-free predicates keep their ids
   h.put(static_cast<unsigned>(operands.size()));
   for (auto const & op : operands) h.put(op.hash());
   return h.hash();
@@ -68,7 +69,9 @@ struct CompactParser {
       while (i < s.size() && s[i] == '(') { e.operands.push_back(expr()); ws(); }
     } else {
       e.scalar = word();
-      e.value = std::stof(word());
+      auto const w = word();
+      if (!w.empty() && w[0] == '@') e.ref = w.substr(1);
+      else e.value = std::stof(w);
     }
     expect(')');
     return e;
@@ -83,7 +86,8 @@ std::string TermExpr::to_compact() const {
   if (kind == Kind::All || kind == Kind::Any || kind == Kind::Not) {
     for (auto const & op : operands) { out += " "; out += op.to_compact(); }
   } else {
-    out += " " + scalar + " " + std::to_string(value);
+    out += " " + scalar + " ";
+    out += ref.empty() ? std::to_string(value) : "@" + ref;
   }
   out += ")";
   return out;

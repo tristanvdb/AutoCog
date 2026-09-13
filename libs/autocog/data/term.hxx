@@ -21,6 +21,11 @@ struct TermExpr {
   std::vector<TermExpr> operands;   ///< All/Any: 1+; Not: exactly 1; comparisons: none.
   std::string scalar;               ///< Comparisons: the named scalar.
   float value = 0.0f;               ///< Comparisons: the constant compared against.
+  std::string ref;                  ///< Comparisons: when non-empty, the constant is
+                                    ///< resolved from this model property (e.g.
+                                    ///< "model.n_ctx") at evaluation setup -- the
+                                    ///< scalarization boundary; the hot loop only
+                                    ///< ever sees `value`.
 
   /// Recursive content hash: digest(kind + scalar + value + operand hashes).
   std::string hash() const;

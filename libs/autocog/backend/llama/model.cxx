@@ -41,6 +41,7 @@ static size_t kv_slot_count() {
 
 Model::Model() :
   id(0),
+  context_size(1u << 20),  // rng model: effectively unbounded
   model(nullptr),
   contexts(),
   rng(42)
@@ -51,6 +52,7 @@ Model::Model() :
 
 Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   id(id_),
+  context_size(static_cast<unsigned>(n_ctx)),
   model(nullptr),
   contexts(),
   rng(0),

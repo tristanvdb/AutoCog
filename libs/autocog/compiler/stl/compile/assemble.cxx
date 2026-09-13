@@ -142,14 +142,33 @@ static bool translate_stop(
                 return false;
             }
             auto const & const_side = lhs_scalar ? *bin->data.rhs : *bin->data.lhs;
-            auto v = evaluator.evaluate_expression(scope, const_side, ctx);
+            // The constant side may be a model property, resolved at the
+            // worker when the model loads (e.g. the context-overflow guard
+            // `__status__.tree.tokens >= __model__.n_ctx`).
+            std::string ref;
+            {
+                ast::Expression const * cs = &const_side;
+                while (auto const * par = std::get_if<ast::Parenthesis>(&cs->data.expr))
+                    cs = par->data.expr.get();
+                if (auto const * cid = std::get_if<ast::Identifier>(&cs->data.expr)) {
+                    if (cid->data.name == "__model__.n_ctx") ref = "model.n_ctx";
+                    else if (cid->data.name.rfind("__model__.", 0) == 0) {
+                        driver.emit_error("'" + cid->data.name + "' is not yet "
+                                          "available in termination predicates", loc);
+                        return false;
+                    }
+                }
+            }
             double num = 0.0;
-            if (auto const * f = std::get_if<float>(&v)) num = *f;
-            else if (auto const * i = std::get_if<int>(&v)) num = *i;
-            else {
-                driver.emit_error("the constant side of a termination comparison "
-                                  "must be numeric", loc);
-                return false;
+            if (ref.empty()) {
+                auto v = evaluator.evaluate_expression(scope, const_side, ctx);
+                if (auto const * f = std::get_if<float>(&v)) num = *f;
+                else if (auto const * i = std::get_if<int>(&v)) num = *i;
+                else {
+                    driver.emit_error("the constant side of a termination comparison "
+                                      "must be numeric", loc);
+                    return false;
+                }
             }
             auto k = bin->data.kind;
             if (flipped) {  // c OP scalar  ==  scalar OP' c
@@ -167,6 +186,7 @@ static bool translate_stop(
             }
             out.scalar = *scalar;
             out.value = static_cast<float>(num);
+            out.ref = ref;
             return true;
         }
         default:

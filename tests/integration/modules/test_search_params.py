@@ -184,3 +184,31 @@ def test_queue_stop_translation(repo_root, tmp_path):
                            autocog.compile(str(stl), defines={"max_terms": 8}),
                            {"q": "x"})
     assert fta8["queue"]["stop"]["any"][0] == {"ge": ["terminals", 8.0]}
+
+
+def test_model_ref_in_stop(repo_root, tmp_path):
+    """__model__.n_ctx on the constant side of a stop comparison: carried as
+    a ref through STA and FTA, folded to the model's context size at
+    evaluation setup (the scalarization boundary), and the guarded run
+    completes normally on rng."""
+    from autocog.engine import Engine
+
+    stl = tmp_path / "guard.stl"
+    stl.write_text("""
+prompt main {
+  is { q is text<length=8>; }
+  search { queue.stop is (__status__.tree.tokens >= __model__.n_ctx); }
+  channel { q get q; }
+  return { use q; }
+}
+""")
+    prog = autocog.compile(str(stl))
+    fta = instantiate_fta(repo_root, prog, {"q": "x"})
+    assert fta["queue"]["stop"] == {"ge": ["tokens", {"ref": "model.n_ctx"}]}
+
+    engine = Engine(model=None,
+                    syntax=str(repo_root / "share" / "syntax" / "complete.json"),
+                    search=str(repo_root / "share" / "search" / "default.json"))
+    engine.set_seed(42)
+    result = engine.run(prog, q="hello")
+    assert isinstance(result, str) and result
