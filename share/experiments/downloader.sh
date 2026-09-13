@@ -3,9 +3,11 @@
 # into datasets/ — both alongside the repo (see env.sh; NFS-persistent, so
 # each download happens once). Run it directly, or let setup.sh call it.
 #
-#     autocog/share/experiments/downloader.sh [--datasets-only]
+#     autocog/share/experiments/downloader.sh [--datasets-only] [descriptor.json ...]
 #
 #   --datasets-only   skip the models (e.g. gguf already in place)
+#   descriptors       campaign descriptors: fetch only the models they
+#                     name (minimal set) instead of the MODEL_SIZE tier
 #   MODEL_SIZE={0,1,2}  scale tier (see models.sh): 0 = tiny + 1B pair
 #                       (default), 1 adds the 3B/8B pairs, 2 adds 14B/32B
 #
@@ -20,15 +22,18 @@ EXP_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$EXP_DIR/env.sh"
 
 DATASETS_ONLY=0
-case "${1:-}" in
-    --datasets-only) DATASETS_ONLY=1 ;;
-    "") ;;
-    *) echo "usage: $0 [--datasets-only]" >&2; exit 1 ;;
-esac
+DESCRIPTORS=()
+for arg in "$@"; do
+    case "$arg" in
+        --datasets-only) DATASETS_ONLY=1 ;;
+        -*) echo "usage: $0 [--datasets-only] [descriptor.json ...]" >&2; exit 1 ;;
+        *) DESCRIPTORS+=("$(realpath "$arg")") ;;  # models.sh cds away
+    esac
+done
 
 if [ "$DATASETS_ONLY" -eq 0 ]; then
     echo "=== models into $MODELS_DIR ==="
-    "$EXP_DIR/models.sh"
+    "$EXP_DIR/models.sh" "${DESCRIPTORS[@]}"
 fi
 
 echo "=== datasets into $DATASETS_DIR ==="
@@ -62,6 +67,16 @@ else
     echo "have: mmlu/"
 fi
 
+# Campaign question files (the names campaign datasets refer to), converted
+# beside the raw distributions; skip-if-present like everything else.
+CONVERT="$REPO/share/benchmarks/quality/convert.py"
+EASY=$(ls ARC-V1-Feb2018*/ARC-Easy/ARC-Easy-Test.jsonl 2>/dev/null | head -1)
+CHAL=$(ls ARC-V1-Feb2018*/ARC-Challenge/ARC-Challenge-Test.jsonl 2>/dev/null | head -1)
+[ -s arc-easy.json ]      || python3 "$CONVERT" arc "$EASY" --out arc-easy.json
+[ -s arc-challenge.json ] || python3 "$CONVERT" arc "$CHAL" --out arc-challenge.json
+[ -s arc-challenge-500.json ] || python3 "$CONVERT" arc "$CHAL" --limit 500 --out arc-challenge-500.json
+
 echo
 echo "datasets ready:"
 ls -d "$DATASETS_DIR"/ARC-V1-Feb2018*/ "$DATASETS_DIR"/mmlu 2>/dev/null || true
+ls "$DATASETS_DIR"/arc-*.json 2>/dev/null || true

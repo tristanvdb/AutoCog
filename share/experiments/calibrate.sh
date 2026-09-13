@@ -15,6 +15,43 @@ MODEL="${MODEL:-$MODELS_DIR/Llama-3.2-1B-Instruct-Q8_0.gguf}"
 CAL="$RESULTS_DIR/calibration"
 mkdir -p "$CAL"
 
+# Machine profile: hardware inventory for this machine CONFIG, written on
+# first run and reused by the campaign launcher (GPU count/topology). Keyed
+# by a config hash so a re-imaged/re-shaped instance re-profiles while the
+# same box skips it.
+PROFILE_DIR="$WORKDIR/.calibration"
+mkdir -p "$PROFILE_DIR"
+CONFIG="$( { uname -sr; nproc; command -v nvidia-smi > /dev/null \
+             && nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader; } 2>&1 )"
+HASH=$(echo "$CONFIG" | sha256sum | cut -c1-12)
+PROFILE="$PROFILE_DIR/profile-$HASH.json"
+if [ -s "$PROFILE" ]; then
+    echo "machine profile: $PROFILE (already profiled this config)"
+else
+    python3 - "$PROFILE" <<'PYEOF'
+import json, os, subprocess, sys
+prof = {"hostname": os.uname().nodename, "kernel": os.uname().release,
+        "cpus": os.cpu_count(), "gpus": 0, "gpu_names": [], "vram_mb": [],
+        "driver": None}
+try:
+    out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total,driver_version",
+                          "--format=csv,noheader,nounits"],
+                         capture_output=True, text=True, timeout=15)
+    for line in out.stdout.strip().splitlines():
+        name, mem, drv = [c.strip() for c in line.split(",")]
+        prof["gpu_names"].append(name)
+        prof["vram_mb"].append(int(float(mem)))
+        prof["driver"] = drv
+    prof["gpus"] = len(prof["gpu_names"])
+except (FileNotFoundError, subprocess.TimeoutExpired):
+    pass
+with open(sys.argv[1], "w") as f:
+    json.dump(prof, f, indent=1)
+print(f"machine profile written: {sys.argv[1]}")
+print(json.dumps(prof))
+PYEOF
+fi
+
 export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
@@ -53,5 +90,5 @@ PYEOF
 } 2>&1
 echo "==========================================================================="
 echo
-echo "next: launch your campaign, e.g."
-echo "  nohup experiments/v0.7/run-perf-suite.sh 7 > perf-suite.log 2>&1 &"
+echo "next: run your campaign descriptor(s), e.g."
+echo "  autocog/share/experiments/campaign.sh campaigns/v08-protocol.json"

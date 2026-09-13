@@ -3,7 +3,10 @@
 # campaign (then: calibrate.sh, then the campaign's script). Run it from
 # your working directory with the repo as a subdirectory:
 #
-#     cd ~/my-nfs && autocog/share/experiments/setup.sh
+#     cd ~/my-nfs && autocog/share/experiments/setup.sh [campaign.json ...]
+#
+# Campaign descriptors as arguments restrict the model download to the
+# minimal set those campaigns need (see models.sh).
 #
 # Artifacts (.venv, build-exp, models, results, .ccache) land alongside
 # the repo — see env.sh for the layout and overrides. Safe to re-run and
@@ -194,7 +197,7 @@ cmake -B "$BUILD_EXP" -S "$REPO" \
 cmake --build "$BUILD_EXP" --target autocog_stlc autocog_ista autocog_xfta autocog_psta autocog_efta -j"$(nproc)"
 echo "$STAMP" > "$BUILD_EXP/.autocog-stamp"
 
-"$EXP_DIR/downloader.sh"
+"$EXP_DIR/downloader.sh" "$@"
 
 echo
 echo "setup complete. next: $(realpath --relative-to="$PWD" "$EXP_DIR" 2>/dev/null || echo "$EXP_DIR")/calibrate.sh"

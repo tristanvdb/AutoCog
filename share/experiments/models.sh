@@ -22,6 +22,23 @@ cd "$MODELS_DIR"
 # tokens — run Qwen models with default syntax.
 MODEL_SIZE="${MODEL_SIZE:-0}"
 
+# Campaign descriptors as arguments select the MINIMAL model set: the
+# union of their "models" tags, matched against the catalog by filename
+# prefix. Without descriptors the MODEL_SIZE tiers apply. (We will not
+# be storing every large model — fetch only what the campaigns ask for.)
+WANTED=""
+for desc in "$@"; do
+    tags=$(python3 -c "
+import json, sys
+d = json.load(open(sys.argv[1]))
+for m in d.get('models', []):
+    print(m['model'] if isinstance(m, dict) else m)" "$desc")
+    WANTED="$WANTED $tags"
+done
+if [ -n "$WANTED" ]; then
+    MODEL_SIZE=2   # expose the full catalog to the filter below
+fi
+
 declare -A MODELS=(
   [tiny-llama3-test-Q2_K.gguf]="https://huggingface.co/TensorBlock/tiny-llama3-test-GGUF/resolve/main/tiny-llama3-test-Q2_K.gguf"
   [Llama-3.2-1B.Q8_0.gguf]="https://huggingface.co/QuantFactory/Llama-3.2-1B-GGUF/resolve/main/Llama-3.2-1B.Q8_0.gguf"
@@ -30,8 +47,10 @@ declare -A MODELS=(
 if [ "$MODEL_SIZE" -ge 1 ]; then
   MODELS[Llama-3.2-3B.Q8_0.gguf]="https://huggingface.co/QuantFactory/Llama-3.2-3B-GGUF/resolve/main/Llama-3.2-3B.Q8_0.gguf"
   MODELS[Llama-3.2-3B-Instruct-Q8_0.gguf]="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q8_0.gguf"
-  MODELS[Meta-Llama-3.1-8B.Q8_0.gguf]="https://huggingface.co/QuantFactory/Meta-Llama-3.1-8B-GGUF/resolve/main/Meta-Llama-3.1-8B.Q8_0.gguf"
-  MODELS[Meta-Llama-3.1-8B-Instruct-Q8_0.gguf]="https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
+  # Saved under tag-prefixed names: campaign model tags resolve by prefix
+  # (Llama-3.1-8B -> Llama-3.1-8B.Q8_0.gguf), so no Meta- prefix here.
+  MODELS[Llama-3.1-8B.Q8_0.gguf]="https://huggingface.co/QuantFactory/Meta-Llama-3.1-8B-GGUF/resolve/main/Meta-Llama-3.1-8B.Q8_0.gguf"
+  MODELS[Llama-3.1-8B-Instruct-Q8_0.gguf]="https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
 fi
 if [ "$MODEL_SIZE" -ge 2 ]; then
   MODELS[Qwen2.5-14B.Q8_0.gguf]="https://huggingface.co/QuantFactory/Qwen2.5-14B-GGUF/resolve/main/Qwen2.5-14B.Q8_0.gguf"
@@ -41,6 +60,13 @@ if [ "$MODEL_SIZE" -ge 2 ]; then
 fi
 
 for name in "${!MODELS[@]}"; do
+    if [ -n "$WANTED" ]; then
+        keep=0
+        for tag in $WANTED; do
+            case "$name" in "$tag"*) keep=1 ;; esac
+        done
+        [ "$keep" = 1 ] || continue
+    fi
     if [ -s "$name" ]; then
         echo "have: $name"
         continue
@@ -50,4 +76,11 @@ for name in "${!MODELS[@]}"; do
     mv "$name.part" "$name"
 done
 
+if [ -n "$WANTED" ]; then
+    for tag in $WANTED; do
+        [ "$tag" = "rng" ] && continue
+        ls "$MODELS_DIR/$tag"*.gguf > /dev/null 2>&1 \
+            || { echo "FATAL: no catalog entry fetched for model tag '$tag'" >&2; exit 1; }
+    done
+fi
 ls -lh "$MODELS_DIR"/*.gguf
