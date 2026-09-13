@@ -24,3 +24,5 @@ tests/coverage*.json
 docs/_planning/
 .ccache/
 /datasets
+
+results/
