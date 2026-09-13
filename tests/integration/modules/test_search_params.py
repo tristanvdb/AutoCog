@@ -248,3 +248,88 @@ def test_search_config_object_forms_roundtrip(repo_root, tmp_path):
     bad2["queue"]["metric"] = ["perplexity", "mean_logprob"]
     with pytest.raises(AutoCogError, match="unknown queue metric"):
         runtime_sta_cxx.read_search(json.dumps(bad2))
+
+
+# Every stop operator the language can produce: ! -> not, > -> gt, <= -> le,
+# < -> lt, >= -> ge, || -> any, && -> all, plus a __model__ ref constant.
+FULL_STOP_STL = """
+prompt main {
+  is { q is text<length=8>; }
+  search {
+    queue.stop is ((!(__status__.tree.terminals > 3))
+                || (((__status__.best.proba <= 0.5)
+                  && (__status__.tree.tokens < __model__.n_ctx))
+                  && (__status__.tree.leaves >= 1)));
+  }
+  channel { q get q; }
+  return { use q; }
+}
+"""
+
+FULL_STOP_DICT = {
+    "any": [
+        {"not": {"gt": ["terminals", 3.0]}},
+        {"all": [{"all": [{"le": ["best.proba", 0.5]},
+                          {"lt": ["tokens", {"ref": "model.n_ctx"}]}]},
+                 {"ge": ["queue.size", 1.0]}]},
+    ],
+}
+
+
+def test_stop_predicate_codec_roundtrip(repo_root, tmp_path):
+    """The termination predicate survives every codec door unchanged:
+    dump_fta (JSON writer), read_fta of the JSON text (JSON reader),
+    get_fta (python writer), read_fta of the python object (python reader).
+    Covers all operator words and the {"ref": ...} constant slot."""
+    stl = tmp_path / "full_stop.stl"
+    stl.write_text(FULL_STOP_STL)
+
+    syntax_id = runtime_sta_cxx.load_syntax(
+        str(repo_root / "share" / "syntax" / "complete.json"))
+    search_id = runtime_sta_cxx.load_search(
+        str(repo_root / "share" / "search" / "default.json"))
+    prog = autocog.compile(str(stl))
+    fta_id = runtime_sta_cxx.instantiate(prog.id, "main", {"q": "x"},
+                                         syntax_id, search_id)
+    try:
+        text = runtime_sta_cxx.dump_fta(fta_id)
+    finally:
+        runtime_sta_cxx.release_fta(fta_id)
+    assert json.loads(text)["queue"]["stop"] == FULL_STOP_DICT
+
+    # JSON reader -> python writer.
+    rid = runtime_sta_cxx.read_fta(text)
+    obj = runtime_sta_cxx.get_fta(rid)
+    runtime_sta_cxx.release_fta(rid)
+    assert obj["queue"]["stop"] == FULL_STOP_DICT
+
+    # Python reader -> JSON writer: back to the exact original dump.
+    rid2 = runtime_sta_cxx.read_fta(obj)
+    text2 = runtime_sta_cxx.dump_fta(rid2)
+    runtime_sta_cxx.release_fta(rid2)
+    assert json.loads(text2) == json.loads(text)
+
+
+def test_stop_predicate_codec_rejections(repo_root, tmp_path):
+    """Malformed predicates are rejected at both codec doors with the
+    same diagnostics: unknown operator, empty combinator, multi-key node."""
+    from autocog.errors import AutoCogError
+
+    stl = tmp_path / "full_stop.stl"
+    stl.write_text(FULL_STOP_STL)
+    prog = autocog.compile(str(stl))
+    fta = instantiate_fta(repo_root, prog, {"q": "x"})
+
+    def reshaped(stop):
+        bad = json.loads(json.dumps(fta))
+        bad["queue"]["stop"] = stop
+        return bad
+
+    for door in (lambda o: runtime_sta_cxx.read_fta(json.dumps(o)),
+                 runtime_sta_cxx.read_fta):
+        with pytest.raises(AutoCogError, match="unknown TermExpr operator"):
+            door(reshaped({"between": ["tokens", 1.0]}))
+        with pytest.raises(AutoCogError, match="empty TermExpr combinator"):
+            door(reshaped({"all": []}))
+        with pytest.raises(AutoCogError, match="single-key"):
+            door(reshaped({"ge": ["tokens", 1.0], "lt": ["tokens", 2.0]}))

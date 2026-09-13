@@ -45,7 +45,13 @@ pybind11::object to_py(TermExpr const & e) {
   if (term_is_comparison(e.kind)) {
     py::list body;
     body.append(e.scalar);
-    body.append(e.value);
+    if (e.ref.empty()) {
+      body.append(e.value);
+    } else {
+      py::dict r;
+      r["ref"] = e.ref;
+      body.append(r);
+    }
     d[term_kind_str(e.kind)] = body;
   } else if (e.kind == TermExpr::Kind::Not) {
     d[term_kind_str(e.kind)] = e.operands.empty() ? py::object(py::none()) : to_py(e.operands[0]);
