@@ -238,7 +238,10 @@ def cmd_bench(args):
                     workers=args.worker)
     elif args.bench_command == "campaign":
         from .bench.campaign import run_campaign
-        run_campaign(args.manifest)
+        _, failures = run_campaign(args.descriptor, phases=args.phase,
+                                   workers=args.worker)
+        if failures:
+            sys.exit(1)
 
 
 def cmd_serve(args):
@@ -542,8 +545,16 @@ def main():
                         help="Remote level-3 worker host:port (repeatable; "
                              "routed by model tag)")
 
-    pb_campaign = bench_sub.add_parser("campaign", help="Run a campaign manifest")
-    pb_campaign.add_argument("manifest", help="Campaign manifest JSON")
+    pb_campaign = bench_sub.add_parser(
+        "campaign", help="Execute a campaign descriptor against workers")
+    pb_campaign.add_argument("descriptor", help="Campaign descriptor JSON")
+    pb_campaign.add_argument("--phase", action="append", default=None,
+                             help="Only these phase(s) (repeatable; "
+                                  "default: all, in order)")
+    pb_campaign.add_argument("--worker", action="append", default=None,
+                             help="Level-3 worker host:port (repeatable, "
+                                  "REQUIRED — workers are preassigned "
+                                  "with models by the campaign launcher)")
 
     args = parser.parse_args()
 

@@ -30,8 +30,7 @@ import json
 import os
 import sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def resolve_syntax(name):
@@ -73,10 +72,11 @@ def run(args):
     remote = None
     if args.worker:
         from autocog.remote import RemoteBackend
+        from autocog.bench.workers import model_tag as tag_of
         remote = RemoteBackend("http://" + args.worker
                                if "://" not in args.worker else args.worker)
-        remote.model_tag = (os.path.splitext(os.path.basename(args.model))[0]
-                            if args.model else None)
+        # --model may be a tag (launcher mode: workers preloaded) or a path.
+        remote.model_tag = tag_of(args.model) if args.model else None
         model_tag = remote.model_tag or "rng"
     else:
         from autocog.backend.llama import backend_llama_cxx as be

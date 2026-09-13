@@ -1,0 +1,26 @@
+{
+  "name": "testing",
+  "defaults": {"seed": 42, "questions": 2},
+  "worker": {"mode": "distributed", "factor": 2},
+  "models": [{"model": "tiny-llama3-test-Q2_K", "ctx": 1024}],
+  "datasets": ["questions"],
+  "phases": [
+    {"name": "smoke",
+     "runs": [
+       {"kind": "quality", "data": "questions",
+        "syntaxes": ["complete"], "demos": ["select"], "out": "rng-select"},
+       {"kind": "quality", "model": "tiny-llama3-test-Q2_K", "data": "questions",
+        "syntaxes": ["complete"], "demos": ["select"], "out": "tiny-select"}
+     ]},
+    {"name": "probes",
+     "runs": [
+       {"kind": "probe", "model": "tiny-llama3-test-Q2_K", "demo": "repeat",
+        "syntax": "complete", "data": "questions", "limit": 2, "out": "tiny-probe"}
+     ]},
+    {"name": "termination",
+     "runs": [
+       {"kind": "perf", "cells": "termination", "budget_seconds": 60,
+        "tag": "rng-term", "out": "rng-term"}
+     ]}
+  ]
+}

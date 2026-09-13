@@ -16,7 +16,7 @@ import autocog
 from autocog.errors import ConfigError
 
 from . import results
-from .workers import LocalWorker, pick_worker
+from .workers import LocalWorker, model_tag, pick_worker
 
 DEFAULT_CONTENT = {
     "topic": "Science",
@@ -118,8 +118,8 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
     if root is None:
         raise ConfigError("cannot locate share/syntax from cwd or the cells file")
 
-    model_tag = os.path.splitext(os.path.basename(model))[0] if model else "rng"
-    stamp = f"{results.host_name()}-{model_tag}" + (f"-{tag}" if tag else "")
+    tag_ = model_tag(model)
+    stamp = f"{results.host_name()}-{tag_}" + (f"-{tag}" if tag else "")
     os.makedirs(out, exist_ok=True)
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
@@ -144,6 +144,9 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
                     f"cell wants ctx={cell['ctx']} but worker loaded n_ctx={caps.get('n_ctx')}")
             return remote
         if key not in local_workers:
+            if model and not os.path.isfile(model):
+                raise ConfigError(
+                    f"model {model!r} is a tag, not a file — tags need --worker")
             local_workers[key] = LocalWorker(model=model, n_ctx=key[1],
                                              kv_slots=key[0])
         return local_workers[key]
@@ -190,7 +193,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
             for k, v in (("beams", 4), ("ahead", 1), ("width", 1)):
                 summary.setdefault(f"autocog.bench.{k}", v)
             summary["autocog.bench.wall_seconds"] = round(wall, 3)
-            summary["autocog.bench.model"] = model_tag
+            summary["autocog.bench.model"] = tag_
             summaries.append(summary)
             nd.emit(summary)
             log(f"[{i + 1}/{len(cell_list)}] {cell_name(cell)} -> "
@@ -207,7 +210,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
         log(f"[failed] {len(failed)} cell(s): " + ", ".join(failed))
     if summaries:
         md = os.path.join(out, f"results-{stamp}.md")
-        results.perf_md(md, f"{results.host_name()} — {model_tag}"
+        results.perf_md(md, f"{results.host_name()} — {tag_}"
                         + (f" — {tag}" if tag else ""),
                         summaries, os.environ.get("AUTOCOG_NGL", "0"))
         log(f"\nresults: {nd.path}\n         {md}")

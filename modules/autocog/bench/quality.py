@@ -16,7 +16,7 @@ from autocog.recorder import Recorder
 from . import results
 from .formatters import load_formatter, load_questions
 from .perf import find_root
-from .workers import LocalWorker, pick_worker
+from .workers import LocalWorker, model_tag, pick_worker
 
 SYNTAXES = ["complete", "indent-index", "indent", "stripped",
             "chatml", "llama2chat", "llama3chat", "special"]
@@ -56,14 +56,17 @@ def run_quality(model=None, data=None, formatter="", questions=0,
 
     mcq_dir = os.path.join(root, "share", "demos", "mcq")
     search = os.path.join(root, "share", "search", "default.json")
-    model_tag = os.path.splitext(os.path.basename(model))[0] if model else "rng"
+    tag = model_tag(model)
     os.makedirs(out, exist_ok=True)
-    stamp = f"{results.host_name()}-{model_tag}"
+    stamp = f"{results.host_name()}-{tag}"
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
     if workers:
         worker = pick_worker(workers, model)
         log(f"worker: {worker.url} hosts {worker.capabilities()['models']}")
+    elif model and not os.path.isfile(model):
+        raise autocog.errors.ConfigError(
+            f"model {model!r} is a tag, not a file — tags need --worker")
     else:
         worker = LocalWorker(model=model, n_ctx=n_ctx)
     programs = {demo: autocog.compile(os.path.join(mcq_dir, f"{demo}.stl"),
@@ -73,7 +76,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     base = {
         "log.logger": "autocog.bench.quality",
         "event.action": "quality.run",
-        "autocog.bench.model": model_tag,
+        "autocog.bench.model": tag,
     }
 
     for syntax in syntaxes:

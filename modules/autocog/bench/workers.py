@@ -165,12 +165,23 @@ class RemoteWorker:
         return next(iter(self._engines.values()))
 
 
+def model_tag(model):
+    """A model reference -> its worker tag. Paths (contain a separator or
+    end in .gguf) tag as the filename sans .gguf; anything else IS a tag
+    already (splitext would mangle dotted tags like 'Llama-3.2-1B')."""
+    if not model:
+        return "rng"
+    if os.sep in model or model.endswith(".gguf"):
+        name = os.path.basename(model)
+        return name[:-5] if name.endswith(".gguf") else name
+    return model
+
+
 def pick_worker(worker_urls, model, timeout=300):
-    """Route by model: the worker whose /capabilities hosts the model's tag
-    (basename sans extension), or the RNG when no model is requested."""
+    """Route by model tag, or the RNG when no model is requested."""
     from autocog.errors import ConfigError
 
-    tag = (os.path.splitext(os.path.basename(model))[0] if model else "rng")
+    tag = model_tag(model)
     workers = [RemoteWorker(u, timeout=timeout) for u in worker_urls]
     for w in workers:
         if tag in w.capabilities()["models"]:
