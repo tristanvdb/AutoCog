@@ -100,6 +100,16 @@ def llama3_model_path(repo_root):
     tests instead, for offline or air-gapped local development.
     """
     import os
+    import os as _os
+    candidates = [p for p in (
+        _os.environ.get("MODELS_PATH") and
+        pathlib.Path(_os.environ["MODELS_PATH"]) / "tiny-llama3-test-Q2_K.gguf",
+        repo_root / "models" / "tiny-llama3-test-Q2_K.gguf",
+        repo_root.parent / "data" / "models" / "tiny-llama3-test-Q2_K.gguf",
+    ) if p]
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
     path = repo_root / "models" / "tiny-llama3-test-Q2_K.gguf"
     result = _download_model(LLAMA3_TEST_MODEL_URL, path, LLAMA3_TEST_MODEL_MIN_SIZE)
     if result is None:

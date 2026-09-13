@@ -485,7 +485,7 @@ class TestBackendServer:
             runtime_sta_cxx.release_fta(fta_id)
 
         # Start backend server
-        app = create_app(model_path=None)  # RNG model
+        app = create_app(models=[])  # RNG model
         with running_server(app) as port:
             # Test GET /models
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/models") as resp:
@@ -529,7 +529,7 @@ class TestBackendServer:
         from autocog.server.backend import create_app
 
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        app = create_app(model_path=None)  # RNG model
+        app = create_app(models=[])  # RNG model
         with running_server(app) as port:
             engine = autocog.RemoteBackend(
                 f"http://127.0.0.1:{port}",

@@ -94,8 +94,15 @@ def find_model(tag):
     exact = os.path.join(models_dir, tag + ".gguf")
     if os.path.isfile(exact):
         return exact
-    import glob as g
+    import glob as g, re
     hits = sorted(g.glob(os.path.join(models_dir, tag + "*.gguf")))
+    if len(hits) > 1:
+        # A base tag prefix-matches its -Instruct sibling; keep only hits
+        # whose remainder is a quant suffix (".Q8_0", "-Q4_K_M", ...).
+        quant = [h for h in hits if re.match(
+            r"^[.-]?[QqFf][0-9]", os.path.basename(h)[len(tag):])]
+        if len(quant) == 1:
+            return quant[0]
     if len(hits) == 1:
         return hits[0]
     fail(f"model {tag!r}: " + ("not found" if not hits else f"ambiguous {hits}")

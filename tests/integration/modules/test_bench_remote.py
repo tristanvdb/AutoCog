@@ -31,7 +31,7 @@ def from_repo_root(repo_root, monkeypatch):
 def rng_worker():
     from autocog.server.backend import create_app
 
-    with running_server(create_app(model_path=None)) as port:
+    with running_server(create_app(models=[])) as port:
         yield f"localhost:{port}"
 
 
@@ -85,7 +85,7 @@ def test_routing(repo_root, rng_worker, tmp_path):
         pytest.skip("tiny model not present")
     from autocog.server.backend import create_app
 
-    with running_server(create_app(model_path=str(model), n_ctx=2048)) as tiny_port:
+    with running_server(create_app(models=[{"path": str(model)}], n_ctx=2048)) as tiny_port:
         urls = [rng_worker, f"localhost:{tiny_port}"]
 
         w = pick_worker(urls, str(model))

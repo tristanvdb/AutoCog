@@ -81,24 +81,37 @@ def test_quality_formatter(tmp_path):
     assert events[0]["autocog.bench.n_choices"] == 2
 
 
-def test_campaign(tmp_path):
+def test_campaign(tmp_path, monkeypatch):
+    """The executor is a pure worker consumer: no workers = refusal; with
+    an rng worker it runs phases, isolates failing runs, and resumes.
+    (Full launcher-driven coverage lives in test_campaign.py.)"""
+    from autocog.errors import ConfigError
+    from autocog.server import backend as backend_srv
+    from test_bench_remote import running_server
+
     cells = tmp_path / "cells.json"
     cells.write_text(json.dumps([{"beams": 1, "ahead": 1, "width": 1}]))
-    manifest = tmp_path / "campaign.json"
-    manifest.write_text(json.dumps({
+    desc = tmp_path / "campaign.json"
+    desc.write_text(json.dumps({
         "name": "smoke",
-        "out": str(tmp_path / "results"),
-        "runs": [
-            {"kind": "perf", "cells": str(cells), "tag": "p"},
-            {"kind": "quality", "questions": 1,
-             "syntaxes": ["complete"], "demos": ["select"], "out": "q"},
-            {"kind": "quality", "data": "does-not-exist.json", "out": "broken"},
-        ],
+        "phases": [{"name": "p1", "runs": [
+            {"kind": "perf", "cells": str(cells), "tag": "p", "out": "p"},
+            {"kind": "quality", "data": "does-not-exist", "out": "broken"},
+        ]}],
     }))
-    logs = []
-    out = run_campaign(str(manifest), log=logs.append)
-    assert os.path.isdir(out)
-    assert any(f.startswith("results-")                               # perf run
-               for f in os.listdir(os.path.join(out, "p")))
-    assert os.path.isdir(os.path.join(out, "q"))                      # quality run
-    assert any("[failed] 1 run" in l for l in logs)                   # isolation
+    monkeypatch.setenv("RESULTS_PATH", str(tmp_path / "results"))
+
+    with pytest.raises(ConfigError, match="requires --worker"):
+        run_campaign(str(desc))
+
+    with running_server(backend_srv.create_app(models=[])) as port:
+        logs = []
+        out, failures = run_campaign(str(desc),
+                                     workers=[f"127.0.0.1:{port}"],
+                                     log=logs.append)
+        assert any(f.startswith("results-")                           # perf run
+                   for f in os.listdir(os.path.join(out, "p")))
+        assert failures == ["p1/broken"]                              # isolation
+        out2, _ = run_campaign(str(desc), workers=[f"127.0.0.1:{port}"],
+                               log=logs.append)
+        assert any("skipping" in l for l in logs)                     # resume
