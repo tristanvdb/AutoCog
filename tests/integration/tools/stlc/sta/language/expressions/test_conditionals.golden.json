@@ -14,7 +14,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "935f61d27a0061948868f59ed0029798a301c7c6a6a1466428603e9092293824",
+    "hash": "741b9cdb6c9113b8d27257f9253483597c298555c8364d76f9602571ff40293b",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -60,7 +60,18 @@
           },
           "index": 0,
           "name": "output",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -75,7 +86,18 @@
           "range": [
             3,
             3
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -87,7 +109,18 @@
           },
           "index": 2,
           "name": "detail",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -121,7 +154,13 @@
           "type": "return"
         }
       },
-      "name": "main"
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

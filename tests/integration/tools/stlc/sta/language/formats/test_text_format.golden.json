@@ -14,7 +14,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "7f0c5d9dbd81e41cf746925e7c93296a970e342dc1cac3b4e44845cc5eb5c56b",
+    "hash": "b920a3bc1d9fa81c789141015e0b625b35252b0519309c40eb286a372f594df8",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -61,7 +61,18 @@
           "format_ref": "ShortText",
           "index": 0,
           "name": "title",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -77,7 +88,13 @@
           "range": null,
           "search": {
             "text": {
-              "threshold": 0.949999988079071
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.949999988079071,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -91,7 +108,18 @@
           },
           "index": 2,
           "name": "summary",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -125,7 +153,13 @@
           "type": "return"
         }
       },
-      "name": "writer"
+      "name": "writer",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

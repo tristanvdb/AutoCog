@@ -276,8 +276,11 @@ ir::Value Evaluator::retrieve_value(
           if (root == "__status__" || root == "__model__") {
             throw CompileError("'" + varname + "' is only available inside "
                                "`queue.stop` termination predicates", loc);
-          } else if (root == "__search__" || root == "__syntax__"
-                     || root == "__program__") {
+          } else if (root == "__search__") {
+            throw CompileError("'" + varname + "' is only available as the "
+                               "entire value of the matching search parameter",
+                               loc);
+          } else if (root == "__syntax__" || root == "__program__") {
             throw CompileError("system namespace '" + root + "' is reserved "
                                "but not yet available", loc);
           } else if (dunder) {

@@ -1,8 +1,8 @@
-// Error: __search__ is reserved (fill-up semantics land later).
-// expect-error: system namespace '__search__' is reserved but not yet available
+// Error: __syntax__ is reserved (catalog lands later).
+// expect-error: system namespace '__syntax__' is reserved but not yet available
 prompt main {
   is { q is text<length=4>; }
-  search { text.beams is __search__.text.beams; }
+  search { text.beams is __syntax__.indent; }
   channel { q get q; }
   return { use q; }
 }

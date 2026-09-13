@@ -18,13 +18,30 @@
           "index": 0,
           "name": "input",
           "range": null,
-          "refname": "Data"
+          "refname": "Data",
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         }
       ],
       "flows": [],
       "mangled_name": "processor",
       "name": "processor",
-      "return": null
+      "return": null,
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "records": {

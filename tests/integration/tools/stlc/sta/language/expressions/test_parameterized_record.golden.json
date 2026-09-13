@@ -14,7 +14,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "b6dbcc64e93534ef2881f26964bacf325172c4c5708c7c99b3af5c5a405e99ca",
+    "hash": "40a543406de5b60ce6916558f099e8f8e8a84909ba774d65ac56f694265b130f",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -61,7 +61,18 @@
           "format_ref": "Container",
           "index": 0,
           "name": "small",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -74,7 +85,18 @@
           "format_ref": "Container",
           "index": 1,
           "name": "medium",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -87,7 +109,18 @@
           "format_ref": "Container",
           "index": 2,
           "name": "large",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -121,7 +154,13 @@
           "type": "return"
         }
       },
-      "name": "storage"
+      "name": "storage",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

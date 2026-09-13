@@ -703,6 +703,10 @@ struct FTABuilder {
         auto p = c->second.find(key);
         if (p == c->second.end()) return nullptr;
         if (std::holds_alternative<std::monostate>(p->second)) return nullptr;  // explicit null = unset
+        // A "__search__.<cat>.<key>" reference (fill-up, or written by hand)
+        // tracks the config default -- same as unset.
+        if (auto const * sv = std::get_if<std::string>(&p->second))
+            if (sv->rfind("__search__.", 0) == 0) return nullptr;
         return &p->second;
     }
     static autocog::data::registry::SearchParam const & pol_param(
@@ -1075,6 +1079,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         auto mit = qit->second.find("metric");
         if (mit != qit->second.end())
             if (auto const * s = std::get_if<std::string>(&mit->second)) {
+                if (s->rfind("__search__.", 0) == 0) goto metric_done;  // tracks config
                 // The policy carries the lexicographic list comma-joined
                 // (STL comma-list RHS); split it back.
                 metric.clear();
@@ -1086,6 +1091,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
                 if (!cur.empty()) metric.push_back(cur);
             }
     }
+    metric_done:
     // Registry-validated here (not just at the backend) so a bad metric fails
     // at instantiation with a source-attributable message, not mid-evaluation.
     if (auto const * mp = autocog::data::registry::find("queue", "metric")) {
@@ -1107,7 +1113,8 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         auto sit = qit->second.find("stop");
         if (sit != qit->second.end())
             if (auto const * ss = std::get_if<std::string>(&sit->second))
-                stop = autocog::data::TermExpr::from_compact(*ss);
+                if (ss->rfind("__search__.", 0) != 0)  // reference = config's
+                    stop = autocog::data::TermExpr::from_compact(*ss);
     }
 
     autocog::data::FTA fta;

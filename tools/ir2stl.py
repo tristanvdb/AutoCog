@@ -43,13 +43,24 @@ def unparse_search(search, level):
     if not search:
         return []
     lines = [_indent(level) + "search {"]
+    emitted = 0
     for category in sorted(search.keys()):
         params = search[category]
         for param in sorted(params.keys()):
+            value = params[param]
+            # Fill-up references ("__search__.<cat>.<key>") are the
+            # materialized defaults: recompiling regenerates them, so they
+            # are omitted rather than rendered as string literals. Compact
+            # predicates ("(...)" from queue.stop translation) have no STL
+            # re-rendering yet and are likewise skipped.
+            if isinstance(value, str) and (value.startswith("__search__.")
+                                           or value.startswith("(")):
+                continue
             loc = f"{category}.{param}" if category else param
-            lines.append(f"{_indent(level + 1)}{loc} is {_value(params[param])};")
+            lines.append(f"{_indent(level + 1)}{loc} is {_value(value)};")
+            emitted += 1
     lines.append(_indent(level) + "}")
-    return lines
+    return lines if emitted else []
 
 
 def unparse_format(fmt):

@@ -21,7 +21,18 @@
           "range": [
             1,
             4
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -37,7 +48,18 @@
                 },
                 "index": 0,
                 "name": "label",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -52,7 +74,15 @@
                 },
                 "index": 1,
                 "name": "score",
-                "range": null
+                "range": null,
+                "search": {
+                  "enum": {
+                    "ranking.metric": "__search__.enum.ranking.metric",
+                    "threshold.metric": "__search__.enum.threshold.metric",
+                    "threshold.value": "__search__.enum.threshold.value",
+                    "width": "__search__.enum.width"
+                  }
+                }
               }
             ],
             "type": "struct"
@@ -78,7 +108,18 @@
                 },
                 "index": 0,
                 "name": "tag",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -92,7 +133,18 @@
                 "range": [
                   1,
                   4
-                ]
+                ],
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -103,7 +155,18 @@
                 },
                 "index": 2,
                 "name": "summary",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               }
             ],
             "type": "struct"
@@ -128,7 +191,18 @@
                 },
                 "index": 0,
                 "name": "heading",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -142,7 +216,18 @@
                 "range": [
                   1,
                   3
-                ]
+                ],
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -153,7 +238,18 @@
                 },
                 "index": 2,
                 "name": "footer",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               }
             ],
             "type": "struct"
@@ -186,6 +282,12 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
       }
     }
   },

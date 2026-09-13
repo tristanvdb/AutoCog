@@ -23,7 +23,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "7769d26d2f24a25ee3a1ba0ee01187689cee84d88019b06f41c16896e18f11f6",
+    "hash": "4625c4e7580e091320e1247cede57fc767aa6fcc5539bc25af1981c0e941f435",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -54,11 +54,28 @@
           "format_ref": "Data",
           "index": 0,
           "name": "input",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         }
       ],
       "flows": {},
-      "name": "processor"
+      "name": "processor",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

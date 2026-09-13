@@ -17,7 +17,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "34b8c149489daddb94c68d22e5e5da567a30e489bcc5b2a78b381b65e9831179",
+    "hash": "a09ef19c07781152cc05b4a986a4ee06bc2a7ff91fbd038a1fd13854b829bf67",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -69,7 +69,18 @@
           },
           "index": 0,
           "name": "street",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 2,
@@ -81,11 +92,28 @@
           "format_ref": "City",
           "index": 1,
           "name": "city",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         }
       ],
       "flows": {},
-      "name": "location"
+      "name": "location",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

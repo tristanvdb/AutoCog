@@ -23,7 +23,18 @@
                 },
                 "index": 0,
                 "name": "label",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -39,7 +50,18 @@
                       },
                       "index": 0,
                       "name": "name",
-                      "range": null
+                      "range": null,
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     },
                     {
                       "depth": 3,
@@ -55,7 +77,18 @@
                             },
                             "index": 0,
                             "name": "key",
-                            "range": null
+                            "range": null,
+                            "search": {
+                              "text": {
+                                "ahead": "__search__.text.ahead",
+                                "beams": "__search__.text.beams",
+                                "diversity": "__search__.text.diversity",
+                                "repetition": "__search__.text.repetition",
+                                "threshold": "__search__.text.threshold",
+                                "topk": "__search__.text.topk",
+                                "width": "__search__.text.width"
+                              }
+                            }
                           },
                           {
                             "depth": 1,
@@ -66,7 +99,18 @@
                             },
                             "index": 1,
                             "name": "value",
-                            "range": null
+                            "range": null,
+                            "search": {
+                              "text": {
+                                "ahead": "__search__.text.ahead",
+                                "beams": "__search__.text.beams",
+                                "diversity": "__search__.text.diversity",
+                                "repetition": "__search__.text.repetition",
+                                "threshold": "__search__.text.threshold",
+                                "topk": "__search__.text.topk",
+                                "width": "__search__.text.width"
+                              }
+                            }
                           }
                         ],
                         "type": "struct"
@@ -110,7 +154,18 @@
                 },
                 "index": 0,
                 "name": "title",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -126,7 +181,18 @@
                       },
                       "index": 0,
                       "name": "author",
-                      "range": null
+                      "range": null,
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     },
                     {
                       "depth": 3,
@@ -139,7 +205,18 @@
                       "name": "keywords",
                       "range": [
                         2
-                      ]
+                      ],
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     }
                   ],
                   "type": "struct"
@@ -171,7 +248,18 @@
                 },
                 "index": 0,
                 "name": "version",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -187,7 +275,18 @@
                       },
                       "index": 0,
                       "name": "mod_name",
-                      "range": null
+                      "range": null,
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     },
                     {
                       "depth": 3,
@@ -200,7 +299,18 @@
                       "name": "params",
                       "range": [
                         2
-                      ]
+                      ],
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     }
                   ],
                   "type": "struct"
@@ -232,7 +342,18 @@
                 },
                 "index": 0,
                 "name": "team_name",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": "__search__.text.threshold",
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -248,7 +369,18 @@
                       },
                       "index": 0,
                       "name": "member_name",
-                      "range": null
+                      "range": null,
+                      "search": {
+                        "text": {
+                          "ahead": "__search__.text.ahead",
+                          "beams": "__search__.text.beams",
+                          "diversity": "__search__.text.diversity",
+                          "repetition": "__search__.text.repetition",
+                          "threshold": "__search__.text.threshold",
+                          "topk": "__search__.text.topk",
+                          "width": "__search__.text.width"
+                        }
+                      }
                     },
                     {
                       "depth": 3,
@@ -264,7 +396,18 @@
                             },
                             "index": 0,
                             "name": "street",
-                            "range": null
+                            "range": null,
+                            "search": {
+                              "text": {
+                                "ahead": "__search__.text.ahead",
+                                "beams": "__search__.text.beams",
+                                "diversity": "__search__.text.diversity",
+                                "repetition": "__search__.text.repetition",
+                                "threshold": "__search__.text.threshold",
+                                "topk": "__search__.text.topk",
+                                "width": "__search__.text.width"
+                              }
+                            }
                           },
                           {
                             "depth": 1,
@@ -275,7 +418,18 @@
                             },
                             "index": 1,
                             "name": "city",
-                            "range": null
+                            "range": null,
+                            "search": {
+                              "text": {
+                                "ahead": "__search__.text.ahead",
+                                "beams": "__search__.text.beams",
+                                "diversity": "__search__.text.diversity",
+                                "repetition": "__search__.text.repetition",
+                                "threshold": "__search__.text.threshold",
+                                "topk": "__search__.text.topk",
+                                "width": "__search__.text.width"
+                              }
+                            }
                           }
                         ],
                         "type": "struct"
@@ -324,6 +478,12 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
       }
     }
   },

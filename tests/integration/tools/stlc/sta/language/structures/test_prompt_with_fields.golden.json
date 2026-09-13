@@ -23,7 +23,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "3c326a6f3cb31c75a8697b627d7a9da45c128716d40d23428368349291faff07",
+    "hash": "cf32b526f5101006f750ec02cdd68aa330de5ab28ec64d7b5f5b4a3122da2041",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -59,7 +59,18 @@
           "format_ref": "Name",
           "index": 0,
           "name": "name",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -77,11 +88,25 @@
           "format_ref": "Age",
           "index": 1,
           "name": "age",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": "__search__.enum.ranking.metric",
+              "threshold.metric": "__search__.enum.threshold.metric",
+              "threshold.value": "__search__.enum.threshold.value",
+              "width": "__search__.enum.width"
+            }
+          }
         }
       ],
       "flows": {},
-      "name": "person"
+      "name": "person",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

@@ -1,0 +1,8 @@
+// Error: an explicit config reference must name the parameter it sets.
+// expect-error: must reference the parameter it sets
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is __search__.text.ahead; }
+  channel { q get q; }
+  return { use q; }
+}

@@ -23,7 +23,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "c6a3d5a87a5da32136a0f1dfc6a103820fc68df690668a183267f6d770774477",
+    "hash": "59f5709ce159918ab9e65deea1a4247e3cd08d279d773d0bc4948874b9aaa198",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -87,7 +87,18 @@
           "format_ref": "Topic",
           "index": 0,
           "name": "topic",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -100,7 +111,18 @@
           },
           "index": 1,
           "name": "question",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -118,7 +140,15 @@
           },
           "index": 2,
           "name": "answer",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": "__search__.enum.ranking.metric",
+              "threshold.metric": "__search__.enum.threshold.metric",
+              "threshold.value": "__search__.enum.threshold.value",
+              "width": "__search__.enum.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -152,7 +182,13 @@
           "type": "return"
         }
       },
-      "name": "questioner"
+      "name": "questioner",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

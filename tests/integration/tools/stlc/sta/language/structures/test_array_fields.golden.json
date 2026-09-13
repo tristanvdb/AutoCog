@@ -17,7 +17,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "2ba03c4d515c6e3b0c9a0adfd3ec5e5b1df79999b1d332cc5a2cc7a711ff95dd",
+    "hash": "00a4303497c5ccd47077ac2cf4b1b1ffa6b2bc3e4840d690d54fea3233f72b6d",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -66,7 +66,18 @@
           "range": [
             5,
             5
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -80,7 +91,18 @@
           "range": [
             2,
             8
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -99,7 +121,15 @@
           "range": [
             1,
             10
-          ]
+          ],
+          "search": {
+            "enum": {
+              "ranking.metric": "__search__.enum.ranking.metric",
+              "threshold.metric": "__search__.enum.threshold.metric",
+              "threshold.value": "__search__.enum.threshold.value",
+              "width": "__search__.enum.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -133,7 +163,13 @@
           "type": "return"
         }
       },
-      "name": "collector"
+      "name": "collector",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

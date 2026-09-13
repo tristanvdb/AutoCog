@@ -13,7 +13,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "4df719e0034a050d8587926802dc621e2af5dda2db05b083e88b3716674c0227",
+    "hash": "d53759db8c61df2cb4403dcfcfc556392552ec3c8ae8bae2509666e9f9db0a6b",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -44,11 +44,28 @@
           "format_ref": "Item",
           "index": 0,
           "name": "item",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         }
       ],
       "flows": {},
-      "name": "test"
+      "name": "test",
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
+      }
     }
   },
   "provenance": {},

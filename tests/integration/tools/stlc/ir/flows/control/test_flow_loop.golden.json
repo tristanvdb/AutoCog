@@ -36,7 +36,18 @@
           "index": 0,
           "name": "problem",
           "range": null,
-          "refname": "Problem"
+          "refname": "Problem",
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -46,7 +57,18 @@
           },
           "index": 1,
           "name": "attempt",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": "__search__.text.threshold",
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
+            }
+          }
         },
         {
           "depth": 1,
@@ -60,7 +82,15 @@
           },
           "index": 2,
           "name": "success",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": "__search__.enum.ranking.metric",
+              "threshold.metric": "__search__.enum.threshold.metric",
+              "threshold.value": "__search__.enum.threshold.value",
+              "width": "__search__.enum.width"
+            }
+          }
         }
       ],
       "flows": [
@@ -89,6 +119,12 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
       }
     }
   },

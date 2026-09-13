@@ -25,7 +25,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "0dc80617b10702258b4dbbf904fc6e28a995fec5a759550229cdf75357494571",
+    "hash": "13f26421b36f99706a2e84c098179890f41733b3fa85107be8e27ad73010d2b2",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -122,7 +122,11 @@
             "text": {
               "ahead": 2,
               "beams": 4,
-              "threshold": 0.20000000298023224
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.20000000298023224,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -149,7 +153,12 @@
               "width": 3
             },
             "text": {
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
               "threshold": 0.20000000298023224,
+              "topk": "__search__.text.topk",
               "width": 1
             }
           }
@@ -193,7 +202,13 @@
               "width": 2
             },
             "text": {
-              "threshold": 0.30000001192092896
+              "ahead": "__search__.text.ahead",
+              "beams": "__search__.text.beams",
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.30000001192092896,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -218,8 +233,13 @@
               "width": 2
             },
             "text": {
+              "ahead": "__search__.text.ahead",
               "beams": 2,
-              "threshold": 0.30000001192092896
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.30000001192092896,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -269,7 +289,8 @@
           "threshold": 0.05000000074505806
         },
         "queue": {
-          "metric": "probability"
+          "metric": "probability",
+          "stop": "__search__.queue.stop"
         }
       }
     }

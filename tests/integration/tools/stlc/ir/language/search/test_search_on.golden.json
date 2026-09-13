@@ -41,7 +41,11 @@
             "text": {
               "ahead": 3,
               "beams": 2,
-              "threshold": 0.3
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.3,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -58,8 +62,13 @@
           "refname": "Message",
           "search": {
             "text": {
+              "ahead": "__search__.text.ahead",
               "beams": 8,
-              "threshold": 0.3
+              "diversity": "__search__.text.diversity",
+              "repetition": "__search__.text.repetition",
+              "threshold": 0.3,
+              "topk": "__search__.text.topk",
+              "width": "__search__.text.width"
             }
           }
         },
@@ -80,7 +89,13 @@
                 "range": null,
                 "search": {
                   "text": {
-                    "threshold": 0.3
+                    "ahead": "__search__.text.ahead",
+                    "beams": "__search__.text.beams",
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": 0.3,
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
                   }
                 }
               },
@@ -98,7 +113,11 @@
                   "text": {
                     "ahead": 3,
                     "beams": 2,
-                    "threshold": 0.3
+                    "diversity": "__search__.text.diversity",
+                    "repetition": "__search__.text.repetition",
+                    "threshold": 0.3,
+                    "topk": "__search__.text.topk",
+                    "width": "__search__.text.width"
                   }
                 }
               }
@@ -130,6 +149,12 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "__search__.queue.metric",
+          "stop": "__search__.queue.stop"
+        }
       }
     }
   },

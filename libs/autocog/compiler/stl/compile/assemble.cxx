@@ -246,6 +246,26 @@ static void lower_search(
             continue;
         }
         if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
+        // Explicit reference: `text.beams is __search__.text.beams;` pins the
+        // param to tracking its config default (the fill-up value written by
+        // hand). First cut: the reference must name the parameter it sets.
+        if (param.data.values.size() == 1) {
+            if (auto const * id = std::get_if<ast::Identifier>(
+                    &param.data.values.front().data.expr)) {
+                auto const & nm = id->data.name;
+                if (nm.rfind("__search__.", 0) == 0) {
+                    if (nm != "__search__." + category + "." + key) {
+                        driver.emit_error(
+                            "'" + nm + "' must reference the parameter it sets "
+                            "(__search__." + category + "." + key + ")",
+                            param.location);
+                    } else {
+                        out[category][key] = nm;
+                    }
+                    continue;
+                }
+            }
+        }
         // Predicate params (queue.stop): translate, don't evaluate.
         if (info->kind == reg::Kind::Predicate) {
             if (param.data.values.size() > 1) {
@@ -483,6 +503,40 @@ static void apply_targeted(
             }
             for (auto const & [key, val] : params) f->search[cat][key] = val;
         }
+    }
+}
+
+// Fill-up (defaults as references): every search param the cascade left
+// unspecified IS the reference "__search__.<cat>.<key>", substituted from the
+// engine config at ista. Materialized only for the categories the field's
+// format consumes (text on completion leaves, enum on enum/choice leaves;
+// branch is carried but not consumed by ista, flow only via the synthetic
+// next field). The STA thereby records which values the program pinned and
+// which track the config.
+static void fill_default_refs(std::vector<std::unique_ptr<ir::Field>> & fields) {
+    auto fill = [](ir::Field & f, char const * cat,
+                   std::initializer_list<char const *> keys) {
+        auto & params = f.search[cat];
+        for (auto const * key : keys) {
+            if (!params.count(key))
+                params[key] = std::string("__search__.") + cat + "." + key;
+        }
+    };
+    for (auto & f : fields) {
+        if (!f) continue;
+        std::visit([&](auto & fmt) {
+            using F = std::decay_t<decltype(fmt)>;
+            if constexpr (std::is_same_v<F, ir::Completion>) {
+                fill(*f, "text", {"threshold", "beams", "topk", "ahead",
+                                  "width", "repetition", "diversity"});
+            } else if constexpr (std::is_same_v<F, ir::Enum>
+                              || std::is_same_v<F, ir::Choice>) {
+                fill(*f, "enum", {"threshold.value", "threshold.metric",
+                                  "ranking.metric", "width"});
+            } else if constexpr (std::is_same_v<F, std::vector<std::unique_ptr<ir::Field>>>) {
+                fill_default_refs(fmt);
+            }
+        }, f->format);
     }
 }
 
@@ -1036,6 +1090,13 @@ static void assemble_prompts(
         // applied last, over everything the fields inherited.
         apply_targeted(prompt_targeted, pmt->fields,
                        "prompt '" + node.base_name + "'", driver);
+        // Fill-up: unspecified params become explicit config references.
+        fill_default_refs(pmt->fields);
+        {
+            auto & qp = pmt->search["queue"];
+            if (!qp.count("metric")) qp["metric"] = std::string("__search__.queue.metric");
+            if (!qp.count("stop"))   qp["stop"]   = std::string("__search__.queue.stop");
+        }
 
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
