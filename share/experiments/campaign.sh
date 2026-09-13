@@ -159,12 +159,18 @@ print(json.dumps(out))
 EOF
 }
 
-wait_ready() {  # url timeout
+wait_ready() {  # url pid log timeout -- fail FAST when the worker died
     local t=0
-    while [ "$t" -lt "$2" ]; do
+    while [ "$t" -lt "$4" ]; do
         curl -fsS "http://$1/capabilities" > /dev/null 2>&1 && return 0
+        if ! kill -0 "$2" 2>/dev/null; then
+            echo "FATAL: worker $1 exited during startup; log tail:" >&2
+            tail -5 "$3" >&2
+            return 1
+        fi
         sleep 1; t=$((t + 1))
     done
+    echo "FATAL: worker $1 not ready after $4s (log: $3)" >&2
     return 1
 }
 
@@ -224,9 +230,9 @@ EOF
         PIDS+=($!) ; URLS+=("127.0.0.1:$PORT")
     done
     trap 'kill "${PIDS[@]}" 2>/dev/null || true' EXIT
-    for u in "${URLS[@]}"; do
-        wait_ready "$u" 600 || { echo "FATAL: worker $u never became ready (see $WLOG)" >&2; exit 1; }
-        echo "[up] $u"
+    for i in "${!URLS[@]}"; do
+        wait_ready "${URLS[$i]}" "${PIDS[$i]}" "$WLOG/worker-$i.log" 600 || exit 1
+        echo "[up] ${URLS[$i]}"
     done
 
     # -- run phases in order ----------------------------------------------

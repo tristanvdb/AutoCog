@@ -177,7 +177,9 @@ pip install --upgrade pip > /dev/null
 # but the venv does not — and the standalone tools tree finds it through the
 # active interpreter (import pybind11), so it must live in the venv too.
 pip install pybind11 > /dev/null
-CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install "$REPO"   # local-dir install: always rebuilt
+# [server]: the campaign workers are level-3 backend servers (fastapi/
+# uvicorn) -- without the extra every spawned worker dies on import.
+CMAKE_ARGS="${CUDA_ARGS[*]:-}" pip install "$REPO[server]"   # local-dir install: always rebuilt
 echo "$STAMP" > "$VENV/.autocog-stamp"
 
 # No separate tools tree: the pip install ships both the bindings and the
