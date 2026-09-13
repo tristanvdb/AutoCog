@@ -1,6 +1,6 @@
 """bench quality — MCQ accuracy / token overhead / constraint friction.
 
-The benchmarks/quality/run.py semantics through the in-process worker:
+The share/benchmarks/quality/run.py semantics through the in-process worker:
 one model load per model (not per syntax), scoring via Engine.score_frame
 (no efta subprocess), datapoints via --data + --formatter.
 """
@@ -49,7 +49,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     root = root or find_root(os.getcwd())
     if root is None:
         raise autocog.errors.ConfigError("cannot locate the repo root (share/syntax)")
-    data = data or os.path.join(root, "benchmarks", "quality", "questions.json")
+    data = data or os.path.join(root, "share", "benchmarks", "quality", "questions.json")
     qs = load_questions(data, load_formatter(formatter), limit=questions)
     syntaxes = syntaxes or ["complete", "stripped"]
     demos = demos or ["select"]

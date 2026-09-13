@@ -1,6 +1,6 @@
 """bench perf — computational cells through the in-process worker.
 
-The benchmarks/compute/sweep.py semantics (same cells JSON, same event
+The share/benchmarks/compute/sweep.py semantics (same cells JSON, same event
 shape, same budget behavior) with evaluation through the bindings: no
 per-cell process spawn, no per-cell model reload unless the cell changes
 load-time parameters (slots/ctx), and the perf fields taken from the
@@ -164,7 +164,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
                 + ", ".join(cell_name(c) for c in cell_list[i:]))
             break
         try:
-            stl = resolve(cell.get("stl") or "benchmarks/compute/benchmark.stl", bases)
+            stl = resolve(cell.get("stl") or "share/benchmarks/compute/benchmark.stl", bases)
             syntax = resolve(cell.get("syntax") or "share/syntax/complete.json", bases)
             wk = worker_for(cell)
             engine = wk.engine_for_search_config(syntax, search_config(cell))

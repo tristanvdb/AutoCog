@@ -22,7 +22,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 BUILD_DIR="${1:-$SCRIPT_DIR/build-release}"
 [ -z "$BUILD_DIR" ] && BUILD_DIR="$SCRIPT_DIR/build-release"

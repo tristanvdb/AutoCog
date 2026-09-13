@@ -15,7 +15,7 @@
 #     CCACHE_DIR        the compiler cache only
 
 EXP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EXP_DIR/.." && pwd)"
+REPO="$(cd "$EXP_DIR/../.." && pwd)"
 
 case "$PWD" in
     "$REPO"|"$REPO"/*) WORKDIR="$REPO" ;;

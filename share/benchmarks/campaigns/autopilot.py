@@ -42,7 +42,7 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(os.path.dirname(HERE))
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 
 WAVES = [
     ("w1-smoke", "smoke-real.json"),
@@ -230,7 +230,7 @@ class Autopilot:
             if os.path.exists(out) and os.path.getsize(out) > 0:
                 self.log(f"[w3] {name} exists — skipping")
                 return None
-            data_path = (os.path.join(REPO, "benchmarks", "quality", data)
+            data_path = (os.path.join(REPO, "share", "benchmarks", "quality", data)
                          if self.args.smoke_test
                          else os.path.join(HERE, "datasets", data))
             cmd = [sys.executable, probe, "run", "--demo", demo,

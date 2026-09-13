@@ -1,4 +1,4 @@
-"""The multi-GPU campaign harness (benchmarks/campaigns/client.py) on its
+"""The multi-GPU campaign harness (share/benchmarks/campaigns/client.py) on its
 GPU-less testing topology: spawn 2 RNG workers, dispatch a 2-run campaign
 across them in parallel, verify results and teardown. The harness is pure
 orchestration over the package surface (`autocog backend` + run-level
@@ -17,8 +17,8 @@ import pytest
 
 @pytest.mark.timeout(240)
 def test_client_rng_topology(tmp_path, repo_root):
-    client = repo_root / "benchmarks" / "campaigns" / "client.py"
-    data = repo_root / "benchmarks" / "quality" / "questions.json"
+    client = repo_root / "share" / "benchmarks" / "campaigns" / "client.py"
+    data = repo_root / "share" / "benchmarks" / "quality" / "questions.json"
     manifest = {
         "name": "harness-test",
         "out": str(tmp_path / "results"),
@@ -72,7 +72,7 @@ def test_client_rng_topology(tmp_path, repo_root):
 def test_client_sanity_gate(tmp_path, repo_root):
     """--sanity-only: per-worker probes (affinity echo + one-question run)
     pass on the rng topology and the client exits before dispatching."""
-    client = repo_root / "benchmarks" / "campaigns" / "client.py"
+    client = repo_root / "share" / "benchmarks" / "campaigns" / "client.py"
     manifest = {"name": "sanity-test", "out": str(tmp_path / "results"),
                 "runs": [{"kind": "quality", "questions": 1,
                           "syntaxes": ["complete"], "demos": ["select"],
@@ -99,8 +99,8 @@ def test_probe_choices_rng(tmp_path, repo_root):
     """The adjudication probe: every candidate branch extracted with its
     forced NLL, all four scoring rules computed offline, select showing
     zero structural length bias (single-token digit candidates)."""
-    probe = repo_root / "benchmarks" / "campaigns" / "probe_choices.py"
-    data = repo_root / "benchmarks" / "quality" / "questions.json"
+    probe = repo_root / "share" / "benchmarks" / "campaigns" / "probe_choices.py"
+    data = repo_root / "share" / "benchmarks" / "quality" / "questions.json"
     sel = tmp_path / "sel.ndjson"
     rep = tmp_path / "rep.ndjson"
     for demo, out in (("select", sel), ("repeat", rep)):
@@ -137,8 +137,8 @@ def test_probe_choices_rng(tmp_path, repo_root):
 def test_autopilot_smoke_pipeline(repo_root):
     """The unattended campaign driver end to end on rng: all stages green,
     checkpoint state written, rerun skips everything, summary emitted."""
-    auto = repo_root / "benchmarks" / "campaigns" / "autopilot.py"
-    outdir = repo_root / "benchmarks" / "campaigns" / "results" / "autopilot-smoke"
+    auto = repo_root / "share" / "benchmarks" / "campaigns" / "autopilot.py"
+    outdir = repo_root / "share" / "benchmarks" / "campaigns" / "results" / "autopilot-smoke"
     import shutil
     shutil.rmtree(outdir.parent, ignore_errors=True)
 

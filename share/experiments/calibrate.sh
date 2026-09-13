@@ -27,7 +27,7 @@ cat > "$CELLS" <<'EOF'
 ]
 EOF
 
-python3 "$REPO/benchmarks/compute/sweep.py" --build "$BUILD_EXP" \
+python3 "$REPO/share/benchmarks/compute/sweep.py" --build "$BUILD_EXP" \
     --model "$MODEL" --cells "$CELLS" --tag calib --out "$CAL"
 rm -f "$CELLS"
 

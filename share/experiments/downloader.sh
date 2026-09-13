@@ -3,7 +3,7 @@
 # into datasets/ — both alongside the repo (see env.sh; NFS-persistent, so
 # each download happens once). Run it directly, or let setup.sh call it.
 #
-#     autocog/experiments/downloader.sh [--datasets-only]
+#     autocog/share/experiments/downloader.sh [--datasets-only]
 #
 #   --datasets-only   skip the models (e.g. gguf already in place)
 #   MODEL_SIZE={0,1,2}  scale tier (see models.sh): 0 = tiny + 1B pair

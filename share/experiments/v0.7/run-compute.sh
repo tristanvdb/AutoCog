@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Computational performance sweeps (benchmarks/compute) for the v0.7 report.
+# Computational performance sweeps (share/benchmarks/compute) for the v0.7 report.
 #
 # Usage: run-compute.sh [OUT_DIR] [model.gguf ...]
 #   Without models: every $MODELS_DIR/*.gguf except the tiny smoke model.
@@ -24,11 +24,11 @@ if [ ${#MODELS[@]} -eq 0 ]; then
 fi
 
 echo "=== RNG floor ==="
-"$REPO/benchmarks/compute/run.sh" "$BUILD_EXP" --rng --out "$OUT/compute"
+"$REPO/share/benchmarks/compute/run.sh" "$BUILD_EXP" --rng --out "$OUT/compute"
 
 for model in "${MODELS[@]}"; do
     echo "=== compute sweep: $(basename "$model") (NGL=$AUTOCOG_NGL) ==="
-    "$REPO/benchmarks/compute/run.sh" "$BUILD_EXP" "$model" --out "$OUT/compute"
+    "$REPO/share/benchmarks/compute/run.sh" "$BUILD_EXP" "$model" --out "$OUT/compute"
 done
 
 echo "compute results: $OUT/compute/"

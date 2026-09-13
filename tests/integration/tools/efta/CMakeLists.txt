@@ -26,7 +26,7 @@ add_test(
         bash -c "
             set -e
             OUT=$(mktemp -d)
-            ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/benchmarks/quality/run.py \
+            ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/share/benchmarks/quality/run.py \
                 --build ${CMAKE_BINARY_DIR} --rng --syntaxes complete \
                 --demos select --questions 1 --out \$OUT
             test -s \$OUT/results-*.ndjson

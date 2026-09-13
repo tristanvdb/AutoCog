@@ -3,7 +3,7 @@
 # campaign (then: calibrate.sh, then the campaign's script). Run it from
 # your working directory with the repo as a subdirectory:
 #
-#     cd ~/my-nfs && autocog/experiments/setup.sh
+#     cd ~/my-nfs && autocog/share/experiments/setup.sh
 #
 # Artifacts (.venv, build-exp, models, results, .ccache) land alongside
 # the repo — see env.sh for the layout and overrides. Safe to re-run and

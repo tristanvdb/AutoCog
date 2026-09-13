@@ -4,7 +4,7 @@
 #
 #   experiments/v0.7/run-accuracy.sh [OUT_DIR]
 #
-# The product is RELATIVE accuracy (benchmarks/quality/summarize.py): how
+# The product is RELATIVE accuracy (share/benchmarks/quality/summarize.py): how
 # much each pattern extracts from a BASE model vs its instruct sibling —
 # the original AutoCog question of imposing constraints on base models —
 # and how the gap moves from 1B to 3B. Absent models are skipped with a
@@ -53,7 +53,7 @@ MODELS=(
 )
 
 DATASET="${DATASET:-builtin}"
-QFILE="$REPO/benchmarks/quality/questions.json"
+QFILE="$REPO/share/benchmarks/quality/questions.json"
 case "$DATASET" in
     builtin) ;;
     arc-easy|arc-challenge)
@@ -61,11 +61,11 @@ case "$DATASET" in
         arcfile="$(ls "$DATASETS_DIR"/ARC-V1-Feb2018*/"$name/$name-Test.jsonl" 2>/dev/null | head -1)"
         [ -n "$arcfile" ] || { echo "error: $name not found under $DATASETS_DIR — run experiments/downloader.sh --datasets-only" >&2; exit 1; }
         QFILE="$OUT/questions-$DATASET.json"
-        python3 "$REPO/benchmarks/quality/convert.py" arc "$arcfile" \
+        python3 "$REPO/share/benchmarks/quality/convert.py" arc "$arcfile" \
             --limit "$QUESTIONS" --out "$QFILE" ;;
     mmlu)
         QFILE="$OUT/questions-mmlu.json"
-        python3 "$REPO/benchmarks/quality/convert.py" mmlu \
+        python3 "$REPO/share/benchmarks/quality/convert.py" mmlu \
             "$DATASETS_DIR/mmlu/test" --limit "$QUESTIONS" --out "$QFILE" ;;
     *) echo "unknown DATASET: $DATASET" >&2; exit 1 ;;
 esac
@@ -88,7 +88,7 @@ for model in "${MODELS[@]}"; do
     syntaxes="$SYNTAXES"
     case "$name" in *Instruct*) syntaxes="$SYNTAXES,$INSTRUCT_SYNTAXES" ;; esac
     echo "=== $name (syntaxes: $syntaxes) ===" | tee -a "$OUT/accuracy.log"
-    python3 "$REPO/benchmarks/quality/run.py" \
+    python3 "$REPO/share/benchmarks/quality/run.py" \
         --build "$BUILD_EXP" --model "$model" \
         --syntaxes "$syntaxes" --demos "$DEMOS" \
         --questions "$QUESTIONS" --questions-file "$QFILE" --out "$OUT/$name" \
@@ -98,7 +98,7 @@ for model in "${MODELS[@]}"; do
 done
 
 if [ ${#RESULTS[@]} -gt 0 ]; then
-    python3 "$REPO/benchmarks/quality/summarize.py" "${RESULTS[@]}" \
+    python3 "$REPO/share/benchmarks/quality/summarize.py" "${RESULTS[@]}" \
         --ref Llama-3.2-1B-Instruct-Q8_0 \
         | tee "$OUT/summary.md"
 fi

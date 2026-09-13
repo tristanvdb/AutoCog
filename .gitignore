@@ -26,5 +26,5 @@ docs/_planning/
 /datasets
 
 results/
-benchmarks/campaigns/datasets/
-benchmarks/campaigns/models/
+share/benchmarks/campaigns/datasets/
+share/benchmarks/campaigns/models/

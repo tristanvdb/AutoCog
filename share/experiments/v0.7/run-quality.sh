@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MCQ quality benchmarks (benchmarks/quality) for the v0.7 report:
+# MCQ quality benchmarks (share/benchmarks/quality) for the v0.7 report:
 # accuracy, token overhead, and constraint friction per syntax, per model.
 # The base (non-finetuned) model's run is the fine-tuning before-picture.
 #
@@ -28,7 +28,7 @@ fi
 
 for model in "${MODELS[@]}"; do
     echo "=== quality benchmark: $(basename "$model") (NGL=$AUTOCOG_NGL) ==="
-    python3 "$REPO/benchmarks/quality/run.py" \
+    python3 "$REPO/share/benchmarks/quality/run.py" \
         --build "$BUILD_EXP" \
         --model "$model" \
         --out "$OUT/quality"

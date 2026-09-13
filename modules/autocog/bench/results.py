@@ -1,6 +1,6 @@
 """Result emission: ECS-flavored NDJSON (incremental append) + markdown.
 
-Same event shapes as benchmarks/compute/sweep.py and benchmarks/quality/
+Same event shapes as share/benchmarks/compute/sweep.py and share/benchmarks/quality/
 run.py so existing consumers (summarize/compare/plot, the SIEM pipeline)
 read bench output unchanged.
 """

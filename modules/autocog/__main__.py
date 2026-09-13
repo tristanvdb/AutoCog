@@ -470,7 +470,7 @@ def main():
     p_bench = subparsers.add_parser("bench", help="Run benchmarks")
     bench_sub = p_bench.add_subparsers(dest="bench_command", required=True)
 
-    pb_perf = bench_sub.add_parser("perf", help="Computational cells (benchmarks/compute semantics)")
+    pb_perf = bench_sub.add_parser("perf", help="Computational cells (share/benchmarks/compute semantics)")
     pb_perf.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_perf.add_argument("--cells", default=None, help="Cells JSON (default: the classic matrix)")
     pb_perf.add_argument("--quick", action="store_true", help="Reduced classic matrix")
@@ -486,7 +486,7 @@ def main():
     pb_quality = bench_sub.add_parser("quality", help="MCQ accuracy / friction matrix")
     pb_quality.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_quality.add_argument("--data", default=None,
-                            help="Questions .json/.jsonl (default: benchmarks/quality/questions.json)")
+                            help="Questions .json/.jsonl (default: share/benchmarks/quality/questions.json)")
     pb_quality.add_argument("--formatter", default="",
                             help="file.py:fn applied to each datapoint (raw -> question; None = skip)")
     pb_quality.add_argument("--questions", type=int, default=0, help="Stratified sample size (0 = all)")

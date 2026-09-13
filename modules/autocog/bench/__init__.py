@@ -1,8 +1,8 @@
 """autocog bench — reusable benchmarking harness.
 
 Subcommands (wired in autocog.__main__):
-    bench perf      computational cells (the benchmarks/compute semantics)
-    bench quality   accuracy / token-overhead / friction (benchmarks/quality)
+    bench perf      computational cells (the share/benchmarks/compute semantics)
+    bench quality   accuracy / token-overhead / friction (share/benchmarks/quality)
     bench campaign  a manifest of runs, executed in order
 
 The drivers run against the worker abstraction (workers.LocalWorker for
