@@ -151,12 +151,44 @@ def parse_cpus(spec):
     return cpus
 
 
+def parse_model_specs(args):
+    """--model values (repeatable) into backend load specs. Each value is a
+    GGUF path or an inline JSON object {"path", "tag", "ctx", "ngl",
+    "kv_slots"}; the global --ctx/--ngl/--kv-slots (themselves defaulting
+    to AUTOCOG_*) fill unspecified fields."""
+    def g(name, flag):
+        if flag is not None:
+            return flag
+        env = os.environ.get(f"AUTOCOG_{name}")
+        return int(env) if env else None
+
+    ngl = g("NGL", getattr(args, "ngl", None))
+    kv = g("KV_SLOTS", args.kv_slots)
+    specs = []
+    for value in args.model or []:
+        if value.lstrip().startswith("{"):
+            spec = json.loads(value)
+            if "path" not in spec:
+                raise FileError(f"--model JSON needs a \"path\": {value}")
+        else:
+            spec = {"path": value}
+        spec.setdefault("ctx", args.ctx)
+        if ngl is not None:
+            spec.setdefault("ngl", ngl)
+        if kv is not None:
+            spec.setdefault("kv_slots", kv)
+        if not os.path.isfile(spec["path"]):
+            raise FileError(f"Model file not found: {spec['path']}")
+        specs.append(spec)
+    return specs
+
+
 def cmd_backend(args):
     """Start level-3 backend server (a bench worker)."""
     import uvicorn
     from .server.backend import create_app
 
-    # Pinning happens before the model loads so llama's thread pools are
+    # Pinning happens before the models load so llama's thread pools are
     # created inside the mask and sized to it (AUTOCOG_THREADS).
     if args.cpus:
         cpus = parse_cpus(args.cpus)
@@ -165,8 +197,8 @@ def cmd_backend(args):
     if args.kv_slots is not None:
         os.environ["AUTOCOG_KV_SLOTS"] = str(args.kv_slots)
 
-    model_path = args.model if not args.rng else None
-    app = create_app(model_path=model_path, n_ctx=args.ctx)
+    specs = parse_model_specs(args) if not args.rng else []
+    app = create_app(models=specs, n_ctx=args.ctx)
     uvicorn.run(app, host=args.host, port=args.port)
 
 
@@ -446,12 +478,23 @@ def main():
 
     # --- backend (level 3) ---
     p_backend = subparsers.add_parser("backend", help="Serve FTA evaluation (level 3)")
-    _add_server_args(p_backend)
+    p_backend.add_argument("--model", action="append", default=None,
+                           help="Model to host (repeatable): a GGUF path, or "
+                                "inline JSON {\"path\", \"tag\", \"ctx\", "
+                                "\"ngl\", \"kv_slots\"}")
+    p_backend.add_argument("--rng", action="store_true", help="RNG model only")
+    p_backend.add_argument("--ctx", type=int, default=4096,
+                           help="Default context size for hosted models")
+    p_backend.add_argument("--ngl", type=int, default=None,
+                           help="Default GPU layers (fallback: AUTOCOG_NGL)")
+    p_backend.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
+    p_backend.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080)")
     p_backend.add_argument("--cpus", default=None,
                            help="Pin this worker to a CPU set, e.g. 0-3,8 "
                                 "(also caps the model's thread pools)")
     p_backend.add_argument("--kv-slots", type=int, default=None,
-                           help="KV sequence-slot pool size for the loaded model")
+                           help="Default KV sequence-slot pool size "
+                                "(fallback: AUTOCOG_KV_SLOTS)")
 
     # --- rpc (level 2) ---
     p_rpc = subparsers.add_parser("rpc", help="Serve prompt evaluation (level 2)")

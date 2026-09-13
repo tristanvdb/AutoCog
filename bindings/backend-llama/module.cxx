@@ -38,12 +38,16 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     module.def("build_info", &autocog::build_info, "Build configuration info");
 
     module.def("create",
-        [](std::string const & model_path, int n_ctx) {
-            return Manager::add_model(model_path, n_ctx);
+        [](std::string const & model_path, int n_ctx, int ngl, int kv_slots) {
+            return Manager::add_model(model_path, n_ctx, ngl, kv_slots);
         },
-        "Load a GGUF model and return a ModelID",
+        "Load a GGUF model and return a ModelID. ngl/kv_slots: -1 = fall "
+        "back to AUTOCOG_NGL / AUTOCOG_KV_SLOTS (per-model values let a "
+        "multi-model worker load each model with its own parameters)",
         py::arg("model_path"),
-        py::arg("n_ctx") = 4096
+        py::arg("n_ctx") = 4096,
+        py::arg("ngl") = -1,
+        py::arg("kv_slots") = -1
     );
 
     module.def("set_seed",

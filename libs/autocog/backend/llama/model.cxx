@@ -28,13 +28,17 @@ namespace autocog::backend::llama {
 // prefix cells between them, so the cost is only the divergent suffixes.
 // The default covers a full beams=8 lookahead wave (8 beams x 8 candidates):
 // measured on Llama-3.2-1B, beams=8/ahead=2 drops from 20410 to 269 restored
-// tokens going from 16 to 64 slots. Overridable for experiments
-// (AUTOCOG_KV_SLOTS=1 reproduces the historical single-sequence behavior).
-static size_t kv_slot_count() {
+// tokens going from 16 to 64 slots. Explicit per-model values (multi-model
+// workers) win over the env; AUTOCOG_KV_SLOTS=1 reproduces the historical
+// single-sequence behavior.
+static size_t kv_slot_count(int explicit_slots) {
   size_t n = 64;
+  if (explicit_slots >= 1 && explicit_slots <= 256) {  // LLAMA_MAX_SEQ = 256
+    return static_cast<size_t>(explicit_slots);
+  }
   if (char const * env = std::getenv("AUTOCOG_KV_SLOTS")) {
     long v = std::strtol(env, nullptr, 10);
-    if (v >= 1 && v <= 256) n = static_cast<size_t>(v);  // LLAMA_MAX_SEQ = 256
+    if (v >= 1 && v <= 256) n = static_cast<size_t>(v);
   }
   return n;
 }
@@ -50,7 +54,8 @@ Model::Model() :
   tokens.emplace_back();
 }
 
-Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
+Model::Model(ModelID const id_, std::string const & model_path, int n_ctx,
+             int ngl, int kv_slots) :
   id(id_),
   context_size(static_cast<unsigned>(n_ctx)),
   model(nullptr),
@@ -58,13 +63,17 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   rng(0),
   source_(model_path)
 {
-  // Load model. GPU offload is opt-in via AUTOCOG_NGL (number of layers to
-  // offload; 99 = whole model) so CPU-only environments stay the default and
-  // benchmarks state their hardware explicitly.
+  // Load model. GPU offload is opt-in — per-model `ngl` if given (multi-model
+  // workers load each model with its own parameters), else AUTOCOG_NGL, else
+  // CPU-only — so benchmarks state their hardware explicitly.
   llama_model_params model_params = llama_model_default_params();
-  if (char const * env = std::getenv("AUTOCOG_NGL")) {
-    long v = std::strtol(env, nullptr, 10);
-    if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
+  if (ngl > 0) {
+    model_params.n_gpu_layers = ngl;
+  } else if (ngl < 0) {  // unset: fall back to the environment
+    if (char const * env = std::getenv("AUTOCOG_NGL")) {
+      long v = std::strtol(env, nullptr, 10);
+      if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
+    }
   }
   this->model = llama_model_load_from_file(model_path.c_str(), model_params);
   if (!this->model) {
@@ -78,7 +87,8 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = n_ctx;
   ctx_params.n_batch = n_ctx;
-  ctx_params.n_seq_max = kv_slot_count();
+  size_t const n_slots = kv_slot_count(kv_slots);
+  ctx_params.n_seq_max = n_slots;
   ctx_params.kv_unified = true;
   // CPU-pinned workers must not spawn hardware_concurrency threads onto a
   // two-CPU affinity mask; AUTOCOG_THREADS caps the llama thread pools.
@@ -98,7 +108,7 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   }
   this->contexts.push_back(ctx);
   this->tokens.emplace_back();
-  this->slots_.resize(kv_slot_count());
+  this->slots_.resize(n_slots);
 }
 
 Model::~Model() {

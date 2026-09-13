@@ -7,18 +7,21 @@ plus the evaluation's perf deltas. Thinnest server — just model inference
 responsibility, using the program it holds locally.
 
     autocog backend --model model.gguf [--ctx N] [--port 8080] [--cpus 0-3]
+    autocog backend --model '{"path": "a.gguf", "tag": "A", "ctx": 8192}' \
+                    --model '{"path": "b.gguf", "tag": "B"}'
 
-A backend is a bench *worker*: models are pre-assigned here (loaded once at
-startup), while syntax/search/instantiation stay client-side (level 3).
-/capabilities advertises what this worker hosts so a bench scheduler can
-route jobs by model.
+A backend is a bench *worker*: models are pre-assigned here (loaded once
+at startup, each with its own load parameters), while syntax/search/
+instantiation stay client-side (level 3). /capabilities advertises what
+this worker hosts — tags plus per-model load parameters — so a campaign
+launcher can route jobs by model.
 """
 
 import os
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from . import RequestQueue, add_status_endpoint
 
@@ -47,37 +50,55 @@ class SubmitResponse(BaseModel):
     request_id: str
 
 
-def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
+def default_tag(path):
+    """Tag when the spec gives none: the filename with .gguf stripped."""
+    name = os.path.basename(path)
+    return name[:-5] if name.endswith(".gguf") else name
+
+
+def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAPI:
     """Create the level-3 backend server.
 
-    The RNG model (tag="rng") is always available for testing,
-    even when no real model is loaded. When multi-model support
-    is added, "rng" is a reserved tag that cannot be overridden.
+    `models` is a list of load specs: {"path": ..., "tag": ..., "ctx": ...,
+    "ngl": ..., "kv_slots": ...} — tag defaults to the filename sans .gguf,
+    ctx to n_ctx, ngl/kv_slots to the AUTOCOG_* environment. The first spec
+    is the worker's default model.
 
-    The FTA is self-contained (search params embedded by ista),
-    so the backend needs no search config.
+    The RNG model (tag="rng", model_id=0) is always available for testing;
+    "rng" is a reserved tag that cannot be overridden. The FTA is
+    self-contained (search params embedded by ista), so the backend needs
+    no search config.
     """
     from autocog.backend.llama import backend_llama_cxx
 
     app = FastAPI(title="AutoCog Backend", description="Level 3: FTA evaluation")
     queue = RequestQueue()
 
-    # RNG model is always available (model_id=0, tag="rng")
-    models = {"rng": 0}
-    default_tag = "rng"
+    hosted = {"rng": {"id": 0, "ctx": None, "ngl": None, "kv_slots": None}}
+    default = "rng"
 
-    if model_path:
-        model_id = backend_llama_cxx.create(model_path, n_ctx)
-        tag = os.path.splitext(os.path.basename(model_path))[0]
-        models[tag] = model_id
-        default_tag = tag
+    for spec in models or []:
+        tag = spec.get("tag") or default_tag(spec["path"])
+        if tag == "rng":
+            raise ValueError('"rng" is a reserved model tag')
+        if tag in hosted:
+            raise ValueError(f"duplicate model tag {tag!r}")
+        ctx = int(spec.get("ctx") or n_ctx)
+        ngl = int(spec["ngl"]) if spec.get("ngl") is not None else -1
+        kv = int(spec["kv_slots"]) if spec.get("kv_slots") is not None else -1
+        model_id = backend_llama_cxx.create(spec["path"], ctx, ngl, kv)
+        hosted[tag] = {"id": model_id, "ctx": ctx,
+                       "ngl": ngl if ngl >= 0 else None,
+                       "kv_slots": kv if kv >= 0 else None}
+        if default == "rng":
+            default = tag
 
     def resolve_model(tag):
-        tag = tag or default_tag
-        if tag not in models:
+        tag = tag or default
+        if tag not in hosted:
             raise HTTPException(404, f"model {tag!r} not hosted here "
-                                     f"(available: {list(models)})")
-        return models[tag]
+                                     f"(available: {list(hosted)})")
+        return hosted[tag]["id"]
 
     def evaluate_fta(fta: dict, model: str = None) -> dict:
         """Evaluate an FTA; reply is {"ftt": ..., "perf": ...}.
@@ -133,7 +154,7 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
     @app.get("/models")
     async def list_models():
         """List available model tags."""
-        return {"models": list(models.keys()), "default": default_tag}
+        return {"models": list(hosted.keys()), "default": default}
 
     @app.get("/capabilities")
     async def capabilities():
@@ -143,8 +164,10 @@ def create_app(model_path: str = None, n_ctx: int = 4096) -> FastAPI:
         except (AttributeError, OSError):  # non-Linux
             cpus = None
         return {
-            "models": list(models.keys()),
-            "default": default_tag,
+            "models": list(hosted.keys()),
+            "details": {tag: {k: v for k, v in info.items() if k != "id"}
+                        for tag, info in hosted.items()},
+            "default": default,
             "n_ctx": n_ctx,
             "kv_slots": int(os.environ.get("AUTOCOG_KV_SLOTS", 0)) or None,
             "cpus": cpus,

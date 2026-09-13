@@ -109,7 +109,8 @@ class Model {
 
   public:
     Model();
-    Model(ModelID const id, std::string const & model_path, int n_ctx);
+    Model(ModelID const id, std::string const & model_path, int n_ctx,
+          int ngl = -1, int kv_slots = -1);
     ~Model();
 
     // Move-only: a Model owns raw llama_model*/llama_context* handles, so a copy

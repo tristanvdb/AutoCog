@@ -50,10 +50,11 @@ void Manager::initialize() {
   Manager::initialized = true;
 }
 
-ModelID Manager::add_model(std::string const & path, int n_ctx) {
+ModelID Manager::add_model(std::string const & path, int n_ctx,
+                           int ngl, int kv_slots) {
   auto & manager = instance();
   ModelID id = manager.models.size();
-  manager.models.emplace_back(id, path, n_ctx);
+  manager.models.emplace_back(id, path, n_ctx, ngl, kv_slots);
   return id;
 }
 
