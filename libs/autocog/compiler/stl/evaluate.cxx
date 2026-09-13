@@ -264,8 +264,28 @@ ir::Value Evaluator::retrieve_value(
         sym_it = this->tables.symbols.find(parent_scope+"::"+varname);
       }
 
-      // If still not found, throw error
+      // If still not found, throw error. Dotted names are system-namespace
+      // references (never user symbols); diagnose by root.
       if (sym_it == this->tables.symbols.end()) {
+        auto const dot = varname.find('.');
+        if (dot != std::string::npos) {
+          auto const root = varname.substr(0, dot);
+          bool const dunder = root.size() >= 4
+              && root.compare(0, 2, "__") == 0
+              && root.compare(root.size() - 2, 2, "__") == 0;
+          if (root == "__status__" || root == "__model__") {
+            throw CompileError("'" + varname + "' is only available inside "
+                               "`queue.stop` termination predicates", loc);
+          } else if (root == "__search__" || root == "__syntax__"
+                     || root == "__program__") {
+            throw CompileError("system namespace '" + root + "' is reserved "
+                               "but not yet available", loc);
+          } else if (dunder) {
+            throw CompileError("unknown system namespace '" + root + "'", loc);
+          }
+          throw CompileError("'" + root + "' is not a namespace root (dotted "
+                             "names resolve against system namespaces)", loc);
+        }
         throw CompileError("Undefined symbol: " + varname, loc);
       }
     }

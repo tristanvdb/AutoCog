@@ -1,0 +1,16 @@
+// queue.stop written in the ordinary expression grammar, translated to the
+// termination predicate at stage 5. The file-scope argument folds into the
+// comparison constant (-Dmax_terms overrides it).
+argument max_terms = 5;
+
+prompt main {
+  is { q is text<length=4>; }
+  search {
+    queue.stop is ((__status__.tree.terminals >= max_terms)
+                || ((__status__.best.proba >= 0.9)
+                   && (!(__status__.tree.tokens > 1000))));
+    queue.metric is "perplexity";
+  }
+  channel { q get q; }
+  return { use q; }
+}

@@ -1100,10 +1100,20 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     // Assemble the finalized FTA. The vocab table is carried so the backend
     // (xfta) can build token masks from each vocab_<hash> -> STL expression;
     // complete actions reference an entry by its key.
+    // The STL policy carries queue.stop compact-serialized (translated at
+    // stage 5); it wins over the search config's predicate.
+    std::optional<autocog::data::TermExpr> stop = search.queue.stop;
+    if (qit != prompt.search.categories.end()) {
+        auto sit = qit->second.find("stop");
+        if (sit != qit->second.end())
+            if (auto const * ss = std::get_if<std::string>(&sit->second))
+                stop = autocog::data::TermExpr::from_compact(*ss);
+    }
+
     autocog::data::FTA fta;
     fta.actions = std::move(b.actions);
     fta.queue_metric = std::move(metric);
-    fta.queue_stop = search.queue.stop;
+    fta.queue_stop = std::move(stop);
     fta.vocabs = prompt.vocabs;
     for (auto & [ref, expr] : b.minted_vocabs) fta.vocabs.emplace(ref, std::move(expr));
 

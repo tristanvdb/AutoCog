@@ -3,9 +3,11 @@
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
 #include "autocog/data/search-registry.hxx"
+#include "autocog/data/term.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
+#include <map>
 #include <set>
 
 namespace autocog::compiler::stl {
@@ -30,6 +32,149 @@ static std::optional<int> eval_opt_int(
 
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
+
+// --- queue.stop translation --------------------------------------------------
+// A termination predicate is written in the ordinary expression grammar and
+// TRANSLATED (vocab precedent) to data::TermExpr: comparisons whose one side
+// is a `__status__` scalar become leaves (the other side constant-folds, so
+// defines/arguments work); &&/||/! become all/any/not. The result travels
+// compact-serialized in the (scalar) policy value and is parsed back at ista.
+
+// STL name -> backend termination scalar. Entries commented out exist in the
+// design but not yet in the backend.
+static std::optional<std::string> stop_scalar_name(std::string const & dotted) {
+    static std::map<std::string, std::string> const M = {
+        {"__status__.tree.terminals",    "terminals"},
+        {"__status__.tree.tokens",       "tokens"},
+        {"__status__.tree.leaves",       "queue.size"},
+        {"__status__.tree.coverage.fta", "coverage.fta"},
+        {"__status__.tree.coverage.sta", "coverage.sta"},
+        {"__status__.best.proba",        "best.proba"},
+        {"__status__.best.zscore",       "best.zscore"},
+    };
+    auto it = M.find(dotted);
+    if (it == M.end()) return std::nullopt;
+    return it->second;
+}
+
+static bool translate_stop(
+    ast::Expression const & e,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    Driver & driver,
+    std::optional<autocog::location::SourceRange> const & loc,
+    autocog::data::TermExpr & out
+);
+
+// The scalar side of a comparison: a dotted __status__ identifier.
+static std::optional<std::string> stop_scalar_of(ast::Expression const & e, Driver & driver,
+        std::optional<autocog::location::SourceRange> const & loc) {
+    if (auto const * id = std::get_if<ast::Identifier>(&e.data.expr)) {
+        auto const & name = id->data.name;
+        if (name.rfind("__status__.", 0) == 0 || name.rfind("__model__.", 0) == 0
+                || name.rfind("__node__.", 0) == 0) {
+            auto mapped = stop_scalar_name(name);
+            if (!mapped) {
+                driver.emit_error("'" + name + "' is not yet available in "
+                                  "termination predicates", loc);
+                return std::nullopt;
+            }
+            return mapped;
+        }
+    }
+    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
+        return stop_scalar_of(*par->data.expr, driver, loc);
+    return std::nullopt;
+}
+
+static bool translate_stop(
+    ast::Expression const & e,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    Driver & driver,
+    std::optional<autocog::location::SourceRange> const & loc,
+    autocog::data::TermExpr & out
+) {
+    using TE = autocog::data::TermExpr;
+    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
+        return translate_stop(*par->data.expr, evaluator, scope, ctx, driver, loc, out);
+    if (auto const * un = std::get_if<ast::Unary>(&e.data.expr)) {
+        if (un->data.kind != ast::OpKind::Not) {
+            driver.emit_error("only `!` composes termination predicates", loc);
+            return false;
+        }
+        out.kind = TE::Kind::Not;
+        out.operands.emplace_back();
+        return translate_stop(*un->data.operand, evaluator, scope, ctx, driver, loc,
+                              out.operands.back());
+    }
+    auto const * bin = std::get_if<ast::Binary>(&e.data.expr);
+    if (!bin) {
+        driver.emit_error("queue.stop expects a predicate: comparisons of "
+                          "__status__ scalars composed with &&, ||, !", loc);
+        return false;
+    }
+    switch (bin->data.kind) {
+        case ast::OpKind::And:
+        case ast::OpKind::Or: {
+            out.kind = bin->data.kind == ast::OpKind::And ? TE::Kind::All : TE::Kind::Any;
+            out.operands.emplace_back();
+            if (!translate_stop(*bin->data.lhs, evaluator, scope, ctx, driver, loc,
+                                out.operands.back())) return false;
+            out.operands.emplace_back();
+            return translate_stop(*bin->data.rhs, evaluator, scope, ctx, driver, loc,
+                                  out.operands.back());
+        }
+        case ast::OpKind::Gte:
+        case ast::OpKind::Gt:
+        case ast::OpKind::Lte:
+        case ast::OpKind::Lt: {
+            auto lhs_scalar = stop_scalar_of(*bin->data.lhs, driver, loc);
+            std::optional<std::string> rhs_scalar;
+            if (!lhs_scalar) rhs_scalar = stop_scalar_of(*bin->data.rhs, driver, loc);
+            bool const flipped = !lhs_scalar && rhs_scalar.has_value();
+            auto const & scalar = lhs_scalar.has_value() ? lhs_scalar : rhs_scalar;
+            if (!scalar) {
+                driver.emit_error("one side of a termination comparison must be "
+                                  "a __status__ scalar", loc);
+                return false;
+            }
+            auto const & const_side = lhs_scalar ? *bin->data.rhs : *bin->data.lhs;
+            auto v = evaluator.evaluate_expression(scope, const_side, ctx);
+            double num = 0.0;
+            if (auto const * f = std::get_if<float>(&v)) num = *f;
+            else if (auto const * i = std::get_if<int>(&v)) num = *i;
+            else {
+                driver.emit_error("the constant side of a termination comparison "
+                                  "must be numeric", loc);
+                return false;
+            }
+            auto k = bin->data.kind;
+            if (flipped) {  // c OP scalar  ==  scalar OP' c
+                if (k == ast::OpKind::Lt)  k = ast::OpKind::Gt;
+                else if (k == ast::OpKind::Gt)  k = ast::OpKind::Lt;
+                else if (k == ast::OpKind::Lte) k = ast::OpKind::Gte;
+                else if (k == ast::OpKind::Gte) k = ast::OpKind::Lte;
+            }
+            switch (k) {
+                case ast::OpKind::Gte: out.kind = TE::Kind::Ge; break;
+                case ast::OpKind::Gt:  out.kind = TE::Kind::Gt; break;
+                case ast::OpKind::Lte: out.kind = TE::Kind::Le; break;
+                case ast::OpKind::Lt:  out.kind = TE::Kind::Lt; break;
+                default: out.kind = TE::Kind::Ge; break;
+            }
+            out.scalar = *scalar;
+            out.value = static_cast<float>(num);
+            return true;
+        }
+        default:
+            driver.emit_error("operator not allowed in a termination predicate "
+                              "(use <, <=, >, >=, &&, ||, !)", loc);
+            return false;
+    }
+}
 
 // Lower an `ast::Search` block into ir::SearchPolicies. Each param's locator is a
 // dotted path: the FIRST segment is the category (text/enum/branch/flow/queue,
@@ -101,6 +246,20 @@ static void lower_search(
             continue;
         }
         if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
+        // Predicate params (queue.stop): translate, don't evaluate.
+        if (info->kind == reg::Kind::Predicate) {
+            if (param.data.values.size() > 1) {
+                driver.emit_error("search parameter '" + category + "." + key
+                                  + "' takes a single predicate", param.location);
+                continue;
+            }
+            autocog::data::TermExpr te;
+            if (translate_stop(param.data.values.front(), evaluator, scope, ctx,
+                               driver, param.location, te)) {
+                out[category][key] = te.to_compact();
+            }
+            continue;
+        }
         // List-valued params (registry Kind::List, e.g. queue.metric) take a
         // comma-separated RHS; every element is validated against the string
         // domain and the list is carried comma-joined in the (scalar) policy

@@ -1,0 +1,8 @@
+// Error: __status__ scalars exist only inside queue.stop predicates.
+// expect-error: only available inside `queue.stop` termination predicates
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is __status__.tree.terminals; }
+  channel { q get q; }
+  return { use q; }
+}

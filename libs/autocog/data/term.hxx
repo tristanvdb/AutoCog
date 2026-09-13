@@ -24,6 +24,12 @@ struct TermExpr {
 
   /// Recursive content hash: digest(kind + scalar + value + operand hashes).
   std::string hash() const;
+
+  /// Compact s-expression form, e.g. "(any (ge terminals 5) (lt tokens 100))".
+  /// Used to carry a predicate through the (scalar, JSON-free) STA policy
+  /// map; round-trips exactly.
+  std::string to_compact() const;
+  static TermExpr from_compact(std::string const & text);
 };
 
 }

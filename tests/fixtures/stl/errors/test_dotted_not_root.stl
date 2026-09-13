@@ -1,0 +1,8 @@
+// Error: dotted names resolve against system namespaces only.
+// expect-error: 'foo' is not a namespace root
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is foo.bar; }
+  channel { q get q; }
+  return { use q; }
+}

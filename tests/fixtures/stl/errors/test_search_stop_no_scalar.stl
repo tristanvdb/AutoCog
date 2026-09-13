@@ -1,0 +1,8 @@
+// Error: a termination comparison needs a __status__ scalar on one side.
+// expect-error: one side of a termination comparison must be a __status__ scalar
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.stop is (1 >= 2); }
+  channel { q get q; }
+  return { use q; }
+}

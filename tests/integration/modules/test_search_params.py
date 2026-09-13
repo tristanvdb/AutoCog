@@ -151,3 +151,36 @@ def test_empty_choices_is_user_error(repo_root):
                     search=str(repo_root / "share" / "search" / "default.json"))
     with pytest.raises(AutoCogError, match="requires at least"):
         engine.run(prog, topic="t", question="q", choices=[])
+
+
+STOP_STL = """
+argument max_terms = 5;
+
+prompt main {
+  is { q is text<length=8>; }
+  search {
+    queue.stop is ((__status__.tree.terminals >= max_terms)
+                || (__status__.best.proba >= 0.9));
+  }
+  channel { q get q; }
+  return { use q; }
+}
+"""
+
+
+def test_queue_stop_translation(repo_root, tmp_path):
+    """queue.stop written in the expression grammar reaches the FTA as the
+    translated termination predicate; file-scope arguments fold into the
+    comparison constants (-D overrides them)."""
+    stl = tmp_path / "stop.stl"
+    stl.write_text(STOP_STL)
+
+    fta = instantiate_fta(repo_root, autocog.compile(str(stl)), {"q": "x"})
+    stop = fta["queue"]["stop"]
+    assert stop == {"any": [{"ge": ["terminals", 5.0]},
+                            {"ge": ["best.proba", pytest.approx(0.9)]}]}
+
+    fta8 = instantiate_fta(repo_root,
+                           autocog.compile(str(stl), defines={"max_terms": 8}),
+                           {"q": "x"})
+    assert fta8["queue"]["stop"]["any"][0] == {"ge": ["terminals", 8.0]}

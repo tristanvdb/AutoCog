@@ -1,0 +1,8 @@
+// Error: designed scalars not yet in the backend are rejected, not dropped.
+// expect-error: '__status__.tree.depth' is not yet available in termination predicates
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.stop is (__status__.tree.depth >= 3); }
+  channel { q get q; }
+  return { use q; }
+}
