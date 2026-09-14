@@ -70,6 +70,7 @@ def test_multi_model_worker(worker):
         caps = json.loads(r.read())
     assert set(caps["models"]) == {"rng", TINY, "tiny-again"}
     assert caps["default"] == TINY
+    assert caps["lanes"] == 1          # pooled clients bound in-flight by this
     assert caps["details"][TINY]["ctx"] == 1024
     assert caps["details"]["tiny-again"] == {"ctx": 512, "ngl": None,
                                              "kv_slots": 8}
@@ -101,6 +102,82 @@ def test_multi_model_worker(worker):
 @pytest.fixture(autouse=True)
 def from_repo_root(repo_root, monkeypatch):
     monkeypatch.chdir(repo_root)
+
+
+@pytest.fixture()
+def rng_workers():
+    """Two rng-only backends — the smallest same-tag lane pool."""
+    procs, urls = [], []
+    try:
+        for _ in range(2):
+            port = _free_port()
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "autocog", "backend",
+                 "--host", "127.0.0.1", "--port", str(port)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            procs.append(proc)
+            urls.append(f"http://127.0.0.1:{port}")
+        for proc, url in zip(procs, urls):
+            for _ in range(240):
+                if proc.poll() is not None:
+                    pytest.fail(proc.stdout.read().decode()[-2000:])
+                try:
+                    urllib.request.urlopen(f"{url}/capabilities", timeout=2)
+                    break
+                except OSError:
+                    time.sleep(0.5)
+        yield urls
+    finally:
+        for proc in procs:
+            proc.terminate()
+        for proc in procs:
+            proc.wait()
+
+
+def test_engine_pool_dispatch(rng_workers):
+    """Concurrent executions through one EnginePool spread across both
+    worker lanes; results stay correct; unhosted tags are rejected."""
+    import asyncio
+
+    import autocog
+    from autocog.errors import ConfigError
+    from autocog.remote import EnginePool
+
+    with pytest.raises(ConfigError, match="does not host"):
+        EnginePool(rng_workers, model_tag="nope",
+                   syntax="share/syntax/complete.json",
+                   search="share/search/default.json")
+
+    pool = EnginePool(rng_workers, model_tag="rng",
+                      syntax="share/syntax/complete.json",
+                      search="share/search/default.json",
+                      poll_interval=0.05)
+    assert pool.total_lanes() == 2
+
+    counts = {}
+    for b in pool.backends:
+        orig = b.evaluate_prompt_async
+
+        async def wrapped(*a, _url=b.server_url, _orig=orig, **kw):
+            counts[_url] = counts.get(_url, 0) + 1
+            return await _orig(*a, **kw)
+
+        b.evaluate_prompt_async = wrapped
+
+    prog = autocog.compile("share/demos/mcq/select.stl",
+                           includes=["share/demos/mcq"])
+
+    async def one(i):
+        return await pool.run_async(prog, topic="t", question=f"q{i}",
+                                    choices=["a", "b", "c"])
+
+    async def many():
+        return await asyncio.gather(*(one(i) for i in range(6)))
+
+    results = asyncio.run(many())
+    assert len(results) == 6
+    assert all(r in ("a", "b", "c") for r in results)   # select returns the answer
+    assert len(counts) == 2 and sum(counts.values()) == 6   # both lanes used
 
 
 def test_executor_requires_workers(tmp_path):

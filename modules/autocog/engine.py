@@ -102,6 +102,15 @@ class Engine:
             return frame, artifacts
         return frame
 
+    async def evaluate_prompt_async(self, program, prompt_name, content,
+                                    record_kinds=None):
+        """Async evaluation hook (awaited by Context.step_async). The local
+        engine evaluates in-process and blocks the loop — it is one lane,
+        there is nothing else to schedule. Pooled/remote engines override
+        this with a genuinely awaitable dispatch."""
+        return self.evaluate_prompt(program, prompt_name, content,
+                                    record_kinds=record_kinds)
+
     def score_frame(self, program, prompt_name, frame, content=None):
         """Encode a frame into its canonical forced path under this engine's
         syntax and score every token against the model (the `efta --score`
@@ -136,7 +145,8 @@ class Engine:
     def run(self, program, entry="main", externals=None, max_steps=100,
             recorder=None, **inputs):
         """
-        Run a program to completion.
+        Run a program to completion (sync facade over run_async; callers
+        already inside a running event loop must await run_async instead).
 
         Args:
             program: compiled Program
@@ -149,12 +159,24 @@ class Engine:
         Returns:
             dict of return field values
         """
+        import asyncio
+
+        return asyncio.run(self.run_async(
+            program, entry=entry, externals=externals, max_steps=max_steps,
+            recorder=recorder, **inputs))
+
+    async def run_async(self, program, entry="main", externals=None,
+                        max_steps=100, recorder=None, **inputs):
+        """Run a program to completion — the native implementation.
+        Supports sync and async external callables; mapped calls fan out
+        concurrently when the engine dispatch is awaitable."""
         prompt = program.entry_prompt(entry)
 
-        ctx = Context(program, self, prompt, inputs, externals or {}, recorder=recorder)
+        ctx = Context(program, self, prompt, inputs, externals or {},
+                      recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:
-            ctx.step()
+            await ctx.step_async()
             steps += 1
         if not ctx.done:
             raise OrchestrationError(
@@ -162,13 +184,4 @@ class Engine:
                 f"(at prompt '{ctx.prompt}'). Increase --max-steps if needed."
             )
 
-        return ctx.result
-
-    async def run_async(self, program, entry="main", externals=None, **inputs):
-        """Async version of run — supports async external callables."""
-        prompt = program.entry_prompt(entry)
-
-        ctx = Context(program, self, prompt, inputs, externals or {})
-        while not ctx.done:
-            await ctx.step_async()
         return ctx.result

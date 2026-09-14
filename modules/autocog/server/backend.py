@@ -172,6 +172,10 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
             "kv_slots": int(os.environ.get("AUTOCOG_KV_SLOTS", 0)) or None,
             "cpus": cpus,
             "pid": os.getpid(),
+            # Concurrent execution lanes on this worker (RequestQueue
+            # workers). Pooled clients bound in-flight jobs per worker by
+            # this; >1 requires GIL-released evaluation server-side.
+            "lanes": 1,
         }
 
     @app.post("/seed")

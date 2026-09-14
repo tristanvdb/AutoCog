@@ -39,7 +39,18 @@ class Context:
             self.ctx_id = None
 
     def step(self):
-        """Execute one prompt iteration."""
+        """Execute one prompt iteration (sync facade over step_async; for
+        callers inside a running event loop, await step_async directly)."""
+        import asyncio
+
+        asyncio.run(self.step_async())
+
+    async def step_async(self):
+        """Execute one prompt iteration — the native implementation.
+
+        Async so an engine can await remote lanes and mapped calls can fan
+        out concurrently; a local engine's in-process evaluation simply
+        blocks the loop (one lane, nothing else to schedule)."""
         if self.done:
             return
 
@@ -47,8 +58,9 @@ class Context:
         if self.recorder:
             self.recorder.begin_prompt(self.ctx_id, self.prompt, self._step_count)
 
-        # 1. Resolve channels → content dict
-        content = resolve_channels(
+        # 1. Resolve channels → content dict (call channels may run whole
+        #    sub-flows; mapped calls fan out)
+        content = await resolve_channels(
             self.program, self.prompt,
             self.inputs, self.frames,
             self.engine, self.externals,
@@ -57,7 +69,7 @@ class Context:
 
         # 2. Evaluate prompt → frame
         if self.recorder:
-            frame, artifacts = self.engine.evaluate_prompt(
+            frame, artifacts = await self.engine.evaluate_prompt_async(
                 self.program, self.prompt, content,
                 record_kinds=self.recorder.kinds
             )
@@ -70,7 +82,7 @@ class Context:
                 perf=artifacts.get("perf"),
             )
         else:
-            frame = self.engine.evaluate_prompt(
+            frame = await self.engine.evaluate_prompt_async(
                 self.program, self.prompt, content
             )
         self._step_count += 1
@@ -119,10 +131,6 @@ class Context:
             if self.recorder:
                 self.recorder.record_flow(self.ctx_id, flow_def["prompt"])
             self.prompt = flow_def["prompt"]
-
-    async def step_async(self):
-        """Async version — supports async external callables."""
-        self.step()
 
     def _extract_return(self, frame, flow_def):
         """Extract return fields from a frame according to the return definition."""

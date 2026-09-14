@@ -1,8 +1,16 @@
 """
 Channel resolution — builds the content dict for a prompt invocation.
+
+Async-native: call channels run whole sub-flows (awaiting the engine per
+prompt) and mapped calls fan their jobs out concurrently via gather — the
+source of intra-sample parallelism when the engine dispatches to remote
+lanes. Channels themselves resolve strictly in order (a later channel's
+kwargs may self-reference the content built so far).
 """
 
+import asyncio
 import copy
+import inspect
 import itertools
 
 from .clauses import navigate, apply_clauses, get_mapped_clauses, apply_mapped
@@ -122,13 +130,14 @@ def expand_mapped(base_kwargs, mapped_axes):
     return jobs
 
 
-def resolve_call(channel, inputs, frames, current_prompt, engine, program, externals,
-                 content=None, recorder=None, ctx_id=None):
+async def resolve_call(channel, inputs, frames, current_prompt, engine, program,
+                       externals, content=None, recorder=None, ctx_id=None):
     """
     Resolve a call channel.
 
     1. Resolve kwargs (with mapped expansion)
-    2. Execute call(s) — prompt sub-flow or Python callable
+    2. Execute call(s) — prompt sub-flow or Python callable — mapped jobs
+       concurrently (they are independent: inputs fixed at expansion)
     3. Apply link-level clauses to results
     """
     base_kwargs, mapped_axes = resolve_call_kwargs(
@@ -141,27 +150,29 @@ def resolve_call(channel, inputs, frames, current_prompt, engine, program, exter
     target = channel.get("target", [])
     field_name = ".".join(t["name"] for t in target)
 
-    results = []
-    for job in jobs:
+    async def one_job(job):
         if extern and extern in externals:
-            # Python callable
+            # Python callable (sync or async)
             result = externals[extern](**job)
+            if inspect.isawaitable(result):
+                result = await result
             if recorder:
                 recorder.record_call(ctx_id, field_name, callable_name=extern)
+            return result
         elif entry:
             # Sub-prompt execution
             from .context import Context
             ctx = Context(program, engine, entry, job, externals,
                           recorder=recorder, parent_ctx=ctx_id)
             while not ctx.done:
-                ctx.step()
-            result = ctx.result
+                await ctx.step_async()
             if recorder:
                 recorder.record_call(ctx_id, field_name,
                                      prompt_name=entry, sub_ctx=ctx.ctx_id)
-        else:
-            result = None
-        results.append(result)
+            return ctx.result
+        return None
+
+    results = list(await asyncio.gather(*(one_job(job) for job in jobs)))
 
     # If mapped, collect results as a list; otherwise single result
     if mapped_axes:
@@ -176,8 +187,8 @@ def resolve_call(channel, inputs, frames, current_prompt, engine, program, exter
     return data
 
 
-def resolve_channels(program, prompt_name, inputs, frames, engine, externals,
-                     recorder=None, ctx_id=None):
+async def resolve_channels(program, prompt_name, inputs, frames, engine, externals,
+                           recorder=None, ctx_id=None):
     """
     Resolve all channels for a prompt, building the content dict.
     """
@@ -193,8 +204,9 @@ def resolve_channels(program, prompt_name, inputs, frames, engine, externals,
         elif ch_type == "dataflow":
             value = resolve_dataflow(ch, frames, prompt_name)
         elif ch_type == "call":
-            value = resolve_call(ch, inputs, frames, prompt_name, engine, program,
-                                 externals, content, recorder=recorder, ctx_id=ctx_id)
+            value = await resolve_call(ch, inputs, frames, prompt_name, engine,
+                                       program, externals, content,
+                                       recorder=recorder, ctx_id=ctx_id)
         else:
             continue
 
