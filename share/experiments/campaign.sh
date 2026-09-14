@@ -24,6 +24,10 @@
 #                spawn and run nothing
 #   --ngl N      GPU layers for workers (default: AUTOCOG_NGL, else 99)
 #   --phase P    restrict to one phase (repeatable; for reruns/debugging)
+#   --probe-limit N
+#                default question cap for probe runs that do not declare
+#                their own "limit" (default 1000; 0 = full dataset). A
+#                run's explicit "limit" always wins.
 #
 # Foreground by design: progress on stdout; if the terminal dies, rerun —
 # the executor and the probe tool both skip runs whose outputs exist.
@@ -38,6 +42,7 @@ source "$SCRIPT_DIR/env.sh"
 
 NGL="${AUTOCOG_NGL:-99}"
 DRYRUN=0
+PROBE_LIMIT=1000
 PHASES=()
 DESCRIPTORS=()
 
@@ -46,6 +51,7 @@ while [ $# -gt 0 ]; do
         --dryrun) DRYRUN=1; shift ;;
         --ngl)    NGL="$2"; shift 2 ;;
         --phase)  PHASES+=("$2"); shift 2 ;;
+        --probe-limit) PROBE_LIMIT="$2"; shift 2 ;;
         -*) echo "unknown option: $1" >&2; exit 2 ;;
         *) DESCRIPTORS+=("$1"); shift ;;
     esac
@@ -275,12 +281,13 @@ EOF
         fi
         IS_PROBE=$(python3 -c "import json,sys; p=[p for p in json.loads(sys.argv[1])['phases'] if p['name']==sys.argv[2]][0]; print(1 if p['probe'] else 0)" "$PLAN" "$PH")
         if [ "$IS_PROBE" = 1 ]; then
-            python3 - "$PLAN" "$PH" "$RESULTS_PATH/$NAME" "$EVENTS" <<'EOF' || echo "!!! probe phase $PH reported failures"
+            python3 - "$PLAN" "$PH" "$RESULTS_PATH/$NAME" "$EVENTS" "$PROBE_LIMIT" <<'EOF' || echo "!!! probe phase $PH reported failures"
 import json, os, subprocess, sys, threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 plan, phase_name, out_root, events = (json.loads(sys.argv[1]), sys.argv[2],
                                       sys.argv[3], sys.argv[4])
+probe_limit = int(sys.argv[5])
 repo = os.environ["AUTOCOG_REPO"]
 tool = os.path.join(repo, "share", "benchmarks", "probe_choices.py")
 phase = [p for p in plan["phases"] if p["name"] == phase_name][0]
@@ -338,8 +345,14 @@ def one_probe(i, run):
            "--syntax", run.get("syntax", "complete"),
            "--data", resolve_data(run["data"]),
            "--model", tag, "--out", out]
-    if run.get("limit"):
-        cmd += ["--limit", str(run["limit"])]
+    # A run's explicit "limit" wins; otherwise the launcher's default cap
+    # (--probe-limit, 0 = full dataset) keeps probes budget-bounded.
+    limit = run["limit"] if "limit" in run else probe_limit
+    if limit:
+        cmd += ["--limit", str(limit)]
+        if "limit" not in run:
+            print(f"[{phase_name}/{label}] capped at {limit} questions "
+                  f"(--probe-limit default; set \"limit\" in the run to override)")
     lifecycle("run.start", label, run)
     url = acquire(tag)
     try:

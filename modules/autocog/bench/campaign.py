@@ -39,6 +39,9 @@ Name resolution (the experiments workdir convention, env-overridable):
 
 Resume: a run whose output directory already holds a results-*.ndjson
 is skipped, so re-invoking after an interruption continues the campaign.
+Writers only finalize that name on completion; quality runs additionally
+validate the event count, so partial files from older writers re-run
+instead of silently passing for done.
 """
 
 import glob
@@ -135,8 +138,31 @@ class WorkerPool:
             self._cv.notify_all()
 
 
-def run_done(out_dir):
-    return bool(glob.glob(os.path.join(out_dir, "results-*.ndjson")))
+def run_done(out_dir, run=None, defaults=None):
+    """Does this run's output already exist? New writers only finalize the
+    results-*.ndjson name on completion, but files from older writers (or
+    hand-copied results) may be partial — for quality runs the expected
+    event count is exact (questions x syntaxes x demos, one line each,
+    errors included), so validate it when we can."""
+    files = glob.glob(os.path.join(out_dir, "results-*.ndjson"))
+    if not files:
+        return False
+    if not run or run.get("kind") != "quality":
+        return True
+    try:
+        from .formatters import load_formatter, load_questions
+        params = dict(defaults or {})
+        params.update(run)
+        qs = load_questions(resolve_data(params["data"]),
+                            load_formatter(params.get("formatter", "")),
+                            limit=int(params.get("questions", 0) or 0))
+        expected = (len(qs)
+                    * len(params.get("syntaxes") or ["complete", "stripped"])
+                    * len(params.get("demos") or ["select"]))
+        have = sum(1 for f in files for line in open(f) if line.strip())
+        return have >= expected
+    except Exception:  # noqa: BLE001 — can't validate: trust the file
+        return True
 
 
 def run_tag(run, defaults):
@@ -233,7 +259,7 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
         for i, run in enumerate(phase.get("runs", [])):
             label = run.get("out") or f"{pname}-{i}"
             out_dir = os.path.join(root, label)
-            if run_done(out_dir):
+            if run_done(out_dir, run, defaults):
                 log(f"[{pname}/{label}] output exists — skipping")
                 lifecycle("run.skip", pname, label, run)
                 continue

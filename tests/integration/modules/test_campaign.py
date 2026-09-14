@@ -125,6 +125,38 @@ def test_executor_refuses_probe_runs(tmp_path, worker, monkeypatch):
     assert failures == ["p/p-0"]     # refused, recorded, not fatal
 
 
+def test_executor_redoes_legacy_partial(tmp_path, worker, monkeypatch):
+    """A results file left by a pre-.part writer (interrupted mid-run) is
+    detected as incomplete via the expected event count and re-run; once
+    complete, resume skips it."""
+    from autocog.bench.campaign import run_campaign
+
+    monkeypatch.setenv("RESULTS_PATH", str(tmp_path))
+    desc = tmp_path / "c.json"
+    desc.write_text(json.dumps({
+        "name": "legacy",
+        "phases": [{"name": "p", "runs": [
+            {"kind": "quality", "model": "rng",
+             "data": "share/benchmarks/quality/questions.json",
+             "questions": 2, "syntaxes": ["complete"], "demos": ["select"],
+             "out": "partial"}]}]}))
+    out = tmp_path / "legacy" / "partial"
+    out.mkdir(parents=True)
+    (out / "results-oldhost-rng.ndjson").write_text(
+        json.dumps({"event.action": "quality.run"}) + "\n")   # 1 of 2 events
+
+    logs = []
+    _, failures = run_campaign(str(desc), workers=[worker], log=logs.append)
+    assert failures == []
+    assert not any("skipping" in m for m in logs)              # partial re-ran
+    files = list(out.glob("results-*.ndjson"))
+    assert sum(1 for f in files for _ in open(f)) >= 3         # legacy + 2 new
+
+    logs2 = []
+    run_campaign(str(desc), workers=[worker], log=logs2.append)
+    assert any("skipping" in m for m in logs2)                 # now complete
+
+
 def test_tag_derivation():
     from autocog.bench.workers import model_tag
     assert model_tag(None) == "rng"
