@@ -5,7 +5,8 @@ the repo) describing experiments; hardware is not its concern beyond a
 worker *mode* that a launcher interprets. This executor is a pure
 consumer of workers: it NEVER spawns, configures or stops them — it is
 always given `--worker` URLs (level-3 backends preassigned with models)
-and round-robins each run to a compatible worker by model tag.
+and runs a phase's runs CONCURRENTLY, each on a compatible worker
+leased by model tag (a worker is one lane: one run at a time).
 
 Descriptor:
     {
@@ -43,6 +44,8 @@ is skipped, so re-invoking after an interruption continues the campaign.
 import glob
 import json
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from autocog.errors import ConfigError
 
@@ -94,35 +97,57 @@ def results_root(campaign_name):
 
 
 class WorkerPool:
-    """The --worker URLs, probed once; round-robin routing by model tag."""
+    """The --worker URLs, probed once; lease routing by model tag.
+
+    A worker is ONE execution lane: `acquire` hands a compatible worker
+    to exactly one run at a time (blocking until one frees up), which is
+    what lets a phase's runs execute concurrently — one per worker —
+    without ever stacking two runs on the same lane."""
 
     def __init__(self, urls):
         self.workers = [RemoteWorker(u) for u in urls]
-        self._rr = {}
+        self._cv = threading.Condition()
+        self._busy = set()
         for w in self.workers:
             w.capabilities()   # fail fast on unreachable workers
 
-    def pick(self, tag):
+    def compatible(self, tag):
         compatible = [w for w in self.workers
                       if tag in w.capabilities()["models"]]
         if not compatible:
             hosted = {w.url: w.capabilities()["models"] for w in self.workers}
             raise ConfigError(f"no worker hosts model {tag!r}: {hosted}")
-        i = self._rr.get(tag, 0)
-        self._rr[tag] = i + 1
-        return compatible[i % len(compatible)]
+        return compatible
+
+    def acquire(self, tag):
+        compatible = self.compatible(tag)   # raises before blocking
+        with self._cv:
+            while True:
+                for w in compatible:
+                    if w.url not in self._busy:
+                        self._busy.add(w.url)
+                        return w
+                self._cv.wait()
+
+    def release(self, worker):
+        with self._cv:
+            self._busy.discard(worker.url)
+            self._cv.notify_all()
 
 
 def run_done(out_dir):
     return bool(glob.glob(os.path.join(out_dir, "results-*.ndjson")))
 
 
-def execute_run(run, defaults, pool, out_dir, log):
+def run_tag(run, defaults):
+    return run.get("model") or defaults.get("model") or "rng"
+
+
+def execute_run(run, defaults, worker, out_dir, log):
     kind = run.get("kind")
     params = dict(defaults)
     params.update({k: v for k, v in run.items() if k not in ("kind", "out")})
     tag = params.pop("model", None) or "rng"
-    worker = pool.pick(tag)
 
     if kind == "quality":
         from .quality import run_quality
@@ -178,8 +203,33 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
         results.stream_event(ev)
 
     failures = []
+
+    def one_run(pname, run, label, out_dir):
+        """One run on one leased worker; failures are isolated datapoints."""
+        rlog = lambda m: log(f"[{pname}/{label}] {m}")  # noqa: E731
+        os.makedirs(out_dir, exist_ok=True)
+        log(f"=== [{pname}/{label}] {run.get('kind')} "
+            f"model={run_tag(run, defaults)} ===")
+        lifecycle("run.start", pname, label, run)
+        try:
+            worker = (pool.acquire(run_tag(run, defaults))
+                      if run.get("kind") in ("quality", "perf") else None)
+            try:
+                execute_run(run, defaults, worker, out_dir, rlog)
+            finally:
+                if worker is not None:
+                    pool.release(worker)
+            lifecycle("run.end", pname, label, run, **{"autocog.campaign.ok": True})
+        except Exception as e:  # noqa: BLE001 — isolate runs
+            failures.append(f"{pname}/{label}")
+            log(f"!!! {pname}/{label} failed — continuing: {e}")
+            lifecycle("run.end", pname, label, run,
+                      **{"autocog.campaign.ok": False,
+                         "error.message": str(e)[:300]})
+
     for phase in selected:
         pname = phase.get("name", "phase")
+        pending = []
         for i, run in enumerate(phase.get("runs", [])):
             label = run.get("out") or f"{pname}-{i}"
             out_dir = os.path.join(root, label)
@@ -187,19 +237,15 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
                 log(f"[{pname}/{label}] output exists — skipping")
                 lifecycle("run.skip", pname, label, run)
                 continue
-            os.makedirs(out_dir, exist_ok=True)
-            log(f"=== [{pname}/{label}] {run.get('kind')} "
-                f"model={run.get('model', 'rng')} ===")
-            lifecycle("run.start", pname, label, run)
-            try:
-                execute_run(run, defaults, pool, out_dir, log)
-                lifecycle("run.end", pname, label, run, **{"autocog.campaign.ok": True})
-            except Exception as e:  # noqa: BLE001 — isolate runs
-                failures.append(f"{pname}/{label}")
-                log(f"!!! {pname}/{label} failed — continuing: {e}")
-                lifecycle("run.end", pname, label, run,
-                          **{"autocog.campaign.ok": False,
-                             "error.message": str(e)[:300]})
+            pending.append((pname, run, label, out_dir))
+        if not pending:
+            continue
+        # One thread per pending run (they mostly wait on a worker lease or
+        # on HTTP): a thread cap below the worker count would head-of-line
+        # block idle workers behind runs queued for a busy one.
+        with ThreadPoolExecutor(max_workers=len(pending)) as ex:
+            for f in [ex.submit(one_run, *args) for args in pending]:
+                f.result()
 
     if failures:
         log(f"[failed] {len(failures)} run(s): " + ", ".join(failures))

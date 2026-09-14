@@ -91,6 +91,7 @@ class State:
                 if not ev.get("autocog.campaign.ok") and ev.get("error.message"):
                     self.last_error = ev["error.message"]
         elif action == "quality.run":
+            ev.setdefault("@timestamp", ts)
             self.q_events.append(ev)
             if ev.get("error.message"):
                 self.last_error = ev["error.message"]
@@ -123,14 +124,16 @@ class State:
         return done, running, failed, total
 
     def rates(self):
-        """Questions/min over the trailing window, and mean seconds/run."""
+        """AGGREGATE questions/min over the trailing window (wall-clock
+        across all concurrent lanes, not per-lane busy time), and mean
+        seconds/run."""
         qpm = None
-        if len(self.q_events) >= 2:
-            walls = [e.get("autocog.bench.wall_seconds") or 0
-                     for e in self.q_events[-500:]]
-            busy = sum(walls)
-            if busy > 0:
-                qpm = 60.0 * len(walls) / busy
+        recent = self.q_events[-500:]
+        if len(recent) >= 2:
+            span = (parse_ts(recent[-1].get("@timestamp"))
+                    - parse_ts(recent[0].get("@timestamp")))
+            if span > 0:
+                qpm = 60.0 * (len(recent) - 1) / span
         durations = []
         for rec in self.runs.values():
             if rec["status"] in ("ok", "failed") and rec["t0"] and rec["t1"]:
@@ -184,7 +187,8 @@ def render(state):
         if total and spr:
             lines.append(f"   rate: {qpm:.1f} q/min" if qpm else "   rate: --"
                          )
-            eta = (total - done) * spr
+            # Remaining runs spread over the lanes currently in flight.
+            eta = (total - done) * spr / max(1, running)
             lines.append(f"   ~{fmt_dt(spr)}/run, ETA {fmt_dt(eta)}")
         elif qpm:
             lines.append(f"   rate: {qpm:.1f} q/min")

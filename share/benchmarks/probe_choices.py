@@ -85,8 +85,10 @@ def run(args):
         model_tag = (os.path.splitext(os.path.basename(args.model))[0]
                      if args.model else "rng")
 
+    # Write to .part, rename when complete: an interrupted probe keeps its
+    # rows without looking done to the launcher's skip-if-present check.
     n_rows, n_skip = 0, 0
-    with open(args.out, "w") as sink:
+    with open(args.out + ".part", "w") as sink:
         for q in questions:
             content = {"topic": q.get("topic", ""), "question": q["question"],
                        "choices": q["choices"]}
@@ -126,6 +128,7 @@ def run(args):
                 "qid": q["id"], "gold": q["choices"].index(q["answer"]),
                 "candidates": rows}) + "\n")
             n_rows += 1
+    os.replace(args.out + ".part", args.out)
     print(f"probe: {n_rows} rows, {n_skip} skipped -> {args.out}")
     return 0 if n_rows else 1
 

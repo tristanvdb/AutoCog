@@ -51,13 +51,16 @@ def stream_event(event):
 
 
 class NdjsonWriter:
-    """Appends one event per line as soon as it is recorded — an interrupted
-    run keeps everything it measured."""
+    """Writes one event per line as soon as it is recorded, into
+    `<path>.part`; `close()` renames to the final path. An interrupted
+    run keeps everything it measured (the .part file) WITHOUT looking
+    complete to resume checks that glob for the final name."""
 
     def __init__(self, path):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self.path = path
-        self._f = open(path, "a")
+        self._part = path + ".part"
+        self._f = open(self._part, "w")
         self.events = []
 
     def emit(self, event):
@@ -69,6 +72,7 @@ class NdjsonWriter:
 
     def close(self):
         self._f.close()
+        os.replace(self._part, self.path)
 
 
 PERF_COLS = ["cell", "eval s", "wall s", "tok restore", "tok eval",

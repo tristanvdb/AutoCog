@@ -225,6 +225,10 @@ EOF
     fi
 
     # -- spawn workers ----------------------------------------------------
+    # Workers run their runs concurrently, so split the cores between them
+    # (each process otherwise sizes its llama thread pools to ALL cores).
+    WTHREADS="${AUTOCOG_THREADS:-$(( $(nproc) / N_SLOTS ))}"
+    [ "$WTHREADS" -ge 2 ] || WTHREADS=2
     PIDS=() ; URLS=()
     WLOG="$RESULTS_PATH/$NAME/workers"
     mkdir -p "$WLOG"
@@ -248,9 +252,10 @@ EOF
         CMD=(python3 -m autocog backend --host 127.0.0.1 --port "$PORT")
         while IFS= read -r a; do [ -n "$a" ] && CMD+=("$a"); done <<< "$SPECS"
         if [ -n "$GPU" ]; then
-            CUDA_VISIBLE_DEVICES="$GPU" "${CMD[@]}" > "$WLOG/worker-$i.log" 2>&1 &
+            AUTOCOG_THREADS="$WTHREADS" CUDA_VISIBLE_DEVICES="$GPU" \
+                "${CMD[@]}" > "$WLOG/worker-$i.log" 2>&1 &
         else
-            "${CMD[@]}" > "$WLOG/worker-$i.log" 2>&1 &
+            AUTOCOG_THREADS="$WTHREADS" "${CMD[@]}" > "$WLOG/worker-$i.log" 2>&1 &
         fi
         PIDS+=($!) ; URLS+=("127.0.0.1:$PORT")
     done
@@ -271,7 +276,8 @@ EOF
         IS_PROBE=$(python3 -c "import json,sys; p=[p for p in json.loads(sys.argv[1])['phases'] if p['name']==sys.argv[2]][0]; print(1 if p['probe'] else 0)" "$PLAN" "$PH")
         if [ "$IS_PROBE" = 1 ]; then
             python3 - "$PLAN" "$PH" "$RESULTS_PATH/$NAME" "$EVENTS" <<'EOF' || echo "!!! probe phase $PH reported failures"
-import json, os, subprocess, sys
+import json, os, subprocess, sys, threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 plan, phase_name, out_root, events = (json.loads(sys.argv[1]), sys.argv[2],
                                       sys.argv[3], sys.argv[4])
@@ -281,6 +287,7 @@ phase = [p for p in plan["phases"] if p["name"] == phase_name][0]
 urls = [f"127.0.0.1:{17700 + i}" for i in range(len(plan["slots"]))]
 hosted = [{m["tag"] for m in s["models"]} or {"rng"} for s in plan["slots"]]
 
+ev_lock = threading.Lock()
 def lifecycle(action, label, run, **extra):
     ts = datetime.now(timezone.utc)
     ev = {"@timestamp": ts.strftime("%Y-%m-%dT%H:%M:%S.")
@@ -291,38 +298,63 @@ def lifecycle(action, label, run, **extra):
           "autocog.campaign.run": label, "autocog.campaign.kind": "probe",
           "autocog.campaign.model": run.get("model", "rng")}
     ev.update(extra)
-    with open(events, "a") as f:
+    with ev_lock, open(events, "a") as f:
         f.write(json.dumps({"autocog.bench": ev}) + "\n")
 
-rc = 0
-for i, run in enumerate(phase["runs"]):
+# Worker leasing: probes run concurrently, one per worker at a time
+# (a worker is one execution lane).
+cv, busy = threading.Condition(), set()
+def acquire(tag):
+    with cv:
+        while True:
+            for u, h in zip(urls, hosted):
+                if tag in h and u not in busy:
+                    busy.add(u)
+                    return u
+            cv.wait()
+def release(url):
+    with cv:
+        busy.discard(url)
+        cv.notify_all()
+
+fails = []
+def one_probe(i, run):
     tag = run.get("model", "rng")
     label = run.get("out") or f"{phase_name}-{i}"
-    url = next((u for u, h in zip(urls, hosted) if tag in h), None)
-    if url is None:
+    if not any(tag in h for h in hosted):
         print(f"!!! probe {tag}: no worker hosts it")
         lifecycle("run.end", label, run, **{"autocog.campaign.ok": False,
                   "error.message": f"no worker hosts {tag}"})
-        rc = 1
-        continue
+        fails.append(label)
+        return
     out = os.path.join(out_root, label) + ".ndjson"
     if os.path.exists(out) and os.path.getsize(out) > 0:
         print(f"[{phase_name}/{os.path.basename(out)}] exists — skipping")
         lifecycle("run.skip", label, run)
-        continue
+        return
     os.makedirs(os.path.dirname(out), exist_ok=True)
     from autocog.bench.campaign import resolve_data
     cmd = [sys.executable, tool, "run", "--demo", run["demo"],
            "--syntax", run.get("syntax", "complete"),
            "--data", resolve_data(run["data"]),
-           "--model", tag, "--worker", url, "--out", out]
+           "--model", tag, "--out", out]
     if run.get("limit"):
         cmd += ["--limit", str(run["limit"])]
     lifecycle("run.start", label, run)
-    ok = subprocess.run(cmd, cwd=repo).returncode == 0
+    url = acquire(tag)
+    try:
+        ok = subprocess.run(cmd + ["--worker", url], cwd=repo).returncode == 0
+    finally:
+        release(url)
     lifecycle("run.end", label, run, **{"autocog.campaign.ok": ok})
     if not ok:
-        rc = 1
+        fails.append(label)
+
+with ThreadPoolExecutor(max_workers=max(len(phase["runs"]), 1)) as ex:
+    for f in [ex.submit(one_probe, i, run)
+              for i, run in enumerate(phase["runs"])]:
+        f.result()
+rc = 1 if fails else 0
 probe_outs = [f for f in os.listdir(out_root) if f.endswith(".ndjson")]
 if probe_outs:
     subprocess.run([sys.executable, tool, "analyze",
