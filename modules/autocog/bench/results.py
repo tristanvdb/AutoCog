@@ -51,16 +51,22 @@ def stream_event(event):
 
 
 class NdjsonWriter:
-    """Writes one event per line as soon as it is recorded, into
-    `<path>.part`; `close()` renames to the final path. An interrupted
-    run keeps everything it measured (the .part file) WITHOUT looking
-    complete to resume checks that glob for the final name."""
+    """Writes one event per line as soon as it is recorded.
 
-    def __init__(self, path):
+    atomic=True (default): write into `<path>.part`, rename on close — an
+    interrupted run keeps its data without looking complete to resume
+    checks that glob for the final name. Used where completion is
+    all-or-nothing (perf runs: budget-bounded, no per-sample identity).
+
+    atomic=False: append directly to the final path — used where resume
+    is per-sample (quality runs index existing lines and re-run only the
+    gaps, so a partial file is not mistaken for anything)."""
+
+    def __init__(self, path, atomic=True):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self.path = path
-        self._part = path + ".part"
-        self._f = open(self._part, "w")
+        self._part = (path + ".part") if atomic else None
+        self._f = open(self._part or path, "w" if atomic else "a")
         self.events = []
 
     def emit(self, event):
@@ -72,7 +78,8 @@ class NdjsonWriter:
 
     def close(self):
         self._f.close()
-        os.replace(self._part, self.path)
+        if self._part:
+            os.replace(self._part, self.path)
 
 
 PERF_COLS = ["cell", "eval s", "wall s", "tok restore", "tok eval",

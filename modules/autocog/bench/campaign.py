@@ -4,9 +4,14 @@ A campaign is a DESCRIPTOR (data, owned by the operator, not stored in
 the repo) describing experiments; hardware is not its concern beyond a
 worker *mode* that a launcher interprets. This executor is a pure
 consumer of workers: it NEVER spawns, configures or stops them — it is
-always given `--worker` URLs (level-3 backends preassigned with models)
-and runs a phase's runs CONCURRENTLY, each on a compatible worker
-leased by model tag (a worker is one lane: one run at a time).
+always given `--worker` URLs (level-3 backends preassigned with models).
+
+Quality runs execute at SAMPLE granularity: a phase's (run, syntax,
+demo, question) samples are scheduled across the workers hosting each
+run's tag through EnginePools (per-FTA lane dispatch), the scan keeping
+every lane primed — see quality.run_samples. Perf runs keep an
+exclusive single worker and execute sequentially, before the phase's
+quality samples start (timing never shares a lane).
 
 Descriptor:
     {
@@ -37,18 +42,16 @@ Name resolution (the experiments workdir convention, env-overridable):
     cells  -> <repo>/share/benchmarks/compute/, cells-<name>.json | <name>.json
     out    -> $RESULTS_PATH | $AUTOCOG_WORKDIR/results | ./results, /<campaign>/<run out>
 
-Resume: a run whose output directory already holds a results-*.ndjson
-is skipped, so re-invoking after an interruption continues the campaign.
-Writers only finalize that name on completion; quality runs additionally
-validate the event count, so partial files from older writers re-run
-instead of silently passing for done.
+Resume: per SAMPLE for quality runs — existing result lines are indexed
+by (syntax, demo, question) and only the gaps run, whatever writer
+vintage produced them. Perf runs resume per run (results file finalized
+on completion only).
 """
 
+import asyncio
 import glob
 import json
 import os
-import threading
-from concurrent.futures import ThreadPoolExecutor
 
 from autocog.errors import ConfigError
 
@@ -99,117 +102,40 @@ def results_root(campaign_name):
     return os.path.join(base, campaign_name)
 
 
-class WorkerPool:
-    """The --worker URLs, probed once; lease routing by model tag.
-
-    A worker is ONE execution lane: `acquire` hands a compatible worker
-    to exactly one run at a time (blocking until one frees up), which is
-    what lets a phase's runs execute concurrently — one per worker —
-    without ever stacking two runs on the same lane."""
-
-    def __init__(self, urls):
-        self.workers = [RemoteWorker(u) for u in urls]
-        self._cv = threading.Condition()
-        self._busy = set()
-        for w in self.workers:
-            w.capabilities()   # fail fast on unreachable workers
-
-    def compatible(self, tag):
-        compatible = [w for w in self.workers
-                      if tag in w.capabilities()["models"]]
-        if not compatible:
-            hosted = {w.url: w.capabilities()["models"] for w in self.workers}
-            raise ConfigError(f"no worker hosts model {tag!r}: {hosted}")
-        return compatible
-
-    def acquire(self, tag):
-        compatible = self.compatible(tag)   # raises before blocking
-        with self._cv:
-            while True:
-                for w in compatible:
-                    if w.url not in self._busy:
-                        self._busy.add(w.url)
-                        return w
-                self._cv.wait()
-
-    def release(self, worker):
-        with self._cv:
-            self._busy.discard(worker.url)
-            self._cv.notify_all()
+def hosted_map(urls):
+    """url -> hosted tags, probed once (fail fast on unreachable workers)."""
+    return {w.url: w.capabilities()["models"]
+            for w in (RemoteWorker(u) for u in urls)}
 
 
-def run_done(out_dir, run=None, defaults=None):
-    """Does this run's output already exist? New writers only finalize the
-    results-*.ndjson name on completion, but files from older writers (or
-    hand-copied results) may be partial — for quality runs the expected
-    event count is exact (questions x syntaxes x demos, one line each,
-    errors included), so validate it when we can."""
-    files = glob.glob(os.path.join(out_dir, "results-*.ndjson"))
-    if not files:
-        return False
-    if not run or run.get("kind") != "quality":
-        return True
-    try:
-        from .formatters import load_formatter, load_questions
-        params = dict(defaults or {})
-        params.update(run)
-        qs = load_questions(resolve_data(params["data"]),
-                            load_formatter(params.get("formatter", "")),
-                            limit=int(params.get("questions", 0) or 0))
-        expected = (len(qs)
-                    * len(params.get("syntaxes") or ["complete", "stripped"])
-                    * len(params.get("demos") or ["select"]))
-        have = sum(1 for f in files for line in open(f) if line.strip())
-        return have >= expected
-    except Exception:  # noqa: BLE001 — can't validate: trust the file
-        return True
+def urls_for(hosted, tag):
+    urls = [u for u, models in hosted.items() if tag in models]
+    if not urls:
+        raise ConfigError(f"no worker hosts model {tag!r}: {hosted}")
+    return urls
+
+
+def run_done(out_dir):
+    """Perf-run resume: the results file only carries its final name on
+    completion (quality runs resume per sample instead — see quality)."""
+    return bool(glob.glob(os.path.join(out_dir, "results-*.ndjson")))
 
 
 def run_tag(run, defaults):
     return run.get("model") or defaults.get("model") or "rng"
 
 
-def execute_run(run, defaults, worker, out_dir, log):
-    kind = run.get("kind")
-    params = dict(defaults)
-    params.update({k: v for k, v in run.items() if k not in ("kind", "out")})
-    tag = params.pop("model", None) or "rng"
-
-    if kind == "quality":
-        from .quality import run_quality
-        data = resolve_data(params.pop("data"))
-        run_quality(model=tag, data=data,
-                    formatter=params.pop("formatter", ""),
-                    questions=int(params.pop("questions", 0) or 0),
-                    syntaxes=params.pop("syntaxes", None),
-                    demos=params.pop("demos", None),
-                    out=out_dir, root=resolve_repo(),
-                    seed=int(params.pop("seed", 42)),
-                    workers=[worker.url], log=log)
-    elif kind == "perf":
-        from .perf import run_perf
-        cells = resolve_cells(params.pop("cells"))
-        run_perf(model=tag, cells=cells, out=out_dir,
-                 tag=params.pop("tag", ""),
-                 budget_seconds=float(params.pop("budget_seconds", 0) or 0),
-                 seed=int(params.pop("seed", 42)),
-                 workers=[worker.url], log=log)
-    elif kind == "probe":
-        raise ConfigError("probe runs are a campaign-launcher concern; "
-                          "this executor only runs quality/perf")
-    else:
-        raise ConfigError(f"unknown run kind: {kind!r}")
-
-
 def run_campaign(descriptor_path, phases=None, workers=None, log=print):
     """Execute a campaign descriptor's phases against the given workers."""
+    from .quality import QualityRun, run_samples
+
     desc = json.load(open(descriptor_path))
     name = desc.get("name") or os.path.splitext(
         os.path.basename(descriptor_path))[0]
     if not workers:
         raise ConfigError("bench campaign requires --worker URL(s); worker "
                           "lifecycle belongs to the campaign launcher")
-    pool = WorkerPool(workers)
+    hosted = hosted_map(workers)
     defaults = desc.get("defaults", {})
     root = results_root(name)
 
@@ -230,48 +156,104 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
 
     failures = []
 
-    def one_run(pname, run, label, out_dir):
-        """One run on one leased worker; failures are isolated datapoints."""
-        rlog = lambda m: log(f"[{pname}/{label}] {m}")  # noqa: E731
-        os.makedirs(out_dir, exist_ok=True)
-        log(f"=== [{pname}/{label}] {run.get('kind')} "
-            f"model={run_tag(run, defaults)} ===")
-        lifecycle("run.start", pname, label, run)
-        try:
-            worker = (pool.acquire(run_tag(run, defaults))
-                      if run.get("kind") in ("quality", "perf") else None)
-            try:
-                execute_run(run, defaults, worker, out_dir, rlog)
-            finally:
-                if worker is not None:
-                    pool.release(worker)
-            lifecycle("run.end", pname, label, run, **{"autocog.campaign.ok": True})
-        except Exception as e:  # noqa: BLE001 — isolate runs
-            failures.append(f"{pname}/{label}")
-            log(f"!!! {pname}/{label} failed — continuing: {e}")
-            lifecycle("run.end", pname, label, run,
-                      **{"autocog.campaign.ok": False,
-                         "error.message": str(e)[:300]})
+    def fail(pname, label, run, err):
+        failures.append(f"{pname}/{label}")
+        log(f"!!! {pname}/{label} failed — continuing: {err}")
+        lifecycle("run.end", pname, label, run,
+                  **{"autocog.campaign.ok": False,
+                     "error.message": str(err)[:300]})
+
+    def params_of(run):
+        p = dict(defaults)
+        p.update({k: v for k, v in run.items() if k not in ("kind", "out")})
+        p.pop("model", None)
+        return p
 
     for phase in selected:
         pname = phase.get("name", "phase")
-        pending = []
+        perf_runs, quality_runs = [], []
         for i, run in enumerate(phase.get("runs", [])):
             label = run.get("out") or f"{pname}-{i}"
+            kind = run.get("kind")
+            if kind == "perf":
+                perf_runs.append((run, label))
+            elif kind == "quality":
+                quality_runs.append((run, label))
+            else:
+                fail(pname, label, run,
+                     "probe runs are a campaign-launcher concern; this "
+                     "executor only runs quality/perf" if kind == "probe"
+                     else f"unknown run kind: {kind!r}")
+
+        # Perf first, sequential, one exclusive worker each — nothing else
+        # is in flight yet, so timing never shares a lane.
+        for run, label in perf_runs:
             out_dir = os.path.join(root, label)
-            if run_done(out_dir, run, defaults):
+            if run_done(out_dir):
                 log(f"[{pname}/{label}] output exists — skipping")
                 lifecycle("run.skip", pname, label, run)
                 continue
-            pending.append((pname, run, label, out_dir))
-        if not pending:
-            continue
-        # One thread per pending run (they mostly wait on a worker lease or
-        # on HTTP): a thread cap below the worker count would head-of-line
-        # block idle workers behind runs queued for a busy one.
-        with ThreadPoolExecutor(max_workers=len(pending)) as ex:
-            for f in [ex.submit(one_run, *args) for args in pending]:
-                f.result()
+            log(f"=== [{pname}/{label}] perf model={run_tag(run, defaults)} ===")
+            lifecycle("run.start", pname, label, run)
+            try:
+                from .perf import run_perf
+                params = params_of(run)
+                tag = run_tag(run, defaults)
+                url = urls_for(hosted, tag)[0]
+                os.makedirs(out_dir, exist_ok=True)
+                run_perf(model=tag, cells=resolve_cells(params.pop("cells")),
+                         out=out_dir, tag=params.pop("tag", ""),
+                         budget_seconds=float(params.pop("budget_seconds", 0) or 0),
+                         seed=int(params.pop("seed", 42)),
+                         workers=[url],
+                         log=lambda m, _l=label: log(f"[{pname}/{_l}] {m}"))
+                lifecycle("run.end", pname, label, run,
+                          **{"autocog.campaign.ok": True})
+            except Exception as e:  # noqa: BLE001 — isolate runs
+                fail(pname, label, run, e)
+
+        # Quality at sample granularity across all compatible workers.
+        entries, ledgers, meta = [], {}, []
+        from autocog.remote import lane_ledger
+        for run, label in quality_runs:
+            out_dir = os.path.join(root, label)
+            try:
+                params = params_of(run)
+                tag = run_tag(run, defaults)
+                urls = urls_for(hosted, tag)
+                os.makedirs(out_dir, exist_ok=True)
+                qrun = QualityRun(
+                    tag, resolve_data(params.pop("data")), out_dir,
+                    resolve_repo(), formatter=params.pop("formatter", ""),
+                    questions=int(params.pop("questions", 0) or 0),
+                    syntaxes=params.pop("syntaxes", None),
+                    demos=params.pop("demos", None),
+                    log=lambda m, _l=label: log(f"[{pname}/{_l}] {m}"))
+                if not qrun.pending:
+                    log(f"[{pname}/{label}] all samples present — skipping")
+                    lifecycle("run.skip", pname, label, run)
+                    continue
+                if tag not in ledgers:
+                    ledgers[tag] = lane_ledger(urls)
+                pools = qrun.make_pools(urls, ledgers[tag])
+                seed = int(params.pop("seed", 42))
+                for pool in pools.values():
+                    pool.set_seed(seed)
+                entries.append((qrun, pools))
+                meta.append((run, label))
+            except Exception as e:  # noqa: BLE001 — isolate runs
+                fail(pname, label, run, e)
+        if entries:
+            log(f"=== [{pname}] {sum(len(e[0].pending) for e in entries)} "
+                f"sample(s) over {sum(l.total_lanes() for l in ledgers.values())}"
+                f" lane(s) ===")
+            asyncio.run(run_samples(
+                entries, ledgers, log=log,
+                on_start=lambda i: lifecycle("run.start", pname, meta[i][1],
+                                             meta[i][0]),
+                on_end=lambda i: lifecycle("run.end", pname, meta[i][1],
+                                           meta[i][0],
+                                           **{"autocog.campaign.ok": True})))
 
     if failures:
         log(f"[failed] {len(failures)} run(s): " + ", ".join(failures))

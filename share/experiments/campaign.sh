@@ -157,8 +157,11 @@ elif mode == "distributed":
     if len(real) > n:
         fail(f"{len(real)} models but only {n} worker slot(s) "
              f"({max(gpus,1)} GPU(s) x factor {factor}) — raise factor")
+    # All n slots are used: with factor beyond the model count, models are
+    # replicated round-robin — extra lanes per model (weights duplicated;
+    # interim until server-side lanes>1 shares them).
     slots = [{"gpu": (i % gpus) if gpus else None, "models": [real[i % len(real)]] if real else []}
-             for i in range(min(n, max(len(real), 1)))]
+             for i in range(n if real else 1)]
 else:
     fail(f"unknown worker mode {mode!r}")
 

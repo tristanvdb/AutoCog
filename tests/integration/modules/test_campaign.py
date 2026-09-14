@@ -155,7 +155,7 @@ def test_engine_pool_dispatch(rng_workers):
     assert pool.total_lanes() == 2
 
     counts = {}
-    for b in pool.backends:
+    for b in pool.backends.values():
         orig = b.evaluate_prompt_async
 
         async def wrapped(*a, _url=b.server_url, _orig=orig, **kw):
@@ -232,6 +232,55 @@ def test_executor_redoes_legacy_partial(tmp_path, worker, monkeypatch):
     logs2 = []
     run_campaign(str(desc), workers=[worker], log=logs2.append)
     assert any("skipping" in m for m in logs2)                 # now complete
+
+    # No duplicate samples across all files after the resume pass.
+    keys = []
+    for f in out.glob("results-*.ndjson"):
+        for line in f.open():
+            ev = json.loads(line)
+            if ev.get("autocog.bench.question") is not None:
+                keys.append((ev["autocog.bench.syntax"], ev["autocog.bench.demo"],
+                             ev["autocog.bench.question"]))
+    assert len(keys) == 2 and len(set(keys)) == 2
+
+
+def test_scheduler_no_starvation():
+    """The scan skips saturated tag groups: a big slow run on tag A must
+    not stop tag B's lanes from being fed (B finishes long before A)."""
+    import asyncio
+
+    from autocog.bench.quality import run_samples
+
+    class FakeLedger:
+        def total_lanes(self):
+            return 1
+
+    class FakeRun:
+        def __init__(self, tag, n, delay):
+            self.tag, self.delay = tag, delay
+            self.pending = [("s", "d", {"id": i}) for i in range(n)]
+            self.emitted = []
+
+        async def eval_sample(self, pools, syntax, demo, q):
+            await asyncio.sleep(self.delay)
+            return {"q": q["id"]}
+
+        def emit(self, ev):
+            self.emitted.append(ev)
+
+        def finish(self):
+            pass
+
+    slow = FakeRun("A", 12, 0.05)
+    fast = FakeRun("B", 3, 0.001)
+    ends = []
+    asyncio.run(run_samples(
+        [(slow, None), (fast, None)],
+        {"A": FakeLedger(), "B": FakeLedger()},
+        log=lambda m: None, window=1,
+        on_end=lambda i: ends.append(i)))
+    assert ends == [1, 0]                     # B (index 1) done first
+    assert len(slow.emitted) == 12 and len(fast.emitted) == 3
 
 
 def test_tag_derivation():

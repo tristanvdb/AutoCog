@@ -375,6 +375,56 @@ class RemoteBackend:
         return ctx.result
 
 
+class LaneLedger:
+    """In-flight accounting for a set of worker lanes, keyed by URL.
+
+    One ledger per model tag: EnginePools that differ only in syntax bind
+    their own engines but share the ledger, so a worker's lane count is
+    respected across all of them. Acquire blocks until a lane frees; an
+    idle-lane preference for the last-served config key keeps per-config
+    prefix warmth without ever delaying a job (heuristic only)."""
+
+    def __init__(self, lanes_by_url):
+        self.lanes = dict(lanes_by_url)      # url -> lane count
+        self._inflight = {u: 0 for u in self.lanes}
+        self._last_key = {}
+        self._cv = None                      # created lazily on the loop
+
+    def total_lanes(self):
+        return sum(self.lanes.values())
+
+    def _condition(self):
+        import asyncio
+
+        if self._cv is None:
+            self._cv = asyncio.Condition()
+        return self._cv
+
+    async def acquire(self, key=None):
+        cv = self._condition()
+        async with cv:
+            while True:
+                chosen = None
+                for url, lanes in self.lanes.items():
+                    if self._inflight[url] < lanes:
+                        if key is not None and self._last_key.get(url) == key:
+                            chosen = url
+                            break
+                        chosen = chosen or url
+                if chosen is not None:
+                    self._inflight[chosen] += 1
+                    if key is not None:
+                        self._last_key[chosen] = key
+                    return chosen
+                await cv.wait()
+
+    async def release(self, url):
+        cv = self._condition()
+        async with cv:
+            self._inflight[url] -= 1
+            cv.notify_all()
+
+
 class EnginePool:
     """Virtual engine over N level-3 workers hosting one model tag.
 
@@ -383,23 +433,23 @@ class EnginePool:
     concurrent program executions — and a single execution's mapped-call
     fan-out — spread across all workers. A chain's steps hop lanes freely:
     prompts of one execution share no token prefix, and per-config prefix
-    warmth establishes itself per worker after first touch. An idle-lane
-    preference for the last-served (program, prompt) config keeps that
-    warmth without ever delaying a job (heuristic only).
+    warmth establishes itself per worker after first touch.
 
     Engine surface parity: run/run_async, evaluate_prompt[_async],
     score_frame[_async], set_seed/reset (broadcast), capabilities (first
-    worker). Must be used from a single event loop.
+    worker). Must be used from a single event loop. Pass a shared
+    LaneLedger when several pools (e.g. one per syntax) address the same
+    workers — lane bounds are per worker, not per pool.
     """
 
     def __init__(self, urls, model_tag=None, syntax=None, search=None,
-                 poll_interval=0.5, timeout=300):
+                 poll_interval=0.5, timeout=300, ledger=None):
         from .errors import ConfigError
 
         if not urls:
             raise ConfigError("EnginePool needs at least one worker URL")
-        self.backends = []
-        self._lanes = {}
+        self.backends = {}                   # url -> RemoteBackend
+        lanes = {}
         for u in urls:
             b = RemoteBackend(u, syntax=syntax, search=search,
                               poll_interval=poll_interval, timeout=timeout)
@@ -409,69 +459,46 @@ class EnginePool:
                 raise ConfigError(
                     f"worker {b.server_url} does not host {model_tag!r} "
                     f"(hosts: {caps['models']})")
-            self.backends.append(b)
-            self._lanes[id(b)] = int(caps.get("lanes") or 1)
+            self.backends[b.server_url] = b
+            lanes[b.server_url] = int(caps.get("lanes") or 1)
+        self.ledger = ledger or LaneLedger(lanes)
         self.model_tag = model_tag
-        self.syntax_id = self.backends[0].syntax_id
-        self.search_id = self.backends[0].search_id
+        first = next(iter(self.backends.values()))
+        self.syntax_id = first.syntax_id
+        self.search_id = first.search_id
         self.model_id = None
         self.last_perf = None
-        self._cv = None            # created lazily on the running loop
-        self._inflight = {id(b): 0 for b in self.backends}
-        self._last_key = {}
 
     def total_lanes(self):
-        return sum(self._lanes.values())
+        return self.ledger.total_lanes()
 
-    def _condition(self):
-        import asyncio
-
-        if self._cv is None:
-            self._cv = asyncio.Condition()
-        return self._cv
-
-    async def _acquire(self, key=None):
-        cv = self._condition()
-        async with cv:
-            while True:
-                chosen = None
-                for b in self.backends:
-                    if self._inflight[id(b)] < self._lanes[id(b)]:
-                        if key is not None and self._last_key.get(id(b)) == key:
-                            chosen = b
-                            break
-                        chosen = chosen or b
-                if chosen is not None:
-                    self._inflight[id(chosen)] += 1
-                    if key is not None:
-                        self._last_key[id(chosen)] = key
-                    return chosen
-                await cv.wait()
-
-    async def _release(self, backend):
-        cv = self._condition()
-        async with cv:
-            self._inflight[id(backend)] -= 1
-            cv.notify_all()
+    def _backend_for(self, url):
+        # A shared ledger may hand out a URL registered by a sibling pool
+        # under a normalized form; ledgers built by pool_ledger use the
+        # same normalization as RemoteBackend, so a plain lookup holds.
+        return self.backends[url]
 
     async def evaluate_prompt_async(self, program, prompt_name, content,
                                     record_kinds=None):
-        backend = await self._acquire(key=(program.id, prompt_name))
+        url = await self.ledger.acquire(
+            key=(self.syntax_id, program.id, prompt_name))
         try:
+            backend = self._backend_for(url)
             result = await backend.evaluate_prompt_async(
                 program, prompt_name, content, record_kinds=record_kinds)
             self.last_perf = backend.last_perf
             return result
         finally:
-            await self._release(backend)
+            await self.ledger.release(url)
 
     async def score_frame_async(self, program, prompt_name, frame, content=None):
-        backend = await self._acquire(key=(program.id, prompt_name))
+        url = await self.ledger.acquire(
+            key=(self.syntax_id, program.id, prompt_name))
         try:
-            return await backend.score_frame_async(
+            return await self._backend_for(url).score_frame_async(
                 program, prompt_name, frame, content=content)
         finally:
-            await self._release(backend)
+            await self.ledger.release(url)
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         import asyncio
@@ -512,15 +539,26 @@ class EnginePool:
         return ctx.result
 
     def set_seed(self, seed):
-        for b in self.backends:
+        for b in self.backends.values():
             b.set_seed(seed)
 
     def reset(self, kv=True):
-        for b in self.backends:
+        for b in self.backends.values():
             b.reset(kv)
 
     def capabilities(self):
-        return self.backends[0].capabilities()
+        return next(iter(self.backends.values())).capabilities()
+
+
+def lane_ledger(urls):
+    """A LaneLedger over workers' advertised lane counts, keyed by the
+    same normalized URL form RemoteBackend uses — share it between
+    EnginePools that address the same workers under different syntaxes."""
+    lanes = {}
+    for u in urls:
+        b = RemoteBackend(u)
+        lanes[b.server_url] = int(b.capabilities().get("lanes") or 1)
+    return LaneLedger(lanes)
 
 
 def _poll(server_url, request_id, poll_interval, timeout):
