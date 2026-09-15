@@ -273,6 +273,15 @@ EOF
         wait_ready "${URLS[$i]}" "${PIDS[$i]}" "$WLOG/worker-$i.log" 600 || exit 1
         echo "[up] ${URLS[$i]}"
     done
+    WORKERS_EV=$(python3 -c "
+import json, sys
+plan = json.loads(sys.argv[1])
+workers = [{'url': f'127.0.0.1:{17700 + i}',
+            'models': [m['tag'] for m in s['models']] or ['rng']}
+           for i, s in enumerate(plan['slots'])]
+print(json.dumps({'event.action': 'campaign.workers',
+                  'campaign': plan['name'], 'workers': workers}))" "$PLAN")
+    emit_event "$WORKERS_EV"
 
     # -- run phases in order ----------------------------------------------
     WARGS=() ; for u in "${URLS[@]}"; do WARGS+=(--worker "$u"); done

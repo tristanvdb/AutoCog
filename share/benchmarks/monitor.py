@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Campaign status screen — tail the launcher's event stream and render
 live progress: campaigns done/running/remaining, phase and run progress,
-observed rates with an ETA, and accuracy sliced along the campaign's
-declared axes.
+observed rates with an ETA, accuracy sliced along the campaign's
+declared axes, and per-worker throughput/occupancy polled from the
+workers' status API (GET /stats: FTA rates over 1m/5m/30m, occupancy,
+queue depth — workers advertised by the launcher's campaign.workers
+event, polled only while the campaign runs).
 
     monitor.py [EVENTS]          # default: $AUTOCOG_WORKDIR|./results/campaign-events.ndjson
     monitor.py --once [EVENTS]   # one snapshot, no screen refresh
@@ -19,6 +22,7 @@ import json
 import os
 import sys
 import time
+import urllib.request
 
 
 def default_events_path():
@@ -55,7 +59,8 @@ class State:
     def campaign(self, name):
         if name not in self.campaigns:
             self.campaigns[name] = {"phases": {}, "axes": ["model", "syntax", "demo"],
-                                    "status": "pending", "started": None, "ended": None}
+                                    "status": "pending", "started": None,
+                                    "ended": None, "workers": []}
             self.order.append(name)
         return self.campaigns[name]
 
@@ -73,6 +78,8 @@ class State:
         elif action == "campaign.start":
             c = self.campaign(ev["campaign"])
             c["status"], c["started"] = "running", ts
+        elif action == "campaign.workers":
+            self.campaign(ev["campaign"])["workers"] = ev.get("workers", [])
         elif action == "campaign.end":
             c = self.campaign(ev["campaign"])
             c["status"], c["ended"] = "done", ts
@@ -159,6 +166,44 @@ class State:
         return out
 
 
+def fetch_stats(url, timeout=0.5):
+    """One worker's GET /stats, or None when unreachable (worker down,
+    campaign torn down, or attach before spawn — all non-fatal)."""
+    if "://" not in url:
+        url = "http://" + url
+    try:
+        with urllib.request.urlopen(f"{url}/stats", timeout=timeout) as resp:
+            return json.loads(resp.read())
+    except OSError:
+        return None
+
+
+def render_workers(workers):
+    """Per-worker throughput/occupancy lines from the status API."""
+    lines = [" workers:"]
+    for w in workers:
+        label = f"{w['url']} [{','.join(w.get('models', []))}]"
+        stats = fetch_stats(w["url"])
+        if stats is None:
+            lines.append(f"   {label:<44} unreachable")
+            continue
+        win = stats.get("windows", {})
+
+        def rate(k):
+            return win.get(k, {}).get("rate")
+
+        rates = "  ".join(
+            f"{k} {rate(k):.2f}" if rate(k) is not None else f"{k} -"
+            for k in ("1m", "5m", "30m"))
+        occ = win.get("1m", {}).get("occupancy")
+        lines.append(
+            f"   {label:<44} fta/s {rates}   "
+            f"occ {occ:4.0%}  q {stats.get('pending', 0)}"
+            if occ is not None else
+            f"   {label:<44} fta/s {rates}   q {stats.get('pending', 0)}")
+    return lines
+
+
 def parse_ts(ts):
     from datetime import datetime
 
@@ -196,6 +241,9 @@ def render(state):
                   if k[0] == cur and r["status"] == "running"]
         if active:
             lines.append("   running: " + ", ".join(active[:4]))
+        if state.campaigns[cur]["status"] == "running" \
+                and state.campaigns[cur]["workers"]:
+            lines += [""] + render_workers(state.campaigns[cur]["workers"])
         for axis, agg in state.slices(cur).items():
             lines.append(f"   accuracy by {axis}:")
             for v, (n, k) in sorted(agg.items(), key=lambda x: -x[1][0])[:8]:

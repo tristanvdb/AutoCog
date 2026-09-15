@@ -179,6 +179,45 @@ def test_engine_pool_dispatch(rng_workers):
     assert all(r in ("a", "b", "c") for r in results)   # select returns the answer
     assert len(counts) == 2 and sum(counts.values()) == 6   # both lanes used
 
+    # Status API: both workers accounted their jobs.
+    for url in rng_workers:
+        with urllib.request.urlopen(f"{url}/stats") as r:
+            stats = json.loads(r.read())
+        assert stats["lanes"] == 1
+        assert stats["total"] > 0 and stats["errors"] == 0
+        one_m = stats["windows"]["1m"]
+        assert one_m["jobs"] > 0 and one_m["rate"] > 0
+        assert 0.0 <= one_m["occupancy"] <= 1.0
+        assert set(stats["windows"]) == {"1m", "5m", "30m"}
+
+
+def test_monitor_worker_stats(rng_workers, tmp_path):
+    """The monitor polls advertised workers' /stats while the campaign
+    runs, and marks dead ones unreachable."""
+    dead = f"127.0.0.1:{_free_port()}"
+    events = tmp_path / "events.ndjson"
+    lines = [
+        {"event.action": "campaign.plan", "campaign": "c",
+         "phases": [{"name": "p", "runs": 1}], "axes": []},
+        {"event.action": "campaign.start", "campaign": "c",
+         "@timestamp": "2026-09-15T00:00:00.000Z"},
+        {"event.action": "campaign.workers", "campaign": "c",
+         "workers": [{"url": rng_workers[0].replace("http://", ""),
+                      "models": ["rng"]},
+                     {"url": dead, "models": ["rng"]}]},
+    ]
+    events.write_text("".join(json.dumps(l) + "\n" for l in lines))
+    mon = subprocess.run(
+        [sys.executable,
+         os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                      "share", "benchmarks", "monitor.py"),
+         "--once", str(events)],
+        capture_output=True, text=True, timeout=60)
+    assert mon.returncode == 0, mon.stderr
+    assert "workers:" in mon.stdout
+    assert "fta/s" in mon.stdout
+    assert "unreachable" in mon.stdout
+
 
 def test_executor_requires_workers(tmp_path):
     from autocog.bench.campaign import run_campaign
