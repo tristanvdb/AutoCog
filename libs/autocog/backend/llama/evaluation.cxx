@@ -213,6 +213,12 @@ double Evaluation::scalar_value(std::string const & name) const {
   }
   if (name == "coverage.sta")
     return total_fields_ ? static_cast<double>(visited_fields_.size()) / total_fields_ : 1.0;
+  // Geometric-mean per-token probability of the best COMPLETE path — a
+  // confidence statistic on one terminal, NOT residual mass over the
+  // unexplored queue. Structured documents score high at their first
+  // terminal, so with the terminals_ >= 1 gate in advance(), thresholds
+  // well under that value degenerate to stop-at-first-terminal (v0.8
+  // campaign: 0.25 and 0.05 both stopped at terminals == 1).
   if (name == "best.proba")
     return best_terminal_ && best_terminal_->length
         ? std::exp(-static_cast<double>(best_terminal_->logprob) / best_terminal_->length) : 0.0;
@@ -224,6 +230,11 @@ double Evaluation::scalar_value(std::string const & name) const {
     if (terminals_ < 3 || sd <= 0.0) return 0.0;   // undefined on a tiny field
     return (scalar_value("best.proba") - mean) / sd;
   }
+  // Cumulative eval+restore total across ALL phases of the evaluation —
+  // a throughput/budget counter, NOT a per-path length. Comparing it to
+  // model.n_ctx is NOT a context guard: cumulative throughput crosses
+  // the window long before any single path does (the v0.8 "ctx-guard"
+  // cell fired at the first terminal for exactly this reason).
   if (name == "tokens")     return static_cast<double>(tokens_total_);
   if (name == "queue.size") return static_cast<double>(queue.size());
   return 0.0;  // unreachable: validated at construction
