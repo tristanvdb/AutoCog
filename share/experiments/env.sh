@@ -24,7 +24,6 @@ esac
 WORKDIR="${AUTOCOG_WORKDIR:-$WORKDIR}"
 
 VENV="$WORKDIR/.venv"
-BUILD_EXP="$WORKDIR/build-exp"   # legacy (v0.7 scripts only); campaigns are package-only
 MODELS_DIR="${MODELS_PATH:-$WORKDIR/models}"
 DATASETS_DIR="${DATASETS_PATH:-$WORKDIR/datasets}"
 RESULTS_DIR="$WORKDIR/results"

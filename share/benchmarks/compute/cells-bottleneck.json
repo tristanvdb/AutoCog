@@ -9,14 +9,14 @@
   "beams": 8,
   "ahead": 2,
   "width": 1,
-  "syntax": "experiments/v0.7/syntax-full.json",
+  "syntax": "share/syntax/full.json",
   "label": "sample-bound fullvocab b8a2w1"
  },
  {
   "beams": 4,
   "ahead": 1,
   "width": 1,
-  "stl": "benchmarks/compute/benchmark-prefix8k.stl",
+  "stl": "share/benchmarks/compute/benchmark-prefix8k.stl",
   "ctx": 16384,
   "label": "prefill-bound prefix8k b4a1w1"
  },
@@ -24,7 +24,7 @@
   "beams": 4,
   "ahead": 1,
   "width": 1,
-  "stl": "benchmarks/compute/benchmark-choices.stl",
+  "stl": "share/benchmarks/compute/benchmark-choices.stl",
   "ctx": 8192,
   "content": {"choices": ["Water", "Fire", "Air", "Earth", "Metal", "Wood", "Ice", "Steam", "Lightning", "Sand", "Stone", "Lava", "Mist", "Crystal", "Shadow", "Light", "Salt", "Iron", "Copper", "Gold", "Silver", "Lead", "Tin", "Zinc", "Mercury", "Sulfur", "Carbon", "Oxygen", "Hydrogen", "Helium", "Neon", "Argon"]},
   "content_pad": {"choices": 40},
@@ -41,14 +41,14 @@
   "beams": 4,
   "ahead": 1,
   "width": 1,
-  "stl": "benchmarks/compute/benchmark-digits.stl",
+  "stl": "share/benchmarks/compute/benchmark-digits.stl",
   "label": "overhead-bound digits b4a1w1"
  },
  {
   "beams": 4,
   "ahead": 1,
   "width": 1,
-  "stl": "benchmarks/compute/benchmark-len300.stl",
+  "stl": "share/benchmarks/compute/benchmark-len300.stl",
   "ctx": 8192,
   "label": "depth-bound len300 b4a1w1"
  }
