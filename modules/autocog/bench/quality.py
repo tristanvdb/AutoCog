@@ -49,10 +49,19 @@ def is_label_demo(demo):
     return demo.split("-")[0] == "label"
 
 
+def already_labelled(choices):
+    """Do the choice texts already carry their letter? The ARC converter
+    prepends them ("C: mutualism") because ARC answers cross-reference
+    options by label."""
+    return all(len(c) > 2 and c[0].upper() == LABELS[i] and c[1] in ".:)"
+               for i, c in enumerate(choices) if i < len(LABELS))
+
+
 def choices_for(demo, choices):
-    """Content choices for a mechanism: `label` renders them pre-labelled
-    ("A. Water"), so the letter the model must emit is in the document."""
-    if is_label_demo(demo):
+    """Content choices for a mechanism: `label` needs the letter visible in
+    the document, so it labels them unless the dataset already did (never
+    double-labels). Other mechanisms pass the texts through."""
+    if is_label_demo(demo) and not already_labelled(choices):
         return [f"{LABELS[i]}. {c}" for i, c in enumerate(choices)]
     return list(choices)
 

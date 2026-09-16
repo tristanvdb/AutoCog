@@ -28,6 +28,12 @@ def test_label_mechanism(tmp_path):
     assert is_label_demo("label") and not is_label_demo("select")
     assert choices_for("label", q["choices"]) == ["A. Water", "B. Fire"]
     assert choices_for("select", ["Water"]) == ["Water"]
+    # ARC choices arrive pre-labelled by the converter: never double-label
+    arc = ["A: parasitism", "B: commensalism", "C: mutualism"]
+    assert choices_for("label", arc) == arc
+    assert score_answer("label", "C", {"choices": arc,
+                                       "answer": "C: mutualism"}) \
+        == ("C: mutualism", True)
     assert score_answer("label", "B", q) == ("Fire", True)
     assert score_answer("label", "b\n", q) == ("Fire", True)
     assert score_answer("label", "A", q) == ("Water", False)
