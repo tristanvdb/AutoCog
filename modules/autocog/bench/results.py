@@ -1,8 +1,8 @@
 """Result emission: ECS-flavored NDJSON (incremental append) + markdown.
 
-Same event shapes as share/benchmarks/compute/sweep.py and share/benchmarks/quality/
-run.py so existing consumers (summarize/compare/plot, the SIEM pipeline)
-read bench output unchanged.
+One event per cell or per sample, appended as it completes so a killed run
+leaves usable data. The ECS field names (`host.name`, `@timestamp`, the
+`autocog.*` namespaces) are what a SIEM pipeline ingests unchanged.
 """
 
 import datetime

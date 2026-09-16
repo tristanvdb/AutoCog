@@ -1,7 +1,7 @@
 """bench perf — computational cells through the in-process worker.
 
-The share/benchmarks/compute/sweep.py semantics (same cells JSON, same event
-shape, same budget behavior) with evaluation through the bindings: no
+A cell is one point in the search-parameter space; the cell files live in
+share/benchmarks/compute/. Evaluation runs through the bindings: no
 per-cell process spawn, no per-cell model reload unless the cell changes
 load-time parameters (slots/ctx), and the perf fields taken from the
 evaluation response itself.
@@ -162,7 +162,9 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
     t_start = time.time()
     for i, cell in enumerate(cell_list):
         if budget_seconds and (time.time() - t_start) > budget_seconds:
-            log(f"[budget] {budget_seconds:.0f}s exhausted — skipping "
+            # "dropping", not "skipping": a resume skip means the work is
+            # already done, this means it never will be.
+            log(f"[budget] {budget_seconds:.0f}s exhausted — dropping "
                 f"{len(cell_list) - i} remaining cell(s): "
                 + ", ".join(cell_name(c) for c in cell_list[i:]))
             break

@@ -504,9 +504,21 @@ class TestLauncher:
         assert "accuracy by model" in mon.stdout
         assert "accuracy by demo" in mon.stdout
 
+        # Resume does no work twice. Counting the word "skipping" in stdout was
+        # not that invariant: a sample that errored in the first pass is not a
+        # measurement, so its run legitimately reruns the gap and reports no
+        # skip — which made the assertion depend on whether the box hiccuped.
+        # The contract lives in the data: a measured sample is written once.
         r2 = self.launch(workdir, "--ngl", "0", timeout=300)
         assert r2.returncode == 0
-        assert r2.stdout.count("skipping") >= 4   # every run resumed as done
+        assert "skipping" in r2.stdout
+        for path in out.rglob("results-*.ndjson"):
+            rows = [json.loads(l) for l in path.open() if l.strip()]
+            keys = [(e.get("autocog.bench.syntax"), e.get("autocog.bench.demo"),
+                     e.get("autocog.bench.question")) for e in rows
+                    if not e.get("error.message")]
+            keys = [k for k in keys if all(p is not None for p in k)]
+            assert len(keys) == len(set(keys)), f"{path.name}: resume duplicated samples"
 
 
 def test_build_options_binding():

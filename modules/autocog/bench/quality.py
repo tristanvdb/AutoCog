@@ -1,7 +1,6 @@
 """bench quality — MCQ accuracy / token overhead / constraint friction.
 
-The share/benchmarks/quality/run.py semantics: one model load per model
-(not per syntax), scoring via score_frame (no efta subprocess),
+One model load per model (not per syntax), scoring via score_frame,
 datapoints via --data + --formatter.
 
 With --worker, samples run through EnginePools (one per syntax, sharing
