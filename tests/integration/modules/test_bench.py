@@ -17,6 +17,36 @@ def from_repo_root(repo_root, monkeypatch):
     monkeypatch.chdir(repo_root)
 
 
+def test_label_mechanism(tmp_path):
+    """The `label` answer mechanism: choices render pre-labelled, the model
+    emits one letter from the stlib `letter` vocab, and the letter maps back
+    to a choice text so accuracy is comparable with select/repeat."""
+    from autocog.bench.quality import (LABELS, choices_for, is_label_demo,
+                                       score_answer)
+
+    q = {"choices": ["Water", "Fire"], "answer": "Fire"}
+    assert is_label_demo("label") and not is_label_demo("select")
+    assert choices_for("label", q["choices"]) == ["A. Water", "B. Fire"]
+    assert choices_for("select", ["Water"]) == ["Water"]
+    assert score_answer("label", "B", q) == ("Fire", True)
+    assert score_answer("label", "b\n", q) == ("Fire", True)
+    assert score_answer("label", "A", q) == ("Water", False)
+    # A letter past the choice count is an unusable label: a MISS, recorded
+    # as emitted — never a dropped datapoint.
+    assert score_answer("label", "H", q) == ("H", False)
+    assert score_answer("label", None, q) == (None, None)
+    assert score_answer("select", "Water", q) == ("Water", False)
+    assert LABELS[:2] == "AB"
+
+    events = run_quality(questions=3, syntaxes=["complete"], demos=["label"],
+                         out=str(tmp_path), log=lambda *_: None)
+    assert len(events) == 3
+    for ev in events:
+        assert ev["autocog.bench.demo"] == "label"
+        assert ev.get("error.message") is None
+        assert ev["autocog.bench.correct"] in (True, False)   # never dropped
+
+
 def test_perf_rng_cells(tmp_path):
     cells = tmp_path / "cells.json"
     cells.write_text(json.dumps([

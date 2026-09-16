@@ -34,11 +34,27 @@ from .workers import LocalWorker, model_tag
 
 SYNTAXES = ["complete", "indent-index", "indent", "stripped",
             "chatml", "llama2chat", "llama3chat", "special"]
-DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot", "repeat-hyp"]
+DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot",
+         "repeat-hyp", "label"]
 
 #: samples kept in flight per worker lane by the scheduler (keeps the
 #: lane's queue primed without materializing whole runs)
 WINDOW_PER_LANE = 2
+
+#: choice labels for the `label` mechanism (matches stlib's `letter` vocab)
+LABELS = "ABCDEFGH"
+
+
+def is_label_demo(demo):
+    return demo.split("-")[0] == "label"
+
+
+def choices_for(demo, choices):
+    """Content choices for a mechanism: `label` renders them pre-labelled
+    ("A. Water"), so the letter the model must emit is in the document."""
+    if is_label_demo(demo):
+        return [f"{LABELS[i]}. {c}" for i, c in enumerate(choices)]
+    return list(choices)
 
 
 def extract_answer(result):
@@ -47,6 +63,25 @@ def extract_answer(result):
     if isinstance(result, dict):
         return result.get("answer")
     return None
+
+
+def score_answer(demo, raw, q):
+    """(recorded answer, correct) for a mechanism's raw output.
+
+    select/repeat yield a choice text directly. `label` yields a letter:
+    in range it maps to the choice text; OUT of range (the letter vocab
+    spans A-H while an item may offer fewer choices) it is recorded as
+    the bare letter and scored WRONG --- an unusable label is a miss, not
+    a missing datapoint. Only a genuinely absent answer scores None."""
+    if raw is None:
+        return None, None
+    if not is_label_demo(demo):
+        return raw, raw == q["answer"]
+    idx = LABELS.find(str(raw).strip().upper()[:1]) if isinstance(raw, str) else -1
+    if 0 <= idx < len(q["choices"]):
+        text = q["choices"][idx]
+        return text, text == q["answer"]
+    return raw, False
 
 
 def walk_tokens(node, depth, acc):
@@ -142,9 +177,9 @@ class QualityRun:
                 rec = Recorder(kinds={"input", "frame"}, path=tmp)
                 result = await pool.run_async(
                     prog, recorder=rec, topic=q.get("topic", ""),
-                    question=q["question"], choices=q["choices"])
+                    question=q["question"], choices=choices_for(demo, q["choices"]))
                 wall = time.time() - t0
-                answer = extract_answer(result)
+                answer, correct = score_answer(demo, extract_answer(result), q)
 
                 # Score the canonical forced path of every recorded step.
                 acc = {"tokens.value": 0, "tokens.structure": 0,
@@ -178,8 +213,7 @@ class QualityRun:
         ev.update({
             "autocog.bench.wall_seconds": round(wall, 3),
             "autocog.bench.answer": answer,
-            "autocog.bench.correct":
-                (answer == q["answer"]) if answer is not None else None,
+            "autocog.bench.correct": correct,
             "autocog.bench.steps": steps,
             "autocog.bench.tokens.value": acc["tokens.value"],
             "autocog.bench.tokens.structure": acc["tokens.structure"],
@@ -351,12 +385,13 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     error = None
                     try:
                         result = engine.run(prog, recorder=rec, topic=q.get("topic", ""),
-                                            question=q["question"], choices=q["choices"])
+                                            question=q["question"],
+                                            choices=choices_for(demo, q["choices"]))
                     except Exception as e:  # a failing pair is a datapoint
                         result, error = None, f"{type(e).__name__}: {e}"
                     wall = time.time() - t0
 
-                    answer = extract_answer(result)
+                    answer, correct = score_answer(demo, extract_answer(result), q)
                     ev = results.base_event("autocog.bench.quality", "quality.run", dict(base))
                     ev.update({
                         "autocog.bench.syntax": syntax,
@@ -365,8 +400,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         "autocog.bench.n_choices": len(q["choices"]),
                         "autocog.bench.wall_seconds": round(wall, 3),
                         "autocog.bench.answer": answer,
-                        "autocog.bench.correct":
-                            (answer == q["answer"]) if answer is not None else None,
+                        "autocog.bench.correct": correct,
                     })
                     if error:
                         ev["error.message"] = error

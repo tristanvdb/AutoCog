@@ -1,0 +1,38 @@
+// Multiple Choice Question - Label mode
+// The LLM answers with the letter labelling the correct choice.
+//
+// The third answer mechanism, alongside select.stl (emit the choice INDEX)
+// and repeat.stl (score the choice TEXTS). It isolates the index/letter
+// axis: like select it is a single-token commitment, but the token is the
+// letter carried by the choice itself, which is what the MCQ literature's
+// "symbol" protocols ask for. Choices arrive already labelled ("A. Water"),
+// so the letter the model must emit is visible in the rendered document.
+
+from "vocabs.stl" import letter;
+
+prompt main {
+  argument max_choices = 8;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[2:max_choices] is text<length=44>;
+    answer is text<length=1, vocab=letter, stop="">;
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the possible choices to answer the question, each labelled with a letter, only one is correct";
+    answer as "you give the letter labelling the choice that best answer the question";
+  }
+}
+
+export main<> as main;
