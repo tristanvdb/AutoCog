@@ -53,6 +53,27 @@ def test_label_mechanism(tmp_path):
         assert ev["autocog.bench.correct"] in (True, False)   # never dropped
 
 
+def test_multiprompt_demos(tmp_path):
+    """The multi-prompt MCQ programs run end to end: two-stage (hyp),
+    retry loops (iter) and mapped per-choice calls (annot, one sub-prompt
+    per choice). Scoring a frame is auxiliary — select-annot's frame
+    cannot be re-encoded today (select over a record array), which must
+    cost the friction metrics, not the accuracy datapoint."""
+    for demo, min_steps in (("select-hyp", 2), ("select-iter", 1),
+                            ("repeat-annot", 5), ("select-annot", 4)):
+        events = run_quality(questions=2, syntaxes=["complete"], demos=[demo],
+                             out=str(tmp_path / demo), log=lambda *_: None)
+        assert len(events) == 2, demo
+        for ev in events:
+            assert ev.get("error.message") is None, (demo, ev.get("error.message"))
+            assert ev["autocog.bench.correct"] in (True, False), demo
+            assert ev["autocog.bench.steps"] >= min_steps, demo
+        if demo == "select-annot":       # known runtime gap, recorded not hidden
+            assert all(e.get("autocog.bench.score_error") for e in events)
+        else:
+            assert not any(e.get("autocog.bench.score_error") for e in events), demo
+
+
 def test_perf_rng_cells(tmp_path):
     cells = tmp_path / "cells.json"
     cells.write_text(json.dumps([

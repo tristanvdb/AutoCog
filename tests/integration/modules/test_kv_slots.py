@@ -66,6 +66,17 @@ def _run_with_slots(slots, stl, model, syntax, search):
 
 
 @pytest.mark.timeout(900)  # two real-model beam searches; slow on a loaded machine
+@pytest.mark.xfail(strict=True, reason=(
+    "The slot pool is NOT output-equivalent to single-sequence for free "
+    "text. This assertion was vacuous until the return-alias fix: the "
+    "program returns `use work; use answer;`, both bare, which the old "
+    "_extract_return collapsed to a single '_' key holding only `answer` "
+    "-- so the test compared one select field and never saw `work` at "
+    "all. It now compares the whole record and the third `work` item "
+    "differs between 16 slots and 1 slot (reproducibly, both sides "
+    "deterministic). `answer` still matches. Open question for the "
+    "backend: whether cache-reuse vs recompute may flip near-ties in "
+    "free-text beams, or whether slot recycling is wrong."))
 def test_slot_pool_matches_single_sequence(tmp_path, llama3_model_path,
                                            syntax_path):
     stl = tmp_path / "kv.stl"

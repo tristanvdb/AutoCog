@@ -133,7 +133,15 @@ class Context:
             self.prompt = flow_def["prompt"]
 
     def _extract_return(self, frame, flow_def):
-        """Extract return fields from a frame according to the return definition."""
+        """Extract return fields from a frame according to the return definition.
+
+        A bare `use x` carries no alias, which the compiler records as the
+        root alias "_". With ONE such field that is exactly right: the
+        prompt returns that value. With several — `return { use choice;
+        use correct; }` — the returned record is keyed by the field names,
+        since writing them all to "_" would silently keep only the last
+        one (which is what made call channels binding on a sub-field, like
+        the mcq annotate demos, resolve to a scalar and fail)."""
         fields = flow_def.get("fields", [])
 
         aliases = [f.get("alias", "_") for f in fields]
@@ -149,8 +157,11 @@ class Context:
 
         result = {}
         for field in fields:
-            alias = field.get("alias", "_")
             path = field.get("path", [])
+            alias = field.get("alias", "_")
+            if alias == "_":
+                # name the entry after what was used
+                alias = path[-1].get("name", "_") if path else "_"
             result[alias] = self._resolve_path(frame, path) if path else frame.get(alias)
         return result
 

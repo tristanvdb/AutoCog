@@ -71,7 +71,16 @@ def set_at_path(data, path, value):
 
 
 def apply_bind(data, clause):
-    """Extract source path and optionally rename to target path."""
+    """Extract source path and optionally rename to target path.
+
+    A mapped call channel yields one record per mapped element, so the
+    bind applies element-wise: `choice get choices mapped ... bind(choice,
+    value)` renames the field in every returned record. Without this the
+    rename silently did nothing on lists, leaving the caller's records
+    keyed by the callee's field names."""
+    if isinstance(data, list):
+        return [apply_bind(item, clause) for item in data]
+
     source = clause["source"]
     target = clause.get("target", [])
     value = navigate(data, source)

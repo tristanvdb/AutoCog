@@ -67,10 +67,19 @@ def choices_for(demo, choices):
 
 
 def extract_answer(result):
+    """The answer text out of whatever a program returned.
+
+    A single-field return yields the value directly. A multi-field one
+    yields a record: `answer` when the program named it, else `value` —
+    which is what a select over a record array returns (the annotate
+    demos pick a whole {value, correct} record, and the value is the
+    choice text the dataset is scored against)."""
     if isinstance(result, str):
         return result
     if isinstance(result, dict):
-        return result.get("answer")
+        for key in ("answer", "value"):
+            if isinstance(result.get(key), str):
+                return result[key]
     return None
 
 
@@ -201,9 +210,15 @@ class QualityRun:
                 answer, correct = score_answer(demo, extract_answer(result), q)
 
                 # Score the canonical forced path of every recorded step.
+                # Scoring is AUXILIARY: it yields the token/friction
+                # metrics, not the answer. A program whose frame cannot be
+                # re-encoded (select over a record array, today) still
+                # produced an answer, so the accuracy datapoint stands and
+                # only the metrics go missing -- recorded, not swallowed.
                 acc = {"tokens.value": 0, "tokens.structure": 0,
                        "nll.value": 0.0, "nll.structure": 0.0}
                 steps = 0
+                score_error = None
                 for walk_dir, _, files in os.walk(tmp):
                     for f in sorted(files):
                         if not f.endswith(".frame.json"):
@@ -214,8 +229,12 @@ class QualityRun:
                         content = (json.load(open(input_file))
                                    if os.path.exists(input_file) else {})
                         prompt = os.path.basename(walk_dir)
-                        scored = await pool.score_frame_async(
-                            prog, prompt, frame, content)
+                        try:
+                            scored = await pool.score_frame_async(
+                                prog, prompt, frame, content)
+                        except Exception as e:  # noqa: BLE001
+                            score_error = f"{type(e).__name__}: {e}"
+                            continue
                         walk_tokens(scored, 0, acc)
                         steps += 1
         except Exception as e:  # noqa: BLE001 — a failing sample is a datapoint
@@ -229,6 +248,8 @@ class QualityRun:
                      f"{ev['error.message'][:80]}")
             return ev
 
+        if score_error:
+            ev["autocog.bench.score_error"] = score_error[:300]
         ev.update({
             "autocog.bench.wall_seconds": round(wall, 3),
             "autocog.bench.answer": answer,
@@ -428,10 +449,13 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         continue
 
                     # Score the canonical forced path of every recorded step
-                    # in-process (the efta --score semantics).
+                    # in-process (the efta --score semantics). Auxiliary:
+                    # see eval_sample — a frame that cannot be re-encoded
+                    # costs the metrics, not the answer.
                     acc = {"tokens.value": 0, "tokens.structure": 0,
                            "nll.value": 0.0, "nll.structure": 0.0}
                     steps = 0
+                    score_error = None
                     for walk_dir, _, files in os.walk(tmp):
                         for f in sorted(files):
                             if not f.endswith(".frame.json"):
@@ -442,9 +466,15 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                             content = (json.load(open(input_file))
                                        if os.path.exists(input_file) else {})
                             prompt = os.path.basename(walk_dir)
-                            scored = engine.score_frame(prog, prompt, frame, content)
+                            try:
+                                scored = engine.score_frame(prog, prompt, frame, content)
+                            except Exception as e:  # noqa: BLE001
+                                score_error = f"{type(e).__name__}: {e}"
+                                continue
                             walk_tokens(scored, 0, acc)
                             steps += 1
+                    if score_error:
+                        ev["autocog.bench.score_error"] = score_error[:300]
 
                 ev.update({
                     "autocog.bench.steps": steps,
