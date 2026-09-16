@@ -191,9 +191,60 @@ def test_engine_pool_dispatch(rng_workers):
         assert set(stats["windows"]) == {"1m", "5m", "30m"}
 
 
+def test_monitor_scopes_to_current_campaign(tmp_path):
+    """One events file spans a whole session. Accuracy slices and rates
+    must describe the CURRENT campaign only, and must parse both stamp
+    formats in the stream (ECS '...Z' vs bench isoformat '+00:00')."""
+    import datetime
+
+    def iso(i):
+        return (datetime.datetime(2026, 9, 16, 4, 0, 0,
+                                  tzinfo=datetime.timezone.utc)
+                + datetime.timedelta(seconds=i)).isoformat()
+
+    lines = [
+        {"event.action": "campaign.plan", "campaign": "old",
+         "phases": [{"name": "p", "runs": 1}], "axes": ["model"]},
+        {"event.action": "campaign.start", "campaign": "old",
+         "@timestamp": "2026-09-16T03:00:00.000Z"},
+    ]
+    lines += [{"@timestamp": "2026-09-16T03:00:00.000Z",
+               "autocog.bench": {"event.action": "quality.run",
+                                 "autocog.bench.model": "old-model",
+                                 "autocog.bench.correct": True,
+                                 "@timestamp": iso(i)}} for i in range(5)]
+    lines += [
+        {"event.action": "campaign.end", "campaign": "old",
+         "@timestamp": "2026-09-16T03:10:00.000Z"},
+        {"event.action": "campaign.plan", "campaign": "new",
+         "phases": [{"name": "p", "runs": 2}], "axes": ["model"]},
+        {"event.action": "campaign.start", "campaign": "new",
+         "@timestamp": "2026-09-16T04:00:00.000Z"},
+    ]
+    # bench events carry ONLY the isoformat stamp the writer produces
+    lines += [{"@timestamp": iso(i),
+               "autocog.bench": {"event.action": "quality.run",
+                                 "autocog.bench.model": "new-model",
+                                 "autocog.bench.correct": False,
+                                 "@timestamp": iso(i)}} for i in range(10)]
+    events = tmp_path / "events.ndjson"
+    events.write_text("".join(json.dumps(l) + "\n" for l in lines))
+
+    mon = subprocess.run(
+        [sys.executable,
+         os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                      "share", "benchmarks", "monitor.py"),
+         "--once", str(events)],
+        capture_output=True, text=True, timeout=60)
+    assert mon.returncode == 0, mon.stderr
+    assert "new-model" in mon.stdout                 # current campaign sliced
+    assert "old-model" not in mon.stdout             # finished one excluded
+    assert "q/min" in mon.stdout                     # isoformat stamps parsed
+
+
 def test_monitor_worker_stats(rng_workers, tmp_path):
     """The monitor polls advertised workers' /stats while the campaign
-    runs, and marks dead ones unreachable."""
+    runs, and distinguishes a dead worker from a busy one."""
     dead = f"127.0.0.1:{_free_port()}"
     events = tmp_path / "events.ndjson"
     lines = [
@@ -216,7 +267,10 @@ def test_monitor_worker_stats(rng_workers, tmp_path):
     assert mon.returncode == 0, mon.stderr
     assert "workers:" in mon.stdout
     assert "fta/s" in mon.stdout
-    assert "unreachable" in mon.stdout
+    # a worker that never answers is DOWN; a worker whose event loop is
+    # merely busy must not be reported the same way (see fetch_stats)
+    assert "down (no connection)" in mon.stdout
+    assert "busy" not in mon.stdout
 
 
 def test_executor_requires_workers(tmp_path):

@@ -53,6 +53,7 @@ class State:
         self.runs = {}           # (campaign, phase, label) -> {"status", "t0", "t1", "kind"}
         self.q_events = []       # (ts, campaign?, axes-values dict, correct, wall)
         self.cells = 0
+        self.running = None       # campaign currently live in the stream
         self.last_error = None
         self.last_event_ts = None
 
@@ -78,11 +79,14 @@ class State:
         elif action == "campaign.start":
             c = self.campaign(ev["campaign"])
             c["status"], c["started"] = "running", ts
+            self.running = ev["campaign"]
         elif action == "campaign.workers":
             self.campaign(ev["campaign"])["workers"] = ev.get("workers", [])
         elif action == "campaign.end":
             c = self.campaign(ev["campaign"])
             c["status"], c["ended"] = "done", ts
+            if self.running == ev["campaign"]:
+                self.running = None
         elif action in ("run.start", "run.end", "run.skip"):
             key = (ev.get("autocog.campaign.name"), ev.get("autocog.campaign.phase"),
                    ev.get("autocog.campaign.run"))
@@ -98,7 +102,12 @@ class State:
                 if not ev.get("autocog.campaign.ok") and ev.get("error.message"):
                     self.last_error = ev["error.message"]
         elif action == "quality.run":
-            ev.setdefault("@timestamp", ts)
+            # Bench events carry no campaign field: attribute them to the
+            # campaign running when they arrived. One events file spans
+            # every campaign of a session, so unscoped aggregates would mix
+            # a finished campaign's accuracy into a running one's.
+            ev["_campaign"] = self.running or self.current()
+            ev["_ts"] = parse_ts(ts) or parse_ts(ev.get("@timestamp"))
             self.q_events.append(ev)
             if ev.get("error.message"):
                 self.last_error = ev["error.message"]
@@ -130,21 +139,28 @@ class State:
         total = sum(self.campaigns[name]["phases"].values()) or None
         return done, running, failed, total
 
-    def rates(self):
+    def rates(self, name=None):
         """AGGREGATE questions/min over the trailing window (wall-clock
         across all concurrent lanes, not per-lane busy time), and mean
-        seconds/run."""
+        seconds/run — both for ONE campaign, since an events file spans a
+        whole session and another campaign's runs say nothing about this
+        one's pace."""
         qpm = None
-        recent = self.q_events[-500:]
-        if len(recent) >= 2:
-            span = (parse_ts(recent[-1].get("@timestamp"))
-                    - parse_ts(recent[0].get("@timestamp")))
+        recent = [e for e in self.q_events
+                  if name is None or e.get("_campaign") == name][-500:]
+        stamps = [e["_ts"] for e in recent if e.get("_ts")]
+        if len(stamps) >= 2:
+            span = stamps[-1] - stamps[0]
             if span > 0:
-                qpm = 60.0 * (len(recent) - 1) / span
+                qpm = 60.0 * (len(stamps) - 1) / span
         durations = []
-        for rec in self.runs.values():
+        for (c, _, _), rec in self.runs.items():
+            if name is not None and c != name:
+                continue
             if rec["status"] in ("ok", "failed") and rec["t0"] and rec["t1"]:
-                durations.append((parse_ts(rec["t1"]) - parse_ts(rec["t0"])))
+                d = parse_ts(rec["t1"]) - parse_ts(rec["t0"])
+                if d > 0:
+                    durations.append(d)
         spr = (sum(durations) / len(durations)) if durations else None
         return qpm, spr
 
@@ -155,6 +171,8 @@ class State:
             key = f"autocog.bench.{axis}"
             agg = {}
             for e in self.q_events:
+                if e.get("_campaign") != name:
+                    continue
                 v = e.get(key)
                 c = e.get("autocog.bench.correct")
                 if v is None or c is None:
@@ -166,16 +184,25 @@ class State:
         return out
 
 
-def fetch_stats(url, timeout=0.5):
-    """One worker's GET /stats, or None when unreachable (worker down,
-    campaign torn down, or attach before spawn — all non-fatal)."""
+def fetch_stats(url, timeout=2.0):
+    """One worker's GET /stats. Returns the stats dict, or a reason string:
+    "busy" when the request timed out (the worker is alive but its event
+    loop is occupied) and "down" when the connection itself failed (not
+    spawned yet, or torn down). Reporting a busy worker as unreachable is
+    exactly backwards -- it is the most loaded workers that stall."""
+    import socket
+
     if "://" not in url:
         url = "http://" + url
     try:
         with urllib.request.urlopen(f"{url}/stats", timeout=timeout) as resp:
             return json.loads(resp.read())
+    except socket.timeout:
+        return "busy"
+    except urllib.error.URLError as e:
+        return "busy" if isinstance(e.reason, socket.timeout) else "down"
     except OSError:
-        return None
+        return "down"
 
 
 def render_workers(workers):
@@ -184,8 +211,10 @@ def render_workers(workers):
     for w in workers:
         label = f"{w['url']} [{','.join(w.get('models', []))}]"
         stats = fetch_stats(w["url"])
-        if stats is None:
-            lines.append(f"   {label:<44} unreachable")
+        if isinstance(stats, str):
+            lines.append(f"   {label:<44} "
+                         + ("busy (status endpoint stalled)" if stats == "busy"
+                            else "down (no connection)"))
             continue
         win = stats.get("windows", {})
 
@@ -205,11 +234,25 @@ def render_workers(workers):
 
 
 def parse_ts(ts):
-    from datetime import datetime
+    """Stream timestamps come in two shapes: the ECS formatter writes
+    '...123Z', bench events carry Python isoformat '...123456+00:00'.
+    Parse both — treating one as unparseable silently zeroed every rate
+    computed from quality events."""
+    from datetime import datetime, timezone
 
+    if not isinstance(ts, str):
+        return 0.0
     try:
-        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-    except (TypeError, ValueError):
+        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        pass
+    try:
+        parsed = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
+    except ValueError:
         return 0.0
 
 
@@ -225,7 +268,7 @@ def render(state):
     cur = state.current()
     if cur:
         done, running, failed, total = state.run_counts(cur)
-        qpm, spr = state.rates()
+        qpm, spr = state.rates(cur)
         lines += ["", f" current: {cur}",
                   f"   [{bar(done, total)}] {done}/{total if total else '?'} runs"
                   + (f"  ({running} in flight)" if running else "")]
