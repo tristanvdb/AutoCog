@@ -22,7 +22,11 @@ endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_compile_definitions(DEBUG=1)
+  # AUTOCOG_DEBUG, not DEBUG: RE/flex claims the bare macro (debug.h) and
+  # answers it with an fprintf+fflush per lexer operation into a DEBUG.log
+  # in the working directory — 2 GB over three days of Debug-build testing,
+  # and a synchronous flush on every token of every STL compile.
+  add_compile_definitions(AUTOCOG_DEBUG=1)
   add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 else()
   add_compile_definitions(NDEBUG=1)
