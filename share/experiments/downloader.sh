@@ -76,7 +76,42 @@ CHAL=$(ls ARC-V1-Feb2018*/ARC-Challenge/ARC-Challenge-Test.jsonl 2>/dev/null | h
 [ -s arc-challenge.json ] || python3 "$CONVERT" arc "$CHAL" --out arc-challenge.json
 [ -s arc-challenge-500.json ] || python3 "$CONVERT" arc "$CHAL" --limit 500 --out arc-challenge-500.json
 
+# Whatever else the descriptors name: <source>[-<limit>], converted from the
+# raw distributions above. A campaign asking for "mmlu-1000" or
+# "arc-challenge-250" gets it here rather than by hand.
+if [ "${#DESCRIPTORS[@]}" -gt 0 ]; then
+    WANTED=$(python3 -c "
+import json, sys
+names = []
+for p in sys.argv[1:]:
+    names += json.load(open(p)).get('datasets', [])
+print('\n'.join(sorted(set(names))))" "${DESCRIPTORS[@]}")
+    while IFS= read -r NAME; do
+        [ -n "$NAME" ] || continue
+        [ -s "$NAME.json" ] && { echo "have: $NAME.json"; continue; }
+        LIMIT="${NAME##*-}"
+        case "$NAME" in
+            mmlu|mmlu-*)
+                ARGS=(mmlu "$DATASETS_DIR/mmlu/test") ;;
+            arc-easy-*)
+                ARGS=(arc "$EASY") ;;
+            arc-challenge-*)
+                ARGS=(arc "$CHAL") ;;
+            *)
+                echo "WARNING: dataset '$NAME' named by a descriptor is not" \
+                     "a known distribution and does not exist — the campaign" \
+                     "will refuse to start" >&2
+                continue ;;
+        esac
+        if [ "$LIMIT" -eq "$LIMIT" ] 2>/dev/null; then
+            ARGS+=(--limit "$LIMIT")
+        fi
+        echo "converting: $NAME.json"
+        python3 "$CONVERT" "${ARGS[@]}" --out "$NAME.json"
+    done <<< "$WANTED"
+fi
+
 echo
 echo "datasets ready:"
 ls -d "$DATASETS_DIR"/ARC-V1-Feb2018*/ "$DATASETS_DIR"/mmlu 2>/dev/null || true
-ls "$DATASETS_DIR"/arc-*.json 2>/dev/null || true
+ls "$DATASETS_DIR"/arc-*.json "$DATASETS_DIR"/mmlu-*.json 2>/dev/null || true

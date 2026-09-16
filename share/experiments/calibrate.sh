@@ -75,6 +75,34 @@ if opts["build_type"] != "Release":
           "numbers will be meaningless")
 PYEOF
 
+# Every answer mechanism must produce scored answers on this build before
+# a campaign commits hours to it. Runs on the RNG model (instant, no
+# weights): what is under test is the mechanism plumbing -- constrained
+# fields, candidate scoring, and the letter-to-choice mapping -- not the
+# model. A mechanism that returns nulls here would silently drop samples
+# out of the accuracy denominator for a whole campaign.
+( cd "$REPO" && python3 - <<'PYEOF'
+import sys, tempfile
+from autocog.bench.quality import run_quality
+with tempfile.TemporaryDirectory() as tmp:
+    evs = run_quality(questions=3, syntaxes=["complete"],
+                      demos=["select", "repeat", "label"], out=tmp,
+                      log=lambda *_: None)
+bad = []
+for demo in ("select", "repeat", "label"):
+    rows = [e for e in evs if e["autocog.bench.demo"] == demo]
+    nulls = [e for e in rows if e["autocog.bench.correct"] is None]
+    errs = [e for e in rows if e.get("error.message")]
+    print(f"mechanism {demo:<8} {len(rows)} samples, {len(nulls)} unscored, "
+          f"{len(errs)} errors")
+    if not rows or nulls or errs:
+        bad.append(demo)
+if bad:
+    sys.exit(f"FATAL: mechanism(s) {bad} do not produce scored answers on "
+             "this build")
+PYEOF
+) || exit 1
+
 CELLS="$(mktemp)"
 cat > "$CELLS" <<'EOF'
 [
