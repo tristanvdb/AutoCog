@@ -130,6 +130,11 @@ class RemoteBackend:
     /evaluate endpoint, which returns the FTT.
     """
 
+    #: async polling backs off from POLL_MIN to `poll_interval`, x POLL_GROWTH
+    #: per tick — short jobs return promptly, long jobs poll cheaply
+    POLL_MIN = 0.005
+    POLL_GROWTH = 1.6
+
     def __init__(self, server_url, syntax=None, search=None,
                  poll_interval=0.5, timeout=300):
         """
@@ -259,7 +264,13 @@ class RemoteBackend:
         """POST a job to a queued endpoint and poll asynchronously. The HTTP
         round trips themselves are short (submit returns a request id, status
         returns state) and run on the default executor; the waiting happens
-        in asyncio.sleep, so many jobs can be in flight from one loop."""
+        in asyncio.sleep, so many jobs can be in flight from one loop.
+
+        Polling backs off from POLL_MIN to `poll_interval`: a job that
+        finishes in 20 ms is not billed a fixed 0.5 s of client-side
+        waiting, while a long job still settles to the cheap slow rate.
+        (The v0.8 campaign, at a flat 0.5 s, spent most of its wall clock
+        here: every small-model sample measured exactly one poll tick.)"""
         import asyncio
 
         loop = asyncio.get_running_loop()
@@ -267,8 +278,10 @@ class RemoteBackend:
             None, lambda: self._post(endpoint, payload))
         request_id = submit["request_id"]
         deadline = time.time() + self.timeout
+        delay = min(self.POLL_MIN, self.poll_interval)
         while time.time() < deadline:
-            await asyncio.sleep(self.poll_interval)
+            await asyncio.sleep(delay)
+            delay = min(delay * self.POLL_GROWTH, self.poll_interval)
             status = await loop.run_in_executor(
                 None, lambda: self._get(f"/status/{request_id}"))
             state = status["state"]
