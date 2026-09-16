@@ -105,14 +105,24 @@ def walk_tokens(node, depth, acc):
 
 
 def existing_samples(out_dir):
-    """Index (syntax, demo, question) triples already recorded under an
-    output directory — any results file, any host, torn lines tolerated."""
+    """Index (syntax, demo, question) triples already MEASURED under an
+    output directory — any results file, any host, torn lines tolerated.
+
+    Rows carrying error.message do not count: a sample that failed
+    because its worker died, or the box ran out of memory, is not a
+    measurement, and treating it as one makes a transient failure
+    permanent — the rerun skips it and the run ships with a hole. The
+    error rows stay in the file as the record of what happened; a later
+    successful row for the same sample simply supersedes them (consumers
+    group by these same keys)."""
     have = set()
     for path in glob.glob(os.path.join(out_dir, "results-*.ndjson")):
         for line in open(path):
             try:
                 ev = json.loads(line)
             except json.JSONDecodeError:
+                continue
+            if ev.get("error.message"):
                 continue
             key = (ev.get("autocog.bench.syntax"), ev.get("autocog.bench.demo"),
                    ev.get("autocog.bench.question"))

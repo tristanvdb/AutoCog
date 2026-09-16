@@ -376,6 +376,52 @@ def test_scheduler_no_starvation():
     assert len(slow.emitted) == 12 and len(fast.emitted) == 3
 
 
+def test_resume_retries_failed_samples(tmp_path, worker, monkeypatch):
+    """A sample recorded with an error is NOT a measurement: a rerun must
+    retry it. Otherwise a transient worker failure is permanent — the
+    rerun skips the hole and the run ships incomplete."""
+    from autocog.bench.campaign import run_campaign
+
+    monkeypatch.setenv("RESULTS_PATH", str(tmp_path))
+    desc = tmp_path / "c.json"
+    desc.write_text(json.dumps({
+        "name": "retry",
+        "phases": [{"name": "p", "runs": [
+            {"kind": "quality", "model": "rng",
+             "data": "share/benchmarks/quality/questions.json",
+             "questions": 2, "syntaxes": ["complete"], "demos": ["select"],
+             "out": "r"}]}]}))
+    out = tmp_path / "retry" / "r"
+    out.mkdir(parents=True)
+
+    # one sample previously failed, one previously succeeded
+    import json as _json
+    from autocog.bench.formatters import load_formatter, load_questions
+    qs = load_questions("share/benchmarks/quality/questions.json",
+                        load_formatter(""), limit=2)
+    (out / "results-old.ndjson").write_text("".join(_json.dumps(r) + "\n" for r in [
+        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "select",
+         "autocog.bench.question": qs[0]["id"], "autocog.bench.correct": True},
+        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "select",
+         "autocog.bench.question": qs[1]["id"], "autocog.bench.correct": None,
+         "error.message": "RemoteError: worker died"},
+    ]))
+
+    from autocog.bench.quality import existing_samples
+    have = existing_samples(str(out))
+    assert ("complete", "select", qs[0]["id"]) in have      # measured
+    assert ("complete", "select", qs[1]["id"]) not in have  # failed -> retry
+
+    _, failures = run_campaign(str(desc), workers=[worker], log=lambda m: None)
+    assert failures == []
+    fresh = [json.loads(l) for f in out.glob("results-*.ndjson")
+             if f.name != "results-old.ndjson" for l in f.open()]
+    redone = [e for e in fresh if e.get("autocog.bench.question") == qs[1]["id"]]
+    assert len(redone) == 1 and redone[0]["autocog.bench.correct"] is not None
+    assert not [e for e in fresh
+                if e.get("autocog.bench.question") == qs[0]["id"]]   # not redone
+
+
 def test_tag_derivation():
     from autocog.bench.workers import model_tag
     assert model_tag(None) == "rng"
