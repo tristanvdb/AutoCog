@@ -1,8 +1,29 @@
 #!/usr/bin/env python3
-"""Convert an STA JSON file to Graphviz DOT format (state graph).
+"""Convert an STA prompt to Graphviz DOT: the schema's control structure.
 
 Usage:
     python sta2dot.py program.sta.json [prompt_name] | dot -Tsvg -o graph.svg
+    python sta2dot.py program.sta.json --list
+
+This draws the ABSTRACT state graph -- one node per schema field, the size of
+the source. It is not the automaton the model walks: arrays are still rolled
+up here, and the instantiator unrolls them against the content it is given
+(that unrolled form is the FTA, see fta2dot.py). Read this one to check that
+a program says what you meant; read the FTA to check what a model will see.
+
+Each state carries two out-edges, either of which may be absent:
+
+    flow   enter this field -- descend into a record, or take one more
+           element of an array. A self-loop is an array repeating.
+    exit   leave this field for the next one. An exit back to the root is
+           the end of the prompt, drawn here as a terminal rather than as a
+           back-edge, because a cycle through the root reads as a loop and
+           it is not one.
+
+Whether an edge is available at runtime depends on the array bounds, which
+the instantiator resolves per element: `can_flow = count < max`,
+`can_exit = count >= min` (runtime/sta/instantiate.cxx). The bounds are on
+the node so the two can be read together.
 """
 
 import json
@@ -10,93 +31,131 @@ import sys
 
 
 def _esc(s):
-    return s.replace("\\", "\\\\").replace('"', "'").replace("\n", "\\n")
+    """Escape one piece of label text. Never call this on a string that already
+    contains a DOT line break -- it would escape the backslash and the break
+    would render as a literal \\n, which is exactly what it used to do."""
+    return s.replace("\\", "\\\\").replace('"', "'").replace("\n", " ")
 
 
-def _node_id(tag):
-    return "s_" + tag.replace("@", "__")
+def _label(*lines):
+    """Escape each line, then join with the DOT line break."""
+    return "\\n".join(_esc(str(l)) for l in lines if l is not None and l != "")
 
 
-def sta_to_dot(sta, prompt_name=None):
+def find_prompt(sta, prompt_name=None):
+    """Prompts are stored under their mangled name (`choose__8`): a prompt
+    with arguments is a distinct prompt per instantiation. Accept either the
+    mangled name or the one written in the source."""
+    prompts = sta["prompts"]
     if prompt_name is None:
         entry = list(sta["entry_points"].values())[0]
         prompt_name = entry["prompt"] if isinstance(entry, dict) else entry
+    if prompt_name in prompts:
+        return prompt_name, prompts[prompt_name]
+    for key, p in prompts.items():
+        if p.get("name") == prompt_name:
+            return key, p
+    for key, p in prompts.items():
+        if key.split("__")[0] == prompt_name:
+            return key, p
+    print(f"Prompt '{prompt_name}' not found (have: {', '.join(prompts)})",
+          file=sys.stderr)
+    sys.exit(1)
 
-    prompt = None
-    for p in sta["prompts"].values():
-        if p["name"] == prompt_name:
-            prompt = p
-            break
-    if prompt is None:
-        prompt = sta["prompts"].get(prompt_name)
-    if prompt is None:
-        print(f"Prompt '{prompt_name}' not found", file=sys.stderr)
-        sys.exit(1)
 
-    states = prompt["states"]
+def _field_label(fields, idx):
+    """The lines of a field's node label."""
+    f = fields[idx]
+    fmt = f.get("format") or {}
+    kind = fmt.get("type", "record") if isinstance(fmt, dict) else "record"
+    detail = kind
+    rng = f.get("range")
+    if rng:
+        detail += f" [{rng[0]}:{rng[1]}]"
+    if kind == "completion" and fmt.get("length"):
+        detail += f" len={fmt['length']}"
+    if kind == "choice" and fmt.get("mode"):
+        detail += f" ({fmt['mode']})"
+    lines = [f["name"], detail]
+    if kind == "enum" and fmt.get("values"):
+        vals = ",".join(str(v) for v in fmt["values"])
+        lines.append(vals[:40])
+    return lines
+
+
+def _colour(fields, idx):
+    f = fields[idx]
+    fmt = f.get("format") or {}
+    kind = fmt.get("type", "record") if isinstance(fmt, dict) else "record"
+    if f.get("range"):
+        return "orange"          # an array: the flow self-loop is the repeat
+    if kind == "record":
+        return "lightblue"
+    if kind in ("choice", "enum"):
+        return "palegreen"       # the model picks from a fixed set
+    return "lightgray"           # free generation
+
+
+def sta_to_dot(sta, prompt_name=None):
+    key, prompt = find_prompt(sta, prompt_name)
+    abstracts = prompt["abstracts"]
     fields = prompt["fields"]
     flows = prompt.get("flows", {})
 
-    lines = []
-    lines.append("digraph STA {")
-    lines.append('    rankdir=TB;')
-    lines.append('    node [fontname="monospace", fontsize=10];')
-    lines.append('    edge [fontname="monospace", fontsize=9];')
-    lines.append("")
+    out = [
+        "digraph STA {",
+        "    rankdir=TB;",
+        '    node [fontname="monospace", fontsize=10, shape=box, style=filled];',
+        '    edge [fontname="monospace", fontsize=9];',
+        f'    labelloc="t"; label="{_esc(key)}  (abstract states)";',
+        "",
+    ]
 
-    for tag, state in states.items():
-        nid = _node_id(tag)
-        field_idx = state.get("field", -1)
-
-        if field_idx < 0:
-            # Root node
-            lines.append(f'    {nid} [label="root", fillcolor="white", style="filled"];')
-            continue
-
-        f = fields[field_idx]
-        fmt = f.get("format", {})
-        fmt_type = fmt.get("type", "record") if isinstance(fmt, dict) else "record"
-        rng = f.get("range")
-        indices = state.get("indices", [])
-
-        # Label: field path with indices
-        idx_str = "".join(f"[{j}]" for j in indices)
-        label = f"{f['name']}{idx_str}"
-
-        # Color matching PoC: red=list tail, blue=record, orange=list element, gray=scalar
-        is_list_tail = rng is not None and indices and indices[-1] >= rng[1]
-        is_record = fmt_type == "record"
-        is_list = rng is not None
-
-        if is_list_tail:
-            color = "red"
-        elif is_record:
-            color = "lightblue"
-        elif is_list:
-            color = "orange"
+    for i, a in enumerate(abstracts):
+        if a.get("field", -1) < 0:
+            out.append(f'    s{i} [label="root", shape=circle, fillcolor=white];')
         else:
-            color = "lightgray"
+            out.append(f'    s{i} [label="{_label(*_field_label(fields, a["field"]))}", '
+                       f'fillcolor={_colour(fields, a["field"])}];')
 
-        lines.append(f'    {nid} [label="{_esc(label)}", fillcolor="{color}", style="filled"];')
-
-    lines.append("")
-
-    # Edges from successors (blue, constraint=true)
-    for tag, state in states.items():
-        src = _node_id(tag)
-        for succ in state.get("successors", []):
-            lines.append(f'    {src} -> {_node_id(succ)} [color=blue, constraint=true];')
-
-    # Flow nodes
+    # The prompt's continuation: a return, or control passing to another
+    # prompt. This is where a reader checks that a flow actually goes where
+    # the source says it does.
+    terminals = []
     for name, flow in flows.items():
-        fid = _node_id("flow_" + name)
-        lines.append(f'    {fid} [label="{_esc(name)} ({flow.get("type","?")})", shape=diamond, fillcolor="lightyellow", style="filled"];')
-        for tag, state in states.items():
-            if not state.get("successors"):
-                lines.append(f'    {_node_id(tag)} -> {fid} [color=blue, constraint=true];')
+        kind = flow.get("type", "?")
+        target = flow.get("prompt")
+        nid = "f_" + "".join(c if c.isalnum() or c == "_" else "_" for c in name)
+        lines = [name] + ([f"-> {target}"] if target else []) + [f"({kind})"]
+        out.append(f'    {nid} [label="{_label(*lines)}", '
+                   f'shape=diamond, fillcolor=lightyellow];')
+        terminals.append(nid)
+    if not terminals:
+        out.append('    f_end [label="end", shape=doublecircle, fillcolor=white];')
+        terminals.append("f_end")
 
-    lines.append("}")
-    return "\n".join(lines)
+    out.append("")
+    for i, a in enumerate(abstracts):
+        flow, exit_ = a.get("flow", -1), a.get("exit", -1)
+        if flow >= 0:
+            style = "" if flow != i else ', label="repeat"'
+            out.append(f'    s{i} -> s{flow} [color=blue{style}];')
+        if exit_ > 0:
+            out.append(f'    s{i} -> s{exit_} [color=gray40, style=dashed];')
+        elif exit_ == 0 and i != 0:
+            # Exit to the root is the end of the prompt, not a loop.
+            for t in terminals:
+                out.append(f'    s{i} -> {t} [color=gray40, style=dashed];')
+
+    out.append("")
+    out.append('    subgraph cluster_legend {')
+    out.append('        label="edges"; fontsize=9; style=dotted;')
+    out.append('        l0 [label="flow: enter / repeat", shape=plaintext, fillcolor=white];')
+    out.append('        l1 [label="exit: next field", shape=plaintext, fillcolor=white];')
+    out.append('        l0 -> l1 [style=invis];')
+    out.append('    }')
+    out.append("}")
+    return "\n".join(out)
 
 
 if __name__ == "__main__":
@@ -106,6 +165,11 @@ if __name__ == "__main__":
 
     with open(sys.argv[1]) as f:
         sta = json.load(f)
+
+    if "--list" in sys.argv[2:]:
+        for key, p in sta["prompts"].items():
+            print(key)
+        sys.exit(0)
 
     prompt_name = sys.argv[2] if len(sys.argv) > 2 else None
     print(sta_to_dot(sta, prompt_name))
