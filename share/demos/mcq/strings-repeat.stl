@@ -15,7 +15,7 @@ prompt main {
   channel {
     topic get topic;
     question get question;
-    choices get choices;
+    choices get choice.value;
   }
   return {
     use answer;

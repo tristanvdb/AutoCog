@@ -46,11 +46,15 @@ def insert_at_target(content, target_path, value):
 
 
 def resolve_input(channel, inputs):
-    """Resolve an input channel: read from external inputs."""
-    source_name = channel["source"][0]["name"] if channel["source"] else None
-    if source_name and source_name in inputs:
-        return inputs[source_name]
-    return None
+    """Resolve an input channel: read from external inputs.
+
+    The whole path, not just its first step: `get choice.value` reads the
+    values out of a list of records. This used to take `source[0]` and stop,
+    so a dotted input path silently delivered the wrong thing — the enclosing
+    records rather than the field named."""
+    if not channel["source"]:
+        return None
+    return resolve_path(inputs, channel["source"])
 
 
 def resolve_dataflow(channel, frames, current_prompt):

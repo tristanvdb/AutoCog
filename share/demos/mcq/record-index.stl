@@ -4,7 +4,7 @@
 // choices carry a label alongside their text, so the index names a record and
 // the answer is that record's value.
 
-from "record.stl" import choice;
+from "record.stl" import a_choice;
 from "mcq.py" import pick_value;
 
 prompt main {
@@ -12,20 +12,20 @@ prompt main {
   is {
     topic is text<length=20>;
     question is text<length=50>;
-    choices[2:max_choices] is choice;
-    answer is select(choices);
+    choice[2:max_choices] is a_choice;
+    answer is select(choice);
   }
   channel {
     topic get topic;
     question get question;
-    choices get choices;
+    choice get choice;
   }
   return call pick_value _;
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
-    choices as "the possible choices to answer the question, only one is correct";
+    choice as "the possible choices to answer the question, only one is correct";
     answer as "you pick the index of the choice that best answer the question";
   }
 }

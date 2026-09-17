@@ -169,7 +169,7 @@ def test_engine_pool_dispatch(rng_workers):
 
     async def one(i):
         return await pool.run_async(prog, topic="t", question=f"q{i}",
-                                    choices=["a", "b", "c"])
+                                    choice=[{"label": "A", "value": "a"}, {"label": "B", "value": "b"}, {"label": "C", "value": "c"}])
 
     async def many():
         return await asyncio.gather(*(one(i) for i in range(6)))

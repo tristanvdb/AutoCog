@@ -51,7 +51,7 @@ class TestPerfSurface:
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         assert engine.last_perf is None
         engine.set_seed(42)
-        engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        engine.run(prog, topic="Sci", question="2+2?", choice=[{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}])
         perf = engine.last_perf
         assert perf is not None
         for key in INT_KEYS:
@@ -63,7 +63,7 @@ class TestPerfSurface:
         """Per-eval deltas: two identical evaluations report identical token
         counters (the second must not include the first's accumulation)."""
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
-        inputs = dict(topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        inputs = dict(topic="Sci", question="2+2?", choice=[{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}])
         engine.set_seed(42)
         engine.run(prog, **inputs)
         first = engine.last_perf
@@ -86,7 +86,7 @@ class TestPerfSurface:
 
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         content = {"topic": "Sci", "question": "2+2?",
-                   "choices": ["3", "4", "5", "6"]}
+                   "choice": [{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}]}
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id, engine.search_id)
         try:
@@ -139,7 +139,7 @@ class TestPerfSurfaceRealModel:
         )
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         content = {"topic": "Sci", "question": "2+2?",
-                   "choices": ["3", "4", "5", "6"]}
+                   "choice": [{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}]}
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id, engine.search_id)
         try:
@@ -175,19 +175,26 @@ class TestScoreFrame:
         from autocog.recorder import Recorder
 
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
-        inputs = dict(topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+        inputs = dict(topic="Sci", question="2+2?", choice=[{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}])
         with tempfile.TemporaryDirectory() as tmp:
-            rec = Recorder(kinds={"frame"}, path=tmp)
+            rec = Recorder(kinds={"input", "frame"}, path=tmp)
             engine.set_seed(42)
             engine.run(prog, recorder=rec, **inputs)
-            frames = []
+            frames, contents = [], []
             for root, _, files in os.walk(tmp):
                 frames += [os.path.join(root, f) for f in files
                            if f.endswith(".frame.json")]
-            assert frames
+                contents += [os.path.join(root, f) for f in files
+                             if f.endswith(".input.json")]
+            assert frames and contents
             frame = json.load(open(frames[0]))
+            # CONTENT, not inputs: re-encoding needs the resolved channel
+            # values (the choice texts this program pulled out of the
+            # records), which is what the recorder captured. This is the
+            # same pairing bench/quality.py feeds score_frame.
+            content = json.load(open(contents[0]))
 
-        scored = engine.score_frame(prog, "main", frame, inputs)
+        scored = engine.score_frame(prog, "main", frame, content)
         # linear path, every node text present; RNG scoring draws are noise
         # but the structure must be a full single-branch tree.
         node, depth = scored, 0
@@ -208,7 +215,7 @@ class TestScoreFrame:
             rec = Recorder(kinds={"perf"}, path=tmp)
             engine.set_seed(42)
             engine.run(prog, recorder=rec,
-                       topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
+                       topic="Sci", question="2+2?", choice=[{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}])
             perfs = []
             for root, _, files in os.walk(tmp):
                 perfs += [os.path.join(root, f) for f in files

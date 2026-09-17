@@ -229,7 +229,7 @@ class QualityRun:
             "autocog.bench.program": name,
             "autocog.bench.labels": labels,
             "autocog.bench.question": q["id"],
-            "autocog.bench.n_choices": len(q["choices"]),
+            "autocog.bench.n_choices": len(q["choice"]),
         })
         t0 = time.time()
         try:
@@ -237,7 +237,7 @@ class QualityRun:
                 rec = Recorder(kinds={"input", "frame"}, path=tmp)
                 result = await pool.run_async(
                     prog, recorder=rec, topic=q.get("topic", ""),
-                    question=q["question"], choices=q["choices"])
+                    question=q["question"], choice=q["choice"])
                 wall = time.time() - t0
                 answer, correct = score_answer(extract_answer(result), q)
 
@@ -456,9 +456,10 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     t0 = time.time()
                     error = None
                     try:
-                        result = engine.run(prog, recorder=rec, topic=q.get("topic", ""),
+                        result = engine.run(prog, recorder=rec,
+                                            topic=q.get("topic", ""),
                                             question=q["question"],
-                                            choices=q["choices"])
+                                            choice=q["choice"])
                     except Exception as e:  # a failing pair is a datapoint
                         result, error = None, f"{type(e).__name__}: {e}"
                     wall = time.time() - t0
@@ -470,7 +471,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         "autocog.bench.program": name,
                         "autocog.bench.labels": labels,
                         "autocog.bench.question": q["id"],
-                        "autocog.bench.n_choices": len(q["choices"]),
+                        "autocog.bench.n_choices": len(q["choice"]),
                         "autocog.bench.wall_seconds": round(wall, 3),
                         "autocog.bench.answer": answer,
                         "autocog.bench.correct": correct,

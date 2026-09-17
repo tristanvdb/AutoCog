@@ -28,11 +28,29 @@ def _apply_selector(data, step):
 
 
 def navigate(data, path):
-    """Navigate a nested dict/list by path steps (name + optional selector)."""
-    for step in path:
+    """Navigate a nested dict/list by path steps (name + optional selector).
+
+    A step that lands on a list is mapped over its elements and gathered, so
+    `choice.value` over a list of records yields the list of values. That is
+    what lets a program take one input shape and read the part it wants:
+    the record programs bind `choice` whole, the strings programs pull
+    `choice.value` out of the same records. (Context._resolve_path has always
+    done this for return paths; channels were the half that didn't.)
+    """
+    for i, step in enumerate(path):
         name = step["name"]
         if isinstance(data, dict):
             data = data.get(name)
+        elif isinstance(data, list):
+            if not data:
+                return []      # nothing to gather from is still an answer: none
+            gathered = [g for g in (navigate(item, path[i:]) for item in data)
+                        if g is not None]
+            # A non-empty list that yielded nothing has no such field — a miss,
+            # which must not read as "an empty list". An EMPTY source does read
+            # that way, so a program is told it got zero choices and can say so
+            # ("requires at least 2") instead of finding the field absent.
+            return gathered or None
         else:
             return None
         if data is None:

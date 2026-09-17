@@ -6,7 +6,7 @@
 // model can emit — the choice set IS the data. The label is then resolved to
 // the value it names, on the return.
 
-from "record.stl" import choice;
+from "record.stl" import a_choice;
 from "mcq.py" import by_label;
 
 prompt main {
@@ -14,20 +14,20 @@ prompt main {
   is {
     topic is text<length=20>;
     question is text<length=50>;
-    choices[2:max_choices] is choice;
-    answer is repeat(choices.label);
+    choice[2:max_choices] is a_choice;
+    answer is repeat(choice.label);
   }
   channel {
     topic get topic;
     question get question;
-    choices get choices;
+    choice get choice;
   }
   return call by_label _;
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
-    choices as "the possible choices to answer the question, only one is correct";
+    choice as "the possible choices to answer the question, only one is correct";
     answer as "you give the letter labelling the choice that best answer the question";
   }
 }

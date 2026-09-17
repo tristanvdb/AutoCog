@@ -116,7 +116,8 @@ def test_sum_ranking_prefers_short_choice_on_rng(repo_root, tmp_path):
     such length bias (its pick is seed-dependent but well-defined)."""
     from autocog.engine import Engine
 
-    choices = ["tiny", "a very very very long choice answer text indeed"]
+    choice = [{"label": "A", "value": "tiny"},
+              {"label": "B", "value": "a very very very long choice answer text indeed"}]
     search = json.load(open(repo_root / "share" / "search" / "default.json"))
     search["enum"]["ranking"] = {"metric": "sum"}
     search_file = tmp_path / "sum.json"
@@ -129,7 +130,7 @@ def test_sum_ranking_prefers_short_choice_on_rng(repo_root, tmp_path):
                     syntax=str(repo_root / "share" / "syntax" / "complete.json"),
                     search=str(search_file))
     engine.set_seed(42)
-    result = engine.run(prog, topic="t", question="pick one", choices=choices)
+    result = engine.run(prog, topic="t", question="pick one", choice=choice)
     answer = result if isinstance(result, str) else result.get("answer")
     assert answer == "tiny"
 
@@ -150,7 +151,7 @@ def test_empty_choices_is_user_error(repo_root):
                     syntax=str(repo_root / "share" / "syntax" / "complete.json"),
                     search=str(repo_root / "share" / "search" / "default.json"))
     with pytest.raises(AutoCogError, match="requires at least"):
-        engine.run(prog, topic="t", question="q", choices=[])
+        engine.run(prog, topic="t", question="q", choice=[])
 
 
 STOP_STL = """

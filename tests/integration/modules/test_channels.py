@@ -183,7 +183,7 @@ class TestErrorPaths:
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         with pytest.raises(autocog.errors.OrchestrationError) as exc_info:
-            engine.run(prog, question="What is 2+2?", choices=["4"])
+            engine.run(prog, question="What is 2+2?", choice=[{"label": "A", "value": "4"}])
         e = exc_info.value
         assert getattr(e, "field", None) == "choices"
 

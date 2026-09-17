@@ -332,7 +332,11 @@ static void collect_inputs(
             if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
                 // Direct input channel
                 if (ic->source.empty()) continue;
-                std::string name = ic->source.back().name;
+                // The FIRST step: `choices get choice.value` reads the input
+                // named `choice` and takes a field out of it. Naming the
+                // schema after the last step would advertise an input called
+                // `value` that no caller can supply.
+                std::string name = ic->source.front().name;
                 std::string target_name = ic->target.empty() ? name : ic->target.back().name;
 
                 // Find target field format and range
@@ -369,7 +373,7 @@ static void collect_inputs(
                 for (auto const & kw : cc->kwargs) {
                     if (kw.is_input && !kw.value.has_value()) {
                         if (kw.path.empty()) continue;
-                        std::string name = kw.path.back().name;
+                        std::string name = kw.path.front().name;
                         if (inputs.count(name) == 0) {
                             data::SchemaField schema;
                             schema.type = "text";
@@ -409,10 +413,10 @@ static void collect_inputs(
             for (auto const & ch : it->second.channels) {
                 bool found = false;
                 if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
-                    if (!ic->source.empty() && ic->source.back().name == name) found = true;
+                    if (!ic->source.empty() && ic->source.front().name == name) found = true;
                 } else if (auto * cc = std::get_if<data::CallChannel>(&ch.value)) {
                     for (auto const & kw : cc->kwargs) {
-                        if (kw.is_input && !kw.path.empty() && kw.path.back().name == name) found = true;
+                        if (kw.is_input && !kw.path.empty() && kw.path.front().name == name) found = true;
                     }
                 }
                 if (found) { schema.required = true; break; }

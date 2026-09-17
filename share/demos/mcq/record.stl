@@ -1,12 +1,15 @@
 // A labelled choice: the letter that names it, and the text it carries.
 //
+// Named `a_choice` so a field can be called `choice` — the singular names a
+// list of records, the plural a list of strings, and a program's schema says
+// which it takes at a glance.
+//
 // The label comes from the data, not from AutoCog — letter indexing is a
 // property of the dataset, produced once when it is converted. A program that
-// commits on the label (`repeat(choices.label)`) can only emit a label that is
-// present in the record, so there is no letter it can produce that names
-// nothing.
+// commits on the label (`repeat(choice.label)`) can only emit a label present
+// in the record, so there is no letter it can produce that names nothing.
 
-record choice {
+record a_choice {
   is {
     label is text<length=1>;
     value is text<length=40>;

@@ -21,7 +21,11 @@ from .workers import LocalWorker, model_tag, pick_worker
 DEFAULT_CONTENT = {
     "topic": "Science",
     "question": "What is H2O?",
+    # both shapes: a cell's program takes one or the other, and an unused
+    # input is ignored
     "choices": ["Water", "Fire", "Air", "Earth"],
+    "choice": [{"label": l, "value": v}
+               for l, v in zip("ABCD", ["Water", "Fire", "Air", "Earth"])],
 }
 
 FULL_MATRIX = {"beams": [1, 2, 4, 8], "ahead": [1, 2, 4], "width": [1, 2]}

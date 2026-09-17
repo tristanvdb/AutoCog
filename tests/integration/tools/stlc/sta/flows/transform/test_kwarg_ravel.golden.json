@@ -2,7 +2,7 @@
   "entry_points": {
     "main": {
       "inputs": {
-        "items": {
+        "groups": {
           "required": true,
           "type": "text"
         }
@@ -19,7 +19,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "8453f0a9fe58339b1bd8f25bf067b8dd9aecbc47e0ebeb2173f2deb6a7777954",
+    "hash": "ca2f8598106ff86b433dbc99d0c1e6820fbe301d2dc849079c46c5ca5d32d9c2",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },

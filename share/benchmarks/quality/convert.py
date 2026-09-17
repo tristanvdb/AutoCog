@@ -4,7 +4,12 @@
     python3 convert.py arc  <ARC-*-Test.jsonl>  [--limit N] [--out FILE]
     python3 convert.py mmlu <mmlu/test dir>     [--limit N] [--out FILE]
 
-Emits `[{id, topic, question, choices[4], answer}, ...]` (see README).
+Emits `[{id, topic, question, choice[4], answer}, ...]` where each choice is
+`{label, value}` — the label separate from the text, never glued onto it.
+Letter indexing is a property of the dataset, so it is produced here, once;
+no program and nothing in the harness invents a label at run time. A program
+that wants only the texts pulls `choice.value` through a channel.
+
 Only clean 4-choice items with a resolvable answer are kept (ARC has a few
 3/5-choice questions and numeric labels; MMLU is uniformly 4-choice).
 --limit takes a deterministic stratified sample (every k-th item of the
@@ -20,13 +25,13 @@ import sys
 
 
 def load_arc(path, four_only=False):
-    # Letter labels are prepended to the choice texts ("D: both A and B")
-    # because ARC answers cross-reference other options by label; choice
-    # order is preserved. Numeric-labeled items (~4% of ARC) are dropped:
-    # their labels (1-4) disagree with select's zero-based answer indices,
-    # and prefixing them is worse than skipping (PI decision; the edge case
-    # is reserved for fine-tuning-effect studies). --four-only additionally
-    # drops 3/5-choice items for uniform-cost performance runs.
+    # ARC carries its own labels and its answers cross-reference them, so they
+    # are kept as a field of each choice rather than pasted into the text.
+    # Numeric-labeled items (~4% of ARC) are dropped: their labels (1-4)
+    # disagree with the zero-based index a select emits, and normalizing them
+    # is a judgement the converter should not make silently (PI decision; the
+    # edge case is reserved for fine-tuning-effect studies). --four-only
+    # additionally drops 3/5-choice items for uniform-cost performance runs.
     out = []
     for line in open(path):
         q = json.loads(line)
@@ -38,14 +43,14 @@ def load_arc(path, four_only=False):
             continue
         if not 2 <= len(choices) <= 8:
             continue
-        texts = [f"{c['label']}: {c['text']}" for c in choices]
+        texts = [c["text"] for c in choices]
         if q.get("answerKey") not in labels or len(set(texts)) != len(texts):
             continue
         out.append({
             "id": q["id"],
             "topic": "Science",
             "question": q["question"]["stem"],
-            "choices": texts,
+            "choice": [{"label": l, "value": t} for l, t in zip(labels, texts)],
             "answer": texts[labels.index(q["answerKey"])],
         })
     return out
@@ -62,11 +67,15 @@ def load_mmlu(test_dir):
                 choices = row[1:5]
                 if len(set(choices)) != 4:
                     continue
+                # MMLU ships no labels; the same A-D the dataset's answer key
+                # uses become the choice labels, so every dataset arrives in
+                # one shape.
                 out.append({
                     "id": f"{subject.replace(' ', '-')}-{i}",
                     "topic": subject,
                     "question": row[0],
-                    "choices": choices,
+                    "choice": [{"label": l, "value": v}
+                               for l, v in zip("ABCD", choices)],
                     "answer": choices["ABCD".index(row[5])],
                 })
     return out

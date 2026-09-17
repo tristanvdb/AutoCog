@@ -5,11 +5,10 @@ stdlib and execute through the Python orchestration — channels, flows, and
 sub-prompt calls (the C++ tool pipeline exercises none of the orchestration,
 so this is the only place a demo is proven to actually run).
 
-Two families, named for what the model is choosing among. `strings-*` take a
-list of choice texts; `record-*` take labelled records, so the label is in the
-data rather than something the harness prepends. Both return the choice that
-was settled on — a mechanism that commits on something else (an index, a
-letter) resolves it on its own return.
+Two families, named for what the model is choosing among. Both take the SAME
+input — the labelled records a converted dataset produces — and the strings-*
+family pulls `choice.value` out of them through a channel. That is the entire
+difference, and it is expressed in the program rather than in whoever feeds it.
 """
 
 import pytest
@@ -17,28 +16,15 @@ import pytest
 CHOICES = ["Water", "Fire", "Air", "Earth"]
 LABELS = ["A", "B", "C", "D"]
 
-STRINGS_INPUTS = {"topic": "Science", "question": "What is H2O?",
-                  "choices": CHOICES}
-RECORD_INPUTS = {"topic": "Science", "question": "What is H2O?",
-                 "choices": [{"label": l, "value": v}
-                             for l, v in zip(LABELS, CHOICES)]}
-
-# The annot demos build their own per-choice records (value + an annotator's
-# verdict), so they are fed plain strings like the strings-* family.
-ANNOT = {"record-index-annot", "record-value-annot"}
-
-
-def inputs_for(demo):
-    return RECORD_INPUTS if demo.startswith("record-") and demo not in ANNOT \
-        else STRINGS_INPUTS
-
+INPUTS = {"topic": "Science", "question": "What is H2O?",
+          "choice": [{"label": l, "value": v} for l, v in zip(LABELS, CHOICES)]}
 
 # Demos whose result is a bare answer: it must be one of the choice texts.
 ANSWER_IS_CHOICE = {"strings-select", "strings-repeat",
                     "strings-select-cot", "strings-repeat-cot",
                     "strings-select-hyp", "strings-repeat-hyp",
                     "record-index", "record-value", "record-label",
-                    "record-index-annot"}
+                    "record-index-annot", "record-value-annot"}
 
 # The iter demos return a labeled struct; the answer field must be a choice.
 # (Their literal `status` field currently orchestrates to None — a known
@@ -51,14 +37,7 @@ MCQ_DEMOS = [
     "strings-repeat", "strings-repeat-cot",
     "strings-repeat-hyp", "strings-repeat-iter",
     "record-index", "record-value", "record-label",
-    "record-index-annot",
-    # record-value-annot needs choices[].value populated by the annotator
-    # calls, but multi-field call returns currently collapse to a single
-    # unnamed value (the literal-return-fields runtime gap), so the repeat
-    # source correctly resolves to zero candidates.
-    pytest.param("record-value-annot", marks=pytest.mark.xfail(
-        reason="multi-field call returns do not populate struct arrays yet",
-        strict=True)),
+    "record-index-annot", "record-value-annot",
 ]
 
 
@@ -66,7 +45,7 @@ MCQ_DEMOS = [
 def test_mcq_demo_runs_rng(demo, engine, repo_root):
     import autocog
     prog = autocog.compile(str(repo_root / f"share/demos/mcq/{demo}.stl"))
-    result = engine.run(prog, **inputs_for(demo))
+    result = engine.run(prog, **INPUTS)
     assert result is not None
     if demo in ANSWER_IS_CHOICE:
         assert result in CHOICES, f"{demo}: unexpected answer {result!r}"
@@ -87,5 +66,5 @@ def test_mcq_demo_runs_real(demo, real_engine, repo_root):
     """
     import autocog
     prog = autocog.compile(str(repo_root / f"share/demos/mcq/{demo}.stl"))
-    result = real_engine.run(prog, **STRINGS_INPUTS)
+    result = real_engine.run(prog, **INPUTS)
     assert result is not None

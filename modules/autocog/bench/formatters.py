@@ -2,7 +2,11 @@
 
 A formatter is a callable `fn(record) -> question | None` (None = skip),
 where a question is the questions.json shape:
-    {"id", "topic", "question", "choices", "answer"}
+    {"id", "topic", "question", "choice": [{"label", "value"}], "answer"}
+
+The choices arrive as labelled records — the label produced when the dataset
+was converted, never invented at run time. A program that wants only the texts
+pulls `choice.value` through a channel.
 
 Specified as `path/to/file.py:function` (the pytest/gunicorn convention)
 and applied client-side to every datapoint of `--data`. The default is
@@ -52,7 +56,7 @@ def load_questions(data_path, formatter=None, limit=0):
         records = json.load(open(data_path))
     questions = [q for q in (fn(r) for r in records) if q is not None]
     for q in questions:
-        for key in ("id", "question", "choices", "answer"):
+        for key in ("id", "question", "choice", "answer"):
             if key not in q:
                 raise ConfigError(f"formatted question missing {key!r}: {q}")
     if limit and limit < len(questions):

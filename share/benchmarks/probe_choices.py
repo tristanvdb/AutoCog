@@ -90,8 +90,9 @@ def run(args):
     n_rows, n_skip = 0, 0
     with open(args.out + ".part", "w") as sink:
         for q in questions:
+            texts = [c["value"] for c in q["choice"]]
             content = {"topic": q.get("topic", ""), "question": q["question"],
-                       "choices": q["choices"]}
+                       "choices": texts, "choice": q["choice"]}
             fid = rt.instantiate(prog.id, "main", content, syn_id, sid)
             try:
                 if remote is not None:
@@ -104,7 +105,7 @@ def run(args):
                 rt.release_fta(fid)
 
             cands = candidate_group(ftt)
-            if not cands or len(cands) != len(q["choices"]):
+            if not cands or len(cands) != len(texts):
                 n_skip += 1
                 continue
             # A select commits on an index digit, a repeat on the choice text.
@@ -117,17 +118,17 @@ def run(args):
                 if "select" in args.demo:
                     idx = int(text)
                 else:
-                    idx = q["choices"].index(text) if text in q["choices"] else -1
+                    idx = texts.index(text) if text in texts else -1
                 rows.append({"i": idx, "nll": round(sum(c["logprobs"]), 6),
                              "n_tok": len(c["logprobs"]),
                              "n_bytes": len(text.encode("utf-8"))})
-            if sorted(r["i"] for r in rows) != list(range(len(q["choices"]))):
+            if sorted(r["i"] for r in rows) != list(range(len(texts))):
                 n_skip += 1
                 continue
             sink.write(json.dumps({
                 "model": model_tag, "demo": args.demo,
                 "syntax": os.path.splitext(os.path.basename(syntax))[0],
-                "qid": q["id"], "gold": q["choices"].index(q["answer"]),
+                "qid": q["id"], "gold": texts.index(q["answer"]),
                 "candidates": rows}) + "\n")
             n_rows += 1
     os.replace(args.out + ".part", args.out)

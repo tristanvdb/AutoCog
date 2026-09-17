@@ -92,7 +92,9 @@ def test_quality_formatter(tmp_path):
             if len(record["opts"]) < 2:
                 return None
             return {"id": record["q"][:6], "topic": "T",
-                    "question": record["q"], "choices": record["opts"],
+                    "question": record["q"],
+                    "choice": [{"label": l, "value": v}
+                               for l, v in zip("ABCDEFGH", record["opts"])],
                     "answer": record["opts"][record["gold"]]}
     """))
     qs = load_questions(str(data), load_formatter(f"{fmt}:to_mcq"))

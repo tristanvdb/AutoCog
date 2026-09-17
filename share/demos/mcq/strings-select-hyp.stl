@@ -42,7 +42,7 @@ prompt choose {
     topic get topic;
     question get question;
     hyphothesis use main.hyphothesis;
-    choices get choices;
+    choices get choice.value;
   }
   return call pick _;
   annotate {
