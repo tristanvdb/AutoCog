@@ -8,6 +8,15 @@ set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 foreach(STL_FILE ${MCQ_STL_FILES})
     get_filename_component(DEMO_NAME ${STL_FILE} NAME_WE)
 
+    # Some files here are libraries the demos import (the shared `choice`
+    # record), not programs: no `export ... as main`, so there is no entry
+    # point to instantiate. The demos that import them cover them.
+    file(READ ${STL_FILE} STL_SOURCE)
+    string(FIND "${STL_SOURCE}" "export " HAS_EXPORT)
+    if(HAS_EXPORT EQUAL -1)
+        continue()
+    endif()
+
     # Compile smoke
     add_test(
         NAME demo-stlc-mcq-${DEMO_NAME}

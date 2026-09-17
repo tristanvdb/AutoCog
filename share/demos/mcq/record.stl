@@ -1,0 +1,18 @@
+// A labelled choice: the letter that names it, and the text it carries.
+//
+// The label comes from the data, not from AutoCog — letter indexing is a
+// property of the dataset, produced once when it is converted. A program that
+// commits on the label (`repeat(choices.label)`) can only emit a label that is
+// present in the record, so there is no letter it can produce that names
+// nothing.
+
+record choice {
+  is {
+    label is text<length=1>;
+    value is text<length=40>;
+  }
+  annotate {
+    label as "the letter naming this choice";
+    value as "the text of this choice";
+  }
+}

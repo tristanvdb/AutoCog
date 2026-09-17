@@ -1,0 +1,32 @@
+// MCQ over a list of strings, committing by INDEX.
+//
+// The model emits the position of the choice it picks, so the frame records a
+// digit. Turning that digit into the choice it names is this program's job,
+// done on the return — which is why the runtime never rewrites the field.
+
+from "mcq.py" import pick;
+
+prompt main {
+  argument max_choices = 10;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[2:max_choices] is text<length=40>;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return call pick _;
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the possible choices to answer the question, only one is correct";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+export main<> as main;

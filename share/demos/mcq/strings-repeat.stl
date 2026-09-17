@@ -1,0 +1,32 @@
+// MCQ over a list of strings, committing by TEXT.
+//
+// The model reproduces one of the rendered choices under a choice-constrained
+// mask, so what it emits already is the answer: no resolution, and nothing for
+// the return to do but hand the field over.
+
+prompt main {
+  argument max_choices = 10;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[2:max_choices] is text<length=40>;
+    answer is repeat(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the possible choices to answer the question, only one is correct";
+    answer as "you repeat verbatim the choice that best answer the question";
+  }
+}
+
+export main<> as main;

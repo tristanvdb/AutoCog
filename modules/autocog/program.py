@@ -198,6 +198,12 @@ def compile(filepath, includes=None, entry_points=None, defines=None):
         raise FileError(f"Cannot find file: {filepath}", path=filepath)
 
     inc = list(includes or [])
+    # The program's own directory is an implicit include — the compiler driver
+    # adds it for STL imports (compile/parse.cxx); mirrored here so the Python
+    # imports it names resolve by the same rule.
+    own_dir = os.path.dirname(os.path.abspath(filepath))
+    if own_dir not in inc:
+        inc.insert(0, own_dir)
     # Add stdlib as implicit include (lowest priority)
     stdlib = _stdlib_path()
     if stdlib and stdlib not in inc:
@@ -211,8 +217,8 @@ def compile(filepath, includes=None, entry_points=None, defines=None):
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).
     _process_diagnostics(pid)
-    # The resolvers a program names usually sit beside it.
-    return Program(pid, search_paths=[os.path.dirname(os.path.abspath(filepath))] + inc)
+    # inc already leads with the program's own directory.
+    return Program(pid, search_paths=inc)
 
 
 def load(filepath):
