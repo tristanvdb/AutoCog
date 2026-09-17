@@ -308,7 +308,8 @@ def test_executor_redoes_legacy_partial(tmp_path, worker, monkeypatch):
         "phases": [{"name": "p", "runs": [
             {"kind": "quality", "model": "rng",
              "data": "share/benchmarks/quality/questions.json",
-             "questions": 2, "syntaxes": ["complete"], "demos": ["strings-select"],
+             "questions": 2, "syntaxes": ["complete"],
+             "programs": ["share/demos/mcq/strings-select.stl"],
              "out": "partial"}]}]}))
     out = tmp_path / "legacy" / "partial"
     out.mkdir(parents=True)
@@ -332,7 +333,7 @@ def test_executor_redoes_legacy_partial(tmp_path, worker, monkeypatch):
         for line in f.open():
             ev = json.loads(line)
             if ev.get("autocog.bench.question") is not None:
-                keys.append((ev["autocog.bench.syntax"], ev["autocog.bench.demo"],
+                keys.append((ev["autocog.bench.syntax"], ev["autocog.bench.program"],
                              ev["autocog.bench.question"]))
     assert len(keys) == 2 and len(set(keys)) == 2
 
@@ -389,7 +390,8 @@ def test_resume_retries_failed_samples(tmp_path, worker, monkeypatch):
         "phases": [{"name": "p", "runs": [
             {"kind": "quality", "model": "rng",
              "data": "share/benchmarks/quality/questions.json",
-             "questions": 2, "syntaxes": ["complete"], "demos": ["strings-select"],
+             "questions": 2, "syntaxes": ["complete"],
+             "programs": ["share/demos/mcq/strings-select.stl"],
              "out": "r"}]}]}))
     out = tmp_path / "retry" / "r"
     out.mkdir(parents=True)
@@ -400,9 +402,9 @@ def test_resume_retries_failed_samples(tmp_path, worker, monkeypatch):
     qs = load_questions("share/benchmarks/quality/questions.json",
                         load_formatter(""), limit=2)
     (out / "results-old.ndjson").write_text("".join(_json.dumps(r) + "\n" for r in [
-        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "strings-select",
+        {"autocog.bench.syntax": "complete", "autocog.bench.program": "strings-select",
          "autocog.bench.question": qs[0]["id"], "autocog.bench.correct": True},
-        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "strings-select",
+        {"autocog.bench.syntax": "complete", "autocog.bench.program": "strings-select",
          "autocog.bench.question": qs[1]["id"], "autocog.bench.correct": None,
          "error.message": "RemoteError: worker died"},
     ]))
@@ -502,7 +504,12 @@ class TestLauncher:
         assert mon.returncode == 0, mon.stderr
         assert "4/4 runs" in mon.stdout
         assert "accuracy by model" in mon.stdout
-        assert "accuracy by demo" in mon.stdout
+        assert "accuracy by program" in mon.stdout
+        # labels are an axis too: the descriptor tagged both programs
+        # "strings", so they group under it without the monitor knowing
+        # what the word means
+        assert "accuracy by label" in mon.stdout
+        assert "strings" in mon.stdout
 
         # Resume does no work twice. Counting the word "skipping" in stdout was
         # not that invariant: a sample that errored in the first pass is not a
@@ -514,7 +521,7 @@ class TestLauncher:
         assert "skipping" in r2.stdout
         for path in out.rglob("results-*.ndjson"):
             rows = [json.loads(l) for l in path.open() if l.strip()]
-            keys = [(e.get("autocog.bench.syntax"), e.get("autocog.bench.demo"),
+            keys = [(e.get("autocog.bench.syntax"), e.get("autocog.bench.program"),
                      e.get("autocog.bench.question")) for e in rows
                     if not e.get("error.message")]
             keys = [k for k in keys if all(p is not None for p in k)]

@@ -67,7 +67,7 @@ def test_quality_remote_matches_local(rng_worker, tmp_path):
     """One question: the pooled worker path seeds once per run (real
     models are deterministic; rng consumes a stream), so only the first
     question is bit-comparable to the local path's per-question seeding."""
-    kwargs = dict(questions=1, syntaxes=["complete"], demos=["strings-select"],
+    kwargs = dict(questions=1, syntaxes=["complete"], programs=["share/demos/mcq/strings-select.stl"],
                   log=lambda *_: None)
     local = run_quality(out=str(tmp_path / "local"), **kwargs)
     remote = run_quality(out=str(tmp_path / "remote"), workers=[rng_worker],

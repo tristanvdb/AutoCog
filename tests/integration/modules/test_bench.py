@@ -29,7 +29,8 @@ def test_multiprompt_demos(tmp_path):
     invert and the friction metrics come out for every demo."""
     for demo, min_steps in (("strings-select-hyp", 2), ("strings-select-iter", 1),
                             ("record-value-annot", 5), ("record-index-annot", 4)):
-        events = run_quality(questions=2, syntaxes=["complete"], demos=[demo],
+        events = run_quality(questions=2, syntaxes=["complete"],
+                             programs=[f"share/demos/mcq/{demo}.stl"],
                              out=str(tmp_path / demo), log=lambda *_: None)
         assert len(events) == 2, demo
         for ev in events:
@@ -70,7 +71,8 @@ def test_perf_failed_cell_continues(tmp_path):
 
 def test_quality_rng(tmp_path):
     events = run_quality(out=str(tmp_path), questions=2,
-                         syntaxes=["complete"], demos=["strings-select"],
+                         syntaxes=["complete"],
+                         programs=["share/demos/mcq/strings-select.stl"],
                          log=lambda *_: None)
     assert len(events) == 2
     for ev in events:
@@ -98,7 +100,8 @@ def test_quality_formatter(tmp_path):
 
     events = run_quality(data=str(data), formatter=f"{fmt}:to_mcq",
                          out=str(tmp_path), syntaxes=["complete"],
-                         demos=["strings-select"], log=lambda *_: None)
+                         programs=["share/demos/mcq/strings-select.stl"],
+                         log=lambda *_: None)
     assert len(events) == 1
     assert events[0]["autocog.bench.n_choices"] == 2
 

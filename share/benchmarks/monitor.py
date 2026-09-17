@@ -59,7 +59,7 @@ class State:
 
     def campaign(self, name):
         if name not in self.campaigns:
-            self.campaigns[name] = {"phases": {}, "axes": ["model", "syntax", "demo"],
+            self.campaigns[name] = {"phases": {}, "axes": ["model", "syntax", "program"],
                                     "status": "pending", "started": None,
                                     "ended": None, "workers": []}
             self.order.append(name)
@@ -165,22 +165,35 @@ class State:
         return qpm, spr
 
     def slices(self, name):
+        """Accuracy by axis. Beyond the declared axes, every label a program
+        carries is an axis of its own: programs tagged `select` group together
+        whatever they are named, and so do the ones tagged `record`. The
+        labels are opaque here — a descriptor decides what is worth
+        contrasting, and this just counts."""
         axes = self.campaigns[name]["axes"] if name in self.campaigns else []
+        mine = [e for e in self.q_events if e.get("_campaign") == name]
         out = {}
         for axis in axes:
             key = f"autocog.bench.{axis}"
             agg = {}
-            for e in self.q_events:
-                if e.get("_campaign") != name:
-                    continue
-                v = e.get(key)
-                c = e.get("autocog.bench.correct")
+            for e in mine:
+                v, c = e.get(key), e.get("autocog.bench.correct")
                 if v is None or c is None:
                     continue
                 n, k = agg.get(v, (0, 0))
                 agg[v] = (n + 1, k + (1 if c else 0))
             if agg:
                 out[axis] = agg
+        agg = {}
+        for e in mine:
+            c = e.get("autocog.bench.correct")
+            if c is None:
+                continue
+            for label in e.get("autocog.bench.labels") or []:
+                n, k = agg.get(label, (0, 0))
+                agg[label] = (n + 1, k + (1 if c else 0))
+        if agg:
+            out["label"] = agg
         return out
 
 

@@ -118,14 +118,14 @@ def perf_md(path, title, events, ngl):
 def quality_md(path, title, events):
     cells = {}
     for ev in events:
-        key = (ev["autocog.bench.syntax"], ev["autocog.bench.demo"])
+        key = (ev["autocog.bench.syntax"], ev["autocog.bench.program"])
         cells.setdefault(key, []).append(ev)
     with open(path, "w") as f:
         f.write(f"# Quality benchmark — {title}\n\n")
-        f.write("| syntax | demo | accuracy | tok value | tok structure "
+        f.write("| syntax | program | accuracy | tok value | tok structure "
                 "| friction value | friction structure |\n")
         f.write("|---|---|---|---|---|---|---|\n")
-        for (syntax, demo), evs in sorted(cells.items()):
+        for (syntax, program), evs in sorted(cells.items()):
             n = len(evs)
             acc = sum(1 for e in evs if e.get("autocog.bench.correct")) / n
             def mean(key):
@@ -136,5 +136,5 @@ def quality_md(path, title, events):
             fv = mean("autocog.bench.friction.value")
             fs = mean("autocog.bench.friction.structure")
             fmt = lambda v: f"{v:.2f}" if v is not None else "-"
-            f.write(f"| {syntax} | {demo} | {acc:.0%} | {fmt(tv)} | {fmt(ts)} "
+            f.write(f"| {syntax} | {program} | {acc:.0%} | {fmt(tv)} | {fmt(ts)} "
                     f"| {fmt(fv)} | {fmt(fs)} |\n")

@@ -27,10 +27,16 @@
           "syntaxes": [
             "complete"
           ],
-          "demos": [
-            "strings-select"
-          ],
-          "out": "rng-select"
+          "out": "rng-select",
+          "programs": {
+            "strings-select": {
+              "filepath": "autocog/share/demos/mcq/strings-select.stl",
+              "labels": [
+                "select",
+                "strings"
+              ]
+            }
+          }
         },
         {
           "kind": "quality",
@@ -39,10 +45,16 @@
           "syntaxes": [
             "complete"
           ],
-          "demos": [
-            "strings-select"
-          ],
-          "out": "tiny-select"
+          "out": "tiny-select",
+          "programs": {
+            "strings-select": {
+              "filepath": "autocog/share/demos/mcq/strings-select.stl",
+              "labels": [
+                "select",
+                "strings"
+              ]
+            }
+          }
         }
       ]
     },
@@ -76,6 +88,22 @@
   "axes": [
     "model",
     "syntax",
-    "demo"
-  ]
+    "program"
+  ],
+  "programs": {
+    "strings-select": {
+      "filepath": "autocog/share/demos/mcq/strings-select.stl",
+      "labels": [
+        "select",
+        "strings"
+      ]
+    },
+    "strings-repeat": {
+      "filepath": "autocog/share/demos/mcq/strings-repeat.stl",
+      "labels": [
+        "repeat",
+        "strings"
+      ]
+    }
+  }
 }

@@ -7,7 +7,7 @@ consumer of workers: it NEVER spawns, configures or stops them — it is
 always given `--worker` URLs (level-3 backends preassigned with models).
 
 Quality runs execute at SAMPLE granularity: a phase's (run, syntax,
-demo, question) samples are scheduled across the workers hosting each
+program, question) samples are scheduled across the workers hosting each
 run's tag through EnginePools (per-FTA lane dispatch), the scan keeping
 every lane primed — see quality.run_samples. Perf runs keep an
 exclusive single worker and execute sequentially, before the phase's
@@ -24,7 +24,9 @@ Descriptor:
         {"name": "protocol",
          "runs": [
            {"kind": "quality", "model": "Llama-3.2-1B", "data": "arc-easy",
-            "syntaxes": ["complete"], "demos": ["strings-select", "strings-repeat"]},
+            "syntaxes": ["complete"],
+            "programs": {"strings-select": {"filepath": "demos/mcq/strings-select.stl",
+                                           "labels": ["select", "strings"]}}},
            {"kind": "perf", "model": "Llama-3.1-8B-Instruct",
             "cells": "termination"}
          ]}
@@ -43,7 +45,7 @@ Name resolution (the experiments workdir convention, env-overridable):
     out    -> $RESULTS_PATH | $AUTOCOG_WORKDIR/results | ./results, /<campaign>/<run out>
 
 Resume: per SAMPLE for quality runs — existing result lines are indexed
-by (syntax, demo, question) and only the gaps run, whatever writer
+by (syntax, program, question) and only the gaps run, whatever writer
 vintage produced them. Perf runs resume per run (results file finalized
 on completion only).
 """
@@ -227,7 +229,8 @@ def run_campaign(descriptor_path, phases=None, workers=None, log=print):
                     resolve_repo(), formatter=params.pop("formatter", ""),
                     questions=int(params.pop("questions", 0) or 0),
                     syntaxes=params.pop("syntaxes", None),
-                    demos=params.pop("demos", None),
+                    programs=params.pop("programs", None),
+                    workdir=params.pop("workdir", None),
                     log=lambda m, _l=label: log(f"[{pname}/{_l}] {m}"))
                 if not qrun.pending:
                     log(f"[{pname}/{label}] all samples present — skipping")

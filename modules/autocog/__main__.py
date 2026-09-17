@@ -183,7 +183,7 @@ def cmd_bench(args):
         run_quality(model=args.model, data=args.data, formatter=args.formatter,
                     questions=args.questions,
                     syntaxes=args.syntaxes.split(",") if args.syntaxes else None,
-                    demos=args.demos.split(",") if args.demos else None,
+                    programs=args.program, workdir=args.workdir,
                     out=args.out, seed=args.seed, n_ctx=args.ctx,
                     workers=args.worker)
     elif args.bench_command == "campaign":
@@ -495,7 +495,14 @@ def main():
                             help="file.py:fn applied to each datapoint (raw -> question; None = skip)")
     pb_quality.add_argument("--questions", type=int, default=0, help="Stratified sample size (0 = all)")
     pb_quality.add_argument("--syntaxes", default=None, help="Comma list (default: complete,stripped)")
-    pb_quality.add_argument("--demos", default=None, help="Comma list (default: strings-select)")
+    pb_quality.add_argument("--program", action="append", required=True,
+                            help="STL program to run (repeatable). Named after "
+                                 "its filename; relative paths resolve against "
+                                 "--workdir. A campaign passes the descriptor's "
+                                 "programs section instead.")
+    pb_quality.add_argument("--workdir", default=None,
+                            help="Base for relative program/data paths "
+                                 "(default: the current directory)")
     pb_quality.add_argument("--out", default=".", help="Results directory")
     pb_quality.add_argument("--ctx", type=int, default=2048)
     pb_quality.add_argument("--seed", type=int, default=42)

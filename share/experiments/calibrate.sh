@@ -86,11 +86,12 @@ import sys, tempfile
 from autocog.bench.quality import run_quality
 with tempfile.TemporaryDirectory() as tmp:
     evs = run_quality(questions=3, syntaxes=["complete"],
-                      demos=["strings-select", "strings-repeat", "record-label"], out=tmp,
+                      programs=["share/demos/mcq/strings-select.stl",
+                                "share/demos/mcq/strings-repeat.stl"], out=tmp,
                       log=lambda *_: None)
 bad = []
 for demo in ("select", "repeat", "label"):
-    rows = [e for e in evs if e["autocog.bench.demo"] == demo]
+    rows = [e for e in evs if e["autocog.bench.program"] == demo]
     nulls = [e for e in rows if e["autocog.bench.correct"] is None]
     errs = [e for e in rows if e.get("error.message")]
     print(f"mechanism {demo:<8} {len(rows)} samples, {len(nulls)} unscored, "
