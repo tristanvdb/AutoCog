@@ -6,6 +6,7 @@ hosting the requested model; a spawned worker honors --cpus.
 """
 
 import json
+import pathlib
 import os
 import subprocess
 import sys
@@ -81,11 +82,9 @@ def test_quality_remote_matches_local(rng_worker, tmp_path):
             assert l.get(key) == r.get(key), key
 
 
-def test_routing(repo_root, rng_worker, tmp_path):
+def test_routing(repo_root, rng_worker, tmp_path, llama3_model_path):
     """Two workers, one hosting the tiny model: jobs route by model tag."""
-    model = repo_root / "models" / "tiny-llama3-test-Q2_K.gguf"
-    if not model.exists():
-        pytest.skip("tiny model not present")
+    model = pathlib.Path(llama3_model_path)
     from autocog.server.backend import create_app
 
     with running_server(create_app(models=[{"path": str(model)}], n_ctx=2048)) as tiny_port:

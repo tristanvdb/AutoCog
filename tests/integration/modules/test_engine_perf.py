@@ -22,14 +22,6 @@ def repo(p, *parts):
     return str(p.joinpath(*parts))
 
 
-def build_dir(repo_root):
-    for cand in ("build-rel", "build"):
-        xfta = repo_root / cand / "tools" / "xfta" / "xfta"
-        if xfta.exists():
-            return repo_root / cand
-    return None
-
-
 @pytest.fixture
 def engine(repo_root):
     return autocog.Engine(
@@ -78,19 +70,21 @@ class TestPerfSurface:
         for key in INT_KEYS:
             assert first[key] == second[key], key
 
-    def test_matches_xfta(self, engine, repo_root):
+    def test_matches_xfta(self, engine, repo_root, build_dir):
         """The gate: identical FTA + seed through the Engine and through the
         xfta binary must yield identical integer counters and identical keys."""
-        bdir = build_dir(repo_root)
-        if bdir is None:
-            pytest.skip("no built xfta binary")
+        bdir = build_dir
 
         from autocog.runtime.sta import runtime_sta_cxx
         from autocog.backend.llama import backend_llama_cxx
 
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
+        # CONTENT, not inputs: instantiate takes the prompt's own fields, after
+        # the channel block has run. `main` declares `choices` (plain texts,
+        # pulled by `choices get choice.value`); handing it the run's `choice`
+        # leaves `choices` empty and the answer choose with no candidates.
         content = {"topic": "Sci", "question": "2+2?",
-                   "choice": [{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}]}
+                   "choices": ["3", "4", "5", "6"]}
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id, engine.search_id)
         try:
@@ -125,17 +119,9 @@ class TestPerfSurface:
             runtime_sta_cxx.release_fta(fta_id)
 
 
-def tiny_model(repo_root):
-    """The tiny test GGUF, in the checkout or in the workspace data dir."""
-    for cand in (repo_root / "models", repo_root.parent / "data" / "models"):
-        path = cand / "tiny-llama3-test-Q2_K.gguf"
-        if path.exists():
-            return path
-    return None
-
-
 class TestPerfSurfaceRealModel:
-    def test_simplification_moves_token_seams(self, repo_root):
+    def test_simplification_moves_token_seams(self, repo_root,
+                                              llama3_model_path):
         """Why export and scoring cannot share a path, on a real tokenizer.
 
         A byte-level tokenizer cannot merge across a seam, so the rng model
@@ -147,10 +133,7 @@ class TestPerfSurfaceRealModel:
         Same text, different tokens. The flat one is what a language model
         sees in training; the forced one is what friction is about.
         """
-        model = tiny_model(repo_root)
-        if model is None:
-            pytest.skip("needs the tiny model")
-
+        model = llama3_model_path
         golden = (repo_root / "tests" / "integration" / "tools" / "e2e" /
                   "golden" / "language" / "structures" /
                   "test_array_fields.collector.golden.json")
@@ -171,12 +154,10 @@ class TestPerfSurfaceRealModel:
         assert flat[0]["text"] == "".join(n["text"] for n in forced)
         assert len(flat[0]["tokens"]) < sum(len(n["tokens"]) for n in forced)
 
-    def test_matches_xfta_tiny_model(self, repo_root):
+    def test_matches_xfta_tiny_model(self, repo_root, build_dir,
+                                     llama3_model_path):
         """Same gate on a real (tiny) model: decode/sample counters engaged."""
-        bdir = build_dir(repo_root)
-        model = repo_root / "models" / "tiny-llama3-test-Q2_K.gguf"
-        if bdir is None or not model.exists():
-            pytest.skip("needs built xfta + tiny model")
+        bdir, model = build_dir, llama3_model_path
 
         from autocog.runtime.sta import runtime_sta_cxx
         from autocog.backend.llama import backend_llama_cxx
@@ -187,8 +168,12 @@ class TestPerfSurfaceRealModel:
             search=repo(repo_root, "share", "search", "default.json"),
         )
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
+        # CONTENT, not inputs: instantiate takes the prompt's own fields, after
+        # the channel block has run. `main` declares `choices` (plain texts,
+        # pulled by `choices get choice.value`); handing it the run's `choice`
+        # leaves `choices` empty and the answer choose with no candidates.
         content = {"topic": "Sci", "question": "2+2?",
-                   "choice": [{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}]}
+                   "choices": ["3", "4", "5", "6"]}
         fta_id = runtime_sta_cxx.instantiate(
             prog.id, "main", content, engine.syntax_id, engine.search_id)
         try:

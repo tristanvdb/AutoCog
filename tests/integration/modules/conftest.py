@@ -87,6 +87,32 @@ def reset_rng_seed(engine):
 
 
 @pytest.fixture(scope="session")
+def build_dir(repo_root):
+    """The build tree holding the CLI tools.
+
+    Looked up the same way as the model, and for the same reason: artifacts
+    live beside the checkout now, not inside it, so a test that only knows
+    about `<repo>/build` skips itself on a perfectly good machine and the
+    coverage disappears without anyone noticing.
+    """
+    import os as _os
+    candidates = [p for p in (
+        _os.environ.get("BUILD_DIR") and pathlib.Path(_os.environ["BUILD_DIR"]),
+        repo_root / "build",
+        repo_root / "build-rel",
+        repo_root.parent / "builds" / "debug",
+        repo_root.parent / "builds" / "build-rel",
+    ) if p]
+    for cand in candidates:
+        if (cand / "tools" / "xfta" / "xfta").is_file():
+            return cand
+    pytest.fail(
+        "no build tree with the CLI tools was found. Looked in:\n  "
+        + "\n  ".join(str(c) for c in candidates)
+        + "\nSet BUILD_DIR to the build tree.", pytrace=False)
+
+
+@pytest.fixture(scope="session")
 def llama3_model_path(repo_root):
     """Path to TensorBlock/tiny-llama3-test Q2_K (21MB, 128k tokens).
 
