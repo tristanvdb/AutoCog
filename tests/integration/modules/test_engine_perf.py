@@ -14,6 +14,9 @@ import tempfile
 import pytest
 
 import autocog
+from autocog.backend.llama import backend_llama_cxx
+from autocog.engine import merge_content
+from autocog.runtime.sta import runtime_sta_cxx
 
 def repo(p, *parts):
     return str(p.joinpath(*parts))
@@ -122,7 +125,52 @@ class TestPerfSurface:
             runtime_sta_cxx.release_fta(fta_id)
 
 
+def tiny_model(repo_root):
+    """The tiny test GGUF, in the checkout or in the workspace data dir."""
+    for cand in (repo_root / "models", repo_root.parent / "data" / "models"):
+        path = cand / "tiny-llama3-test-Q2_K.gguf"
+        if path.exists():
+            return path
+    return None
+
+
 class TestPerfSurfaceRealModel:
+    def test_simplification_moves_token_seams(self, repo_root):
+        """Why export and scoring cannot share a path, on a real tokenizer.
+
+        A byte-level tokenizer cannot merge across a seam, so the rng model
+        hides this: only real BPE shows that concatenating two text actions
+        changes the tokenization of their junction. Measured on the tiny
+        Llama-3 vocab, test_array_fields renders to 473 tokens as the runtime
+        forces it and 472 once fully simplified.
+
+        Same text, different tokens. The flat one is what a language model
+        sees in training; the forced one is what friction is about.
+        """
+        model = tiny_model(repo_root)
+        if model is None:
+            pytest.skip("needs the tiny model")
+
+        golden = (repo_root / "tests" / "integration" / "tools" / "e2e" /
+                  "golden" / "language" / "structures" /
+                  "test_array_fields.collector.golden.json")
+        frame = json.loads(golden.read_text())
+        prog = autocog.compile(
+            repo(repo_root, "tests", "fixtures", "stl", "language",
+                 "structures", "test_array_fields.stl"))
+        engine = autocog.Engine(
+            model=str(model), n_ctx=4096,
+            syntax=repo(repo_root, "share", "syntax", "complete.json"),
+            search=repo(repo_root, "share", "search", "default.json"),
+        )
+
+        flat = engine.export_frame(prog, "collector", frame, simplify="full")
+        assert len(flat) == 1
+        forced = spine(engine.score_frame(prog, "collector", frame))
+
+        assert flat[0]["text"] == "".join(n["text"] for n in forced)
+        assert len(flat[0]["tokens"]) < sum(len(n["tokens"]) for n in forced)
+
     def test_matches_xfta_tiny_model(self, repo_root):
         """Same gate on a real (tiny) model: decode/sample counters engaged."""
         bdir = build_dir(repo_root)
@@ -202,6 +250,107 @@ def best_path(node, prefix=()):
         if candidate is not None and score > best_score:
             best, best_score = candidate, score
     return best, best_score
+
+
+@pytest.fixture()
+def recorded_step(engine, repo_root):
+    """One recorded prompt step: (program, frame, content, generated FTT)."""
+    from autocog.recorder import Recorder
+
+    prog = autocog.compile(repo(repo_root, "share", "demos", "mcq",
+                                "strings-select.stl"))
+    inputs = dict(topic="Sci", question="2+2?",
+                  choice=[{"label": "A", "value": "3"},
+                          {"label": "B", "value": "4"},
+                          {"label": "C", "value": "5"},
+                          {"label": "D", "value": "6"}])
+    with tempfile.TemporaryDirectory() as tmp:
+        rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
+        engine.set_seed(42)
+        engine.run(prog, recorder=rec, **inputs)
+        found = {}
+        for root, _, files in os.walk(tmp):
+            for f in files:
+                for suffix in ("frame", "input", "ftt"):
+                    if f.endswith(f".{suffix}.json"):
+                        found.setdefault(suffix, os.path.join(root, f))
+        assert set(found) == {"frame", "input", "ftt"}
+        # CONTENT, not inputs: re-rendering needs the resolved channel values
+        # (the choice texts this program pulled out of the records), which is
+        # what the recorder captured. Same pairing bench/quality.py feeds.
+        return (prog, json.load(open(found["frame"])),
+                json.load(open(found["input"])), json.load(open(found["ftt"])))
+
+
+class TestExportFrame:
+    """Simplification, through the surface a finetuning script would use."""
+
+    def test_full_is_one_flat_segment(self, engine, recorded_step):
+        prog, frame, content, _ = recorded_step
+        segments = engine.export_frame(prog, "main", frame, content,
+                                       simplify="full")
+        assert len(segments) == 1
+        assert segments[0]["tokens"]
+        assert segments[0]["text"]
+
+    def test_limited_tags_every_value_with_its_field(self, engine, recorded_step):
+        """The point of limited: each value segment says which schema field it
+        came from, so a loss can weight it. Structure segments carry none."""
+        prog, frame, content, _ = recorded_step
+        segments = engine.export_frame(prog, "main", frame, content,
+                                       simplify="limited")
+        full = engine.export_frame(prog, "main", frame, content,
+                                   simplify="full")
+
+        assert len(segments) > 1
+        values = [s for s in segments if s["field"] is not None]
+        assert values, "no value segments — nothing to weight"
+        for s in values:
+            assert s["uid"].startswith("field.")
+            assert s["tokens"]
+        # Same rendering either way: simplification changes the shape, never
+        # the prompt.
+        assert "".join(s["text"] for s in segments) == full[0]["text"]
+
+    def test_export_is_not_scoring(self, engine, recorded_step):
+        """Training tokens and friction tokens are different sequences, and
+        the library must not let one stand in for the other."""
+        from autocog.errors import ConfigError
+
+        prog, frame, content, _ = recorded_step
+        exported = engine.export_frame(prog, "main", frame, content,
+                                       simplify="full")[0]["tokens"]
+        scored = spine(engine.score_frame(prog, "main", frame, content))
+        forced = [t for n in scored for t in n["tokens"]]
+
+        # Same text always. The token streams coincide here only because the
+        # rng model is byte-level, so nothing can merge across a seam; under a
+        # real BPE they diverge (see test_simplification_moves_token_seams).
+        # Merging can never ADD tokens, which holds for both.
+        assert "".join(n["text"] for n in scored) == \
+               "".join(s["text"] for s in
+                       engine.export_frame(prog, "main", frame, content,
+                                           simplify="limited"))
+        assert len(exported) <= len(forced)
+
+        fta_id = runtime_sta_cxx.instantiate(
+            prog.id, "main", merge_content(content, frame),
+            engine.syntax_id, engine.search_id, simplify="full")
+        try:
+            with pytest.raises(ConfigError, match="Refusing to score"):
+                backend_llama_cxx.evaluate(engine.model_id, fta_id,
+                                           score_all=True)
+        finally:
+            runtime_sta_cxx.release_fta(fta_id)
+
+    def test_incomplete_frame_is_refused(self, engine, recorded_step):
+        """Simplification flattens a path the frame has already fixed. Given
+        a frame that leaves a field open, it must say so, not pick one."""
+        from autocog.errors import ConfigError
+
+        prog, frame, content, _ = recorded_step
+        with pytest.raises(ConfigError, match="still generates"):
+            engine.export_frame(prog, "main", {}, content, simplify="full")
 
 
 class TestScoreFrame:

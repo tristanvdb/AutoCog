@@ -16,6 +16,7 @@ target_include_directories(autocog_backend_llama_lib PUBLIC
 
 target_link_libraries(autocog_backend_llama_lib PUBLIC
     autocog_data_lib
+    autocog_runtime_fta_lib
     llama
 )
 

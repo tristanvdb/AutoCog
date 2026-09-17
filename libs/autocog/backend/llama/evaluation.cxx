@@ -97,6 +97,19 @@ Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, d
 {
   perf_.prepare_seconds = prepared.prepare_seconds;
 
+  // Simplification merges adjacent text, which moves the token boundaries at
+  // every seam: the flat sequence a finetuning export wants is NOT the
+  // sequence the runtime forces. Scoring one and calling it friction would
+  // report numbers for a tokenization no evaluation ever produced, and the
+  // two paths are otherwise indistinguishable from here — so refuse.
+  if (config.score_all && fta_.simplified && *fta_.simplified != "none")
+    throw autocog::ConfigError(
+        "Refusing to score a '" + *fta_.simplified + "'-simplified FTA: "
+        "merging text actions re-tokenizes across their boundaries, so the "
+        "token sequence is not the one the runtime forces. Score the FTA as "
+        "instantiated; simplify only for finetuning export.",
+        *fta_.simplified);
+
   for (auto const & name : fta_.queue_metric) metric_.push_back(parse_metric_key(name));
   metric_.push_back(MetricKey::Fifo);  // total, deterministic order
 

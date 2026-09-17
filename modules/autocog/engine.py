@@ -171,6 +171,58 @@ class Engine:
         finally:
             runtime_sta_cxx.release_fta(fta_id)
 
+    def export_frame(self, program, prompt_name, frame, content=None,
+                     simplify="full"):
+        """Re-render a frame and return its tokens, for finetuning.
+
+        A training example is the rendered prompt as the model would read it.
+        This is the same re-rendering score_frame does, minus the scoring and
+        plus simplification, which collapses the forced chain of text actions
+        into the segments a loss wants to see.
+
+        Returns a list of segments in order, each:
+
+            {"uid", "field", "indices", "text", "tokens"}
+
+        With simplify="full" that is one segment: the flat token list. With
+        "limited" it alternates value and structure, every value segment
+        carrying the schema field index and array indices it came from, so a
+        weighted loss can penalize (say) only the generated values, or only
+        the enumeration, instead of the whole sequence uniformly.
+
+        These tokens are NOT the ones the runtime forces — merging text lets
+        the tokenizer merge across the seams. That is what makes them right
+        for training and wrong for friction, and why score_frame and this do
+        not share a path.
+        """
+        fta_id = runtime_sta_cxx.instantiate(
+            program.id, prompt_name, merge_content(content, frame),
+            self.syntax_id, self.search_id, simplify=simplify
+        )
+        try:
+            ftt_id, _perf = backend_llama_cxx.evaluate(self.model_id, fta_id)
+            try:
+                ftt = runtime_sta_cxx.get_ftt(ftt_id)
+            finally:
+                runtime_sta_cxx.release_ftt(ftt_id)
+        finally:
+            runtime_sta_cxx.release_fta(fta_id)
+
+        segments, node = [], ftt
+        while node is not None:
+            segments.append({
+                "uid": node["uid"],
+                "field": node.get("field"),
+                "indices": node.get("indices"),
+                "text": node["text"],
+                "tokens": node["tokens"],
+            })
+            kids = node.get("children") or []
+            # A simplified FTA is a chain; anything else means the frame left
+            # a decision open, which simplify() would already have refused.
+            node = kids[0] if kids else None
+        return segments
+
     def run(self, program, entry="main", externals=None, max_steps=100,
             recorder=None, **inputs):
         """

@@ -49,6 +49,11 @@
     "queue": {
       "type": "object",
       "description": "Scheduling config carried into the FTA (e.g. the best-path metric)."
+    },
+    "simplified": {
+      "type": "string",
+      "enum": ["limited", "full"],
+      "description": "Present when this FTA is the collapsed form of another: adjacent text actions merged for finetuning export. Such an FTA must not be scored - merging re-tokenizes across the seams, so its token sequence is not the one the runtime forces."
     }
   },
   "required": [

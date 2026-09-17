@@ -77,6 +77,14 @@ class FTA : public Base<FTA> {
     std::optional<TermExpr> queue_stop;         ///< Early-termination predicate.
     std::map<std::string, VocabExpr> vocabs;    ///< ref -> expression tree.
 
+    /// Set when this FTA is the collapsed form of another ("limited"/"full",
+    /// see runtime/fta/simplify.hxx). Not provenance: simplification is a
+    /// transform of THIS artifact's actions, not a parent artifact. It is
+    /// load-bearing rather than cosmetic — the evaluator refuses to score a
+    /// simplified FTA, because merging text actions re-tokenizes across their
+    /// boundaries.
+    std::optional<std::string> simplified;
+
   public:
     std::string content_hash() const;
 };

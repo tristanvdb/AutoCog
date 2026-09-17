@@ -106,6 +106,7 @@ pybind11::object to_py(FTA const & s) {
     for (auto const & [k, ve] : s.vocabs) vj[py::str(k)] = to_py(ve);
     d["vocabs"] = vj;
   }
+  if (s.simplified) d["simplified"] = *s.simplified;
   if (s.metadata) d["metadata"] = to_py(*s.metadata);
   d["provenance"] = s.provenance;
   return d;
@@ -136,6 +137,8 @@ void from_py(pybind11::object const & obj, FTA & s) {
     for (auto const & item : vj)
       from_py(py::reinterpret_borrow<py::object>(item.second), s.vocabs[item.first.cast<std::string>()]);
   }
+  if (d.contains("simplified") && !d["simplified"].is_none())
+    s.simplified = d["simplified"].cast<std::string>();
   if (d.contains("metadata")) { s.metadata.emplace(); from_py(d["metadata"], *s.metadata); }
   if (d.contains("provenance"))
     s.provenance = d["provenance"].cast<std::map<std::string, std::string>>();

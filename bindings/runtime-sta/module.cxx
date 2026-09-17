@@ -1,6 +1,7 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/runtime/sta/walk.hxx"
+#include "autocog/runtime/fta/simplify.hxx"
 #include "autocog/codec/json.hxx"      // load/store/dump: file + JSON-string boundary
 #include "autocog/codec/python.hxx"    // read/get: direct data:: <-> py::object
 #include "autocog/data/store.hxx"
@@ -17,6 +18,7 @@
 
 namespace py    = pybind11;
 namespace sta   = autocog::runtime::sta;
+namespace rfta  = autocog::runtime::fta;
 namespace data  = autocog::data;
 namespace codec = autocog::codec;
 
@@ -107,7 +109,8 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
     module.def("instantiate",
         [](std::string const & program_id, std::string const & prompt_name,
            py::object content, std::string const & syntax_id,
-           std::string const & search_id) -> std::string {
+           std::string const & search_id,
+           std::string const & simplify) -> std::string {
             auto const & program = data::datastore().sta.get(program_id);
             auto const & syntax  = data::datastore().syntax.get(syntax_id);
             auto const & search  = data::datastore().search.get(search_id);
@@ -120,11 +123,18 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
             auto content_doc = to_document(content);
             std::string sta_uid = program.metadata ? program.metadata->hash : std::string{};
             auto fta = sta::instantiate(it->second, content_doc, syntax, search, sta_uid);
+            auto mode = rfta::parse_simplification(simplify);
+            if (mode != rfta::Simplification::None) fta = rfta::simplify(fta, mode);
             return data::datastore().fta.add(std::make_unique<data::FTA>(std::move(fta)));
         },
-        "Instantiate an STA prompt into an FTA; returns a handle",
+        "Instantiate an STA prompt into an FTA; returns a handle.\n\n"
+        "simplify ('none' | 'limited' | 'full') collapses a fully-determined "
+        "FTA — one whose content was a complete frame — for finetuning export. "
+        "It throws if anything is left to generate, and the result cannot be "
+        "scored: merging text re-tokenizes across the seams.",
         py::arg("program_id"), py::arg("prompt"), py::arg("content"),
-        py::arg("syntax_id"), py::arg("search_id"));
+        py::arg("syntax_id"), py::arg("search_id"),
+        py::arg("simplify") = "none");
 
     // ===== FTT -> frame =====
     module.def("walk_ftt_to_frame",
