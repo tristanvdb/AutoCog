@@ -191,6 +191,36 @@ def test_engine_pool_dispatch(rng_workers):
         assert set(stats["windows"]) == {"1m", "5m", "30m"}
 
 
+def test_pooled_scoring_measures_friction(rng_workers, tmp_path):
+    """Friction over the wire: a pooled run must come back with the same
+    per-token numbers the in-process engine produces.
+
+    This is the path every campaign takes, and it is the one where a silent
+    zero costs the most — a whole run of samples that look scored and are
+    not. The worker has no scoring endpoint of its own: the client
+    re-renders the frame into a forced FTA and asks /evaluate to score all
+    of it, so what is exercised here is the same code the local engine runs.
+    """
+    from autocog.bench.quality import run_quality
+
+    events = run_quality(
+        questions=2, syntaxes=["complete"],
+        programs=["share/demos/mcq/strings-select.stl"],
+        out=str(tmp_path / "pooled"), workers=rng_workers,
+        log=lambda *_: None)
+
+    assert len(events) == 2
+    for ev in events:
+        assert ev.get("error.message") is None, ev.get("error.message")
+        assert not ev.get("autocog.bench.score_error"), \
+            ev.get("autocog.bench.score_error")
+        assert ev["autocog.bench.steps"] > 0
+        assert ev["autocog.bench.tokens.value"] > 0
+        assert ev["autocog.bench.tokens.structure"] > 0
+        assert ev["autocog.bench.friction.value"]
+        assert ev["autocog.bench.friction.structure"]
+
+
 def test_monitor_scopes_to_current_campaign(tmp_path):
     """One events file spans a whole session. Accuracy slices and rates
     must describe the CURRENT campaign only, and must parse both stamp

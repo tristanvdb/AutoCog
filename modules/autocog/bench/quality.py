@@ -482,10 +482,10 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         log(f"[{syntax}/{name}/{q['id']}] ERROR {error[:80]}")
                         continue
 
-                    # Score the canonical forced path of every recorded step
-                    # in-process (the efta --score semantics). Auxiliary:
-                    # see eval_sample — a frame that cannot be re-encoded
-                    # costs the metrics, not the answer.
+                    # Re-render every recorded step as a forced path and
+                    # score it in-process. Auxiliary: see eval_sample — a
+                    # frame that cannot be re-rendered costs the metrics,
+                    # not the answer.
                     acc = {"tokens.value": 0, "tokens.structure": 0,
                            "nll.value": 0.0, "nll.structure": 0.0}
                     steps = 0

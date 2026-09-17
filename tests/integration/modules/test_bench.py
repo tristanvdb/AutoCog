@@ -22,7 +22,7 @@ def test_multiprompt_demos(tmp_path):
     retry loops (iter) and mapped per-choice calls (annot, one sub-prompt
     per choice).
 
-    Every frame re-encodes, record-index-annot included. It used to be the
+    Every frame re-renders, record-index-annot included. It used to be the
     exception — its frame held the resolved record the walker had written
     over the emitted index, and no encoder could match that back to a
     rendered choice. Now the frame holds the index, so there is nothing to
@@ -37,7 +37,14 @@ def test_multiprompt_demos(tmp_path):
             assert ev.get("error.message") is None, (demo, ev.get("error.message"))
             assert ev["autocog.bench.correct"] in (True, False), demo
             assert ev["autocog.bench.steps"] >= min_steps, demo
-        assert not any(e.get("autocog.bench.score_error") for e in events), demo
+            assert not ev.get("autocog.bench.score_error"), demo
+            # An absent score_error is not the same as a measurement: assert
+            # the friction numbers arrived. Scoring silently producing zeros
+            # is exactly the failure a "no errors" gate waves through.
+            assert ev["autocog.bench.tokens.structure"] > 0, demo
+            assert ev["autocog.bench.tokens.value"] > 0, demo
+            assert ev["autocog.bench.friction.structure"], demo
+            assert ev["autocog.bench.friction.value"], demo
 
 
 def test_perf_rng_cells(tmp_path):

@@ -29,11 +29,11 @@ from . import RequestQueue, add_status_endpoint
 class EvaluateRequest(BaseModel):
     fta: Dict[str, Any]
     model: Optional[str] = None    # model tag; default = the worker's default
-
-
-class ScoreRequest(BaseModel):
-    ftt: Dict[str, Any]            # encoder-produced (text-level) FTT
-    model: Optional[str] = None
+    # Score every text action, not only the ones the FTA marks. Friction
+    # measurement sends an FTA instantiated from a complete frame — one forced
+    # path — and reads the logprobs. There is no separate scoring endpoint:
+    # scoring IS evaluation, of an FTA that has nothing left to decide.
+    score_all: bool = False
 
 
 class SeedRequest(BaseModel):
@@ -100,7 +100,8 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
                                      f"(available: {list(hosted)})")
         return hosted[tag]["id"]
 
-    def evaluate_fta(fta: dict, model: str = None) -> dict:
+    def evaluate_fta(fta: dict, model: str = None,
+                     score_all: bool = False) -> dict:
         """Evaluate an FTA; reply is {"ftt": ..., "perf": ...}.
 
         The backend is xfta over the wire: it evaluates the FTA against the
@@ -109,6 +110,10 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
         response, no side-channel). The client walks the FTT into a frame
         using the program it holds locally (single FTT->frame implementation
         in the runtime), so the backend does not walk it here.
+
+        `score_all` serves friction measurement: the client instantiates the
+        prompt with a complete frame as content, which leaves the FTA one
+        forced path, and asks for every token on it to be scored.
         """
         import json as _json
 
@@ -118,30 +123,14 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
         # C++ to translate+store; C++ owns the structure from here.
         fta_id = runtime_sta_cxx.read_fta(fta)
         model_id = resolve_model(model)
-        ftt_id, perf_json = backend_llama_cxx.evaluate(model_id, fta_id)
+        ftt_id, perf_json = backend_llama_cxx.evaluate(
+            model_id, fta_id, score_all=score_all)
         try:
             return {"ftt": runtime_sta_cxx.get_ftt(ftt_id),
                     "perf": _json.loads(perf_json)}
         finally:
             runtime_sta_cxx.release_ftt(ftt_id)
             runtime_sta_cxx.release_fta(fta_id)
-
-    def score_ftt(ftt: dict, model: str = None) -> dict:
-        """Score an encoder-produced FTT (tokenize + forced P(token|prefix));
-        reply is {"ftt": <scored>}. The client encodes frames locally (the
-        runtime is model-free) and ships the text-level tree here."""
-        from autocog.runtime.sta import runtime_sta_cxx
-
-        ftt_id = runtime_sta_cxx.read_ftt(ftt)
-        model_id = resolve_model(model)
-        try:
-            scored_id = backend_llama_cxx.score(model_id, ftt_id)
-            try:
-                return {"ftt": runtime_sta_cxx.get_ftt(scored_id)}
-            finally:
-                runtime_sta_cxx.release_ftt(scored_id)
-        finally:
-            runtime_sta_cxx.release_ftt(ftt_id)
 
     @app.on_event("startup")
     async def startup():
@@ -191,12 +180,8 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
 
     @app.post("/evaluate")
     async def evaluate(req: EvaluateRequest) -> SubmitResponse:
-        request_id = queue.submit(evaluate_fta, fta=req.fta, model=req.model)
-        return SubmitResponse(request_id=request_id)
-
-    @app.post("/score")
-    async def score(req: ScoreRequest) -> SubmitResponse:
-        request_id = queue.submit(score_ftt, ftt=req.ftt, model=req.model)
+        request_id = queue.submit(evaluate_fta, fta=req.fta, model=req.model,
+                                  score_all=req.score_all)
         return SubmitResponse(request_id=request_id)
 
     add_status_endpoint(app, queue)

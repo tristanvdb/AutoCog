@@ -108,7 +108,7 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     );
 
     module.def("evaluate",
-        [](ModelID model, std::string const & fta_id) -> py::tuple {
+        [](ModelID model, std::string const & fta_id, bool score_all) -> py::tuple {
             // Evaluate the stored FTA, detokenize the resulting FTT with the
             // model (only possible here, where it is loaded), and hand it to the
             // store. The Manager's working evaluation is a transient: once the
@@ -133,7 +133,9 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
                 // model: snapshot here so the returned perf holds per-eval deltas.
                 DecodeStats const ds_base = Manager::get_model(model).decode_stats();
                 KvStats const kv_base = Manager::get_model(model).kv_stats();
-                EvalID eval_id = Manager::add_eval(model, fta);
+                EvaluationConfig config;
+                config.score_all = score_all;
+                EvalID eval_id = Manager::add_eval(model, fta, config);
                 Manager::advance(eval_id, std::nullopt);
                 perf_json = perf_fields(
                     Manager::get_model(model), Manager::get_eval(eval_id),
@@ -159,39 +161,14 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         "stores it. Returns (ftt_handle, perf_json): the same autocog.perf.* "
         "field map xfta --perf emits, as per-evaluation deltas. Read the FTT "
         "back via the runtime-sta FTT verbs (get_ftt / dump_ftt / "
-        "walk_ftt_to_frame), which need no model.",
+        "walk_ftt_to_frame), which need no model.\n\n"
+        "score_all=True scores every text action instead of only the ones the "
+        "FTA marks. On an FTA instantiated from a complete frame — one forced "
+        "path — that fills P(token | prefix) for every token the model did not "
+        "choose: constraint friction. It is pure cost during generation.",
         py::arg("model"),
-        py::arg("fta_id")
-    );
-
-    module.def("score",
-        [](ModelID model, std::string const & ftt_id) -> std::string {
-            // Score a stored (typically encoder-produced) FTT: every node's
-            // logprobs become P(token | prefix) under this model — the efta
-            // --score semantics. The input artifact is immutable in the store,
-            // so the scored tree is stored as a new artifact. GIL released
-            // for the same reason as evaluate (see above).
-            std::string handle;
-            {
-                py::gil_scoped_release nogil;
-
-                data::FTT ftt = data::datastore().ftt.get(ftt_id);   // copy
-                // Encoder output is text-level; tokenization needs the model
-                // (same pipeline as efta: encode -> tokenize -> score).
-                autocog::backend::llama::tokenize(model, ftt);
-                autocog::backend::llama::score(model, ftt);
-                detokenize(model, ftt);
-                ftt.provenance["model"] = Manager::get_model(model).sha256();
-                ftt.metadata.reset();   // scored content differs: re-finalize fresh
-                handle = data::datastore().ftt.add(
-                    std::make_unique<data::FTT>(std::move(ftt)));
-            }
-            return handle;
-        },
-        "Score a stored FTT against the model (forced P(token|prefix) on every "
-        "node, the efta --score semantics); returns the scored FTT's handle.",
-        py::arg("model"),
-        py::arg("ftt_id")
+        py::arg("fta_id"),
+        py::arg("score_all") = false
     );
 
     module.def("reset",

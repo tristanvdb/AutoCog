@@ -13,7 +13,7 @@ unsigned Evaluation::evaluate_text(PathState & state) {
 
   unsigned num_token_eval = 0;
   ProbaSequence logprobs(p.tokens.size(), 0.);
-  if (ta.evaluate) {
+  if (ta.evaluate || config.score_all) {
     auto [model, ctx] = this->restore(state, perf_.text);
     num_token_eval += model.eval_sequences(p.tokens, logprobs, ctx);
     perf_.text.tokens_eval += static_cast<unsigned>(p.tokens.size());

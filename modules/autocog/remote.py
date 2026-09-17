@@ -242,22 +242,10 @@ class RemoteBackend:
 
     async def score_frame_async(self, program, prompt_name, frame, content=None):
         """score_frame with an awaitable transport."""
-        content = content or {}
-        fta_id = self._sta.instantiate(
-            program.id, prompt_name, content, self.syntax_id, self.search_id
-        )
-        try:
-            ftt_id = self._sta.encode_frame(
-                program.id, prompt_name, fta_id, frame, content
-            )
-            try:
-                ftt = self._sta.get_ftt(ftt_id)
-            finally:
-                self._sta.release_ftt(ftt_id)
-        finally:
-            self._sta.release_fta(fta_id)
+        fta = self._forced_fta(program, prompt_name, frame, content)
         reply = await self._submit_async(
-            "/score", {"ftt": ftt, "model": self.model_tag})
+            "/evaluate",
+            {"fta": fta, "model": self.model_tag, "score_all": True})
         return reply["ftt"]
 
     async def _submit_async(self, endpoint, payload):
@@ -338,25 +326,32 @@ class RemoteBackend:
         with urllib.request.urlopen(f"{self.server_url}/capabilities") as resp:
             return json.loads(resp.read())
 
-    def score_frame(self, program, prompt_name, frame, content=None):
-        """Engine.score_frame with the model work remote: instantiate and
-        encode locally (the runtime is model-free), ship the text-level FTT
-        to the worker's /score, return the scored FTT dict."""
-        content = content or {}
+    def _forced_fta(self, program, prompt_name, frame, content):
+        """Re-render a frame into the FTA of the single path that produces it.
+
+        Instantiation with the frame as content leaves nothing for the model
+        to decide, so the FTA is one chain of text actions. It is built here
+        because the runtime is model-free — only the scoring needs the GPU.
+        """
+        from .engine import merge_content
+
         fta_id = self._sta.instantiate(
-            program.id, prompt_name, content, self.syntax_id, self.search_id
+            program.id, prompt_name, merge_content(content, frame),
+            self.syntax_id, self.search_id
         )
         try:
-            ftt_id = self._sta.encode_frame(
-                program.id, prompt_name, fta_id, frame, content
-            )
-            try:
-                ftt = self._sta.get_ftt(ftt_id)
-            finally:
-                self._sta.release_ftt(ftt_id)
+            return self._sta.get_fta(fta_id)
         finally:
             self._sta.release_fta(fta_id)
-        reply = self._submit("/score", {"ftt": ftt, "model": self.model_tag})
+
+    def score_frame(self, program, prompt_name, frame, content=None):
+        """Engine.score_frame with the model work remote: re-render locally,
+        ship the forced FTA to the worker's /evaluate with score_all, return
+        the scored FTT dict."""
+        fta = self._forced_fta(program, prompt_name, frame, content)
+        reply = self._submit(
+            "/evaluate",
+            {"fta": fta, "model": self.model_tag, "score_all": True})
         return reply["ftt"]
 
     def run(self, program, entry="main", externals=None, max_steps=100,

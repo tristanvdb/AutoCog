@@ -40,6 +40,11 @@ void print_usage(const char* program_name) {
               << "  --model <file>        Path to GGUF model file\n"
               << "  --rng                 Use built-in RNG model (no model file needed)\n"
               << "  --ftt <file>          Output FTT JSON (required; /dev/stdout for stdout)\n"
+              << "  --score-all           Score every text action, not only the ones\n"
+              << "                        the FTA marks. On an FTA instantiated from a\n"
+              << "                        complete frame — one forced path — this fills\n"
+              << "                        P(token | prefix) for every token the model did\n"
+              << "                        not choose: constraint friction.\n"
               << "  --seed N              RNG seed (default: 42)\n"
               << "  --ctx N               Maximum context size for the model\n"
               << "  --perf <file>         Write coarse-grain performance events\n"
@@ -133,6 +138,7 @@ static int run(int argc, char** argv) {
   unsigned ctx_size = 4096;
   unsigned seed = 42;
   bool use_rng = false;
+  EvaluationConfig eval_config;
 
   autocog::init_console_logger();
 
@@ -142,6 +148,7 @@ static int run(int argc, char** argv) {
     if (arg == "--version") { std::cout << "xfta " << autocog::version() << "\n"; return 0; }
     if (arg == "--build-info") { std::cout << autocog::build_info(); return 0; }
     if (arg == "--rng") { use_rng = true; continue; }
+    if (arg == "--score-all") { eval_config.score_all = true; continue; }
     if (arg == "--fta"   && i + 1 < argc) { fta_file = argv[++i]; continue; }
     if (arg == "--ftt"   && i + 1 < argc) { ftt_file = argv[++i]; continue; }
     if (arg == "--model" && i + 1 < argc) { model_path = argv[++i]; continue; }
@@ -199,7 +206,7 @@ static int run(int argc, char** argv) {
 
   SPDLOG_LOGGER_DEBUG(autocog::log(), "FTA: \"{}\"", fta_file);
   auto fta = codec::from_file<data::FTA>(fta_file);
-  EvalID eval_id = Manager::add_eval(model_id, *fta);
+  EvalID eval_id = Manager::add_eval(model_id, *fta, eval_config);
   Manager::advance(eval_id, std::nullopt);
 
   {

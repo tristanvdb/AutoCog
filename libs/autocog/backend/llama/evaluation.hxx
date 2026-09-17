@@ -43,7 +43,15 @@ enum class MetricKey {
 };
 
 struct EvaluationConfig {
-  bool evaluate_text{true};
+  /// Score every text action, not only those the FTA marked `evaluate`.
+  ///
+  /// Generation never needs this: fixed text is a prefix the model is going
+  /// to be conditioned on anyway, and decoding it to learn a logprob nobody
+  /// reads is pure cost. It is on when the logprobs themselves are the
+  /// measurement — an FTA instantiated from a complete frame is one forced
+  /// path, and scoring all of it yields P(token | prefix) for every token the
+  /// model did not choose. That is constraint friction.
+  bool score_all{false};
 };
 
 // Coarse-grain performance counters, accumulated during advance(). Cheap

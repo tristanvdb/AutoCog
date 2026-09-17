@@ -576,7 +576,7 @@ std::optional<int> Driver::run_generate() {
 
     // Publish exported prompts under their export names: `export main<> as
     // main;` must yield a prompt addressable as "main" by the tools that take
-    // --prompt (ista/efta), not only through the entry-point indirection.
+    // --prompt (ista), not only through the entry-point indirection.
     // The first (sorted) export name wins for a given prompt; a name already
     // taken by a different prompt is left mangled (indirection still works).
     {

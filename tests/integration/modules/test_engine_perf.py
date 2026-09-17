@@ -6,6 +6,7 @@ evaluation (same FTA, model, seed). Float durations only need to exist.
 """
 
 import json
+import math
 import os
 import subprocess
 import tempfile
@@ -168,44 +169,99 @@ class TestPerfSurfaceRealModel:
             runtime_sta_cxx.release_fta(fta_id)
 
 
+def spine(node):
+    """Flatten a single-path FTT to its nodes, asserting it stays single."""
+    out = []
+    while True:
+        out.append(node)
+        kids = node.get("children") or []
+        assert len(kids) <= 1, f"not a forced path: {node.get('uid')}"
+        if not kids:
+            return out
+        node = kids[0]
+
+
+def best_path(node, prefix=()):
+    """The path the frame came from: the completed leaf with the best score.
+
+    Mirrors walk_ftt_to_frame's "best" metric — exp(-logprob/length) over
+    leaves that were not pruned. A generation may branch; a frame names one
+    branch, so this is what a re-rendering has to reproduce.
+    """
+    path = prefix + (node,)
+    kids = node.get("children") or []
+    if not kids:
+        if node.get("pruned") is not None:
+            return None, -1.0
+        length = node.get("length") or 0
+        score = math.exp(-node["logprob"] / length) if length else 0.0
+        return path, score
+    best, best_score = None, -1.0
+    for kid in kids:
+        candidate, score = best_path(kid, path)
+        if candidate is not None and score > best_score:
+            best, best_score = candidate, score
+    return best, best_score
+
+
 class TestScoreFrame:
-    def test_score_frame_roundtrip(self, engine, repo_root):
-        """Encode+score a recorded frame in-process; every token carries a
-        logprob and the rendered text matches the recorded evaluation."""
+    def test_score_frame_reproduces_the_generation(self, engine, repo_root):
+        """Re-rendering a recorded frame must reproduce the tokens the model
+        actually read — that is the whole claim behind faithful frames.
+
+        The recorded FTT is the generation; score_frame instantiates the
+        prompt with the frame as content and scores the result. If the two
+        token streams differ by so much as one token, every friction number
+        measured this way is measuring a prompt nobody ever ran.
+        """
         from autocog.recorder import Recorder
 
         prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
-        inputs = dict(topic="Sci", question="2+2?", choice=[{"label": "A", "value": "3"}, {"label": "B", "value": "4"}, {"label": "C", "value": "5"}, {"label": "D", "value": "6"}])
+        inputs = dict(topic="Sci", question="2+2?",
+                      choice=[{"label": "A", "value": "3"},
+                              {"label": "B", "value": "4"},
+                              {"label": "C", "value": "5"},
+                              {"label": "D", "value": "6"}])
         with tempfile.TemporaryDirectory() as tmp:
-            rec = Recorder(kinds={"input", "frame"}, path=tmp)
+            rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
             engine.set_seed(42)
             engine.run(prog, recorder=rec, **inputs)
-            frames, contents = [], []
+            frames, contents, ftts = [], [], []
             for root, _, files in os.walk(tmp):
                 frames += [os.path.join(root, f) for f in files
                            if f.endswith(".frame.json")]
                 contents += [os.path.join(root, f) for f in files
                              if f.endswith(".input.json")]
-            assert frames and contents
+                ftts += [os.path.join(root, f) for f in files
+                         if f.endswith(".ftt.json")]
+            assert frames and contents and ftts
             frame = json.load(open(frames[0]))
-            # CONTENT, not inputs: re-encoding needs the resolved channel
+            # CONTENT, not inputs: re-rendering needs the resolved channel
             # values (the choice texts this program pulled out of the
             # records), which is what the recorder captured. This is the
             # same pairing bench/quality.py feeds score_frame.
             content = json.load(open(contents[0]))
+            generated = json.load(open(ftts[0]))
 
         scored = engine.score_frame(prog, "main", frame, content)
-        # linear path, every node text present; RNG scoring draws are noise
-        # but the structure must be a full single-branch tree.
-        node, depth = scored, 0
-        while True:
-            assert "text" in node and "logprobs" in node
-            kids = node.get("children") or []
-            assert len(kids) <= 1
-            if not kids:
-                break
-            node, depth = kids[0], depth + 1
-        assert depth > 3
+
+        # The generation may have branched (search); the frame names one path,
+        # so compare against the branch the walk chose.
+        want, _ = best_path(generated)
+        assert want is not None
+        got = spine(scored)
+        assert "".join(n["text"] for n in got) == "".join(n["text"] for n in want)
+        assert [t for n in got for t in n["tokens"]] == \
+               [t for n in want for t in n["tokens"]]
+
+        # Scored: every node below the root carries one logprob per token, and
+        # they are not uniformly zero (which is what an unarmed score_all
+        # would leave behind).
+        below = got[1:]
+        assert below
+        for n in below:
+            assert len(n["logprobs"]) == len(n["tokens"]), n.get("uid")
+        assert any(v != 0.0 for n in below for v in n["logprobs"])
 
     def test_perf_record_kind(self, engine, repo_root):
         from autocog.recorder import Recorder

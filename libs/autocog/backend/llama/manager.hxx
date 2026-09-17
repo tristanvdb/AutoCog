@@ -38,7 +38,8 @@ class Manager {
                              int ngl = -1, int kv_slots = -1);
     static Model & get_model(ModelID id);
 
-    static EvalID add_eval(ModelID const model_, data::FTA const & fta);
+    static EvalID add_eval(ModelID const model_, data::FTA const & fta,
+                           EvaluationConfig const & config = EvaluationConfig{});
     static Evaluation & get_eval(EvalID id);
     static unsigned advance(EvalID id, std::optional<unsigned> max_token_eval=std::nullopt);
     static data::FTT const & retrieve(EvalID id);

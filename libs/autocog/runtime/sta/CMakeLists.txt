@@ -1,6 +1,5 @@
 
 add_library(autocog_runtime_sta_lib STATIC
-    encode.cxx
     instantiate.cxx
     walk.cxx
 )
