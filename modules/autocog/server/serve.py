@@ -40,7 +40,9 @@ def create_app(program=None, externals=None, model_path: str = None,
         search=search_path,
         n_ctx=n_ctx
     )
-    _externals = externals or {}
+    # None, not {}: a level-1 server executes the whole program, so it must
+    # load the resolvers the program names just as a local runner does.
+    _externals = externals
 
     def run_program(entry: str, inputs: dict):
         """Run the full program to completion."""

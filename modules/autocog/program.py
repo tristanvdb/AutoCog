@@ -71,9 +71,12 @@ def _process_diagnostics(program_id):
 class Program:
     """A compiled STL program. Wraps an opaque ProgramID."""
 
-    def __init__(self, program_id):
+    def __init__(self, program_id, search_paths=()):
         self.id = program_id
         self._sta = None
+        #: where this program was compiled from (source dir + includes), so a
+        #: runner can find the .py files it names without being told again
+        self.search_paths = list(search_paths)
 
     @property
     def sta(self):
@@ -208,10 +211,15 @@ def compile(filepath, includes=None, entry_points=None, defines=None):
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).
     _process_diagnostics(pid)
-    return Program(pid)
+    # The resolvers a program names usually sit beside it.
+    return Program(pid, search_paths=[os.path.dirname(os.path.abspath(filepath))] + inc)
 
 
 def load(filepath):
-    """Load a pre-compiled STA JSON file into a Program."""
+    """Load a pre-compiled STA JSON file into a Program.
+
+    The artifact's directory becomes a search path: a program that resolves
+    its own answer names a .py file, and the usual layout puts it alongside.
+    """
     pid = runtime_sta_cxx.load_sta(filepath)
-    return Program(pid)
+    return Program(pid, search_paths=[os.path.dirname(os.path.abspath(filepath))])

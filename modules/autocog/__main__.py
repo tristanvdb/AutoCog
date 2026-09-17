@@ -41,57 +41,7 @@ def setup_logging(args):
         log.propagate = False
 
 
-def load_externals(program, include_paths):
-    """Auto-load Python externals referenced by the program.
-
-    Scans python_imports in the STA, finds the .py files in include paths
-    (and the stdlib), and loads the functions.
-    """
-    import importlib.util
-    from .program import _stdlib_path
-
-    # Build search paths: explicit includes, then stdlib
-    search_paths = list(include_paths)
-    stdlib = _stdlib_path()
-    if stdlib and stdlib not in search_paths:
-        search_paths.append(stdlib)
-
-    externals = {}
-    loaded_modules = {}
-
-    for extern_name, info in program.python_imports.items():
-        py_file = info["file"]
-        target_func = info["target"]
-
-        # Find the .py file in search paths
-        module_path = None
-        for inc in search_paths:
-            candidate = os.path.join(inc, py_file)
-            if os.path.isfile(candidate):
-                module_path = candidate
-                break
-
-        if module_path is None:
-            print(f"Warning: Python file '{py_file}' not found in include paths", file=sys.stderr)
-            continue
-
-        # Load the module (cache by path)
-        if module_path not in loaded_modules:
-            mod_name = os.path.splitext(os.path.basename(py_file))[0]
-            spec = importlib.util.spec_from_file_location(mod_name, module_path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            loaded_modules[module_path] = mod
-
-        mod = loaded_modules[module_path]
-        func = getattr(mod, target_func, None)
-        if func is None:
-            print(f"Warning: function '{target_func}' not found in '{py_file}'", file=sys.stderr)
-            continue
-
-        externals[extern_name] = func
-
-    return externals
+from .externals import load_externals  # re-exported: the CLI's historical home
 
 
 def _load_program(args):

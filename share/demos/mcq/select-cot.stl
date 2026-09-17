@@ -1,6 +1,8 @@
 // Multiple Choice Question - Select with Chain of Thought
 // Shows intermediate reasoning steps before selecting answer
 
+from "mcq.py" import pick;
+
 from "thinking/thought.stl" import Thought;
 
 alias Thought<goal="reason toward the answer"> as thought;
@@ -19,9 +21,7 @@ prompt main {
     question get question;
     choices get choices;
   }
-  return {
-    use answer;
-  }
+  return call pick _;
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";

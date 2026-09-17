@@ -85,7 +85,7 @@ class Engine:
             try:
                 # The backend stored the FTT; walk it from the store (model-free).
                 frame = runtime_sta_cxx.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id, content
+                    program.id, prompt_name, ftt_id
                 )
 
                 if record_kinds:
@@ -169,10 +169,20 @@ class Engine:
                         max_steps=100, recorder=None, **inputs):
         """Run a program to completion — the native implementation.
         Supports sync and async external callables; mapped calls fan out
-        concurrently when the engine dispatch is awaitable."""
+        concurrently when the engine dispatch is awaitable.
+
+        `externals=None` loads the Python callables the program names, from
+        where it was compiled. A program that resolves its own answer would
+        otherwise need every caller to remember to pass them, and forgetting
+        is silent: the call returns None and the answer is quietly wrong.
+        Pass a dict (even an empty one) to take over."""
         prompt = program.entry_prompt(entry)
 
-        ctx = Context(program, self, prompt, inputs, externals or {},
+        if externals is None:
+            from .externals import load_externals
+            externals = load_externals(program)
+
+        ctx = Context(program, self, prompt, inputs, externals,
                       recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:

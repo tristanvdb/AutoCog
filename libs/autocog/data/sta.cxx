@@ -59,7 +59,11 @@ std::string Flow::hash() const {
     [&](FlowControl const & f){ h.put(f.prompt); h.put(f.limit); },
     [&](FlowReturn const & f){
       h.put(static_cast<unsigned>(f.fields.size()));
-      for (auto const & rf : f.fields) { h.put(rf.alias); put_paths(h, rf.path); }
+      for (auto const & rf : f.fields) {
+        h.put(rf.alias); put_paths(h, rf.path);
+        // Only when present: a `use` return keeps the identity it always had.
+        if (rf.call) h.put(Channel{*rf.call}.hash());
+      }
     },
   }, value);
   return h.hash();

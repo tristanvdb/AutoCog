@@ -14,6 +14,12 @@ import inspect
 import itertools
 
 from .clauses import navigate, apply_clauses, get_mapped_clauses, apply_mapped
+from .errors import ConfigError
+
+#: Frame keys that belong to the machinery rather than to the schema the author
+#: wrote. `next` carries the flow choice (see Context.step_async); a spread must
+#: not hand it to a callee as if it were data.
+FLOW_FIELDS = frozenset({"next"})
 
 
 def resolve_path(source, path):
@@ -140,15 +146,35 @@ async def resolve_call(channel, inputs, frames, current_prompt, engine, program,
        concurrently (they are independent: inputs fixed at expansion)
     3. Apply link-level clauses to results
     """
-    base_kwargs, mapped_axes = resolve_call_kwargs(
-        channel["kwargs"], inputs, frames, current_prompt, content
-    )
+    spread = channel.get("spread")
+    if spread is not None:
+        # `call f <path>` — the record at <path> IS the argument list, `_` (an
+        # empty path) being the root: for a return, the prompt's frame.
+        root = content if content is not None else frames.get(current_prompt, {})
+        record = resolve_path(root, spread) if spread else root
+        if not isinstance(record, dict):
+            raise ConfigError(
+                f"call spread expects a record, got {type(record).__name__}")
+        base_kwargs = {k: v for k, v in record.items() if k not in FLOW_FIELDS}
+        mapped_axes = {}
+    else:
+        base_kwargs, mapped_axes = resolve_call_kwargs(
+            channel["kwargs"], inputs, frames, current_prompt, content
+        )
     jobs = expand_mapped(base_kwargs, mapped_axes)
 
     entry = channel.get("entry")
     extern = channel.get("extern")
     target = channel.get("target", [])
     field_name = ".".join(t["name"] for t in target)
+
+    if extern and extern not in externals:
+        # For a Python call `entry` mirrors `extern`, so falling through would
+        # look up a prompt by that name and die with a bare KeyError. A
+        # resolver that failed to load is a broken program: say so here.
+        raise ConfigError(
+            f"call names the Python callable '{extern}', which is not loaded. "
+            f"Available: {sorted(externals)}")
 
     async def one_job(job):
         if extern and extern in externals:

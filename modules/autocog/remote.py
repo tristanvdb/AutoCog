@@ -108,7 +108,7 @@ class RemoteEngine:
         from .context import Context
 
         prompt = program.entry_prompt(entry)
-        ctx = Context(program, self, prompt, inputs, externals or {})
+        ctx = Context(program, self, prompt, inputs, externals)
         steps = 0
         while not ctx.done and steps < max_steps:
             await ctx.step_async()
@@ -183,7 +183,7 @@ class RemoteBackend:
             ftt_id = self._sta.read_ftt(ftt)
             try:
                 frame = self._sta.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id, content
+                    program.id, prompt_name, ftt_id
                 )
 
                 if record_kinds:
@@ -224,7 +224,7 @@ class RemoteBackend:
             ftt_id = self._sta.read_ftt(ftt)
             try:
                 frame = self._sta.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id, content
+                    program.id, prompt_name, ftt_id
                 )
                 if record_kinds:
                     if "frame" in record_kinds:
@@ -374,7 +374,7 @@ class RemoteBackend:
         from .context import Context
 
         prompt = program.entry_prompt(entry)
-        ctx = Context(program, self, prompt, inputs, externals or {},
+        ctx = Context(program, self, prompt, inputs, externals,
                       recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:
@@ -538,7 +538,7 @@ class EnginePool:
         from .context import Context
 
         prompt = program.entry_prompt(entry)
-        ctx = Context(program, self, prompt, inputs, externals or {},
+        ctx = Context(program, self, prompt, inputs, externals,
                       recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:

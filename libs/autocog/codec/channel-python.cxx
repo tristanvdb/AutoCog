@@ -115,6 +115,8 @@ pybind11::object to_py(Channel const & c) {
       d["kwargs"]=kwargs; d["clauses"]=clauses_to_py(x.clauses);
       d["extern"]= x.extern_func ? py::cast(*x.extern_func) : py::none();
       d["entry"] = x.entry ? py::cast(*x.entry) : py::none();
+      // Present only for the spread form: `call f { ... }` keeps its old shape.
+      if (x.spread) d["spread"] = paths_to_py(*x.spread);
       return d;
     },
   }, c.value);
@@ -136,6 +138,7 @@ void from_py(pybind11::object const & obj, Channel & out) {
     for (auto const & kj : d["kwargs"].cast<py::list>()) { x.kwargs.emplace_back(); from_py(py::reinterpret_borrow<py::object>(kj), x.kwargs.back()); }
     if (d.contains("extern") && !d["extern"].is_none()) x.extern_func = d["extern"].cast<std::string>();
     if (d.contains("entry")  && !d["entry"].is_none())  x.entry       = d["entry"].cast<std::string>();
+    if (d.contains("spread") && !d["spread"].is_none()) { x.spread.emplace(); paths_from_py(d["spread"], *x.spread); }
   } else {
     throw autocog::SchemaError("autocog::data: unknown channel type '" + type + "'", type);
   }

@@ -451,6 +451,9 @@
             ],
             "additionalProperties": false
           }
+        },
+        "call": {
+          "$ref": "#/$defs/channel"
         }
       },
       "required": [
@@ -517,6 +520,9 @@
           "items": {
             "$ref": "#/$defs/channel_clause"
           }
+        },
+        "spread": {
+          "$ref": "#/$defs/path_steps"
         }
       },
       "required": [

@@ -1,6 +1,8 @@
 // Multiple Choice Question - Select with Per-Choice Annotation
 // Demonstrates: call channels with map/bind, nested field annotations
 
+from "mcq.py" import pick_value;
+
 record correctness {
   is enum("yes", "no", "maybe");
   annotate "Evaluation of the correctness of a statement, can be yes, no, or maybe.";
@@ -28,9 +30,7 @@ prompt main {
       choice get choices mapped;
     } bind(choice, value);
   }
-  return {
-    use answer;
-  }
+  return call pick_value _;
   annotate {
     _ as "You are answering a multiple choice question. You have been given the opportunity to look at each possible answer individually to decide whether or not they could be correct.";
     topic as "the general category from which the question was taken";

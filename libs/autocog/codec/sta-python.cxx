@@ -126,7 +126,11 @@ pybind11::object to_py(Flow const & fl) {
     [](FlowReturn const & f) -> py::object {
       py::dict d; d["type"]="return";
       py::list fields;
-      for (auto const & rf : f.fields) { py::dict rj; rj["alias"]=rf.alias; rj["path"]=paths_to_py(rf.path); fields.append(rj); }
+      for (auto const & rf : f.fields) {
+        py::dict rj; rj["alias"]=rf.alias; rj["path"]=paths_to_py(rf.path);
+        if (rf.call) rj["call"] = to_py(Channel{*rf.call});
+        fields.append(rj);
+      }
       d["fields"]=fields;
       return d;
     },
@@ -148,6 +152,10 @@ void from_py(pybind11::object const & obj, Flow & out) {
       ReturnField & rf = f.fields.back();
       rf.alias = rd["alias"].cast<std::string>();
       paths_from_py(rd["path"], rf.path);
+      if (rd.contains("call") && !rd["call"].is_none()) {
+        Channel ch; from_py(rd["call"], ch);
+        rf.call = std::get<CallChannel>(ch.value);
+      }
     }
   } else {
     throw autocog::SchemaError("autocog::data: unknown flow type '" + type + "'", type);

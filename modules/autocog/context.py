@@ -22,7 +22,13 @@ class Context:
         self.engine = engine
         self.prompt = prompt
         self.inputs = inputs
-        self.externals = externals or {}
+        if externals is None:
+            # A program may resolve its own answer with a Python call; loading
+            # what it names is the default so no caller can forget. Pass a dict
+            # (even empty) to take over.
+            from .externals import load_externals
+            externals = load_externals(program)
+        self.externals = externals
         self.recorder = recorder
         self.frames = {}    # prompt_name → latest frame dict
         self.branches = {}  # prompt_name → {target: count}
@@ -113,7 +119,7 @@ class Context:
         flow_def = flows[flow_choice]
 
         if flow_def["type"] == "return":
-            self.result = self._extract_return(frame, flow_def)
+            self.result = await self._extract_return(frame, flow_def)
             self.done = True
             if self.recorder:
                 self.recorder.record_return(self.ctx_id, self.result)
@@ -132,7 +138,7 @@ class Context:
                 self.recorder.record_flow(self.ctx_id, flow_def["prompt"])
             self.prompt = flow_def["prompt"]
 
-    def _extract_return(self, frame, flow_def):
+    async def _extract_return(self, frame, flow_def):
         """Extract return fields from a frame according to the return definition.
 
         A bare `use x` carries no alias, which the compiler records as the
@@ -141,7 +147,13 @@ class Context:
         use correct; }` — the returned record is keyed by the field names,
         since writing them all to "_" would silently keep only the last
         one (which is what made call channels binding on a sub-field, like
-        the mcq annotate demos, resolve to a scalar and fail)."""
+        the mcq annotate demos, resolve to a scalar and fail).
+
+        A field may also be `call f ...` instead of `use path`. That runs
+        HERE, after the frame is stored, which is the whole point: the frame
+        holds what the model emitted (a select field holds its index), and
+        the return is where a program turns that into whatever its caller
+        wants. Nothing upstream rewrites a field to make it convenient."""
         fields = flow_def.get("fields", [])
 
         aliases = [f.get("alias", "_") for f in fields]
@@ -152,6 +164,8 @@ class Context:
 
         if has_root and len(fields) == 1:
             field = fields[0]
+            if field.get("call"):
+                return await self._resolve_return_call(frame, field["call"])
             path = field.get("path", [])
             return self._resolve_path(frame, path) if path else frame.get("_")
 
@@ -162,8 +176,23 @@ class Context:
             if alias == "_":
                 # name the entry after what was used
                 alias = path[-1].get("name", "_") if path else "_"
-            result[alias] = self._resolve_path(frame, path) if path else frame.get(alias)
+            if field.get("call"):
+                result[alias] = await self._resolve_return_call(frame, field["call"])
+            else:
+                result[alias] = self._resolve_path(frame, path) if path else frame.get(alias)
         return result
+
+    async def _resolve_return_call(self, frame, call):
+        """Run a return field's call. `content=frame` so both `use .x` and a
+        `_` spread read what this prompt just produced — the same resolver a
+        channel uses, only later in the step."""
+        from .channels import resolve_call
+
+        return await resolve_call(
+            call, self.inputs, self.frames, self.prompt, self.engine,
+            self.program, self.externals, content=frame,
+            recorder=self.recorder, ctx_id=self.ctx_id,
+        )
 
     def _resolve_path(self, value, path):
         """Walk a dotted path through nested dicts/lists.

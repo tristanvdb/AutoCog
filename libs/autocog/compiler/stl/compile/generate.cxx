@@ -20,6 +20,10 @@ namespace data = autocog::data;
 
 namespace {
 
+// Defined below with the other IR->STA converters; the flow extractor above
+// them needs it for `alias call f ...` return fields.
+static data::CallChannel convert_call_channel(ir::CallChannel const & c);
+
 // Local helpers over the data field/abstract tables: the data:: types are pure
 // PODs, so the methods/free fns that lived on the runtime types live here.
 static bool is_list(data::Field const & f) { return f.range.has_value(); }
@@ -181,6 +185,7 @@ static std::map<std::string, data::Flow> extract_flows(ir::Prompt const & pmt) {
             data::ReturnField srf;
             srf.alias = rf.alias.value_or("_");
             srf.path = rf.source.steps;   // shared PathStep; copy through
+            if (rf.call) srf.call = convert_call_channel(rf.call.value());
             rt.fields.push_back(std::move(srf));
         }
         flows[label] = data::Flow{std::move(rt)};
@@ -215,6 +220,27 @@ static std::vector<data::Clause> convert_clauses(std::vector<ir::Clause> const &
     return out;
 }
 
+static data::CallChannel convert_call_channel(ir::CallChannel const & c) {
+    data::CallChannel cc;
+    cc.target = convert_docpath(c.target);
+    cc.extern_func = c.extern_func;
+    cc.entry = c.entry;
+    for (auto const & [name, kwarg] : c.kwargs) {
+        data::ChannelKwarg ck;
+        ck.name = name;
+        ck.is_input = kwarg.is_input;
+        ck.prompt = kwarg.prompt;
+        ck.path = convert_steps(kwarg.path);
+        ck.value = kwarg.value;
+        ck.clauses = convert_clauses(kwarg.clauses);
+        cc.kwargs.push_back(std::move(ck));
+    }
+    if (c.spread) cc.spread = convert_steps(c.spread.value().steps);
+    // Link-level clauses
+    cc.clauses = convert_clauses(c.link_clauses);
+    return cc;
+}
+
 static std::vector<data::Channel> extract_channels(ir::Prompt const & pmt) {
     std::vector<data::Channel> channels;
     for (auto const & ch : pmt.channels) {
@@ -233,23 +259,7 @@ static std::vector<data::Channel> extract_channels(ir::Prompt const & pmt) {
                 dc.clauses = convert_clauses(c.clauses);
                 channels.push_back(data::Channel{std::move(dc)});
             } else if constexpr (std::is_same_v<T, ir::CallChannel>) {
-                data::CallChannel cc;
-                cc.target = convert_docpath(c.target);
-                cc.extern_func = c.extern_func;
-                cc.entry = c.entry;
-                for (auto const & [name, kwarg] : c.kwargs) {
-                    data::ChannelKwarg ck;
-                    ck.name = name;
-                    ck.is_input = kwarg.is_input;
-                    ck.prompt = kwarg.prompt;
-                    ck.path = convert_steps(kwarg.path);
-                    ck.value = kwarg.value;
-                    ck.clauses = convert_clauses(kwarg.clauses);
-                    cc.kwargs.push_back(std::move(ck));
-                }
-                // Link-level clauses
-                cc.clauses = convert_clauses(c.link_clauses);
-                channels.push_back(data::Channel{std::move(cc)});
+                channels.push_back(data::Channel{convert_call_channel(c)});
             }
         }, ch);
     }

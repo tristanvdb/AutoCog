@@ -193,23 +193,14 @@ struct Encoder {
                 Doc const * v = value_of(act);
                 if (!v)
                     throw autocog::ConfigError("Frame has no value for choice '" + act.uid + "'", act.uid);
+                // A frame value is the text the model emitted at this field, so
+                // it matches a rendered choice directly. (There used to be a
+                // fallback here probing each index through the walker's select
+                // resolver — it existed only because the walker rewrote select
+                // values on the way out. It doesn't anymore.)
                 std::string const want = doc_to_text(*v, act.uid);
                 for (size_t i = 0; i < ch->choices.size(); ++i)
                     if (ch->choices[i] == want) { idx = i; break; }
-                if (idx == ch->choices.size()) {
-                    // Engine-produced frames hold *resolved* select values;
-                    // probe each index through the walker's resolver.
-                    auto const * cf = std::get_if<autocog::data::ChoiceFormat>(
-                        &fields[*act.field].format.value);
-                    if (cf && cf->mode == "select") {
-                        for (size_t i = 0; i < ch->choices.size(); ++i) {
-                            if (doc_equal(resolve_select(ch->choices[i], *cf, content), *v)) {
-                                idx = i;
-                                break;
-                            }
-                        }
-                    }
-                }
                 if (idx == ch->choices.size())
                     throw autocog::ConfigError("Frame value '" + want + "' matches no choice of '" + act.uid + "'", act.uid);
             } else {

@@ -25,11 +25,8 @@ namespace autocog::runtime::sta {
 ///
 /// Decisions along the way:
 ///  - value chooses (schema field set) match the frame value against the
-///    choice texts — frames from psta hold raw choice strings (select
-///    indices unresolved) and match directly; frames from the Python engine
-///    hold *resolved* select values, so when a direct match fails and the
-///    field is select-mode, each index is probed through resolve_select
-///    against `content` (pass a null/empty Document when frames are raw);
+///    choice texts directly. Every frame holds what the model emitted, so a
+///    select field holds its index and matches the rendered index;
 ///  - structural branch chooses (no field) take the first successor whose
 ///    nearest reachable value action has a value present in the frame — the
 ///    "continue the array" choice is first by construction, so arrays extend

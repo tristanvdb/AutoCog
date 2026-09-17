@@ -132,6 +132,7 @@ nlohmann::json to_json(Flow const & fl) {
         nlohmann::json rj;
         rj["alias"] = rf.alias;
         rj["path"]  = paths_to_json(rf.path);
+        if (rf.call) rj["call"] = to_json(Channel{*rf.call});
         fields.push_back(rj);
       }
       return {{"type","return"}, {"fields", fields}};
@@ -153,6 +154,11 @@ void from_json(nlohmann::json const & dom, Flow & out) {
       ReturnField & rf = f.fields.back();
       rf.alias = rj.at("alias").get<std::string>();
       paths_from_json(rj.at("path"), rf.path);
+      if (rj.contains("call") && !rj["call"].is_null()) {
+        Channel ch;
+        from_json(rj.at("call"), ch);
+        rf.call = std::get<CallChannel>(ch.value);
+      }
     }
   } else {
     throw autocog::SchemaError("autocog::data: unknown flow type '" + type + "'", type);

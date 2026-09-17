@@ -14,11 +14,14 @@ MCQ_INPUTS = {
     "choices": ["Water", "Fire", "Air", "Earth"],
 }
 
-# Demos whose result is a bare answer: it must be one of the input choices
-# (select maps the picked index back to the choice; repeat emits it verbatim
-# under a choice-constrained token mask).
+# Demos whose result is a bare answer: it must be one of the input choices.
+# `repeat` emits the choice verbatim under a choice-constrained token mask, so
+# its frame value already IS the answer. `select` emits an INDEX — the frame
+# records that index, and the program resolves it on the return
+# (`return call pick _;`). select-annot belongs here too now: its choices are
+# records, so it resolves through the picked record's `value`.
 ANSWER_IS_CHOICE = {"select", "repeat", "select-cot", "repeat-cot",
-                    "select-hyp", "repeat-hyp"}
+                    "select-hyp", "repeat-hyp", "select-annot"}
 
 # The iter demos return a labeled struct; the answer field must be a choice.
 # (Their literal `status` field currently orchestrates to None — a known
@@ -31,8 +34,7 @@ MCQ_DEMOS = [
     # repeat-annot needs choices[].value populated by the annotator calls,
     # but multi-field call returns currently collapse to a single unnamed
     # value (the literal-return-fields runtime gap), so the repeat source
-    # correctly resolves to zero candidates. select-annot only survives
-    # because select candidates are indices that never read the values.
+    # correctly resolves to zero candidates.
     pytest.param("repeat-annot", marks=pytest.mark.xfail(
         reason="multi-field call returns do not populate struct arrays yet",
         strict=True)),
@@ -51,10 +53,6 @@ def test_mcq_demo_runs_rng(demo, engine, repo_root):
     elif demo in ANSWER_IN_STRUCT:
         assert result["answer"] in MCQ_INPUTS["choices"], f"{demo}: {result!r}"
     else:
-        # The -annot demos: select/repeat over a struct-valued choices array
-        # currently resolves to a sub-field of the picked struct rather than
-        # identifying the choice — asserted loosely until those semantics are
-        # settled (select over struct arrays is a flagged follow-up).
         assert isinstance(result, dict) and result, f"{demo}: {result!r}"
 
 

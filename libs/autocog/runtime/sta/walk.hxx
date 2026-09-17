@@ -14,35 +14,24 @@ namespace autocog::runtime::sta {
 ///
 /// This is the single canonical FTT->frame implementation.
 ///
+/// A field's frame value is the text the model emitted at that field, verbatim.
+/// Nothing is rewritten on the way out: a `select` field holds the INDEX that
+/// was produced, not the value that index names. Resolving the index is the
+/// program's job (`return call ...`), not the walker's — a frame that holds
+/// "Water" where "1" was emitted describes no token stream, and forcing it back
+/// would then require inverting a transformation the frame no longer records.
+///
 /// @param ftt          The FTT tree (root node) as produced by the backend.
 /// @param sta          The STA program (provides each prompt's field table).
 /// @param prompt_name  The prompt whose fields the FTT corresponds to.
-/// @param content      The input content (a Document); used to resolve `select`
-///                     choices to their actual values. Pass a null Document to
-///                     skip.
-/// @param resolve_selects  When true (and content is available), a `select`
-///                     choice field's index value is resolved to the actual
-///                     value from `content`; otherwise the raw index is kept.
 /// @param metric       Path-selection metric. "best" picks the completed path
 ///                     whose leaf has the highest score (matching FTT::proba()).
 ///                     Unknown values raise ConfigError.
 /// @return The frame: a nested Document of field name -> value.
-/// Resolve a `select` choice index to the actual value from `content` by
-/// walking the choice format's path. On any miss the raw index string comes
-/// back unchanged. Shared by the walker (index -> value) and the frame
-/// encoder (value -> index, by probing each index).
-autocog::types::Document resolve_select(
-    std::string const & index_str,
-    autocog::data::ChoiceFormat const & cf,
-    autocog::types::Document const & content
-);
-
 autocog::types::Document walk_ftt_to_frame(
     autocog::data::FTT const & ftt,
     autocog::data::STA const & sta,
     std::string const & prompt_name,
-    autocog::types::Document const & content,
-    bool resolve_selects,
     std::string const & metric = "best"
 );
 

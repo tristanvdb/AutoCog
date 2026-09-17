@@ -5,7 +5,13 @@ namespace autocog::compiler::stl::ast {
 
 DATA(Retfield) {
   ONODE(Expression) alias; // if missing implies `field.steps[-1].field` (meaning "C" for path "A[0:2].B.C[3]")
-  VARIANT(Path, Expression) source;
+  // "use" (a field), "is" (a compile-time value), or "call" (a callable).
+  // A return call runs after the prompt's frame is stored, so `use .x` inside
+  // it sees the generated value — the same spelling a channel uses to read the
+  // pre-filled one. It is the program's own hook for turning what the model
+  // emitted into what the caller wants, which is why nothing upstream of the
+  // frame ever rewrites a field.
+  VARIANT(Path, Expression, Call) source;
   VARIANTS(Bind, Ravel, Wrap, Prune) clauses;
 };
 TRAVERSE_CHILDREN(Retfield, alias, source, clauses)

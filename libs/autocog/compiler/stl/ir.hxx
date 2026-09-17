@@ -261,6 +261,7 @@ struct CallChannel {
   std::optional<std::string> extern_func;  // "module.function" for Python calls
   std::optional<std::string> entry;        // For prompt calls
   std::unordered_map<std::string, Kwarg> kwargs;
+  std::optional<DocPath> spread;           // `call f <path>`: spread a record as the arguments
   std::vector<Clause> link_clauses;        // Clauses on the link itself (ravel, bind, etc.)
 
   CallChannel(DocPath target_) :
@@ -268,6 +269,7 @@ struct CallChannel {
     extern_func(std::nullopt),
     entry(std::nullopt),
     kwargs(),
+    spread(std::nullopt),
     link_clauses()
   {}
 };
@@ -292,12 +294,14 @@ struct ReturnField {
   DocPath source;                         // Which field to return
   std::optional<std::string> alias;       // Optional alias for the field
   std::optional<std::string> constant;    // Compile-time constant value (from Expression source)
+  std::optional<CallChannel> call;        // `alias call f ...`: computed, not read
   std::vector<Clause> clauses;            // Transformation clauses
 
   ReturnField(DocPath source_) :
     source(std::move(source_)),
     alias(std::nullopt),
     constant(std::nullopt),
+    call(std::nullopt),
     clauses()
   {}
 };

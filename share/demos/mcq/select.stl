@@ -1,6 +1,8 @@
 // Multiple Choice Question - Select mode
 // The LLM picks the index of the correct answer from a list of choices
 
+from "mcq.py" import pick;
+
 prompt main {
   argument max_choices = 8;
   is {
@@ -14,9 +16,7 @@ prompt main {
     question get question;
     choices get choices;
   }
-  return {
-    use answer;
-  }
+  return call pick _;
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";

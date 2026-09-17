@@ -56,9 +56,13 @@ def test_label_mechanism(tmp_path):
 def test_multiprompt_demos(tmp_path):
     """The multi-prompt MCQ programs run end to end: two-stage (hyp),
     retry loops (iter) and mapped per-choice calls (annot, one sub-prompt
-    per choice). Scoring a frame is auxiliary — select-annot's frame
-    cannot be re-encoded today (select over a record array), which must
-    cost the friction metrics, not the accuracy datapoint."""
+    per choice).
+
+    Every frame re-encodes, select-annot included. It used to be the
+    exception — its frame held the resolved record the walker had written
+    over the emitted index, and no encoder could match that back to a
+    rendered choice. Now the frame holds the index, so there is nothing to
+    invert and the friction metrics come out for every demo."""
     for demo, min_steps in (("select-hyp", 2), ("select-iter", 1),
                             ("repeat-annot", 5), ("select-annot", 4)):
         events = run_quality(questions=2, syntaxes=["complete"], demos=[demo],
@@ -68,10 +72,7 @@ def test_multiprompt_demos(tmp_path):
             assert ev.get("error.message") is None, (demo, ev.get("error.message"))
             assert ev["autocog.bench.correct"] in (True, False), demo
             assert ev["autocog.bench.steps"] >= min_steps, demo
-        if demo == "select-annot":       # known runtime gap, recorded not hidden
-            assert all(e.get("autocog.bench.score_error") for e in events)
-        else:
-            assert not any(e.get("autocog.bench.score_error") for e in events), demo
+        assert not any(e.get("autocog.bench.score_error") for e in events), demo
 
 
 def test_perf_rng_cells(tmp_path):

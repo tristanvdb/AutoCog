@@ -320,7 +320,8 @@ class TestStapp:
             try:
                 assert "main" in prog.entry_points
                 engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
-                result = engine.run(prog, externals={}, topic="Sci", question="2+2?", choices=["3","4","5","6"])
+                # no externals= : the unpacked app carries its own resolvers
+                result = engine.run(prog, topic="Sci", question="2+2?", choices=["3","4","5","6"])
                 assert isinstance(result, str)
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -624,7 +625,7 @@ class TestCLI:
         import subprocess, json, tempfile, os
         # Compile first
         compile_result = subprocess.run(
-            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/select.stl")],
+            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/repeat.stl")],
             capture_output=True, text=True, timeout=30
         )
         with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as f:
@@ -1292,8 +1293,9 @@ class TestCLIErrorsDirect:
         from autocog.__main__ import main
         import autocog
 
-        # Compile to STA first
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        # Compile to STA first. `repeat` names no resolver, so the .sta alone
+        # is a complete program — which is what the --sta path is about.
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/repeat.stl"))
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump(prog.sta, f)
             sta_path = f.name

@@ -151,14 +151,13 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
     // ===== FTT -> frame =====
     module.def("walk_ftt_to_frame",
         [](std::string const & program_id, std::string const & prompt_name,
-           std::string const & ftt_id, py::object content) -> py::object {
+           std::string const & ftt_id) -> py::object {
             auto const & program = data::datastore().sta.get(program_id);
             auto const & ftt     = data::datastore().ftt.get(ftt_id);
-            auto content_doc = to_document(content);
-            auto frame = sta::walk_ftt_to_frame(
-                ftt, program, prompt_name, content_doc, /*resolve_selects=*/true);
+            auto frame = sta::walk_ftt_to_frame(ftt, program, prompt_name);
             return codec::to_py(frame);
         },
-        "Walk a stored FTT (by handle) into the prompt's frame; returns the frame dict",
-        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"), py::arg("content"));
+        "Walk a stored FTT (by handle) into the prompt's frame; returns the frame dict. "
+        "Field values are verbatim: a select field holds the emitted index.",
+        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"));
 }

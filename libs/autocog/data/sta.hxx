@@ -50,7 +50,16 @@ struct FieldFormat {
 
 // --- Flow --------------------------------------------------------------------
 
-struct ReturnField { std::string alias; std::vector<PathStep> path; };
+/// A returned entry: `alias use <path>` reads the frame, `alias call f ...`
+/// computes it. The call carries the same shape a channel's does, so one code
+/// path resolves both; the difference is when it runs — a channel before the
+/// prompt, a return after, once the frame is stored and `use .x` can see what
+/// the model emitted.
+struct ReturnField {
+  std::string alias;
+  std::vector<PathStep> path;
+  std::optional<CallChannel> call;
+};
 struct FlowControl { std::string prompt; std::optional<int> limit; };
 struct FlowReturn  { std::vector<ReturnField> fields; };
 

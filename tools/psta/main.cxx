@@ -91,13 +91,10 @@ static int run(int argc, char ** argv) {
     // Read FTT (file path).
     auto ftt = codec::from_file<data::FTT>(ftt_file);
 
-    // Build the frame via the canonical FTT->frame walker. psta has no input
-    // content and historically kept raw select indices, so select-resolution
-    // is disabled here (resolve_selects=false), preserving its output. The
-    // --metric selects which completed path becomes the frame.
-    autocog::types::Document empty{ autocog::types::Document::Object{} };
-    auto result = sta::walk_ftt_to_frame(*ftt, *program, prompt_name,
-                                         empty, /*resolve_selects=*/false, metric);
+    // Build the frame via the canonical FTT->frame walker. The frame records
+    // what the model emitted, so a select field keeps its index. The --metric
+    // selects which completed path becomes the frame.
+    auto result = sta::walk_ftt_to_frame(*ftt, *program, prompt_name, metric);
 
     // Write frame JSON to --frame (/dev/stdout for stdout).
     std::ostream * out = &std::cout;

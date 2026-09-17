@@ -1118,6 +1118,64 @@ static void assemble_prompts(
             if (!qp.count("stop"))   qp["stop"]   = std::string("__search__.queue.stop");
         }
 
+        // `call <entry> { ... }` / `call <entry> <path>`: shared by channels
+        // (which run before the prompt) and returns (which run after it), so
+        // both spell a call the same way and resolve through the same code.
+        auto assemble_call = [&](ast::Data<ast::Tag::Call> const & src,
+                                 ir::CallChannel & cc) {
+            auto const & objref = src.entry;
+            auto entry_name = objref.data.name.data.name;
+            auto resolved = builder.resolve(entry_name, node.fileid);
+            if (resolved) {
+                ir::VarMap kwargs;
+                for (auto const & assign : objref.data.config) {
+                    auto k = assign.data.argument.data.name;
+                    auto v = evaluator.evaluate_expression(scope, assign.data.value, node.context);
+                    kwargs[k] = v;
+                }
+                auto target_ctx = builder.eval_context(*resolved, kwargs);
+                auto arguments = builder.extract_arguments(resolved->decl, target_ctx);
+                cc.entry = driver.mangle(resolved->name, arguments);
+            } else if (builder.is_python_symbol(entry_name, node.fileid)) {
+                cc.entry = entry_name;
+                cc.extern_func = entry_name;
+            }
+            if (src.spread) {
+                auto steps = convert_path(*src.spread, evaluator, scope, node.context);
+                // `_` names the root -- an empty path, as `annotate` reads it.
+                if (steps.size() == 1 && steps[0].name == "_") steps.clear();
+                cc.spread = ir::DocPath(std::move(steps), false, std::nullopt);
+                return;
+            }
+            for (auto const & kwarg : src.arguments) {
+                auto kw_name = kwarg.data.name.data.name;
+                ir::Kwarg irk;
+                std::visit([&](auto const & ks) {
+                    using KS = std::decay_t<decltype(ks)>;
+                    if constexpr (std::is_same_v<KS, ast::Path>) {
+                        irk.is_input = true;
+                        irk.path = convert_path(ks, evaluator, scope, node.context);
+                    } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
+                        if (ks.data.prompt) {
+                            irk.prompt = resolve_prompt_ref(ks.data.prompt->data.name.data.name);
+                        }
+                        irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
+                    } else if constexpr (std::is_same_v<KS, ast::Expression>) {
+                        auto val = evaluator.evaluate_expression(scope, ks, node.context);
+                        if (auto * sv = std::get_if<std::string>(&val)) {
+                            irk.value = *sv;
+                        } else if (auto * iv = std::get_if<int>(&val)) {
+                            irk.value = std::to_string(*iv);
+                        } else if (auto * fv = std::get_if<float>(&val)) {
+                            irk.value = std::to_string(*fv);
+                        }
+                    }
+                }, kwarg.data.source);
+                irk.clauses = convert_clauses_from_link(kwarg.data.clauses, evaluator, scope, node.context);
+                cc.kwargs[kw_name] = std::move(irk);
+            }
+        };
+
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
@@ -1185,50 +1243,7 @@ static void assemble_prompts(
                                 pmt->channels.push_back(std::move(dc));
                             } else if constexpr (std::is_same_v<S, ast::Call>) {
                                 auto cc = ir::CallChannel(std::move(target_docpath));
-                                auto const & objref = src.data.entry;
-                                auto entry_name = objref.data.name.data.name;
-                                auto resolved = builder.resolve(entry_name, node.fileid);
-                                if (resolved) {
-                                    ir::VarMap kwargs;
-                                    for (auto const & assign : objref.data.config) {
-                                        auto k = assign.data.argument.data.name;
-                                        auto v = evaluator.evaluate_expression(scope, assign.data.value, node.context);
-                                        kwargs[k] = v;
-                                    }
-                                    auto target_ctx = builder.eval_context(*resolved, kwargs);
-                                    auto arguments = builder.extract_arguments(resolved->decl, target_ctx);
-                                    cc.entry = driver.mangle(resolved->name, arguments);
-                                } else if (builder.is_python_symbol(entry_name, node.fileid)) {
-                                    cc.entry = entry_name;
-                                    cc.extern_func = entry_name;
-                                }
-                                for (auto const & kwarg : src.data.arguments) {
-                                    auto kw_name = kwarg.data.name.data.name;
-                                    ir::Kwarg irk;
-                                    std::visit([&](auto const & ks) {
-                                        using KS = std::decay_t<decltype(ks)>;
-                                        if constexpr (std::is_same_v<KS, ast::Path>) {
-                                            irk.is_input = true;
-                                            irk.path = convert_path(ks, evaluator, scope, node.context);
-                                        } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
-                                            if (ks.data.prompt) {
-                                                irk.prompt = resolve_prompt_ref(ks.data.prompt->data.name.data.name);
-                                            }
-                                            irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
-                                        } else if constexpr (std::is_same_v<KS, ast::Expression>) {
-                                            auto val = evaluator.evaluate_expression(scope, ks, node.context);
-                                            if (auto * sv = std::get_if<std::string>(&val)) {
-                                                irk.value = *sv;
-                                            } else if (auto * iv = std::get_if<int>(&val)) {
-                                                irk.value = std::to_string(*iv);
-                                            } else if (auto * fv = std::get_if<float>(&val)) {
-                                                irk.value = std::to_string(*fv);
-                                            }
-                                        }
-                                    }, kwarg.data.source);
-                                    irk.clauses = convert_clauses_from_link(kwarg.data.clauses, evaluator, scope, node.context);
-                                    cc.kwargs[kw_name] = std::move(irk);
-                                }
+                                assemble_call(src.data, cc);
                                 // Link-level clauses (ravel, bind, etc. on the channel itself)
                                 cc.link_clauses = convert_clauses_from_link(link.data.clauses, evaluator, scope, node.context);
                                 pmt->channels.push_back(std::move(cc));
@@ -1264,6 +1279,15 @@ static void assemble_prompts(
                                     }
                                     ri.fields.push_back(std::move(ret));
                                 }
+                            } else if constexpr (std::is_same_v<S, ast::Call>) {
+                                auto ret = ir::ReturnField(ir::DocPath({}, false, std::nullopt));
+                                if (rf.data.alias) {
+                                    ret.alias = eval_alias(rf.data.alias.value(), evaluator, scope, node.context);
+                                }
+                                auto cc = ir::CallChannel(ir::DocPath({}, false, std::nullopt));
+                                assemble_call(src.data, cc);
+                                ret.call = std::move(cc);
+                                ri.fields.push_back(std::move(ret));
                             }
                         }, rf.data.source);
                     }

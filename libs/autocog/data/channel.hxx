@@ -54,6 +54,9 @@ struct CallChannel {
   std::optional<std::string> extern_func;  ///< Python callable (null = none)
   std::optional<std::string> entry;        ///< prompt entry point (null = none)
   std::vector<ChannelKwarg> kwargs;
+  /// `call f <path>` instead of `call f { ... }`: spread the record at <path>
+  /// as the arguments. An empty path is the root. Excludes `kwargs`.
+  std::optional<std::vector<PathStep>> spread;
   std::vector<Clause> clauses;
 };
 
