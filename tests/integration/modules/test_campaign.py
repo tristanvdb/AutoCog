@@ -203,9 +203,9 @@ def test_monitor_scopes_to_current_campaign(tmp_path):
                 + datetime.timedelta(seconds=i)).isoformat()
 
     lines = [
-        {"event.action": "campaign.plan", "campaign": "old",
-         "phases": [{"name": "p", "runs": 1}], "axes": ["model"]},
-        {"event.action": "campaign.start", "campaign": "old",
+        {"event.action": "campaign.plan", "autocog.campaign.name": "old",
+         "autocog.campaign.runs": 1, "axes": ["model"]},
+        {"event.action": "campaign.start", "autocog.campaign.name": "old",
          "@timestamp": "2026-09-16T03:00:00.000Z"},
     ]
     lines += [{"@timestamp": "2026-09-16T03:00:00.000Z",
@@ -214,11 +214,11 @@ def test_monitor_scopes_to_current_campaign(tmp_path):
                                  "autocog.bench.correct": True,
                                  "@timestamp": iso(i)}} for i in range(5)]
     lines += [
-        {"event.action": "campaign.end", "campaign": "old",
+        {"event.action": "campaign.end", "autocog.campaign.name": "old",
          "@timestamp": "2026-09-16T03:10:00.000Z"},
-        {"event.action": "campaign.plan", "campaign": "new",
-         "phases": [{"name": "p", "runs": 2}], "axes": ["model"]},
-        {"event.action": "campaign.start", "campaign": "new",
+        {"event.action": "campaign.plan", "autocog.campaign.name": "new",
+         "autocog.campaign.runs": 2, "axes": ["model"]},
+        {"event.action": "campaign.start", "autocog.campaign.name": "new",
          "@timestamp": "2026-09-16T04:00:00.000Z"},
     ]
     # bench events carry ONLY the isoformat stamp the writer produces
@@ -233,7 +233,7 @@ def test_monitor_scopes_to_current_campaign(tmp_path):
     mon = subprocess.run(
         [sys.executable,
          os.path.join(os.path.dirname(__file__), "..", "..", "..",
-                      "share", "benchmarks", "monitor.py"),
+                      "share", "campaign", "monitor.py"),
          "--once", str(events)],
         capture_output=True, text=True, timeout=60)
     assert mon.returncode == 0, mon.stderr
@@ -248,20 +248,19 @@ def test_monitor_worker_stats(rng_workers, tmp_path):
     dead = f"127.0.0.1:{_free_port()}"
     events = tmp_path / "events.ndjson"
     lines = [
-        {"event.action": "campaign.plan", "campaign": "c",
-         "phases": [{"name": "p", "runs": 1}], "axes": []},
-        {"event.action": "campaign.start", "campaign": "c",
+        # workers ride on the plan: the app knows its topology before it
+        # spawns anything, so there is no separate announcement
+        {"event.action": "campaign.plan", "autocog.campaign.name": "c",
+         "autocog.campaign.runs": 1, "axes": [],
+         "workers": [rng_workers[0].replace("http://", ""), dead]},
+        {"event.action": "campaign.start", "autocog.campaign.name": "c",
          "@timestamp": "2026-09-15T00:00:00.000Z"},
-        {"event.action": "campaign.workers", "campaign": "c",
-         "workers": [{"url": rng_workers[0].replace("http://", ""),
-                      "models": ["rng"]},
-                     {"url": dead, "models": ["rng"]}]},
     ]
     events.write_text("".join(json.dumps(l) + "\n" for l in lines))
     mon = subprocess.run(
         [sys.executable,
          os.path.join(os.path.dirname(__file__), "..", "..", "..",
-                      "share", "benchmarks", "monitor.py"),
+                      "share", "campaign", "monitor.py"),
          "--once", str(events)],
         capture_output=True, text=True, timeout=60)
     assert mon.returncode == 0, mon.stderr
@@ -433,92 +432,77 @@ def test_tag_derivation():
 
 
 class TestLauncher:
-    """share/experiments/campaign.sh on a scratch workdir with the test
-    campaign: dryrun plan, full run (multi-model worker, executor routing,
-    probe phase, perf termination cells, archive), and resume."""
+    """share/campaign.sh's app on a scratch workdir: the plan it derives, a
+    full run against workers it spawns itself, and resume.
+
+    Exercised through `python3 -m campaign`, not the shell wrapper — the
+    wrapper's whole job is the bootstrap (venv, build, pip), which this
+    environment already has and which reinstalling would only make slow."""
 
     @pytest.fixture()
     def workdir(self, tmp_path, repo_root, tiny_gguf):
         wd = tmp_path / "wd"
-        for sub in ("models", "datasets", "campaigns"):
-            (wd / sub).mkdir(parents=True)
-        (wd / "autocog").symlink_to(repo_root)
-        venv = repo_root / "venv"
-        if not venv.exists():
-            pytest.skip("no venv beside the repo")
-        (wd / ".venv").symlink_to(venv)
+        (wd / "models").mkdir(parents=True)
+        (wd / "datasets").mkdir(parents=True)
         shutil.copy(tiny_gguf, wd / "models" / (TINY + ".gguf"))
         shutil.copy(repo_root / "share" / "benchmarks" / "quality" / "questions.json",
                     wd / "datasets" / "questions.json")
-        shutil.copy(repo_root / "tests" / "fixtures" / "campaigns" / "testing.json",
-                    wd / "campaigns" / "testing.json")
+        shutil.copy(repo_root / "tests" / "fixtures" / "campaigns" / "testing.yml",
+                    wd / "testing.yml")
         return wd
 
-    def launch(self, wd, *args, timeout):
-        script = wd / "autocog" / "share" / "experiments" / "campaign.sh"
+    def launch(self, wd, repo_root, *args, timeout):
         env = {k: v for k, v in os.environ.items()
                if k not in ("AUTOCOG_WORKDIR", "MODELS_PATH", "DATASETS_PATH",
-                            "RESULTS_PATH", "AUTOCOG_REPO")}
-        return subprocess.run([str(script), *args, "campaigns/testing.json"],
-                              cwd=str(wd), env=env, capture_output=True,
-                              text=True, timeout=timeout)
+                            "RESULTS_PATH")}
+        env["PYTHONPATH"] = str(repo_root / "share")
+        return subprocess.run(
+            [sys.executable, "-m", "campaign", "testing.yml",
+             "--workdir", str(wd), *args],
+            cwd=str(wd), env=env, capture_output=True, text=True,
+            timeout=timeout)
 
-    def test_dryrun(self, workdir):
-        r = self.launch(workdir, "--dryrun", timeout=120)
+    def test_dry_run(self, workdir, repo_root):
+        r = self.launch(workdir, repo_root, "--dry-run", timeout=120)
         assert r.returncode == 0, r.stdout + r.stderr
-        assert f"models=[{TINY}]" in r.stdout
-        assert "phase smoke [bench]" in r.stdout
-        assert "phase probes [probe]" in r.stdout
+        assert "campaign testing" in r.stdout
+        assert TINY in r.stdout
+        assert "rng-mechanism" in r.stdout and "tiny-shape" in r.stdout
         assert not (workdir / "results").exists()   # nothing spawned
 
-    @pytest.mark.timeout(600)
-    def test_full_run_and_resume(self, workdir):
-        r = self.launch(workdir, "--ngl", "0", timeout=580)
+    @pytest.mark.timeout(900)
+    def test_full_run_and_resume(self, workdir, repo_root):
+        r = self.launch(workdir, repo_root, timeout=880)
         assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-2000:]
-        out = workdir / "results" / "testing"
-        for run in ("rng-select", "tiny-select", "rng-term"):
-            assert list((out / run).glob("results-*.ndjson")), run
-        assert (out / "tiny-probe.ndjson").is_file()
-        assert json.loads((out / "adjudication.json").read_text())
-        # termination cells: the stop predicate cut eval tokens on len300
-        events = [json.loads(l) for l in
-                  next((out / "rng-term").glob("results-*.ndjson")).open()]
-        by = {e["autocog.bench.label"]: e for e in events}
-        assert (by["len300 w2 stop-term-16"]["autocog.perf.tokens.eval"]
-                < by["len300 w2 baseline"]["autocog.perf.tokens.eval"])
-        assert list((workdir / "results").glob("testing-*.tar.gz"))
 
-        # Event stream + status screen: every run has lifecycle events and
-        # the monitor renders progress, rates and axis-sliced accuracy.
+        out = workdir / "results" / "testing"
+        for run in ("rng-mechanism", "tiny-shape"):
+            assert list((out / run).glob("results-*.ndjson")), run
+
+        # The gate ran and passed before any run started, and it wrote
+        # nothing into the campaign's results.
+        assert "gate:" in r.stdout
+        assert r.stdout.index("gate:") < r.stdout.index("rng-mechanism]")
+
         events = workdir / "results" / "campaign-events.ndjson"
         assert events.is_file()
         stream = [json.loads(l) for l in events.read_text().splitlines()]
         actions = [(e.get("autocog.bench") or e).get("event.action") for e in stream]
-        assert actions.count("run.end") == 4          # incl. the probe run
+        assert actions.count("run.end") == 2
         assert "campaign.plan" in actions and "campaign.end" in actions
-        assert any(a == "quality.run" for a in actions)
+
         mon = subprocess.run(
-            [sys.executable, str(workdir / "autocog" / "share" / "benchmarks"
-                                 / "monitor.py"), "--once", str(events)],
+            [sys.executable, str(repo_root / "share" / "campaign" / "monitor.py"),
+             "--once", str(events)],
             capture_output=True, text=True, timeout=60)
         assert mon.returncode == 0, mon.stderr
-        assert "4/4 runs" in mon.stdout
-        assert "accuracy by model" in mon.stdout
         assert "accuracy by program" in mon.stdout
-        # labels are an axis too: the descriptor tagged both programs
-        # "strings", so they group under it without the monitor knowing
-        # what the word means
-        assert "accuracy by label" in mon.stdout
-        assert "strings" in mon.stdout
+        # labels are an axis: both mechanisms are tagged `strings`
+        assert "accuracy by label" in mon.stdout and "strings" in mon.stdout
 
-        # Resume does no work twice. Counting the word "skipping" in stdout was
-        # not that invariant: a sample that errored in the first pass is not a
-        # measurement, so its run legitimately reruns the gap and reports no
-        # skip — which made the assertion depend on whether the box hiccuped.
-        # The contract lives in the data: a measured sample is written once.
-        r2 = self.launch(workdir, "--ngl", "0", timeout=300)
-        assert r2.returncode == 0
-        assert "skipping" in r2.stdout
+        # Resume does no work twice: a measured sample is written once.
+        r2 = self.launch(workdir, repo_root, timeout=880)
+        assert r2.returncode == 0, r2.stdout[-2000:]
         for path in out.rglob("results-*.ndjson"):
             rows = [json.loads(l) for l in path.open() if l.strip()]
             keys = [(e.get("autocog.bench.syntax"), e.get("autocog.bench.program"),

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Campaign status screen — tail the launcher's event stream and render
-live progress: campaigns done/running/remaining, phase and run progress,
+live progress: campaigns done/running/remaining, run progress,
 observed rates with an ETA, accuracy sliced along the campaign's
 declared axes, and per-worker throughput/occupancy polled from the
 workers' status API (GET /stats: FTA rates over 1m/5m/30m, occupancy,
-queue depth — workers advertised by the launcher's campaign.workers
-event, polled only while the campaign runs).
+queue depth — workers come from the campaign.plan event and are polled
+only while the campaign runs).
 
-    monitor.py [EVENTS]          # default: $AUTOCOG_WORKDIR|./results/campaign-events.ndjson
+    monitor.py [EVENTS]          # default: ./results/campaign-events.ndjson
     monitor.py --once [EVENTS]   # one snapshot, no screen refresh
 
 The stream is NDJSON: ECS lines whose `autocog.bench` field carries a
@@ -47,10 +47,10 @@ def bar(done, total, width=30):
 
 class State:
     def __init__(self):
-        self.campaigns = {}      # name -> {"phases": {name: total}, "axes": [...],
+        self.campaigns = {}      # name -> {"runs": int, "axes": [...],
                                  #          "status", "started", "ended"}
         self.order = []
-        self.runs = {}           # (campaign, phase, label) -> {"status", "t0", "t1", "kind"}
+        self.runs = {}           # (campaign, run) -> {"status", "t0", "t1"}
         self.q_events = []       # (ts, campaign?, axes-values dict, correct, wall)
         self.cells = 0
         self.running = None       # campaign currently live in the stream
@@ -59,7 +59,7 @@ class State:
 
     def campaign(self, name):
         if name not in self.campaigns:
-            self.campaigns[name] = {"phases": {}, "axes": ["model", "syntax", "program"],
+            self.campaigns[name] = {"runs": 0, "axes": ["model", "syntax", "program"],
                                     "status": "pending", "started": None,
                                     "ended": None, "workers": []}
             self.order.append(name)
@@ -71,35 +71,38 @@ class State:
         ts = obj.get("@timestamp") or ev.get("@timestamp")
         self.last_event_ts = ts or self.last_event_ts
 
+        name = ev.get("autocog.campaign.name")
         if action == "campaign.plan":
-            c = self.campaign(ev["campaign"])
-            c["phases"] = {p["name"]: p["runs"] for p in ev.get("phases", [])}
+            c = self.campaign(name)
+            c["runs"] = int(ev.get("autocog.campaign.runs") or 0)
             if ev.get("axes"):
                 c["axes"] = ev["axes"]
+            if ev.get("workers"):
+                c["workers"] = ev["workers"]
         elif action == "campaign.start":
-            c = self.campaign(ev["campaign"])
+            c = self.campaign(name)
             c["status"], c["started"] = "running", ts
-            self.running = ev["campaign"]
-        elif action == "campaign.workers":
-            self.campaign(ev["campaign"])["workers"] = ev.get("workers", [])
+            self.running = name
         elif action == "campaign.end":
-            c = self.campaign(ev["campaign"])
+            c = self.campaign(name)
             c["status"], c["ended"] = "done", ts
-            if self.running == ev["campaign"]:
+            if self.running == name:
                 self.running = None
         elif action in ("run.start", "run.end", "run.skip"):
-            key = (ev.get("autocog.campaign.name"), ev.get("autocog.campaign.phase"),
-                   ev.get("autocog.campaign.run"))
-            rec = self.runs.setdefault(key, {"status": "running", "t0": ts, "t1": None,
-                                             "kind": ev.get("autocog.campaign.kind")})
+            key = (name, ev.get("autocog.campaign.run"))
+            rec = self.runs.setdefault(key, {"status": "running", "t0": ts,
+                                             "t1": None})
             if action == "run.start":
                 rec.update(status="running", t0=ts)
             elif action == "run.skip":
                 rec.update(status="skipped", t1=ts)
             else:
-                rec.update(status="ok" if ev.get("autocog.campaign.ok") else "failed",
-                           t1=ts)
-                if not ev.get("autocog.campaign.ok") and ev.get("error.message"):
+                # A run reports failure by carrying an error, not by omitting
+                # a success flag: a truncated line then reads as unfinished
+                # rather than as passing.
+                failed = bool(ev.get("error.message"))
+                rec.update(status="failed" if failed else "ok", t1=ts)
+                if failed:
                     self.last_error = ev["error.message"]
         elif action == "quality.run":
             # Bench events carry no campaign field: attribute them to the
@@ -126,7 +129,7 @@ class State:
 
     def run_counts(self, name):
         done = running = failed = 0
-        for (c, _, _), rec in self.runs.items():
+        for (c, _), rec in self.runs.items():
             if c != name:
                 continue
             if rec["status"] in ("ok", "skipped"):
@@ -136,7 +139,7 @@ class State:
                 failed += 1
             else:
                 running += 1
-        total = sum(self.campaigns[name]["phases"].values()) or None
+        total = self.campaigns[name].get("runs") or None
         return done, running, failed, total
 
     def rates(self, name=None):
@@ -154,7 +157,7 @@ class State:
             if span > 0:
                 qpm = 60.0 * (len(stamps) - 1) / span
         durations = []
-        for (c, _, _), rec in self.runs.items():
+        for (c, _), rec in self.runs.items():
             if name is not None and c != name:
                 continue
             if rec["status"] in ("ok", "failed") and rec["t0"] and rec["t1"]:
@@ -219,11 +222,16 @@ def fetch_stats(url, timeout=2.0):
 
 
 def render_workers(workers):
-    """Per-worker throughput/occupancy lines from the status API."""
+    """Per-worker throughput/occupancy lines from the status API.
+
+    A worker is a URL: what it hosts comes from the worker itself, not from
+    what the plan believed when it spawned it."""
     lines = [" workers:"]
     for w in workers:
-        label = f"{w['url']} [{','.join(w.get('models', []))}]"
-        stats = fetch_stats(w["url"])
+        url = w["url"] if isinstance(w, dict) else w
+        stats = fetch_stats(url)
+        hosted = stats.get("models", []) if isinstance(stats, dict) else []
+        label = f"{url} [{','.join(hosted)}]" if hosted else url
         if isinstance(stats, str):
             lines.append(f"   {label:<44} "
                          + ("busy (status endpoint stalled)" if stats == "busy"
