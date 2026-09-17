@@ -109,9 +109,16 @@ json.dump(content, open(out, 'w'), indent=2)
 \" ${INSPECT_CONTENT} ${DEMO_NAME} \$P \$CONTENT
 
                   for SYN in ${INSPECT_SYNTAX_ARGS}; do
-                    FTA=\$OUT/\$P.\$SYN.fta.json
-                    $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --fta \$FTA 2>/dev/null
-                    ${Python_EXECUTABLE} ${FTA2DOT} \$FTA > \$OUT/\$P.\$SYN.fta.dot
+                    # Two graphs per cell. The unsimplified FTA is what the
+                    # runtime evaluates; the simplified one is the same
+                    # automaton with its fixed text gathered up, which is the
+                    # one a person can actually take in (25 actions -> 5).
+                    for MODE in none full; do
+                      SUFFIX=\$SYN; [ \$MODE = full ] && SUFFIX=\$SYN.simplified
+                      FTA=\$OUT/\$P.\$SUFFIX.fta.json
+                      $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --simplify \$MODE --fta \$FTA 2>/dev/null
+                      ${Python_EXECUTABLE} ${FTA2DOT} \$FTA > \$OUT/\$P.\$SUFFIX.fta.dot
+                    done
                   done
                 done
 

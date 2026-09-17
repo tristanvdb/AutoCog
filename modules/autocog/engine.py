@@ -218,8 +218,16 @@ class Engine:
                 "tokens": node["tokens"],
             })
             kids = node.get("children") or []
-            # A simplified FTA is a chain; anything else means the frame left
-            # a decision open, which simplify() would already have refused.
+            # Simplification merges text around decisions; it does not remove
+            # them. A frame that left one open gives a tree, and taking the
+            # first branch would quietly invent a training example the model
+            # was never shown.
+            if len(kids) > 1:
+                raise ConfigError(
+                    f"Cannot export: the frame left a decision open at "
+                    f"{node.get('uid')!r} ({len(kids)} branches). A training "
+                    f"example is one rendered prompt; supply a frame that "
+                    f"determines every field.", path=node.get("uid"))
             node = kids[0] if kids else None
         return segments
 

@@ -33,53 +33,55 @@ char const * simplification_name(Simplification mode) {
 
 namespace {
 
-/// The forced chain, entry first. Throws if the FTA still has a decision in
-/// it: the caller asked to flatten a path that does not exist yet.
-std::vector<Action const *> forced_chain(FTA const & fta) {
-  std::map<std::string, Action const *> by_uid;
-  for (auto const & a : fta.actions) by_uid.emplace(a.uid, &a);
+/// Index of every action by uid, and how many actions name each as successor.
+struct Graph {
+  std::map<std::string, std::size_t> by_uid;
+  std::vector<unsigned> preds;
+  std::vector<std::size_t> sole_pred;   ///< Valid where preds == 1.
 
-  std::vector<Action const *> chain;
-  Action const * cur = fta.actions.empty() ? nullptr : &fta.actions.front();
-  while (cur) {
-    if (!std::holds_alternative<TextAction>(cur->body))
-      throw autocog::ConfigError(
-          "Cannot simplify: action '" + cur->uid + "' still generates. "
-          "Simplification flattens a path the frame has already fixed — "
-          "instantiate with a complete frame as content first.",
-          cur->uid);
-    if (cur->successors.size() > 1)
-      throw autocog::ConfigError(
-          "Cannot simplify: action '" + cur->uid + "' branches "
-          + std::to_string(cur->successors.size()) + " ways.",
-          cur->uid);
-    chain.push_back(cur);
-    if (cur->successors.empty()) break;
-    auto it = by_uid.find(cur->successors.front());
-    if (it == by_uid.end())
-      throw autocog::ConfigError(
-          "Cannot simplify: action '" + cur->uid + "' names a successor '"
-          + cur->successors.front() + "' that is not in the FTA.",
-          cur->successors.front());
-    cur = it->second;
+  explicit Graph(FTA const & fta)
+    : preds(fta.actions.size(), 0), sole_pred(fta.actions.size(), 0) {
+    for (std::size_t i = 0; i < fta.actions.size(); ++i)
+      by_uid.emplace(fta.actions[i].uid, i);
+    for (std::size_t p = 0; p < fta.actions.size(); ++p)
+      for (auto const & s : fta.actions[p].successors) {
+        auto it = by_uid.find(s);
+        if (it == by_uid.end())
+          throw autocog::ConfigError(
+              "Cannot simplify: action '" + fta.actions[p].uid
+              + "' names a successor '" + s + "' that is not in the FTA.", s);
+        preds[it->second] += 1;
+        sole_pred[it->second] = p;
+      }
   }
 
-  // Every action must be on the chain. One that is not is unreachable, and
-  // dropping it silently would mean simplifying a different prompt than the
-  // one that was asked for.
-  if (chain.size() != fta.actions.size())
-    throw autocog::ConfigError(
-        "Cannot simplify: " + std::to_string(fta.actions.size() - chain.size())
-        + " of " + std::to_string(fta.actions.size())
-        + " actions are unreachable from the entry.", "actions");
+  std::size_t index(std::string const & uid) const { return by_uid.at(uid); }
+};
 
-  return chain;
+bool is_text(Action const & a) {
+  return std::holds_alternative<TextAction>(a.body);
 }
 
-/// Two adjacent actions belong to the same segment when they describe the same
-/// thing: the same schema field at the same indices, or both structure.
-bool same_segment(Action const & a, Action const & b) {
+/// Same schema field at the same position -- what `limited` keeps apart.
+bool same_identity(Action const & a, Action const & b) {
   return a.field == b.field && a.indices == b.indices;
+}
+
+/// Can `b` be absorbed into the run ending at `a`? This is basic-block
+/// formation: the two must be text, `a` must go nowhere else, and nothing
+/// else may enter `b`, or merging would lose an edge.
+bool mergeable(Action const & a, Action const & b, unsigned b_preds,
+               Simplification mode) {
+  if (!is_text(a) || !is_text(b)) return false;
+  // Defensive, and NOT covered by the tests: the instantiator never emits a
+  // text action with two successors (branching is always a choose), so no
+  // fixture reaches this. It stays because simplify() takes any data::FTA,
+  // including one loaded from JSON, and merging a branching node would drop
+  // every successor but the first.
+  if (a.successors.size() != 1) return false;
+  if (b_preds != 1) return false;
+  if (mode == Simplification::Limited && !same_identity(a, b)) return false;
+  return true;
 }
 
 }
@@ -87,49 +89,101 @@ bool same_segment(Action const & a, Action const & b) {
 FTA simplify(FTA const & source, Simplification mode) {
   if (mode == Simplification::None) return source;
 
-  std::vector<Action const *> const chain = forced_chain(source);
+  Graph const g(source);
 
-  // Group the chain: Full is one group, Limited splits wherever the field
-  // identity changes.
-  std::vector<std::vector<Action const *>> groups;
-  for (Action const * a : chain) {
-    bool const start_new = groups.empty()
-        || (mode == Simplification::Limited && !same_segment(*groups.back().back(), *a));
-    if (start_new) groups.emplace_back();
-    groups.back().push_back(a);
+  // Group the actions into maximal runs. A run starts at an action its
+  // predecessor cannot absorb, and extends forward while the next one can be.
+  // Iterating ascending keeps the order deterministic and puts the entry's
+  // run first: actions[0] has no predecessor, so it always starts a run.
+  std::vector<int> group_of(source.actions.size(), -1);
+  std::vector<std::vector<std::size_t>> groups;
+
+  for (std::size_t i = 0; i < source.actions.size(); ++i) {
+    if (group_of[i] >= 0) continue;
+    // Not a run head if the action upstream will absorb this one: leave it
+    // for that run, which may be started later in this same loop.
+    if (g.preds[i] == 1
+        && mergeable(source.actions[g.sole_pred[i]], source.actions[i], 1, mode))
+      continue;
+    std::vector<std::size_t> run{i};
+    group_of[i] = static_cast<int>(groups.size());
+    for (;;) {
+      Action const & last = source.actions[run.back()];
+      if (last.successors.size() != 1) break;
+      std::size_t const next = g.index(last.successors.front());
+      if (group_of[next] >= 0) break;
+      if (!mergeable(last, source.actions[next], g.preds[next], mode)) break;
+      group_of[next] = static_cast<int>(groups.size());
+      run.push_back(next);
+    }
+    groups.push_back(std::move(run));
+  }
+
+  // Anything left unassigned was skipped above because a predecessor claimed
+  // it, but that predecessor's run stopped early (it had already been
+  // assigned). Give each its own run so no action is dropped.
+  for (std::size_t i = 0; i < source.actions.size(); ++i) {
+    if (group_of[i] >= 0) continue;
+    group_of[i] = static_cast<int>(groups.size());
+    groups.push_back({i});
   }
 
   FTA out;
   out.actions.reserve(groups.size());
-  for (std::size_t i = 0; i < groups.size(); ++i) {
-    auto const & group = groups[i];
-    TextAction text;
-    for (Action const * a : group) {
-      auto const & body = std::get<TextAction>(a->body);
-      text.text += body.text;
-      text.evaluate = text.evaluate || body.evaluate;
-    }
+  for (auto const & run : groups) {
+    Action const & head = source.actions[run.front()];
     Action action;
-    // The first uid in the group: it encodes the STA path, which is the
-    // provenance a weighted finetuning loss needs to key on.
-    action.uid  = group.front()->uid;
-    action.body = std::move(text);
-    if (mode == Simplification::Limited) {
-      action.field   = group.front()->field;
-      action.indices = group.front()->indices;
+    // The first uid in the run: it encodes the STA path, which is the
+    // provenance a weighted finetuning loss keys on.
+    action.uid = head.uid;
+
+    if (run.size() == 1) {
+      action.body = head.body;          // a decision, or a lone text action
+    } else {
+      TextAction text;
+      for (std::size_t idx : run) {
+        auto const & body = std::get<TextAction>(source.actions[idx].body);
+        text.text += body.text;
+        text.evaluate = text.evaluate || body.evaluate;
+      }
+      action.body = std::move(text);
+    }
+
+    // Keep the schema identity when every action in the run agrees on it.
+    // Under `limited` that is guaranteed; under `full` it happens whenever a
+    // run did not cross a field boundary, and there is no reason to discard
+    // provenance that is still unambiguous.
+    bool uniform = true;
+    for (std::size_t idx : run)
+      uniform = uniform && same_identity(source.actions[idx], head);
+    if (uniform) {
+      action.field = head.field;
+      action.indices = head.indices;
     }
     out.actions.push_back(std::move(action));
   }
-  for (std::size_t i = 0; i + 1 < out.actions.size(); ++i)
-    out.actions[i].successors.push_back(out.actions[i + 1].uid);
+
+  // Successors: whatever the run's last action pointed at, remapped to the
+  // run that now contains it. Index alignment with a choose's candidate list
+  // is preserved because a choose is never merged into anything.
+  for (std::size_t gi = 0; gi < groups.size(); ++gi) {
+    Action const & tail = source.actions[groups[gi].back()];
+    for (auto const & s : tail.successors)
+      out.actions[gi].successors.push_back(
+          out.actions[group_of[g.index(s)]].uid);
+  }
 
   out.queue_metric = source.queue_metric;
   out.queue_stop   = source.queue_stop;
-  // Vocabs mask completions, and a forced chain has none: carrying the table
-  // would be carrying a table nothing can reference.
+  // Vocabs mask completions. Carry them only if a completion survived.
+  for (auto const & a : out.actions)
+    if (std::holds_alternative<autocog::data::CompleteAction>(a.body)) {
+      out.vocabs = source.vocabs;
+      break;
+    }
 
   // Provenance is parents-by-hash: the source FTA is a parent, the mode is
-  // not — it is a property of these actions, so it gets its own field.
+  // not -- it is a property of these actions, so it gets its own field.
   out.provenance = source.provenance;
   out.provenance["fta"] = source.metadata ? source.metadata->hash : std::string{};
   out.simplified = simplification_name(mode);

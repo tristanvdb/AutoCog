@@ -344,12 +344,17 @@ class TestExportFrame:
             runtime_sta_cxx.release_fta(fta_id)
 
     def test_incomplete_frame_is_refused(self, engine, recorded_step):
-        """Simplification flattens a path the frame has already fixed. Given
-        a frame that leaves a field open, it must say so, not pick one."""
+        """A training example is one rendered prompt.
+
+        Simplification merges text around decisions; it does not remove them,
+        so an underdetermined frame still yields a tree. Walking the first
+        branch of one would invent an example the model was never shown, so
+        the export refuses instead.
+        """
         from autocog.errors import ConfigError
 
         prog, frame, content, _ = recorded_step
-        with pytest.raises(ConfigError, match="still generates"):
+        with pytest.raises(ConfigError, match="left a decision open"):
             engine.export_frame(prog, "main", {}, content, simplify="full")
 
 

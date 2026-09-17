@@ -102,24 +102,102 @@ endforeach()
 set(SC_STL ${STL_FIXTURES}/language/structures/test_array_fields.stl)
 set(SC_GOLDEN ${E2E_GOLDEN}/language/structures/test_array_fields.collector.golden.json)
 
-# Simplification flattens a path the frame has already fixed. Asked to flatten
-# an FTA that still generates, it must say so rather than pick a branch.
+# A partly determined FTA still simplifies: decisions survive as boundaries and
+# the fixed text between them is gathered up. This is what makes an FTA
+# readable -- the mcq demos drop from 25 actions to 5 -- and it is only safe
+# because the merge never crosses a branch. The invariant is that the SET OF
+# PATHS through the automaton is unchanged, text for text: merging two actions
+# requires the first to go nowhere else and nothing else to enter the second,
+# so paths are in bijection and no route gains, loses or reorders a character.
 add_test(
-    NAME simplify_refuses_an_incomplete_frame
+    NAME simplify_preserves_every_path
     COMMAND ${CMAKE_COMMAND} -E env
         bash -c "
             set -e
             D=$(mktemp -d)
-            $<TARGET_FILE:autocog_stlc> --sta \$D/sta -I ${STLIB} ${SC_STL} 2>/dev/null
-            if $<TARGET_FILE:autocog_ista> --sta \$D/sta --prompt collector --syntax ${SYNTAX} --search ${SEARCH} --content {} --simplify full --fta /dev/null 2>\$D/err; then
-                echo 'simplified an FTA that still generates'; exit 1
-            fi
-            grep -q 'still generates' \$D/err || { echo 'wrong error:'; cat \$D/err; exit 1; }
+            DEMOS=${PROJECT_SOURCE_DIR}/share/demos/mcq
+            $<TARGET_FILE:autocog_stlc> --sta \$D/sta -I ${STLIB} -I \$DEMOS \$DEMOS/strings-select.stl 2>/dev/null
+            ${Python_EXECUTABLE} -c \"
+import json, sys
+json.dump(json.load(open(sys.argv[1]))['strings-select.main'], open(sys.argv[2], 'w'))
+\" \$DEMOS/inspect/content.json \$D/determined.json
+            echo '{}' > \$D/open.json
+            for FIXTURE in determined open; do
+              for MODE in none limited full; do
+                $<TARGET_FILE:autocog_ista> --sta \$D/sta --prompt main --syntax ${SYNTAX} --search ${SEARCH} --content \$D/\$FIXTURE.json --simplify \$MODE --fta \$D/\$FIXTURE.\$MODE.fta 2>/dev/null
+              done
+            done
+            ${Python_EXECUTABLE} -c \"
+import json, sys
+
+def paths(path):
+    fta = json.load(open(path))
+    by_uid = {a['uid']: a for a in fta['actions']}
+    out = []
+
+    def walk(action, prefix, depth):
+        if depth > 400:
+            raise SystemExit('cycle or runaway in ' + path)
+        kind = action['type']
+        if kind == 'text':
+            text = prefix + action['text']
+        elif kind == 'complete':
+            # Generated: the text is not known statically, but the action is
+            # never merged, so its identity must survive.
+            text = prefix + '<complete:' + action['uid'] + '>'
+        else:
+            text = prefix
+        succ = action['successors']
+        if not succ:
+            out.append(text); return
+        if kind == 'choose':
+            choices = action['choices']
+            if not choices:
+                # A choose with no candidates: instantiating without content
+                # leaves a select with nothing to select from. Not evaluable,
+                # but legal for inspection, and it still has a continuation.
+                walk(by_uid[succ[0]], text, depth + 1)
+                return
+            # Successors are index-aligned with candidates when there is one
+            # per candidate; a value choose has a single continuation that
+            # every candidate shares.
+            for i, choice in enumerate(choices):
+                nxt = succ[i] if len(succ) == len(choices) else succ[0]
+                walk(by_uid[nxt], text + str(choice), depth + 1)
+        else:
+            for s in succ:
+                walk(by_uid[s], text, depth + 1)
+
+    walk(fta['actions'][0], '', 0)
+    return sorted(out), len(fta['actions'])
+
+for fixture, why in (('determined', 'a forced path'),
+                     ('open', 'branches and a join')):
+    base, n_base = paths('\$D/' + fixture + '.none.fta')
+    if len(base) < 2:
+        print(fixture, 'has a single path: it cannot show branch survival')
+        sys.exit(1)
+    for mode in ('limited', 'full'):
+        got, n = paths('\$D/' + fixture + '.' + mode + '.fta')
+        if got != base:
+            print(fixture, mode, 'changed the paths:', len(got), 'vs', len(base))
+            for a, b in zip(got, base):
+                if a != b:
+                    print(' got :', repr(a[:200]))
+                    print(' want:', repr(b[:200]))
+                    break
+            sys.exit(1)
+        if n >= n_base:
+            print(fixture, mode, 'did not reduce the count:', n, '>=', n_base)
+            sys.exit(1)
+        print('OK %-11s %-8s %2d actions (from %2d), %d paths unchanged (%s)'
+              % (fixture, mode, n, n_base, len(got), why))
+\"
             rm -rf \$D
         "
 )
-set_tests_properties(simplify_refuses_an_incomplete_frame PROPERTIES
-    LABELS "simplify" TIMEOUT 30)
+set_tests_properties(simplify_preserves_every_path PROPERTIES
+    LABELS "simplify" TIMEOUT 60)
 
 # The two must never be combined: simplification is for finetuning export,
 # scoring is for friction, and they disagree about what the token stream is.
