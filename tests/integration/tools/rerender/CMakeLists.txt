@@ -37,7 +37,7 @@ add_test(
             set -e
             STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${SC_STL} 2>/dev/null
-            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/complete.json --search ${SEARCH} --content ${SC_GOLDEN} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/complete.json --search ${SEARCH} --simplify none --content ${SC_GOLDEN} --fta \$FTA 2>/dev/null
             $<TARGET_FILE:autocog_xfta> --fta \$FTA --rng --score-all --ftt \$FTT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -73,7 +73,7 @@ add_test(
             set -e
             STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${SC_STL} 2>/dev/null
-            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/complete.json --search ${SEARCH} --content ${SC_GOLDEN} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${PROJECT_SOURCE_DIR}/share/syntax/complete.json --search ${SEARCH} --simplify none --content ${SC_GOLDEN} --fta \$FTA 2>/dev/null
             $<TARGET_FILE:autocog_xfta> --fta \$FTA --rng --ftt \$FTT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
 import json, sys
@@ -88,6 +88,54 @@ print('OK: text actions stay free unless asked for')
         "
 )
 set_tests_properties(rerender_no_score_by_default PROPERTIES LABELS "rerender;score" TIMEOUT 30)
+
+# The DEFAULT path, which is simplified. Merging the fixed text leaves no node
+# for a field the content supplied, so the FTT alone cannot reconstruct the
+# frame — `psta --content` seeds it with the document ista was given and the
+# FTT overwrites what it recorded. The pair has to agree with the unsimplified
+# walk, or the default quietly produces different frames from `--simplify none`.
+#
+# This is the complement of the round-trips below: those pin `--simplify none`
+# precisely so the frame comes out of the token stream, which is what makes
+# them a test of the renderer rather than of the seed.
+add_test(
+    NAME rerender_default_is_simplified_and_fills
+    COMMAND ${CMAKE_COMMAND} -E env
+        bash -c "
+            set -e
+            D=$(mktemp -d)
+            $<TARGET_FILE:autocog_stlc> --sta \$D/sta -I ${STLIB} ${SC_STL} 2>/dev/null
+            SYN=${PROJECT_SOURCE_DIR}/share/syntax/complete.json
+            # default (simplified)
+            $<TARGET_FILE:autocog_ista> --sta \$D/sta --prompt test --syntax \$SYN --search ${SEARCH} --content ${SC_GOLDEN} --fta \$D/def.fta 2>/dev/null
+            $<TARGET_FILE:autocog_xfta> --fta \$D/def.fta --rng --ftt \$D/def.ftt 2>/dev/null
+            $<TARGET_FILE:autocog_psta> --sta \$D/sta --ftt \$D/def.ftt --prompt test --frame \$D/bare.frame 2>/dev/null
+            $<TARGET_FILE:autocog_psta> --sta \$D/sta --ftt \$D/def.ftt --prompt test --content ${SC_GOLDEN} --frame \$D/filled.frame 2>/dev/null
+            # explicit none
+            $<TARGET_FILE:autocog_ista> --sta \$D/sta --prompt test --syntax \$SYN --search ${SEARCH} --simplify none --content ${SC_GOLDEN} --fta \$D/raw.fta 2>/dev/null
+            $<TARGET_FILE:autocog_xfta> --fta \$D/raw.fta --rng --ftt \$D/raw.ftt 2>/dev/null
+            $<TARGET_FILE:autocog_psta> --sta \$D/sta --ftt \$D/raw.ftt --prompt test --frame \$D/raw.frame 2>/dev/null
+            ${Python_EXECUTABLE} -c \"
+import json, sys
+load = lambda p: json.load(open(p))
+if load('\$D/def.fta')['actions'] == load('\$D/raw.fta')['actions']:
+    print('the default did not simplify'); sys.exit(1)
+want = load('${SC_GOLDEN}')
+if load('\$D/raw.frame') != want:
+    print('unsimplified walk lost the frame'); sys.exit(1)
+if load('\$D/bare.frame') == want:
+    print('a simplified FTT reconstructed the frame with no content:'
+          ' the fixture does not exercise the seed'); sys.exit(1)
+if load('\$D/filled.frame') != want:
+    print('psta --content did not fill:', json.dumps(load('\$D/filled.frame')))
+    sys.exit(1)
+print('OK: default simplifies; --content recovers the same frame')
+\"
+            rm -rf \$D
+        "
+)
+set_tests_properties(rerender_default_is_simplified_and_fills PROPERTIES
+    LABELS "rerender;simplify" TIMEOUT 30)
 
 foreach(syntax_name complete indent-index indent stripped chatml llama2chat llama3chat special)
   set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/${syntax_name}.json)
@@ -110,7 +158,7 @@ foreach(syntax_name complete indent-index indent stripped chatml llama2chat llam
                 STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
                 STL_DIR=$(dirname ${stl_path})
                 $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} -I \$STL_DIR ${stl_path} 2>/dev/null
-                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${prompt_name} --syntax ${SYNTAX} --search ${SEARCH} --content ${golden_path} --fta \$FTA 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${prompt_name} --syntax ${SYNTAX} --search ${SEARCH} --simplify none --content ${golden_path} --fta \$FTA 2>/dev/null
                 $<TARGET_FILE:autocog_xfta> --fta \$FTA --rng --ftt \$FTT 2>/dev/null
                 $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt ${prompt_name} --frame \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"

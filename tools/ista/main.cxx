@@ -35,15 +35,22 @@ static void print_usage(char const * prog) {
               << "  --syntax <file|json>   Syntax config: a file path or inline JSON\n"
               << "  --search <file|json>   Search config: a file path or inline JSON\n"
               << "  --content <file|json>  Initial content: a file path or inline JSON\n"
-              << "  --simplify <mode>      Collapse a fully-determined FTA (one supplied a\n"
-              << "                         complete frame as --content) for finetuning export:\n"
-              << "                           none    (default) leave it alone\n"
+              << "  --simplify <mode>      Gather adjacent fixed text into as few actions as\n"
+              << "                         the decisions allow. ON BY DEFAULT (full): the\n"
+              << "                         per-action tokenization of an unsimplified FTA is\n"
+              << "                         NOT the natural tokenization of the text it renders,\n"
+              << "                         and merging fixes that at every seam it can reach.\n"
+              << "                           none    one action per renderer step\n"
               << "                           limited one action per schema field, plus the\n"
               << "                                   structure between them, each keeping the\n"
               << "                                   uid of the STA node it came from\n"
-              << "                           full    one action: the flat token list\n"
-              << "                         Merging text re-tokenizes across the seams, so a\n"
-              << "                         simplified FTA cannot be scored (xfta refuses it).\n"
+              << "                           full    (default) merge regardless of field; on a\n"
+              << "                                   complete frame that is one action, the\n"
+              << "                                   flat token list\n"
+              << "                         Generated values are never merged (they are not text\n"
+              << "                         actions), so psta still recovers them; fields the\n"
+              << "                         content supplied come back from `psta --content`.\n"
+              << "                         xfta refuses --score-all on a simplified FTA.\n"
               << "  --fta <file>           Output FTA JSON (/dev/stdout for stdout)\n"
               << "  --verbose [LEVEL]      Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  --version              Show version\n"
@@ -53,7 +60,7 @@ static void print_usage(char const * prog) {
 
 static int run(int argc, char ** argv) {
     std::string sta_file, prompt_name, syntax_arg, search_arg, content_arg, fta_file;
-    std::string simplify_arg;
+    std::string simplify_arg = "full";
 
     autocog::init_console_logger();
 

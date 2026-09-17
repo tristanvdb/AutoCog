@@ -110,8 +110,12 @@ class Engine:
                 artifacts["perf"] = self.last_perf
             try:
                 # The backend stored the FTT; walk it from the store (model-free).
+                # content seeds the frame: harmless here (this FTA is
+                # unsimplified, so every field has a node) and correct if the
+                # instantiation ever gains simplification, where fields the
+                # content supplied have no node to walk.
                 frame = runtime_sta_cxx.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id
+                    program.id, prompt_name, ftt_id, content
                 )
 
                 if record_kinds:

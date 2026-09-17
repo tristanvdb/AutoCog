@@ -40,7 +40,7 @@ foreach(golden_path ${GOLDEN_FILES})
                 STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
                 STL_DIR=$(dirname ${stl_path})
                 $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} -I \$STL_DIR ${stl_path} 2>/dev/null
-                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${prompt_name} --syntax ${SYNTAX} --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${prompt_name} --syntax ${SYNTAX} --search ${SEARCH} --simplify none --content {} --fta \$FTA 2>/dev/null
                 $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
                 $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt ${prompt_name} --frame \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
@@ -75,7 +75,7 @@ add_test(
             set -e
             STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
             $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${DN_STL} 2>/dev/null
-            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --content ${DN_CONTENT} --fta \$FTA 2>/dev/null
+            $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --simplify none --content ${DN_CONTENT} --fta \$FTA 2>/dev/null
             $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
             $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt test --frame \$RESULT 2>/dev/null
             ${Python_EXECUTABLE} -c \"
@@ -113,7 +113,7 @@ foreach(variant min max mid mixed asym)
                 set -e
                 STA=$(mktemp) FTA=$(mktemp) FTT=$(mktemp) RESULT=$(mktemp)
                 $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} ${VA_STL} 2>/dev/null
-                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --content ${VA_CONTENT} --fta \$FTA 2>/dev/null
+                $<TARGET_FILE:autocog_ista> --sta \$STA --prompt test --syntax ${SYNTAX} --search ${SEARCH} --simplify none --content ${VA_CONTENT} --fta \$FTA 2>/dev/null
                 $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
                 $<TARGET_FILE:autocog_psta> --sta \$STA --ftt \$FTT --prompt test --frame \$RESULT 2>/dev/null
                 ${Python_EXECUTABLE} -c \"
@@ -219,7 +219,7 @@ foreach(case "test_prompt_with_fields.person" "test_basic_record.test")
                 $<TARGET_FILE:autocog_stlc> --sta \$STA -I ${STLIB} \
                     ${STL_FIXTURES}/language/structures/${sv_name}.stl 2>/dev/null
                 $<TARGET_FILE:autocog_ista> --sta \$STA --prompt ${sv_prompt} \
-                    --syntax ${SYNTAX} --search ${SEARCH} --content {} --fta \$FTA 2>/dev/null
+                    --syntax ${SYNTAX} --search ${SEARCH} --simplify none --content {} --fta \$FTA 2>/dev/null
                 ${Python_EXECUTABLE} ${COMPARE} --force-validate --validate-only \$FTA
                 $<TARGET_FILE:autocog_xfta> --rng --seed 42 --fta \$FTA --ftt \$FTT 2>/dev/null
                 ${Python_EXECUTABLE} ${COMPARE} --force-validate --format ftt --validate-only \$FTT

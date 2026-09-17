@@ -27,6 +27,10 @@ set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 set(INSPECT_SYNTAXES complete index-one index-none special
     CACHE STRING "Syntaxes rendered by the mcq inspection graphs")
 
+# Also emit the unsimplified FTA (one node per renderer step). For debugging
+# the instantiator; noise when reading a program.
+set(INSPECT_RAW "" CACHE STRING "Also emit unsimplified FTA graphs (set to 1)")
+
 # A CMake list interpolates with semicolons, which `for SYN in ...` reads as
 # command separators.
 string(REPLACE ";" " " INSPECT_SYNTAX_ARGS "${INSPECT_SYNTAXES}")
@@ -109,16 +113,19 @@ json.dump(content, open(out, 'w'), indent=2)
 \" ${INSPECT_CONTENT} ${DEMO_NAME} \$P \$CONTENT
 
                   for SYN in ${INSPECT_SYNTAX_ARGS}; do
-                    # Two graphs per cell. The unsimplified FTA is what the
-                    # runtime evaluates; the simplified one is the same
-                    # automaton with its fixed text gathered up, which is the
-                    # one a person can actually take in (25 actions -> 5).
-                    for MODE in none full; do
-                      SUFFIX=\$SYN; [ \$MODE = full ] && SUFFIX=\$SYN.simplified
-                      FTA=\$OUT/\$P.\$SUFFIX.fta.json
-                      $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --simplify \$MODE --fta \$FTA 2>/dev/null
-                      ${Python_EXECUTABLE} ${FTA2DOT} \$FTA > \$OUT/\$P.\$SUFFIX.fta.dot
-                    done
+                    # ista simplifies by default, which is the graph worth
+                    # reading: the same automaton with its fixed text gathered
+                    # up (25 actions to 5 on these demos). The unsimplified
+                    # one is one node per renderer step -- useful when the
+                    # instantiator itself is the suspect, and noise otherwise.
+                    FTA=\$OUT/\$P.\$SYN.fta.json
+                    $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --fta \$FTA 2>/dev/null
+                    ${Python_EXECUTABLE} ${FTA2DOT} \$FTA > \$OUT/\$P.\$SYN.fta.dot
+                    if [ -n \"${INSPECT_RAW}\" ]; then
+                      RAW=\$OUT/\$P.\$SYN.raw.fta.json
+                      $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --simplify none --fta \$RAW 2>/dev/null
+                      ${Python_EXECUTABLE} ${FTA2DOT} \$RAW > \$OUT/\$P.\$SYN.raw.fta.dot
+                    fi
                   done
                 done
 

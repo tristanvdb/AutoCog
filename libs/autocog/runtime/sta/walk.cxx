@@ -126,7 +126,8 @@ autocog::types::Document walk_ftt_to_frame(
     autocog::data::FTT const & ftt,
     autocog::data::STA const & sta,
     std::string const & prompt_name,
-    std::string const & metric
+    std::string const & metric,
+    autocog::types::Document const & content
 ) {
     auto const & prompt = sta.prompts.at(prompt_name);
     auto const & fields = prompt.fields;
@@ -149,7 +150,13 @@ autocog::types::Document walk_ftt_to_frame(
         if (s > best) { best = s; path = candidate; }
     }
 
-    Doc frame{ Doc::Object{} };
+    // Seed from the content the prompt was instantiated with, so fields a
+    // simplified FTA merged away are still present; the walk below overwrites
+    // whatever the FTT actually recorded. Seeding rather than merging
+    // afterwards also means an array arrives already populated, so a generated
+    // element written at index i lands on top of the given ones instead of
+    // padding the gap with nulls.
+    Doc frame = is_obj(content) ? content : Doc{ Doc::Object{} };
     for (auto const * node : path) {
         if (!node->field) continue;  // header/branch/endl: no value
 

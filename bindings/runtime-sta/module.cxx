@@ -139,13 +139,21 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
     // ===== FTT -> frame =====
     module.def("walk_ftt_to_frame",
         [](std::string const & program_id, std::string const & prompt_name,
-           std::string const & ftt_id) -> py::object {
+           std::string const & ftt_id, py::object content) -> py::object {
             auto const & program = data::datastore().sta.get(program_id);
             auto const & ftt     = data::datastore().ftt.get(ftt_id);
-            auto frame = sta::walk_ftt_to_frame(ftt, program, prompt_name);
+            auto content_doc = content.is_none() ? autocog::types::Document{}
+                                                 : to_document(content);
+            auto frame = sta::walk_ftt_to_frame(ftt, program, prompt_name,
+                                                "best", content_doc);
             return codec::to_py(frame);
         },
         "Walk a stored FTT (by handle) into the prompt's frame; returns the frame dict. "
-        "Field values are verbatim: a select field holds the emitted index.",
-        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"));
+        "Field values are verbatim: a select field holds the emitted index.\n\n"
+        "content seeds the frame with the document the prompt was instantiated "
+        "from. A simplified FTA has no node for a field its content supplied, so "
+        "those fields would otherwise be absent; the FTT overwrites whatever it "
+        "recorded. Harmless on an unsimplified FTT, where every field has a node.",
+        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"),
+        py::arg("content") = py::none());
 }

@@ -183,7 +183,7 @@ class RemoteBackend:
             ftt_id = self._sta.read_ftt(ftt)
             try:
                 frame = self._sta.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id
+                    program.id, prompt_name, ftt_id, content
                 )
 
                 if record_kinds:
@@ -224,7 +224,7 @@ class RemoteBackend:
             ftt_id = self._sta.read_ftt(ftt)
             try:
                 frame = self._sta.walk_ftt_to_frame(
-                    program.id, prompt_name, ftt_id
+                    program.id, prompt_name, ftt_id, content
                 )
                 if record_kinds:
                     if "frame" in record_kinds:

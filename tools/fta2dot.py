@@ -9,25 +9,28 @@ Nodes are HTML tables rather than one-line labels, because the interesting
 part of an action is its payload and a truncated label hides exactly that.
 Each node shows its uid, the schema field it serves (if any), and its body:
 
-    text       the literal rendering, wrapped, with newlines shown as |
+    text       the literal rendering IN FULL, wrapped, newlines marked
     complete   the generation budget and the vocab/stop masks
     choose     one row per candidate, and the edge for candidate i LEAVES
                FROM THAT ROW -- successors are index-aligned with choices,
                so this is the one place where the alignment is visible
                rather than asserted.
 
-An FTA instantiated from a complete frame has no decisions left and is one
-long chain; `ista --simplify full` collapses that chain and is usually what
-you want before reading a graph of any size.
+Nothing is truncated. Pass `ista --simplify full` first unless you are
+debugging the instantiator: it gathers the fixed text into as few actions as
+the decisions allow (25 actions to 5 on the mcq demos), which is the
+difference between a graph you read and a graph you scroll.
 """
 
 import html
 import json
 import sys
 
-WIDTH = 48          # characters per line inside a node, before wrapping
-MAX_LINES = 8       # text longer than this is elided in the middle
-MAX_CHOICES = 12    # candidate rows before eliding
+WIDTH = 72          # characters per line inside a node, before wrapping
+
+# Nothing is elided. The whole point of reading these is to see exactly what
+# the model will be shown, and a graph that hides the middle of a prompt is
+# worse than no graph -- it looks like it answered the question.
 
 COLOURS = {
     "header": "#fff3c4",      # the system prompt and schema preview
@@ -54,19 +57,23 @@ def _wrap(s, width):
     return [s[i:i + width] for i in range(0, len(s), width)] or [""]
 
 
-def _text_rows(text, width, max_lines):
-    """Wrapped lines of a literal, eliding the middle of a long one."""
-    lines = []
-    for para in text.split("\n"):
-        lines.extend(_wrap(para, width))
-        lines.append("⏎")          # the newline itself, made visible
-    if lines and lines[-1] == "⏎" and not text.endswith("\n"):
-        lines.pop()
-    if len(lines) > max_lines:
-        head = lines[: max_lines // 2]
-        tail = lines[-(max_lines // 2):]
-        lines = head + [f"... {len(lines) - len(head) - len(tail)} more lines ..."] + tail
-    return lines
+def _text_rows(text, width):
+    """Every line of a literal, wrapped, in full.
+
+    A trailing pilcrow marks a real newline. Whitespace at the end of a
+    rendering is load-bearing -- it is what the model gets conditioned on --
+    and it is otherwise indistinguishable from the node's own line break."""
+    rows = []
+    paragraphs = text.split("\n")
+    for i, para in enumerate(paragraphs):
+        last_para = (i == len(paragraphs) - 1)
+        if last_para and para == "" and len(paragraphs) > 1:
+            break                      # the final newline is already marked
+        chunks = _wrap(para, width)
+        for j, chunk in enumerate(chunks):
+            mark = "¶" if (not last_para and j == len(chunks) - 1) else ""
+            rows.append(chunk + mark)
+    return rows
 
 
 def _kind_colour(uid, atype):
@@ -99,7 +106,7 @@ def _node(a, width, colour):
         body = "".join(
             f'<TR><TD ALIGN="LEFT"><FONT FACE="monospace" POINT-SIZE="9">'
             f'{_cell(line)}</FONT></TD></TR>'
-            for line in _text_rows(a.get("text", ""), width, MAX_LINES))
+            for line in _text_rows(a.get("text", ""), width))
         rows.append(body)
 
     elif atype == "complete":
@@ -125,20 +132,13 @@ def _choose_node(a, width, colour):
     rows.append('<TR><TD COLSPAN="2" ALIGN="LEFT"><FONT POINT-SIZE="8" '
                 f'COLOR="#666666">choose 1 of {len(choices)}</FONT></TD></TR>')
 
-    shown = list(enumerate(choices))
-    if len(shown) > MAX_CHOICES:
-        keep = MAX_CHOICES // 2
-        shown = shown[:keep] + [(None, None)] + shown[-keep:]
-    for i, c in shown:
-        if i is None:
-            rows.append('<TR><TD COLSPAN="2"><FONT POINT-SIZE="8">'
-                        f'... {len(choices) - MAX_CHOICES} more ...</FONT></TD></TR>')
-            continue
-        text = "\n".join(_text_rows(str(c), width - 6, 3))
+    for i, c in enumerate(choices):
+        text = "<BR ALIGN='LEFT'/>".join(
+            _cell(line) for line in _text_rows(str(c), width - 6))
         rows.append(
             f'<TR><TD PORT="c{i}" WIDTH="22"><FONT POINT-SIZE="8">{i}</FONT></TD>'
             f'<TD ALIGN="LEFT"><FONT FACE="monospace" POINT-SIZE="9">'
-            f'{_cell(text)}</FONT></TD></TR>')
+            f'{text}</FONT></TD></TR>')
     return ('<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" '
             f'BGCOLOR="{colour}">' + "".join(rows) + "</TABLE>")
 
