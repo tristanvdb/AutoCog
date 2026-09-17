@@ -79,7 +79,7 @@ def test_multi_model_worker(worker):
     import autocog
     from autocog.runtime.sta import runtime_sta_cxx as rt
 
-    prog = autocog.compile("share/demos/mcq/select.stl",
+    prog = autocog.compile("share/demos/mcq/strings-select.stl",
                            includes=["share/demos/mcq"])
     syn = rt.load_syntax("share/syntax/complete.json")
     sea = rt.load_search("share/search/default.json")
@@ -164,7 +164,7 @@ def test_engine_pool_dispatch(rng_workers):
 
         b.evaluate_prompt_async = wrapped
 
-    prog = autocog.compile("share/demos/mcq/select.stl",
+    prog = autocog.compile("share/demos/mcq/strings-select.stl",
                            includes=["share/demos/mcq"])
 
     async def one(i):
@@ -308,7 +308,7 @@ def test_executor_redoes_legacy_partial(tmp_path, worker, monkeypatch):
         "phases": [{"name": "p", "runs": [
             {"kind": "quality", "model": "rng",
              "data": "share/benchmarks/quality/questions.json",
-             "questions": 2, "syntaxes": ["complete"], "demos": ["select"],
+             "questions": 2, "syntaxes": ["complete"], "demos": ["strings-select"],
              "out": "partial"}]}]}))
     out = tmp_path / "legacy" / "partial"
     out.mkdir(parents=True)
@@ -389,7 +389,7 @@ def test_resume_retries_failed_samples(tmp_path, worker, monkeypatch):
         "phases": [{"name": "p", "runs": [
             {"kind": "quality", "model": "rng",
              "data": "share/benchmarks/quality/questions.json",
-             "questions": 2, "syntaxes": ["complete"], "demos": ["select"],
+             "questions": 2, "syntaxes": ["complete"], "demos": ["strings-select"],
              "out": "r"}]}]}))
     out = tmp_path / "retry" / "r"
     out.mkdir(parents=True)
@@ -400,17 +400,17 @@ def test_resume_retries_failed_samples(tmp_path, worker, monkeypatch):
     qs = load_questions("share/benchmarks/quality/questions.json",
                         load_formatter(""), limit=2)
     (out / "results-old.ndjson").write_text("".join(_json.dumps(r) + "\n" for r in [
-        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "select",
+        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "strings-select",
          "autocog.bench.question": qs[0]["id"], "autocog.bench.correct": True},
-        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "select",
+        {"autocog.bench.syntax": "complete", "autocog.bench.demo": "strings-select",
          "autocog.bench.question": qs[1]["id"], "autocog.bench.correct": None,
          "error.message": "RemoteError: worker died"},
     ]))
 
     from autocog.bench.quality import existing_samples
     have = existing_samples(str(out))
-    assert ("complete", "select", qs[0]["id"]) in have      # measured
-    assert ("complete", "select", qs[1]["id"]) not in have  # failed -> retry
+    assert ("complete", "strings-select", qs[0]["id"]) in have      # measured
+    assert ("complete", "strings-select", qs[1]["id"]) not in have  # failed -> retry
 
     _, failures = run_campaign(str(desc), workers=[worker], log=lambda m: None)
     assert failures == []

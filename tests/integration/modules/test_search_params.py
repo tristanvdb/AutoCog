@@ -122,7 +122,7 @@ def test_sum_ranking_prefers_short_choice_on_rng(repo_root, tmp_path):
     search_file = tmp_path / "sum.json"
     search_file.write_text(json.dumps(search))
 
-    prog = autocog.compile(str(repo_root / "share" / "demos" / "mcq" / "repeat.stl"),
+    prog = autocog.compile(str(repo_root / "share" / "demos" / "mcq" / "strings-repeat.stl"),
                            includes=[str(repo_root / "share" / "demos" / "mcq")])
 
     engine = Engine(model=None,
@@ -144,7 +144,7 @@ def test_empty_choices_is_user_error(repo_root):
     from autocog.engine import Engine
     from autocog.errors import AutoCogError
 
-    prog = autocog.compile(str(repo_root / "share" / "demos" / "mcq" / "select.stl"),
+    prog = autocog.compile(str(repo_root / "share" / "demos" / "mcq" / "strings-select.stl"),
                            includes=[str(repo_root / "share" / "demos" / "mcq")])
     engine = Engine(model=None,
                     syntax=str(repo_root / "share" / "syntax" / "complete.json"),

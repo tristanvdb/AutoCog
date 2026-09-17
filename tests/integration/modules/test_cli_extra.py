@@ -50,7 +50,7 @@ class TestCLIJsonMode:
 
     def test_json_invalid_input(self, repo_root):
         """--json with malformed --input JSON hits the JSONDecodeError --json arm."""
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         r = subprocess.run(
             [sys.executable, "-m", "autocog", "--json", "run",
              "--stl", stl, "--rng", "--input", "not valid json"],
@@ -107,7 +107,7 @@ class TestServerCLI:
             self._stop(proc)
 
     def test_rpc_cli(self, repo_root):
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         port, proc = self._launch(["rpc", "--stl", stl, "--rng"], "/schema")
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/schema") as resp:
@@ -117,7 +117,7 @@ class TestServerCLI:
             self._stop(proc)
 
     def test_serve_cli(self, repo_root):
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         port, proc = self._launch(["serve", "--stl", stl, "--rng"], "/schema")
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/schema") as resp:

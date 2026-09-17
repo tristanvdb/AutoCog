@@ -17,54 +17,18 @@ def from_repo_root(repo_root, monkeypatch):
     monkeypatch.chdir(repo_root)
 
 
-def test_label_mechanism(tmp_path):
-    """The `label` answer mechanism: choices render pre-labelled, the model
-    emits one letter from the stlib `letter` vocab, and the letter maps back
-    to a choice text so accuracy is comparable with select/repeat."""
-    from autocog.bench.quality import (LABELS, choices_for, is_label_demo,
-                                       score_answer)
-
-    q = {"choices": ["Water", "Fire"], "answer": "Fire"}
-    assert is_label_demo("label") and not is_label_demo("select")
-    assert choices_for("label", q["choices"]) == ["A. Water", "B. Fire"]
-    assert choices_for("select", ["Water"]) == ["Water"]
-    # ARC choices arrive pre-labelled by the converter: never double-label
-    arc = ["A: parasitism", "B: commensalism", "C: mutualism"]
-    assert choices_for("label", arc) == arc
-    assert score_answer("label", "C", {"choices": arc,
-                                       "answer": "C: mutualism"}) \
-        == ("C: mutualism", True)
-    assert score_answer("label", "B", q) == ("Fire", True)
-    assert score_answer("label", "b\n", q) == ("Fire", True)
-    assert score_answer("label", "A", q) == ("Water", False)
-    # A letter past the choice count is an unusable label: a MISS, recorded
-    # as emitted — never a dropped datapoint.
-    assert score_answer("label", "H", q) == ("H", False)
-    assert score_answer("label", None, q) == (None, None)
-    assert score_answer("select", "Water", q) == ("Water", False)
-    assert LABELS[:2] == "AB"
-
-    events = run_quality(questions=3, syntaxes=["complete"], demos=["label"],
-                         out=str(tmp_path), log=lambda *_: None)
-    assert len(events) == 3
-    for ev in events:
-        assert ev["autocog.bench.demo"] == "label"
-        assert ev.get("error.message") is None
-        assert ev["autocog.bench.correct"] in (True, False)   # never dropped
-
-
 def test_multiprompt_demos(tmp_path):
     """The multi-prompt MCQ programs run end to end: two-stage (hyp),
     retry loops (iter) and mapped per-choice calls (annot, one sub-prompt
     per choice).
 
-    Every frame re-encodes, select-annot included. It used to be the
+    Every frame re-encodes, record-index-annot included. It used to be the
     exception — its frame held the resolved record the walker had written
     over the emitted index, and no encoder could match that back to a
     rendered choice. Now the frame holds the index, so there is nothing to
     invert and the friction metrics come out for every demo."""
-    for demo, min_steps in (("select-hyp", 2), ("select-iter", 1),
-                            ("repeat-annot", 5), ("select-annot", 4)):
+    for demo, min_steps in (("strings-select-hyp", 2), ("strings-select-iter", 1),
+                            ("record-value-annot", 5), ("record-index-annot", 4)):
         events = run_quality(questions=2, syntaxes=["complete"], demos=[demo],
                              out=str(tmp_path / demo), log=lambda *_: None)
         assert len(events) == 2, demo
@@ -106,7 +70,7 @@ def test_perf_failed_cell_continues(tmp_path):
 
 def test_quality_rng(tmp_path):
     events = run_quality(out=str(tmp_path), questions=2,
-                         syntaxes=["complete"], demos=["select"],
+                         syntaxes=["complete"], demos=["strings-select"],
                          log=lambda *_: None)
     assert len(events) == 2
     for ev in events:
@@ -134,7 +98,7 @@ def test_quality_formatter(tmp_path):
 
     events = run_quality(data=str(data), formatter=f"{fmt}:to_mcq",
                          out=str(tmp_path), syntaxes=["complete"],
-                         demos=["select"], log=lambda *_: None)
+                         demos=["strings-select"], log=lambda *_: None)
     assert len(events) == 1
     assert events[0]["autocog.bench.n_choices"] == 2
 

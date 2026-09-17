@@ -48,7 +48,7 @@ INT_KEYS = [
 
 class TestPerfSurface:
     def test_last_perf_populated(self, engine, repo_root):
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         assert engine.last_perf is None
         engine.set_seed(42)
         engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
@@ -62,7 +62,7 @@ class TestPerfSurface:
     def test_reset_and_deltas(self, engine, repo_root):
         """Per-eval deltas: two identical evaluations report identical token
         counters (the second must not include the first's accumulation)."""
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         inputs = dict(topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         engine.set_seed(42)
         engine.run(prog, **inputs)
@@ -84,7 +84,7 @@ class TestPerfSurface:
         from autocog.runtime.sta import runtime_sta_cxx
         from autocog.backend.llama import backend_llama_cxx
 
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         content = {"topic": "Sci", "question": "2+2?",
                    "choices": ["3", "4", "5", "6"]}
         fta_id = runtime_sta_cxx.instantiate(
@@ -137,7 +137,7 @@ class TestPerfSurfaceRealModel:
             syntax=repo(repo_root, "share", "syntax", "complete.json"),
             search=repo(repo_root, "share", "search", "default.json"),
         )
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         content = {"topic": "Sci", "question": "2+2?",
                    "choices": ["3", "4", "5", "6"]}
         fta_id = runtime_sta_cxx.instantiate(
@@ -174,7 +174,7 @@ class TestScoreFrame:
         logprob and the rendered text matches the recorded evaluation."""
         from autocog.recorder import Recorder
 
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         inputs = dict(topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         with tempfile.TemporaryDirectory() as tmp:
             rec = Recorder(kinds={"frame"}, path=tmp)
@@ -203,7 +203,7 @@ class TestScoreFrame:
     def test_perf_record_kind(self, engine, repo_root):
         from autocog.recorder import Recorder
 
-        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "select.stl"))
+        prog = autocog.compile(repo(repo_root, "share", "demos", "mcq", "strings-select.stl"))
         with tempfile.TemporaryDirectory() as tmp:
             rec = Recorder(kinds={"perf"}, path=tmp)
             engine.set_seed(42)

@@ -86,7 +86,7 @@ import sys, tempfile
 from autocog.bench.quality import run_quality
 with tempfile.TemporaryDirectory() as tmp:
     evs = run_quality(questions=3, syntaxes=["complete"],
-                      demos=["select", "repeat", "label"], out=tmp,
+                      demos=["strings-select", "strings-repeat", "record-label"], out=tmp,
                       log=lambda *_: None)
 bad = []
 for demo in ("select", "repeat", "label"):

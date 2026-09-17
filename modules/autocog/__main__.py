@@ -495,7 +495,7 @@ def main():
                             help="file.py:fn applied to each datapoint (raw -> question; None = skip)")
     pb_quality.add_argument("--questions", type=int, default=0, help="Stratified sample size (0 = all)")
     pb_quality.add_argument("--syntaxes", default=None, help="Comma list (default: complete,stripped)")
-    pb_quality.add_argument("--demos", default=None, help="Comma list (default: select)")
+    pb_quality.add_argument("--demos", default=None, help="Comma list (default: strings-select)")
     pb_quality.add_argument("--out", default=".", help="Results directory")
     pb_quality.add_argument("--ctx", type=int, default=2048)
     pb_quality.add_argument("--seed", type=int, default=42)

@@ -168,20 +168,20 @@ class TestErrorPaths:
     def test_invalid_entry_point(self, engine, repo_root):
         """Running with invalid entry point raises ValueError."""
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         with pytest.raises(autocog.errors.ConfigError, match="not found"):
             engine.run(prog, entry="nonexistent")
 
     def test_content_range_violation_is_orchestration_error(self, engine, repo_root):
         """Input content that violates a field's range raises OrchestrationError.
 
-        select.stl requires 2..max_choices choices; supplying 1 is an
+        strings-select.stl requires 2..max_choices choices; supplying 1 is an
         orchestration failure located at the offending field — not a bare
         ExecutionError/RuntimeError. This is deterministic (input validation,
         independent of token sampling).
         """
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         with pytest.raises(autocog.errors.OrchestrationError) as exc_info:
             engine.run(prog, question="What is 2+2?", choices=["4"])
         e = exc_info.value

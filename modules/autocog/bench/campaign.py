@@ -24,7 +24,7 @@ Descriptor:
         {"name": "protocol",
          "runs": [
            {"kind": "quality", "model": "Llama-3.2-1B", "data": "arc-easy",
-            "syntaxes": ["complete"], "demos": ["select", "repeat"]},
+            "syntaxes": ["complete"], "demos": ["strings-select", "strings-repeat"]},
            {"kind": "perf", "model": "Llama-3.1-8B-Instruct",
             "cells": "termination"}
          ]}

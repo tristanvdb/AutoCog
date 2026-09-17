@@ -19,7 +19,7 @@ Length bias per rule is the mean within-question Kendall tau between
 candidate token counts and candidate scores (same formalization as the
 paper), so the bias of every rule is measured, not assumed.
 
-    probe_choices.py run --demo select --data q.json --out probe.ndjson
+    probe_choices.py run --demo strings-select --data q.json --out probe.ndjson
         [--formatter f.py:fn] [--limit N] [--syntax name-or-path]
         [--model path.gguf | --rng] [--worker host:port] [--ctx N]
     probe_choices.py analyze probe1.ndjson [probe2.ndjson ...] --out report
@@ -107,12 +107,14 @@ def run(args):
             if not cands or len(cands) != len(q["choices"]):
                 n_skip += 1
                 continue
-            # select candidates are index digits; repeat candidates are the
-            # choice texts. Map both to choice indices.
+            # A select commits on an index digit, a repeat on the choice text.
+            # Map both back to a choice index. (The demo name carries the
+            # mechanism as a component, not a prefix: strings-select,
+            # record-index, record-value...)
             rows = []
             for c in cands:
                 text = c["text"]
-                if args.demo.startswith("select"):
+                if "select" in args.demo:
                     idx = int(text)
                 else:
                     idx = q["choices"].index(text) if text in q["choices"] else -1
@@ -214,7 +216,8 @@ def main(argv=None):
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run")
-    r.add_argument("--demo", required=True, choices=["select", "repeat"])
+    r.add_argument("--demo", required=True,
+                   choices=["strings-select", "strings-repeat"])
     r.add_argument("--data", required=True)
     r.add_argument("--formatter", default="")
     r.add_argument("--limit", type=int, default=0)

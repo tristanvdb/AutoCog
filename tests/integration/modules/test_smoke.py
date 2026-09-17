@@ -75,7 +75,7 @@ class TestCompile:
 
     def test_compile_select(self, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         assert "main" in prog.prompts
         assert "main" in prog.entry_points
 
@@ -104,7 +104,7 @@ class TestCompile:
 
     def test_emit_sta(self, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         sta = prog.sta
         assert "prompts" in sta
         assert "entry_points" in sta
@@ -123,7 +123,7 @@ class TestStoreDedup:
         import gc
         import autocog
 
-        src = str(repo_root / "share/demos/mcq/select.stl")
+        src = str(repo_root / "share/demos/mcq/strings-select.stl")
         # Two independent compiles of the same source are byte-identical, so
         # they resolve to the same content uid (one store entry, two holders).
         p1 = autocog.compile(src)
@@ -144,7 +144,7 @@ class TestPipeline:
 
     def test_select_with_inputs(self, engine, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         result = engine.run(
             prog,
             topic="Science",
@@ -194,9 +194,9 @@ class TestRealModel:
         assert result == text
 
     def test_llama3_select(self, real_engine, repo_root):
-        """Run select.stl with the real model — full evaluation."""
+        """Run strings-select.stl with the real model — full evaluation."""
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         result = real_engine.run(
             prog,
             topic="Science",
@@ -252,7 +252,7 @@ class TestSchema:
 
     def test_mcq_schema(self, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         s = prog.input_schema("main")
         assert "topic" in s
         assert "question" in s
@@ -263,7 +263,7 @@ class TestSchema:
         assert s["choices"]["items"]["type"] == "text"
         # variable range since the choices[2:max_choices] redesign
         assert s["choices"]["min_items"] == 2
-        assert s["choices"]["max_items"] == 8
+        assert s["choices"]["max_items"] == 10
         # Output schema
         o = prog.output_schema("main")
         assert "_" in o
@@ -287,7 +287,7 @@ class TestSchema:
 
     def test_loaded_program_schema(self, repo_root):
         import autocog, json, tempfile, os
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             tmp = f.name
         try:
@@ -310,7 +310,7 @@ class TestStapp:
         from autocog.stapp import pack, load_stapp
         import shutil
 
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
 
@@ -338,7 +338,7 @@ class TestStapp:
         import autocog, tempfile, os, json, zipfile
         from autocog.stapp import pack
 
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         try:
@@ -357,7 +357,7 @@ class TestStapp:
         import tempfile, os, zipfile
         from autocog.stapp import pack
 
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
 
@@ -366,7 +366,7 @@ class TestStapp:
             with zipfile.ZipFile(stapp_path) as zf:
                 names = zf.namelist()
                 assert "program.sta.json" in names
-                assert "select.stl" not in names
+                assert "strings-select.stl" not in names
         finally:
             os.unlink(stapp_path)
 
@@ -375,7 +375,7 @@ class TestStapp:
         from autocog.stapp import pack, load_stapp
         import shutil
 
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
 
@@ -432,7 +432,7 @@ class TestRemoteEngine:
         from autocog.server.serve import create_app
         from autocog.__main__ import load_externals
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -448,7 +448,7 @@ class TestRemoteEngine:
         import autocog
         from autocog.server.rpc import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -472,7 +472,7 @@ class TestBackendServer:
 
         # Compile and instantiate to an FTA, then fetch it as JSON straight from
         # the datastore (dump_fta) -- no need to shell out to the ista tool.
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         search = str(repo_root / "share/search/default.json")
         engine = autocog.Engine(syntax=syntax, search=search)
@@ -529,7 +529,7 @@ class TestBackendServer:
         import autocog
         from autocog.server.backend import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         app = create_app(models=[])  # RNG model
         with running_server(app) as port:
             engine = autocog.RemoteBackend(
@@ -553,7 +553,7 @@ class TestServeServer:
         import autocog, urllib.request
         from autocog.server.serve import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -569,7 +569,7 @@ class TestServeServer:
         import autocog, json, urllib.request
         from autocog.server.serve import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -586,7 +586,7 @@ class TestCLI:
     def test_compile_stdout(self, repo_root):
         import subprocess, json
         result = subprocess.run(
-            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/select.stl")],
+            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl")],
             capture_output=True, text=True, timeout=30
         )
         assert result.returncode == 0
@@ -600,7 +600,7 @@ class TestCLI:
             outpath = f.name
         try:
             result = subprocess.run(
-                ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                  "-o", outpath],
                 capture_output=True, text=True, timeout=30
             )
@@ -614,7 +614,7 @@ class TestCLI:
     def test_run_stl_rng(self, repo_root):
         import subprocess
         result = subprocess.run(
-            ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+            ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
             capture_output=True, text=True, timeout=30
         )
@@ -625,7 +625,7 @@ class TestCLI:
         import subprocess, json, tempfile, os
         # Compile first
         compile_result = subprocess.run(
-            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/repeat.stl")],
+            ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/strings-repeat.stl")],
             capture_output=True, text=True, timeout=30
         )
         with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as f:
@@ -649,7 +649,7 @@ class TestCLI:
             input_path = f.name
         try:
             result = subprocess.run(
-                ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                  "--rng", "--input", input_path],
                 capture_output=True, text=True, timeout=30
             )
@@ -660,7 +660,7 @@ class TestCLI:
     def test_run_verbose(self, repo_root):
         import subprocess
         result = subprocess.run(
-            ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+            ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}'],
             capture_output=True, text=True, timeout=30
         )
@@ -673,7 +673,7 @@ class TestCLI:
             outpath = f.name
         try:
             result = subprocess.run(
-                ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                  "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}',
                  "-o", outpath],
                 capture_output=True, text=True, timeout=30
@@ -691,7 +691,7 @@ class TestCLI:
         try:
             # Pack
             result = subprocess.run(
-                ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                  "-o", stapp_path],
                 capture_output=True, text=True, timeout=30
             )
@@ -717,7 +717,7 @@ class TestCLIFunctions:
         from unittest.mock import patch
         from autocog.__main__ import main
 
-        args = ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/select.stl")]
+        args = ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl")]
         with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
             main()
         sta = json.loads(mock_out.getvalue())
@@ -731,7 +731,7 @@ class TestCLIFunctions:
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             outpath = f.name
         try:
-            args = ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+            args = ["autocog", "compile", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                     "-o", outpath]
             with patch("sys.argv", args):
                 main()
@@ -746,7 +746,7 @@ class TestCLIFunctions:
         from unittest.mock import patch
         from autocog.__main__ import main
 
-        args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+        args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                 "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}']
         with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
             main()
@@ -757,7 +757,7 @@ class TestCLIFunctions:
         from unittest.mock import patch
         from autocog.__main__ import main
 
-        args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+        args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                 "--rng", "-v", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}']
         with patch("sys.argv", args), \
              patch("sys.stdout", new_callable=io.StringIO), \
@@ -773,7 +773,7 @@ class TestCLIFunctions:
         # Pack first
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
-        args = ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+        args = ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                 "-o", stapp_path]
         with patch("sys.argv", args):
             main()
@@ -796,7 +796,7 @@ class TestCLIFunctions:
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         try:
-            args = ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+            args = ["autocog", "pack", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                     "-o", stapp_path]
             with patch("sys.argv", args):
                 main()
@@ -815,7 +815,7 @@ class TestCLIFunctions:
             json.dump({"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}, f)
             input_path = f.name
         try:
-            args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+            args = ["autocog", "run", "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                     "--rng", "--input", input_path]
             with patch("sys.argv", args), patch("sys.stdout", new_callable=io.StringIO) as mock_out:
                 main()
@@ -831,7 +831,7 @@ class TestCoverageEdgeCases:
         """Pack with --vendor-stdlib bundles stlib files."""
         import tempfile, os, zipfile
         from autocog.stapp import pack
-        stl = str(repo_root / "share/demos/mcq/select-iter.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select-iter.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         try:
@@ -852,7 +852,7 @@ class TestCoverageEdgeCases:
         """A vendored .stapp recompiles using its bundled stdlib tree."""
         import tempfile, os, shutil
         from autocog.stapp import pack, load_stapp
-        stl = str(repo_root / "share/demos/mcq/select-iter.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select-iter.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         temp_dir = None
@@ -870,7 +870,7 @@ class TestCoverageEdgeCases:
         """Pack with --no-compile omits STA."""
         import tempfile, os, zipfile
         from autocog.stapp import pack
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         try:
@@ -878,7 +878,7 @@ class TestCoverageEdgeCases:
             with zipfile.ZipFile(stapp_path) as zf:
                 names = zf.namelist()
                 assert "program.sta.json" not in names
-                assert "select.stl" in names
+                assert "strings-select.stl" in names
         finally:
             os.unlink(stapp_path)
 
@@ -886,7 +886,7 @@ class TestCoverageEdgeCases:
         """Load a .stapp with no STA (source only) — must compile."""
         import autocog, tempfile, os, shutil
         from autocog.stapp import pack, load_stapp
-        stl = str(repo_root / "share/demos/mcq/select.stl")
+        stl = str(repo_root / "share/demos/mcq/strings-select.stl")
         with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
             stapp_path = f.name
         try:
@@ -902,7 +902,7 @@ class TestCoverageEdgeCases:
     def test_context_done_noop(self, repo_root):
         """Calling step() on a completed context is a no-op."""
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
         ctx = autocog.Context(prog, engine, "main",
                               {"topic": "X", "question": "Y", "choices": ["a", "b", "c", "d"]})
@@ -938,7 +938,7 @@ class TestCoverageEdgeCases:
     def test_engine_run_async(self, repo_root):
         """Test async run path."""
         import asyncio, autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
         result = asyncio.run(engine.run_async(
             prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"]
@@ -950,7 +950,7 @@ class TestCoverageEdgeCases:
         import autocog, json, urllib.request
         from autocog.server.rpc import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -967,7 +967,7 @@ class TestCoverageEdgeCases:
         import autocog, urllib.request, urllib.error, json
         from autocog.server.serve import create_app
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         syntax = str(repo_root / "share/syntax/complete.json")
         app = create_app(program=prog, model_path=None, syntax_path=syntax, search_path=str(repo_root / "share/search/default.json"))
         with running_server(app) as port:
@@ -1013,7 +1013,7 @@ class TestRecorder:
         import autocog, tempfile, os, json
         from autocog.recorder import Recorder
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
@@ -1044,7 +1044,7 @@ class TestRecorder:
         import autocog, tempfile, os, json
         from autocog.recorder import Recorder
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
@@ -1078,7 +1078,7 @@ class TestRecorder:
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
             result = subprocess.run(
                 ["autocog", "run",
-                 "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                 "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                  "--rng", "--input", '{"topic":"Sci","question":"2+2?","choices":["3","4","5","6"]}',
                  "--record", "frame",
                  "--record-path", tmpdir],
@@ -1095,21 +1095,21 @@ class TestSyntaxVariants:
     def test_lever_syntaxes(self, repo_root, syntax):
         # The basic-lever family: complete minus type/index/indent subsets.
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / f"share/syntax/{syntax}.json"), search=str(repo_root / "share/search/default.json"))
         result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         assert result in ["3", "4", "5", "6"]
 
     def test_chatml_syntax(self, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/chatml.json"), search=str(repo_root / "share/search/default.json"))
         result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         assert result in ["3", "4", "5", "6"]
 
     def test_llama2chat_syntax(self, repo_root):
         import autocog
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/llama2chat.json"), search=str(repo_root / "share/search/default.json"))
         result = engine.run(prog, topic="Sci", question="2+2?", choices=["3", "4", "5", "6"])
         assert result in ["3", "4", "5", "6"]
@@ -1134,7 +1134,7 @@ class TestRecorderFtaFtt:
         import autocog, tempfile, os, json
         from autocog.recorder import Recorder
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         engine = autocog.Engine(syntax=str(repo_root / "share/syntax/complete.json"), search=str(repo_root / "share/search/default.json"))
 
         with tempfile.TemporaryDirectory(prefix="autocog-test-") as tmpdir:
@@ -1210,7 +1210,7 @@ class TestCLIErrors:
         import subprocess
         result = subprocess.run(
             ["autocog", "run",
-             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--model", "/nonexistent/model.gguf",
              "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
             capture_output=True, text=True, timeout=10
@@ -1222,7 +1222,7 @@ class TestCLIErrors:
         import subprocess
         result = subprocess.run(
             ["autocog", "run",
-             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--rng", "--syntax", "/nonexistent/syntax.json",
              "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
             capture_output=True, text=True, timeout=10
@@ -1234,7 +1234,7 @@ class TestCLIErrors:
         import subprocess
         result = subprocess.run(
             ["autocog", "run",
-             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--rng", "--input", "not valid json"],
             capture_output=True, text=True, timeout=10
         )
@@ -1254,7 +1254,7 @@ class TestCLIErrors:
         import subprocess
         result = subprocess.run(
             ["autocog", "run",
-             "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+             "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
              "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}'],
             capture_output=True, text=True, timeout=10
         )
@@ -1278,7 +1278,7 @@ class TestCLIErrorsDirect:
         from unittest.mock import patch
         from autocog.__main__ import main
         args = ["autocog", "run",
-                "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                 "--model", "/nonexistent/model.gguf",
                 "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}']
         with patch("sys.argv", args):
@@ -1295,7 +1295,7 @@ class TestCLIErrorsDirect:
 
         # Compile to STA first. `repeat` names no resolver, so the .sta alone
         # is a complete program — which is what the --sta path is about.
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/repeat.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-repeat.stl"))
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump(prog.sta, f)
             sta_path = f.name
@@ -1316,7 +1316,7 @@ class TestCLIErrorsDirect:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             args = ["autocog", "run",
-                    "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                    "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                     "--rng",
                     "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}',
                     "--record", "frame",
@@ -1336,7 +1336,7 @@ class TestCLIErrorsDirect:
             outpath = f.name
         try:
             args = ["autocog", "run",
-                    "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                    "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                     "--rng",
                     "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}',
                     "-o", outpath]
@@ -1354,7 +1354,7 @@ class TestCLIErrorsDirect:
         from unittest.mock import patch
         from autocog.__main__ import main
         args = ["autocog", "run",
-                "--stl", str(repo_root / "share/demos/mcq/select.stl"),
+                "--stl", str(repo_root / "share/demos/mcq/strings-select.stl"),
                 "--model", "/nonexistent/m.gguf",
                 "--input", '{"topic":"X","question":"Y","choices":["a","b","c","d"]}']
         with patch("sys.argv", args):
@@ -1497,7 +1497,7 @@ class TestErrorHierarchy:
         import autocog
         from autocog.errors import ConfigError
 
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         with pytest.raises(ConfigError, match="not found"):
             prog.entry_prompt("nonexistent")
 
@@ -1610,7 +1610,7 @@ class TestSchemaValidation:
         """validate_artifact passes on a valid STA."""
         import autocog
         from autocog._schema import validate_artifact
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         # Should not raise
         validate_artifact(prog.sta, filepath="test_mcq")
 
@@ -1618,7 +1618,7 @@ class TestSchemaValidation:
         """validate_artifact auto-detects STA format."""
         import autocog
         from autocog._schema import _detect_format
-        prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
+        prog = autocog.compile(str(repo_root / "share/demos/mcq/strings-select.stl"))
         assert _detect_format(prog.sta) == "sta"
 
     def test_validate_invalid_artifact(self, repo_root):

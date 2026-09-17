@@ -186,7 +186,7 @@ check("rng vocab_size", backend_llama_cxx.vocab_size(0) == 258)
 tokens = backend_llama_cxx.tokenize(0, "hello")
 check("tokenize length", len(tokens) == 5)
 check("detokenize roundtrip", backend_llama_cxx.detokenize(0, tokens) == "hello")
-pid6 = compiler_stl_cxx.compile(f"{SHARE}/demos/mcq/select.stl")
+pid6 = compiler_stl_cxx.compile(f"{SHARE}/demos/mcq/strings-select.stl")
 content = {"topic": "Sci", "question": "2+2?", "choices": ["3", "4", "5", "6"]}
 fta_id3 = runtime_sta_cxx.instantiate(pid6, "main", content, sid, scid)
 ftt_id, _perf = backend_llama_cxx.evaluate(0, fta_id3)

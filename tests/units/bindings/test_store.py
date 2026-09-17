@@ -26,7 +26,7 @@ import backend_llama_cxx
 SHARE  = sys.argv[1]
 SYNTAX = os.path.join(SHARE, "syntax", "complete.json")
 SEARCH = os.path.join(SHARE, "search", "default.json")
-SELECT = os.path.join(SHARE, "demos", "mcq", "select.stl")
+SELECT = os.path.join(SHARE, "demos", "mcq", "strings-select.stl")
 
 errors = []
 

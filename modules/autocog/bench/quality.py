@@ -31,38 +31,9 @@ from .formatters import load_formatter, load_questions
 from .perf import find_root
 from .workers import LocalWorker, model_tag
 
-SYNTAXES = ["complete", "indent-index", "indent", "stripped",
-            "chatml", "llama2chat", "llama3chat", "special"]
-DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot",
-         "repeat-hyp", "label"]
-
 #: samples kept in flight per worker lane by the scheduler (keeps the
 #: lane's queue primed without materializing whole runs)
 WINDOW_PER_LANE = 2
-
-#: choice labels for the `label` mechanism (matches stlib's `letter` vocab)
-LABELS = "ABCDEFGH"
-
-
-def is_label_demo(demo):
-    return demo.split("-")[0] == "label"
-
-
-def already_labelled(choices):
-    """Do the choice texts already carry their letter? The ARC converter
-    prepends them ("C: mutualism") because ARC answers cross-reference
-    options by label."""
-    return all(len(c) > 2 and c[0].upper() == LABELS[i] and c[1] in ".:)"
-               for i, c in enumerate(choices) if i < len(LABELS))
-
-
-def choices_for(demo, choices):
-    """Content choices for a mechanism: `label` needs the letter visible in
-    the document, so it labels them unless the dataset already did (never
-    double-labels). Other mechanisms pass the texts through."""
-    if is_label_demo(demo) and not already_labelled(choices):
-        return [f"{LABELS[i]}. {c}" for i, c in enumerate(choices)]
-    return list(choices)
 
 
 def extract_answer(result):
@@ -83,22 +54,20 @@ def extract_answer(result):
 
 
 def score_answer(demo, raw, q):
-    """(recorded answer, correct) for a mechanism's raw output.
+    """(recorded answer, correct) for a program's output.
 
-    select/repeat yield a choice text directly. `label` yields a letter:
-    in range it maps to the choice text; OUT of range (the letter vocab
-    spans A-H while an item may offer fewer choices) it is recorded as
-    the bare letter and scored WRONG --- an unusable label is a miss, not
-    a missing datapoint. Only a genuinely absent answer scores None."""
+    Every mechanism returns the same thing: the choice it settled on. A
+    program that commits on something else — an index, a letter — resolves it
+    itself on the return, so nothing here has to know which one it was. (This
+    used to hold the letter arithmetic for the `label` mechanism, which is why
+    an out-of-range letter had to be special-cased as a miss; a label is now
+    ranked against the labels the data carries, and cannot be out of range.)
+
+    Only a genuinely absent answer scores None.
+    """
     if raw is None:
         return None, None
-    if not is_label_demo(demo):
-        return raw, raw == q["answer"]
-    idx = LABELS.find(str(raw).strip().upper()[:1]) if isinstance(raw, str) else -1
-    if 0 <= idx < len(q["choices"]):
-        text = q["choices"][idx]
-        return text, text == q["answer"]
-    return raw, False
+    return raw, raw == q["answer"]
 
 
 def walk_tokens(node, depth, acc):
@@ -151,7 +120,7 @@ class QualityRun:
         self.out = out
         self.log = log
         self.syntaxes = syntaxes or ["complete", "stripped"]
-        self.demos = demos or ["select"]
+        self.demos = demos or ["strings-select"]
         self.qs = load_questions(data, load_formatter(formatter),
                                  limit=questions)
         mcq_dir = os.path.join(root, "share", "demos", "mcq")
@@ -204,7 +173,7 @@ class QualityRun:
                 rec = Recorder(kinds={"input", "frame"}, path=tmp)
                 result = await pool.run_async(
                     prog, recorder=rec, topic=q.get("topic", ""),
-                    question=q["question"], choices=choices_for(demo, q["choices"]))
+                    question=q["question"], choices=q["choices"])
                 wall = time.time() - t0
                 answer, correct = score_answer(demo, extract_answer(result), q)
 
@@ -425,7 +394,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     try:
                         result = engine.run(prog, recorder=rec, topic=q.get("topic", ""),
                                             question=q["question"],
-                                            choices=choices_for(demo, q["choices"]))
+                                            choices=q["choices"])
                     except Exception as e:  # a failing pair is a datapoint
                         result, error = None, f"{type(e).__name__}: {e}"
                     wall = time.time() - t0

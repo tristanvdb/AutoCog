@@ -28,7 +28,7 @@
             "complete"
           ],
           "demos": [
-            "select"
+            "strings-select"
           ],
           "out": "rng-select"
         },
@@ -40,7 +40,7 @@
             "complete"
           ],
           "demos": [
-            "select"
+            "strings-select"
           ],
           "out": "tiny-select"
         }
@@ -52,7 +52,7 @@
         {
           "kind": "probe",
           "model": "tiny-llama3-test-Q2_K",
-          "demo": "repeat",
+          "demo": "strings-repeat",
           "syntax": "complete",
           "data": "questions",
           "limit": 2,
