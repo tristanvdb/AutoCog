@@ -75,6 +75,16 @@ def test_multi_model_worker(worker):
     assert caps["details"]["tiny-again"] == {"ctx": 512, "ngl": None,
                                              "kv_slots": 8}
 
+    # The EFFECTIVE slot count, not the requested one. `TINY` was loaded with
+    # no kv_slots at all and still runs the built-in default; advertising None
+    # there would mean a campaign recording this worker's configuration
+    # recorded nothing, for a value that changes free-text sampling and moves
+    # every logprob (see test_kv_slots.py). The worker must be able to say
+    # what it is actually running.
+    assert caps["details"][TINY]["kv_slots"] >= 1
+    assert caps["details"]["rng"]["kv_slots"] is None      # no KV cache
+    assert caps["kv_slots"] == caps["details"][TINY]["kv_slots"]
+
     from autocog.bench.workers import RemoteWorker
     import autocog
     from autocog.runtime.sta import runtime_sta_cxx as rt

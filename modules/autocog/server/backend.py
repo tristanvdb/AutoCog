@@ -89,7 +89,7 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
         model_id = backend_llama_cxx.create(spec["path"], ctx, ngl, kv)
         hosted[tag] = {"id": model_id, "ctx": ctx,
                        "ngl": ngl if ngl >= 0 else None,
-                       "kv_slots": kv if kv >= 0 else None}
+                       "kv_slots": backend_llama_cxx.kv_slots(model_id)}
         if default == "rng":
             default = tag
 
@@ -158,7 +158,14 @@ def create_app(models: List[Dict[str, Any]] = None, n_ctx: int = 4096) -> FastAP
                         for tag, info in hosted.items()},
             "default": default,
             "n_ctx": n_ctx,
-            "kv_slots": int(os.environ.get("AUTOCOG_KV_SLOTS", 0)) or None,
+            # The EFFECTIVE count, asked of a loaded model rather than read
+            # back from the request. A worker started with no --kv-slots and
+            # no AUTOCOG_KV_SLOTS still runs 64, and used to advertise None --
+            # so a campaign recording what the worker said recorded nothing,
+            # for a value that changes free-text sampling and shifts every
+            # logprob. rng has no KV cache and reports None honestly.
+            "kv_slots": next((d["kv_slots"] for t, d in hosted.items()
+                              if t != "rng"), None),
             "cpus": cpus,
             "pid": os.getpid(),
             # Concurrent execution lanes on this worker (RequestQueue

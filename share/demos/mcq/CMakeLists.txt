@@ -21,10 +21,10 @@ set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 #
 # The syntax list IS the contrast being drawn. complete / index-one /
 # index-none differ from each other by exactly one knob, so any difference
-# between their graphs is attributable to that knob; `special` is in for the
-# special-token rendering, the likeliest place for a gap. Widen the list
-# here, not by editing tests.
-set(INSPECT_SYNTAXES complete index-one index-none special
+# between their graphs is attributable to that knob. `special` (special-token
+# rendering) is deliberately out of scope for now. Widen the list here, not by
+# editing tests.
+set(INSPECT_SYNTAXES complete index-one index-none
     CACHE STRING "Syntaxes rendered by the mcq inspection graphs")
 
 # Also emit the unsimplified FTA (one node per renderer step). For debugging

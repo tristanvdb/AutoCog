@@ -80,6 +80,18 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         return Manager::get_model(model).vocab_size();
     }, "Get vocabulary size");
 
+    module.def("kv_slots", [](ModelID model) {
+        return Manager::get_model(model).kv_slots();
+    },
+    "KV sequence slots this model was loaded with -- the EFFECTIVE count, "
+    "after the per-model value, AUTOCOG_KV_SLOTS and the built-in default "
+    "have been resolved. Slot count changes free-text sampling and shifts "
+    "every logprob slightly (see tests/integration/modules/test_kv_slots.py), "
+    "so it is an experimental variable and a campaign has to record it. "
+    "Asking the model is the only way to learn it: the request may have said "
+    "nothing at all.",
+    py::arg("model"));
+
     module.def("tokenize",
         [](ModelID model, std::string const & text, bool add_bos, bool special) {
             auto tokens = Manager::get_model(model).tokenize(text, add_bos, special);
