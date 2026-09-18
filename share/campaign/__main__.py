@@ -17,6 +17,7 @@ import sys
 
 from . import plan as planning
 from . import preflight as preflighting
+from . import samples as sampling
 from . import probe as probing
 from . import provision, runner
 from .descriptor import DescriptorError, load
@@ -44,10 +45,9 @@ def main(argv=None):
     ap.add_argument("--skip-gate", action="store_true",
                     help="run without the answer-validity check (say why)")
     ap.add_argument("--prior", action="append", default=None,
-                    help="earlier campaign whose samples this one may adopt "
-                         "instead of re-measuring: a name under results/, or "
-                         "a path (repeatable; adds to the descriptor's own "
-                         "`prior`)")
+                    help="earlier campaign whose questions this one must not "
+                         "draw again: a name under results/, or a path "
+                         "(repeatable; adds to the descriptor's own `prior`)")
     args = ap.parse_args(argv)
 
     repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -86,21 +86,15 @@ def main(argv=None):
         log(f"  worker {slot.index}: gpu={slot.gpu} "
             f"models={[m['tag'] for m in slot.models] or ['rng']}")
     for run in descriptor.runs:
+        samples = (descriptor.dataset(run["dataset"]) or {}).get("samples")
         log(f"  run {run['name']}: model={run['model']} "
             f"dataset={run['dataset']} programs={run['programs']} "
-            f"syntaxes={run['syntaxes']} samples={run['samples'] or 'all'}")
+            f"syntaxes={run['syntaxes']} samples={samples or 'all'}")
     if missing:
         sys.exit(f"no worker can host {missing} — the campaign would stall")
 
-    prior_index = None
-    if prior_dirs:
-        from autocog.bench.reuse import PriorIndex
-
-        # Once for the campaign: a screening campaign's results run to
-        # gigabytes, and every run would otherwise re-read all of them.
-        prior_index = PriorIndex(prior_dirs, log=log)
-        for d in prior_dirs:
-            log(f"  prior: {d}")
+    for d in prior_dirs:
+        log(f"  prior: {d}")
 
     # Every arm, once, on rng — before the weights are downloaded, because a
     # descriptor that cannot execute should cost nothing to find out about.
@@ -128,6 +122,16 @@ def main(argv=None):
 
     results = layout.results_for(descriptor.name)
     os.makedirs(results, exist_ok=True)
+
+    # The campaign's questions: drawn once per dataset, before any run, so
+    # every arm is asked the same thing and a `prior` campaign's questions
+    # are subtracted before the draw rather than after it.
+    try:
+        selections = sampling.select_all(descriptor, layout, results,
+                                         prior_dirs, log=log)
+    except sampling.SelectionError as e:
+        sys.exit(f"samples: {e}")
+
     events_path = os.path.join(layout.results, "campaign-events.ndjson")
     events = Events(events_path)
     attach_bench_stream(events_path)
@@ -144,7 +148,7 @@ def main(argv=None):
             events.emit("campaign.start", descriptor.name)
             if not args.skip_gate:
                 try:
-                    _gate(descriptor, layout, workers, log)
+                    _gate(descriptor, layout, workers, selections, log)
                 except probing.GateFailure as e:
                     events.emit("campaign.end", descriptor.name,
                                 **{"error.message": f"gate: {e}"})
@@ -152,7 +156,7 @@ def main(argv=None):
                              f"Nothing was spent. Fix the program or the data; "
                              f"--skip-gate runs anyway if you know why.")
             failures = runner.run_all(descriptor, layout, workers, events,
-                                      seed=args.seed, prior=prior_index,
+                                      seed=args.seed, selections=selections,
                                       log=log)
     except WorkerFailed as e:
         sys.exit(f"workers: {e}")
@@ -166,7 +170,7 @@ def main(argv=None):
     return 0
 
 
-def _gate(descriptor, layout, workers, log):
+def _gate(descriptor, layout, workers, selections, log):
     """A few real samples per run, checked for usable answers before the
     campaign commits to the whole matrix."""
     from autocog.bench.formatters import load_formatter, load_questions
@@ -176,13 +180,16 @@ def _gate(descriptor, layout, workers, log):
         urls = workers.urls_for(run["model"])
         if not urls:
             continue
-        data = runner.resolve_dataset(descriptor, layout, run["dataset"])
-        probe_run = dict(run, samples=4, syntaxes=run["syntaxes"][:1])
+        # The campaign's own selection, truncated — the gate must see the
+        # questions the campaign will actually ask, not four others.
+        data = selections[run["dataset"]]
+        probe_run = dict(run, syntaxes=run["syntaxes"][:1])
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
             events = list(runner.run_one(descriptor, layout, probe_run, urls,
-                                         out=tmp, log=lambda *_: None))
+                                         out=tmp, data=data, questions=4,
+                                         log=lambda *_: None))
         questions = load_questions(data, load_formatter(""), limit=4)
         report = probing.check_answers(events, questions)
         log(f"gate: {report['scored']} scored, "

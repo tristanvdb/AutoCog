@@ -13,7 +13,7 @@ field to disagree with the file it lives in.
       - {tag: 1b, file: Llama-3.2-1B-Instruct-Q8_0.gguf, ctx: 4096}
 
     datasets:
-      - {name: arc-1000, source: arc, split: test, limit: 1000}
+      - {name: arc-1000, source: arc, split: test, limit: 1000, samples: 200}
 
     programs:
       record-label:
@@ -23,9 +23,8 @@ field to disagree with the file it lives in.
 
     defaults:
       syntaxes: [complete, special, stripped]
-      samples: 200
 
-    prior: [screen-base-1b]        # reuse what an earlier campaign paid for
+    prior: [screen-base-1b]        # draw questions that campaign did not use
 
     runs:
       - {name: mechanism-arc, model: 1b, dataset: arc-1000,
@@ -80,9 +79,10 @@ class Descriptor:
         self.datasets = _datasets(data.get("datasets") or [])
         self.programs = dict(data.get("programs") or {})
         self.defaults = dict(data.get("defaults") or {})
-        #: earlier campaigns whose samples this one may adopt — a name under
-        #: the results root, or a path. Resolved by the app, not here: this
-        #: module reads the descriptor and nothing about the machine.
+        #: earlier campaigns whose QUESTIONS this one must avoid — a name
+        #: under the results root, or a path. Resolved by the app, not
+        #: here: this module reads the descriptor and nothing about the
+        #: machine.
         self.prior = list(data.get("prior") or [])
         self.runs = _runs(data.get("runs") or [], self.defaults)
         self._validate()
@@ -142,6 +142,10 @@ def _models(entries):
 
 
 def _datasets(entries):
+    """`samples` lives HERE, not on a run: a campaign draws its questions
+    once per dataset and every run sees the same ones. A run that could
+    set its own would make two arms incomparable while looking like a
+    single matrix (see share/campaign/samples.py). 0 = the whole dataset."""
     out = []
     for entry in entries:
         if isinstance(entry, str):
@@ -150,7 +154,8 @@ def _datasets(entries):
             raise DescriptorError(f"dataset entry has no name: {entry}")
         out.append({"name": entry["name"], "source": entry.get("source"),
                     "split": entry.get("split"),
-                    "limit": int(entry.get("limit", 0) or 0)})
+                    "limit": int(entry.get("limit", 0) or 0),
+                    "samples": int(entry.get("samples", 0) or 0)})
     return out
 
 
@@ -164,6 +169,14 @@ def _runs(entries, defaults):
             if key not in run:
                 raise DescriptorError(f"run {run['name']!r} has no {key}")
         run["syntaxes"] = list(run.get("syntaxes") or ["complete"])
-        run["samples"] = int(run.get("samples", 0) or 0)
+        # Refused rather than ignored: a descriptor carried over from
+        # before `samples` moved to the dataset would otherwise run the
+        # whole dataset silently, which is a very expensive way to find
+        # out a field was dropped.
+        if "samples" in run:
+            raise DescriptorError(
+                f"run {run['name']!r} sets `samples`: it belongs to the "
+                f"dataset now, so that every run in a campaign draws the "
+                f"same questions and the arms stay comparable")
         out.append(run)
     return out

@@ -39,8 +39,8 @@ models:
   - {tag: 8b,  file: Llama-3.1-8B-Instruct-Q8_0.gguf, ctx: 4096}
 
 datasets:
-  - {name: arc-1000,  source: arc,  split: test, limit: 1000}
-  - {name: mmlu-1000, source: mmlu, split: test, limit: 1000}
+  - {name: arc-1000,  source: arc,  split: test, limit: 1000, samples: 200}
+  - {name: mmlu-1000, source: mmlu, split: test, limit: 1000, samples: 200}
 
 programs:
   strings-select:
@@ -53,7 +53,6 @@ programs:
 
 defaults:
   syntaxes: [complete, special, stripped]
-  samples: 200
 
 runs:
   - {name: mechanism-arc, model: 1b, dataset: arc-1000,
@@ -69,7 +68,8 @@ worker, which proves a campaign's plumbing for free.
 
 **`datasets`** — `name` is what a run asks for and what the built file is
 called; `source`/`split` say how to build it when it is missing. Conversion is
-where choice labels come from, decided once.
+where choice labels come from, decided once. **`samples`** is how many
+questions the campaign draws from it (0 = all) — see below.
 
 **`programs`** — `filepath` absolute or relative to `share/`; `options` are the
 compiler's own flags (`-I dir`, `-D name=value`, `-e entry`); `labels` are
@@ -79,7 +79,8 @@ can group by them.
 **`runs`** — an ordered list, not a matrix. `defaults` fills in what a run
 does not say.
 
-**`prior`** — earlier campaigns this one may reuse. See below.
+**`prior`** — earlier campaigns whose questions this one must not draw
+again. See below.
 
 ### Labels are how you ask a question
 
@@ -95,36 +96,60 @@ many lanes saturate it — all measured, so a descriptor moves between boxes
 unedited. `--mode isolated|distributed` overrides the topology when debugging;
 `--dry-run` prints the plan and spawns nothing.
 
-## Paying once: `prior`
+## The campaign's questions
 
-Re-running a campaign into the same `results/<name>/` already skips the samples
-that are there. `prior` is for everything else — the campaign was renamed, the
-results were archived, or a new campaign overlaps an old one:
+A campaign draws `samples` questions per dataset **once, before any run**, and
+writes them out:
+
+```
+results/<campaign>/samples-<dataset>.json
+```
+
+Every run is then pointed at that file. This is why `samples` sits on the
+dataset and not on a run: arms are only comparable if they were asked the same
+questions, and a per-run draw makes "syntax A beat syntax B" indistinguishable
+from "syntax A got the easier questions". A run that sets `samples` is a
+descriptor error.
+
+The selection is a real dataset file — readable, diffable, and the thing you
+hand someone who asks what the campaign actually measured. It is written once:
+a campaign that died halfway does not re-draw when it resumes.
+
+### `prior`: two campaigns, no intersection
 
 ```yaml
 prior: [screen-base-1b, ../old-box/results/screen-base-1b]
 ```
 
+The questions those campaigns used are subtracted from the pool **before** the
+draw, so this campaign still gets its full `samples` — of questions nobody has
+spent on yet. Two campaigns over one dataset therefore have disjoint sample
+sets, and their results can be concatenated without counting anything twice.
+Nothing is ever copied forward; a row sitting in two campaigns is a row every
+consumer double-counts.
+
+Run the same descriptor twice with `prior` and you get 2N, not N re-measured.
+
 Each entry is a campaign name under `results/`, or a path; both are scanned
-recursively, so run labels and phase layout need not match. A name that
-resolves to nothing is **fatal** — a typo that quietly degraded into "reuse
-nothing" would fail in the only way you cannot see, by just running and
-costing what it was supposed to save. `--prior` adds more from the command
-line.
+recursively (`samples-*.json` for what a campaign committed to, result rows as
+the backstop), so run labels and layout need not match. A name that resolves
+to nothing is **fatal** — a typo degrading into "avoid nothing" fails in the
+only way you cannot see, by running and silently overlapping. If the pool
+cannot supply `samples` unused questions, that is fatal too: quietly running
+12 where the descriptor said 100 looks exactly like running 100 until somebody
+reads the error bars.
 
-An adopted sample is **copied** into this campaign's results, not referenced,
-so a tarball of `results/<name>/` is still the whole campaign. It keeps its
-original `@timestamp` and carries `autocog.bench.reused.from`.
+A question is spent even if its sample errored. A resume re-runs a failed
+sample because it is not a measurement; a later campaign still avoids the
+question, because drawing it again is an intersection.
 
-### What makes two samples the same sample
+### Identity within a campaign
 
-Not `(syntax, program, question)` — that names a *cell*, and the same cell
-measures something else the moment a syntax file is edited. Identity is
-`autocog.bench.fingerprint`, a digest of the model tag, the syntax and search
-JSON **content**, the compiled program's own STA hash, and the question's
-content. Reindent a syntax file and reuse still applies; change a field and
-every sample under it is re-measured, in the prior campaign *and* in this
-campaign's own directory.
+Resume compares `autocog.bench.fingerprint` — the model tag, the syntax and
+search JSON **content**, the compiled program's own STA hash, and the
+question's content. Not `(syntax, program, question)`, which names a *cell*:
+edit a syntax file and the same cell measures something else, and the old
+numbers used to survive the re-run.
 
 Two things the digest does not cover, because a hash invites more trust than
 it earns:
@@ -134,8 +159,7 @@ it earns:
   discipline is yours; a descriptor never sees a path.
 - **The KV slot count.** Any two counts disagree slightly on free-text
   logprobs while agreeing on tree shape, so it is an experimental variable —
-  but it is measured per box, not declared, and keying on it would void every
-  reuse whenever the worker layout changed. It rides on the event instead;
+  but it is measured per box, not declared. It rides on the event instead;
   group by it in analysis.
 
 Results written before fingerprints existed keep resuming on the triple: they

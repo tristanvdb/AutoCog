@@ -49,15 +49,12 @@ by (syntax, program, question) and only the gaps run, whatever writer
 vintage produced them. Perf runs resume per run (results file finalized
 on completion only).
 
-Reuse ACROSS campaigns: `prior` (descriptor key or --prior, repeatable)
-names directories of earlier results. A sample whose fingerprint is
-already there is copied in rather than re-run — the same campaign
-launched twice, or a second campaign overlapping the first, pays only
-for what is new. Identity is a digest of model/syntax/search/program/
-question, never the (syntax, program, question) cell name, so a reuse
-cannot quietly mix two configurations; see bench/reuse.py. The index is
-built ONCE per campaign: a campaign's results run to gigabytes and
-rebuilding it per run would re-read all of it per run.
+Not here: WHICH questions a run sees. A run takes `data` as given, and
+choosing a campaign's datapoints — once per dataset, so every arm sees
+the same ones, and drawn around whatever an earlier campaign already
+used — belongs to the launcher (share/campaign/samples.py). This layer
+would have to make that choice once per run, which is how two arms end
+up incomparable.
 """
 
 import asyncio
@@ -114,19 +111,6 @@ def results_root(campaign_name):
     return os.path.join(base, campaign_name)
 
 
-def resolve_prior(name):
-    """A prior-results directory: a path, or a campaign name under the
-    results root. Unresolvable is an ERROR, not an empty index — a typo
-    that silently disables reuse costs exactly what the feature saves."""
-    if os.path.isdir(name):
-        return name
-    root = results_root(name)
-    if os.path.isdir(root):
-        return root
-    raise ConfigError(f"prior results {name!r} not found (tried {name!r} "
-                      f"and {root!r})")
-
-
 def hosted_map(urls):
     """url -> hosted tags, probed once (fail fast on unreachable workers)."""
     return {w.url: w.capabilities()["models"]
@@ -150,15 +134,9 @@ def run_tag(run, defaults):
     return run.get("model") or defaults.get("model") or "rng"
 
 
-def run_campaign(descriptor_path, phases=None, workers=None, prior=None,
-                 log=print):
-    """Execute a campaign descriptor's phases against the given workers.
-
-    `prior` (adding to the descriptor's own `prior`) names directories of
-    earlier results whose samples this campaign may adopt instead of
-    re-measuring."""
+def run_campaign(descriptor_path, phases=None, workers=None, log=print):
+    """Execute a campaign descriptor's phases against the given workers."""
     from .quality import QualityRun, run_samples
-    from .reuse import PriorIndex
 
     desc = json.load(open(descriptor_path))
     name = desc.get("name") or os.path.splitext(
@@ -169,13 +147,6 @@ def run_campaign(descriptor_path, phases=None, workers=None, prior=None,
     hosted = hosted_map(workers)
     defaults = desc.get("defaults", {})
     root = results_root(name)
-
-    # One index for the whole campaign. Built BEFORE any worker does
-    # anything, so a bad `prior` fails in seconds rather than after the
-    # first arm has been paid for.
-    prior_dirs = [resolve_prior(p)
-                  for p in list(desc.get("prior") or []) + list(prior or [])]
-    prior_index = PriorIndex(prior_dirs, log=log) if prior_dirs else None
 
     selected = [p for p in desc.get("phases", [])
                 if not phases or p.get("name") in phases]
@@ -267,16 +238,10 @@ def run_campaign(descriptor_path, phases=None, workers=None, prior=None,
                     syntaxes=params.pop("syntaxes", None),
                     programs=params.pop("programs", None),
                     workdir=params.pop("workdir", None),
-                    prior=prior_index,
                     log=lambda m, _l=label: log(f"[{pname}/{_l}] {m}"))
                 if not qrun.pending:
                     log(f"[{pname}/{label}] all samples present — skipping")
-                    # Still finish: the run may have just ADOPTED rows from
-                    # a prior campaign, and they need their writer closed
-                    # and the summary regenerated over them.
-                    qrun.finish()
-                    lifecycle("run.skip", pname, label, run,
-                              **{"autocog.campaign.reused": len(qrun.reused)})
+                    lifecycle("run.skip", pname, label, run)
                     continue
                 if tag not in ledgers:
                     ledgers[tag] = lane_ledger(urls)

@@ -33,10 +33,11 @@ def program_specs(descriptor, layout, run):
 def resolve_prior(layout, names):
     """Earlier-results directories, by campaign name or by path.
 
-    A name that resolves to nothing RAISES. Reuse exists to not spend money
-    twice, so a typo that quietly degrades into "reuse nothing" fails in the
-    one way the operator cannot see: the campaign just runs, and costs what
-    it was supposed to save."""
+    A name that resolves to nothing RAISES. `prior` exists so two campaigns
+    do not draw the same questions, and a typo that quietly degraded into
+    "avoid nothing" fails in the one way the operator cannot see: the
+    campaign runs, and its results silently overlap the ones they were
+    meant to extend."""
     out = []
     for name in names:
         if os.path.isdir(name):
@@ -51,16 +52,18 @@ def resolve_prior(layout, names):
     return out
 
 
-def run_one(descriptor, layout, run, urls, seed=42, out=None, prior=None,
-            log=print):
+def run_one(descriptor, layout, run, urls, seed=42, out=None, data=None,
+            questions=0, log=print):
     """One run. Returns its events, or raises for the caller to isolate.
 
-    `out` overrides the results directory. The validity gate uses that to
-    write somewhere disposable: sharing the campaign's output would let four
+    `data` is the campaign's SELECTION for this run's dataset (see
+    samples.py) — already drawn, so the run takes all of it and chooses
+    nothing. `questions` truncates it, which only the validity gate does.
+
+    `out` overrides the results directory. The gate uses that to write
+    somewhere disposable: sharing the campaign's output would let four
     probe samples satisfy the resume index and the real run would find its
-    work already done. The gate passes no `prior` for the same reason — its
-    job is to see real answers come back from these workers, and an adopted
-    row proves nothing about them."""
+    work already done."""
     from autocog.bench.quality import run_quality
 
     out_dir = out or os.path.join(layout.results_for(descriptor.name), run["name"])
@@ -68,8 +71,8 @@ def run_one(descriptor, layout, run, urls, seed=42, out=None, prior=None,
     model = descriptor.model(run["model"])
     return run_quality(
         model=run["model"] if run["model"] != "rng" else None,
-        data=resolve_dataset(descriptor, layout, run["dataset"]),
-        questions=run["samples"],
+        data=data or resolve_dataset(descriptor, layout, run["dataset"]),
+        questions=questions,
         syntaxes=run["syntaxes"],
         programs=program_specs(descriptor, layout, run),
         out=out_dir,
@@ -80,14 +83,15 @@ def run_one(descriptor, layout, run, urls, seed=42, out=None, prior=None,
         seed=seed,
         n_ctx=model["ctx"] if model else 2048,
         workers=urls or None,
-        prior=prior,
         log=log,
     )
 
 
-def run_all(descriptor, layout, workers, events, seed=42, prior=None,
+def run_all(descriptor, layout, workers, events, seed=42, selections=None,
             log=print):
-    """Every run, in descriptor order. Returns the names that failed."""
+    """Every run, in descriptor order. Returns the names that failed.
+
+    `selections` maps a dataset name to this campaign's chosen questions."""
     failures = []
     for run in descriptor.runs:
         urls = workers.urls_for(run["model"])
@@ -103,7 +107,7 @@ def run_all(descriptor, layout, workers, events, seed=42, prior=None,
             "autocog.campaign.model": run["model"]})
         try:
             evs = run_one(descriptor, layout, run, urls, seed=seed,
-                          prior=prior,
+                          data=(selections or {}).get(run["dataset"]),
                           log=lambda m, _n=run["name"]: log(f"[{_n}] {m}"))
             events.emit("run.end", descriptor.name, **{
                 "autocog.campaign.run": run["name"],

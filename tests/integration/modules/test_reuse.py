@@ -1,15 +1,16 @@
-"""Reusing a sample a previous campaign already paid for.
+"""Sample identity, at its two granularities.
 
-Two properties, and the second is the one worth the tests: a sample that
-IS the same is not re-measured, and a sample that merely looks the same
-is. The second is what stops reuse from quietly welding two
-configurations into one dataset — the failure that makes results
-unusable only after the money is gone.
+The SAMPLE fingerprint decides whether the rows in a run's own output
+describe the experiment it is about to run. The QUESTION digest decides
+which datapoints a campaign draws — subtracting what an earlier campaign
+already used, so their sample sets do not intersect and their results can
+be unioned without double-counting anything.
 """
 
 import json
 import os
 import shutil
+import sys
 
 import pytest
 
@@ -19,6 +20,10 @@ from autocog.bench import reuse
 @pytest.fixture(autouse=True)
 def from_repo_root(repo_root, monkeypatch):
     monkeypatch.chdir(repo_root)
+    # The campaign app is not installed: it ships in share/, run in place.
+    share = os.path.join(repo_root, "share")
+    if share not in sys.path:
+        sys.path.insert(0, share)
 
 
 QUESTION = {"id": "q1", "topic": "T", "question": "What is H2O?",
@@ -47,6 +52,16 @@ def test_every_input_moves_the_fingerprint():
     # The id is not identity: two datasets both name something `q1`.
     assert fp(question=dict(QUESTION, id="q2")) != base
     assert fp() == base                       # and it is a function
+
+
+def test_question_digest_is_content():
+    """Content, not id — so a question cannot be excluded from one dataset
+    by an unrelated dataset that happened to reuse the id, and a dataset
+    rebuilt with renumbered ids still matches itself."""
+    base = reuse.question_digest(QUESTION)
+    assert reuse.question_digest(dict(QUESTION)) == base
+    assert reuse.question_digest(dict(QUESTION, id="other")) != base
+    assert reuse.question_digest(dict(QUESTION, answer="Fire")) != base
 
 
 def test_content_not_formatting(tmp_path):
@@ -85,59 +100,117 @@ def test_program_hash_is_the_artifact(repo_root):
     assert rel != other
 
 
-def write_rows(path, rows):
+# --- what an earlier campaign used --------------------------------------
+
+def write(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    if str(path).endswith(".ndjson"):
+        path.write_text("".join(json.dumps(r) + "\n" for r in obj))
+    else:
+        path.write_text(json.dumps(obj))
 
 
-def test_index_skips_what_is_not_a_measurement(tmp_path):
-    """Three kinds of row must not be adoptable: a failure, a row from
-    before fingerprints existed, and a half-written last line."""
-    write_rows(tmp_path / "run" / "results-h-rng.ndjson", [
-        {"autocog.bench.fingerprint": "good", "autocog.bench.answer": "Water"},
-        {"autocog.bench.fingerprint": "dead", "error.message": "worker died"},
-        {"autocog.bench.answer": "Water"},                       # no fingerprint
-    ])
-    with open(tmp_path / "run" / "results-h-rng.ndjson", "a") as f:
-        f.write('{"autocog.bench.fingerprint": "tor')             # killed mid-write
+def test_prior_reads_selections_and_rows(tmp_path):
+    """Two sources, failing differently. The selection file is what the
+    campaign committed to, and covers arms that never ran; the result rows
+    are the backstop for anything produced outside a campaign.
 
-    index = reuse.PriorIndex([str(tmp_path)])
-    assert "good" in index and len(index) == 1
-    assert "dead" not in index          # a dead worker is not a datapoint
-    assert index.get("tor") is None
+    Both are scanned recursively: a digest says nothing about which run
+    directory it came from, which is what lets an earlier campaign with a
+    different layout be subtracted at all."""
+    q1 = dict(QUESTION, id="a")
+    q2 = dict(QUESTION, id="b", question="What is CO2?")
+    write(tmp_path / "old" / "samples-mmlu.json", [q1])
+    write(tmp_path / "old" / "arm" / "deep" / "results-h-rng.ndjson",
+          [{"autocog.bench.question.digest": reuse.question_digest(q2)}])
 
-
-def test_index_is_layout_independent_and_supersedes(tmp_path):
-    """The fingerprint is complete, so which campaign, phase or run
-    directory a row sits in does not matter — which is the whole reason a
-    prior campaign with different run labels can be reused at all.
-
-    And a re-measured sample supersedes: scanning is sorted, last wins."""
-    write_rows(tmp_path / "old" / "arm-a" / "results-h-rng.ndjson",
-               [{"autocog.bench.fingerprint": "x", "autocog.bench.answer": "stale"}])
-    write_rows(tmp_path / "old" / "arm-b" / "deep" / "results-h-rng.ndjson",
-               [{"autocog.bench.fingerprint": "x", "autocog.bench.answer": "fresh"},
-                {"autocog.bench.fingerprint": "y", "autocog.bench.answer": "Fire"}])
-
-    index = reuse.PriorIndex([str(tmp_path / "old")])
-    assert len(index) == 2
-    assert index.get("x")["autocog.bench.answer"] == "fresh"
+    seen = reuse.prior_questions([str(tmp_path / "old")])
+    assert seen == {reuse.question_digest(q1), reuse.question_digest(q2)}
 
 
-def test_adopted_row_keeps_when_it_was_measured(tmp_path):
-    """The measurement's @timestamp is when it was MEASURED. Restamping it
-    would erase the only evidence that the row was not produced by the run
-    it now sits in."""
-    write_rows(tmp_path / "r" / "results-h-rng.ndjson", [
-        {"autocog.bench.fingerprint": "x", "@timestamp": "2026-01-01T00:00:00Z",
-         "autocog.bench.answer": "Water"}])
-    ev = reuse.PriorIndex([str(tmp_path)]).get("x")
-    assert ev["@timestamp"] == "2026-01-01T00:00:00Z"
-    assert ev["autocog.bench.reused.at"] == "2026-01-01T00:00:00Z"
-    assert ev["autocog.bench.reused.from"].endswith("results-h-rng.ndjson")
+def test_a_failed_sample_still_spent_its_question(tmp_path):
+    """Unlike a resume, an error row COUNTS here. A resume re-runs a failed
+    sample because it is not a measurement; a later campaign must still
+    avoid that question, because drawing it again is an intersection."""
+    write(tmp_path / "old" / "results-h-rng.ndjson", [
+        {"autocog.bench.question.digest": "spent",
+         "error.message": "RemoteError: worker died"}])
+    assert reuse.prior_questions([str(tmp_path / "old")]) == {"spent"}
 
 
-# --- end to end, through a run ------------------------------------------
+def test_torn_lines_are_tolerated(tmp_path):
+    write(tmp_path / "old" / "results-h-rng.ndjson",
+          [{"autocog.bench.question.digest": "good"}])
+    with open(tmp_path / "old" / "results-h-rng.ndjson", "a") as f:
+        f.write('{"autocog.bench.question.dig')          # killed mid-write
+    assert reuse.prior_questions([str(tmp_path / "old")]) == {"good"}
+
+
+# --- drawing a campaign's questions --------------------------------------
+
+def test_exclude_draws_the_full_count_from_what_is_left(tmp_path):
+    """The point of excluding BEFORE the draw: the second campaign gets its
+    full N of fresh questions, not N minus however many collided."""
+    from autocog.bench.formatters import load_questions
+
+    pool = [dict(QUESTION, id=f"q{i}", question=f"Q{i}?") for i in range(20)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+
+    first = load_questions(str(data), limit=5)
+    assert len(first) == 5
+
+    used = {reuse.question_digest(q) for q in first}
+    second = load_questions(str(data), limit=5, exclude=used)
+    assert len(second) == 5                                   # full count
+    assert not used & {reuse.question_digest(q) for q in second}   # disjoint
+
+    third = load_questions(str(data), limit=5,
+                           exclude=used | {reuse.question_digest(q)
+                                           for q in second})
+    assert len(third) == 5
+    assert len({q["id"] for q in first + second + third}) == 15
+
+
+def test_a_pool_too_small_to_draw_from_is_fatal(tmp_path, repo_root):
+    """Silently short is the dangerous outcome: a campaign that quietly ran
+    12 questions where the descriptor said 100 looks exactly like one that
+    ran 100, until somebody reads the error bars."""
+    from campaign.samples import SelectionError, select
+
+    pool = [dict(QUESTION, id=f"q{i}", question=f"Q{i}?") for i in range(6)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+    used = {reuse.question_digest(q) for q in pool[:4]}
+
+    with pytest.raises(SelectionError, match="cannot supply 5"):
+        select("pool", str(data), str(tmp_path / "out"), 5, exclude=used,
+               log=lambda *_: None)
+
+
+def test_selection_is_written_once_and_reread(tmp_path):
+    """Idempotent: a campaign that died halfway must not re-draw, or the
+    second half of the matrix answers different questions from the first."""
+    from campaign.samples import select
+
+    pool = [dict(QUESTION, id=f"q{i}", question=f"Q{i}?") for i in range(20)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+    out = tmp_path / "results"
+
+    path = select("pool", str(data), str(out), 5, log=lambda *_: None)
+    chosen = json.load(open(path))
+    assert len(chosen) == 5
+
+    logs = []
+    again = select("pool", str(data), str(out), 99, exclude={"anything"},
+                   log=logs.append)
+    assert again == path
+    assert json.load(open(again)) == chosen           # not re-drawn
+    assert any("already chosen" in m for m in logs)
+
+
+# --- end to end, through a run -------------------------------------------
 
 SHARED = (("share", "syntax", "complete.json"),
           ("share", "search", "default.json"),
@@ -166,77 +239,36 @@ def rng_worker():
         yield [f"127.0.0.1:{port}"]
 
 
-def quality(out, root, prior=None, log=None, workers=None):
+def quality(out, root, log=None, workers=None):
     from autocog.bench.quality import run_quality
 
     return run_quality(
         questions=2, syntaxes=["complete"], root=str(root),
         data=os.path.join(root, *SHARED[-1]), workers=workers,
         programs=["share/demos/mcq/strings-select.stl"],
-        out=str(out), prior=prior, log=log or (lambda *_: None))
+        out=str(out), log=log or (lambda *_: None))
 
 
-def test_second_campaign_adopts_and_stays_self_contained(tmp_path, repo_root,
-                                                        rng_worker):
-    """The ask: run the same campaign twice, pay once.
-
-    The adopted rows are COPIED into the second run's directory rather
-    than referenced. A campaign that ships as a tarball of pointers into a
-    directory somebody has since archived is a campaign that cannot be
-    read, and that is the expensive way to find out."""
+def test_every_row_carries_both_identities(tmp_path, repo_root, rng_worker):
+    """The fingerprint for this run's own resume, the question digest for
+    the next campaign's draw. A row missing either is data that cannot be
+    accounted for later."""
     root = fake_root(repo_root, str(tmp_path / "root"))
-    first = quality(tmp_path / "one", root, workers=rng_worker)
-    assert len(first) == 2
-    assert all(e["autocog.bench.fingerprint"] for e in first)
-
-    logs = []
-    second = quality(tmp_path / "two", root, prior=[str(tmp_path / "one")],
-                     log=logs.append, workers=rng_worker)
-    assert len(second) == 2
-    assert any("reused 2 sample(s)" in m for m in logs)
-    # Not "ran quickly" — nothing was scheduled at all.
-    assert any("nothing to do" in m for m in logs)
-
-    lines = [json.loads(l) for l in
-             open(next((tmp_path / "two").glob("results-*.ndjson")))]
-    assert len(lines) == 2
-    assert {e["autocog.bench.fingerprint"] for e in lines} == \
-           {e["autocog.bench.fingerprint"] for e in first}
-    for e in lines:
-        assert "autocog.bench.reused.from" in e
-        assert e["autocog.bench.answer"] is not None
-
-    # And the summary is regenerated over them: a run that only adopted
-    # still has to look like a finished run.
-    assert list((tmp_path / "two").glob("results-*.md"))
-
-
-def test_edited_syntax_is_not_the_same_experiment(tmp_path, repo_root,
-                                                 rng_worker):
-    """Same model, same program, same question, same cell NAME — and a
-    different rendering. Reusing here is how two configurations end up
-    averaged together in one table, so it must re-measure."""
-    root = fake_root(repo_root, str(tmp_path / "root"))
-    quality(tmp_path / "one", root, workers=rng_worker)
-
-    syntax = os.path.join(root, "share", "syntax", "complete.json")
-    cfg = json.load(open(syntax))
-    cfg["prompt_indent"] = "> " if cfg.get("prompt_indent") != "> " else "  "
-    json.dump(cfg, open(syntax, "w"))
-
-    logs = []
-    second = quality(tmp_path / "two", root, prior=[str(tmp_path / "one")],
-                     log=logs.append, workers=rng_worker)
-    assert len(second) == 2
-    assert not any("reused" in m for m in logs)
-    assert all("autocog.bench.reused.from" not in e for e in second)
+    for workers in (rng_worker, None):           # pooled and in-process
+        evs = quality(tmp_path / str(bool(workers)), root, workers=workers)
+        assert len(evs) == 2
+        for ev in evs:
+            assert ev["autocog.bench.fingerprint"]
+            assert ev["autocog.bench.question.digest"]
+        assert len({e["autocog.bench.question.digest"] for e in evs}) == 2
 
 
 def test_resume_rejects_rows_from_a_different_configuration(tmp_path, repo_root,
-                                                           rng_worker):
-    """The same guard on the run's OWN directory. Editing a syntax and
-    re-running used to keep the old numbers: the triple still matched, so
-    resume called the sample done."""
+                                                            rng_worker):
+    """Editing a syntax and re-running used to keep the old numbers: the
+    (syntax, program, question) triple still matched, so resume called the
+    sample done. The triple names a CELL; the fingerprint names the
+    measurement."""
     root = fake_root(repo_root, str(tmp_path / "root"))
     out = tmp_path / "one"
     quality(out, root, workers=rng_worker)
@@ -256,108 +288,6 @@ def test_resume_rejects_rows_from_a_different_configuration(tmp_path, repo_root,
     assert len({e["autocog.bench.fingerprint"] for e in rows}) == 4
 
 
-def test_local_path_reuses_but_does_not_resume(tmp_path, repo_root):
-    """The in-process path stamps identity and honours --prior, so an
-    ad-hoc run is reusable data and can itself reuse.
-
-    It does NOT resume on its own directory: a campaign is a matrix you
-    resume into, but `bench quality` re-run by hand and quietly measuring
-    nothing would be a trap. Asking for reuse is explicit."""
-    root = fake_root(repo_root, str(tmp_path / "root"))
-    first = quality(tmp_path / "one", root)
-    assert len(first) == 2
-    assert all(e["autocog.bench.fingerprint"] for e in first)
-
-    logs = []
-    again = quality(tmp_path / "one", root, log=logs.append)
-    assert len(again) == 2                              # no implicit resume
-    assert not any("reused" in m for m in logs)
-
-    logs = []
-    second = quality(tmp_path / "two", root, prior=[str(tmp_path / "one")],
-                     log=logs.append)
-    assert any("reused 2 sample(s)" in m for m in logs)
-    assert all("autocog.bench.reused.from" in e for e in second)
-
-
-# --- through a campaign -------------------------------------------------
-
-def campaign_desc(path, name, prior=None):
-    desc = {
-        "name": name,
-        "phases": [{"name": "p", "runs": [
-            {"kind": "quality", "model": "rng",
-             "data": "share/benchmarks/quality/questions.json",
-             "questions": 2, "syntaxes": ["complete"],
-             "programs": ["share/demos/mcq/strings-select.stl"],
-             "out": f"arm-{name}"}]}],
-    }
-    if prior:
-        desc["prior"] = prior
-    path.write_text(json.dumps(desc))
-    return str(path)
-
-
-def test_a_second_campaign_pays_only_for_what_is_new(tmp_path, monkeypatch,
-                                                     rng_worker):
-    """Different campaign NAME, different run label, different output
-    directory — and the same samples, so nothing is measured twice.
-
-    Per-run resume could never do this: it only ever looks in the run's own
-    directory, so an archived campaign is a campaign you pay for again."""
-    from autocog.bench.campaign import run_campaign
-
-    monkeypatch.setenv("RESULTS_PATH", str(tmp_path / "results"))
-    run_campaign(campaign_desc(tmp_path / "one.json", "one"),
-                 workers=rng_worker, log=lambda *_: None)
-
-    logs = []
-    root, failures = run_campaign(
-        campaign_desc(tmp_path / "two.json", "two", prior=["one"]),
-        workers=rng_worker, log=logs.append)
-    assert failures == []
-    assert any("reused 2 sample(s)" in m for m in logs)
-    assert any("skipping" in m for m in logs)
-
-    rows = [json.loads(l)
-            for f in (tmp_path / "results" / "two").rglob("results-*.ndjson")
-            for l in open(f)]
-    assert len(rows) == 2
-    assert all("autocog.bench.reused.from" in e for e in rows)
-
-
-def test_a_prior_that_does_not_exist_is_fatal(tmp_path, monkeypatch, rng_worker):
-    """Not an empty index. Reuse exists to not spend money twice, so a typo
-    that degrades into "reuse nothing" fails the one way the operator
-    cannot see: the campaign just runs, and costs what it should save."""
-    from autocog.bench.campaign import run_campaign
-    from autocog.errors import ConfigError
-
-    monkeypatch.setenv("RESULTS_PATH", str(tmp_path / "results"))
-    with pytest.raises(ConfigError, match="not found"):
-        run_campaign(campaign_desc(tmp_path / "c.json", "c", prior=["typo"]),
-                     workers=rng_worker, log=lambda *_: None)
-
-
-def test_launcher_resolves_prior_by_name_or_path(tmp_path, repo_root):
-    """The app's own resolution: a campaign name under results/, or a path."""
-    import sys
-
-    sys.path.insert(0, os.path.join(repo_root, "share"))
-    from campaign.layout import Layout
-    from campaign.runner import resolve_prior
-
-    layout = Layout(repo_root, str(tmp_path))
-    os.makedirs(os.path.join(tmp_path, "results", "earlier"))
-    elsewhere = tmp_path / "elsewhere"
-    elsewhere.mkdir()
-
-    assert resolve_prior(layout, ["earlier", str(elsewhere)]) == [
-        os.path.join(str(tmp_path), "results", "earlier"), str(elsewhere)]
-    with pytest.raises(FileNotFoundError, match="typo"):
-        resolve_prior(layout, ["typo"])
-
-
 def test_unfingerprinted_rows_still_count_as_done(tmp_path, repo_root):
     """Results written before fingerprints existed keep resuming on the
     triple. Invalidating them would re-run every campaign already on disk
@@ -365,13 +295,11 @@ def test_unfingerprinted_rows_still_count_as_done(tmp_path, repo_root):
     root = fake_root(repo_root, str(tmp_path / "root"))
     out = tmp_path / "legacy"
     out.mkdir()
-    rows = []
-    for q in ("water", "twelve"):
-        rows.append({"autocog.bench.syntax": "complete",
-                     "autocog.bench.program": "strings-select",
-                     "autocog.bench.question": q,
-                     "autocog.bench.answer": "Water"})
-    write_rows(out / "results-old-rng.ndjson", rows)
+    write(out / "results-old-rng.ndjson",
+          [{"autocog.bench.syntax": "complete",
+            "autocog.bench.program": "strings-select",
+            "autocog.bench.question": q,
+            "autocog.bench.answer": "Water"} for q in ("water", "twelve")])
 
     from autocog.bench.quality import QualityRun
 
@@ -381,3 +309,41 @@ def test_unfingerprinted_rows_still_count_as_done(tmp_path, repo_root):
                      log=lambda *_: None)
     assert [q["id"] for q in run.qs] == ["water", "twelve"]
     assert run.pending == []
+
+
+# --- through the launcher ------------------------------------------------
+
+def test_two_campaigns_over_one_dataset_do_not_intersect(tmp_path, repo_root):
+    """The ask, end to end: campaign two draws questions campaign one did
+    not use, so concatenating their results counts every sample once."""
+    from campaign.samples import select
+
+    pool = [dict(QUESTION, id=f"q{i}", question=f"Q{i}?") for i in range(50)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+
+    one = json.load(open(select("pool", str(data), str(tmp_path / "c1"), 10,
+                                log=lambda *_: None)))
+    used = reuse.prior_questions([str(tmp_path / "c1")])
+    two = json.load(open(select("pool", str(data), str(tmp_path / "c2"), 10,
+                                exclude=used, log=lambda *_: None)))
+
+    assert len(one) == len(two) == 10
+    assert not {q["id"] for q in one} & {q["id"] for q in two}
+
+
+def test_a_run_may_not_set_its_own_sample_count(tmp_path, repo_root):
+    """`samples` moved to the dataset so every arm of a campaign is asked
+    the same questions. A run that kept its own would make two arms
+    incomparable while still looking like one matrix — refused, not
+    ignored, because ignoring it runs the whole dataset instead."""
+    from campaign.descriptor import Descriptor, DescriptorError
+
+    base = {"models": [{"tag": "rng"}], "datasets": [{"name": "d"}],
+            "programs": {"p": {"filepath": "x.stl"}}}
+    Descriptor("ok", dict(base, runs=[
+        {"name": "r", "model": "rng", "dataset": "d", "programs": ["p"]}]))
+    with pytest.raises(DescriptorError, match="belongs to the dataset"):
+        Descriptor("bad", dict(base, runs=[
+            {"name": "r", "model": "rng", "dataset": "d", "programs": ["p"],
+             "samples": 10}]))

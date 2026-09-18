@@ -44,9 +44,21 @@ def load_formatter(spec):
     return fn
 
 
-def load_questions(data_path, formatter=None, limit=0):
+def load_questions(data_path, formatter=None, limit=0, exclude=None):
     """Load datapoints (.json list or .jsonl lines), apply the formatter,
-    and take a deterministic stratified sample of `limit` (0 = all)."""
+    and take a deterministic stratified sample of `limit` (0 = all).
+
+    `exclude` is a set of question digests (see bench.reuse) to drop BEFORE
+    sampling, so a campaign asked to avoid an earlier one's questions still
+    gets its full `limit` — drawn from what is left, not short by however
+    many collided.
+
+    The sample is a stride over the pool, not a random draw. Datasets
+    arrive grouped by topic, so a stride spreads across topics where a
+    draw would clump; and striding the REMAINDER keeps that property for
+    the second campaign as well as the first. It is also reproducible,
+    which a campaign's question set has to be.
+    """
     fn = formatter or identity
     records = []
     if data_path.endswith(".jsonl"):
@@ -59,6 +71,10 @@ def load_questions(data_path, formatter=None, limit=0):
         for key in ("id", "question", "choice", "answer"):
             if key not in q:
                 raise ConfigError(f"formatted question missing {key!r}: {q}")
+    if exclude:
+        from .reuse import question_digest
+
+        questions = [q for q in questions if question_digest(q) not in exclude]
     if limit and limit < len(questions):
         step = len(questions) / limit
         questions = [questions[int(i * step)] for i in range(limit)]

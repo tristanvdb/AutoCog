@@ -14,7 +14,8 @@
   ],
   "datasets": [
     {
-      "name": "questions"
+      "name": "questions",
+      "samples": 2
     }
   ],
   "programs": {
@@ -44,8 +45,7 @@
   "defaults": {
     "syntaxes": [
       "complete"
-    ],
-    "samples": 2
+    ]
   },
   "runs": [
     {
