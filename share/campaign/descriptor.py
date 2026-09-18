@@ -25,6 +25,8 @@ field to disagree with the file it lives in.
       syntaxes: [complete, special, stripped]
       samples: 200
 
+    prior: [screen-base-1b]        # reuse what an earlier campaign paid for
+
     runs:
       - {name: mechanism-arc, model: 1b, dataset: arc-1000,
          programs: [record-label, record-value]}
@@ -78,6 +80,10 @@ class Descriptor:
         self.datasets = _datasets(data.get("datasets") or [])
         self.programs = dict(data.get("programs") or {})
         self.defaults = dict(data.get("defaults") or {})
+        #: earlier campaigns whose samples this one may adopt — a name under
+        #: the results root, or a path. Resolved by the app, not here: this
+        #: module reads the descriptor and nothing about the machine.
+        self.prior = list(data.get("prior") or [])
         self.runs = _runs(data.get("runs") or [], self.defaults)
         self._validate()
 

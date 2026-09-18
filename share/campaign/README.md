@@ -79,6 +79,8 @@ can group by them.
 **`runs`** — an ordered list, not a matrix. `defaults` fills in what a run
 does not say.
 
+**`prior`** — earlier campaigns this one may reuse. See below.
+
 ### Labels are how you ask a question
 
 Nothing parses a program's name. `record-index` and `record-value` sharing
@@ -92,6 +94,52 @@ Anything about the machine. Worker count, which GPU holds which model, how
 many lanes saturate it — all measured, so a descriptor moves between boxes
 unedited. `--mode isolated|distributed` overrides the topology when debugging;
 `--dry-run` prints the plan and spawns nothing.
+
+## Paying once: `prior`
+
+Re-running a campaign into the same `results/<name>/` already skips the samples
+that are there. `prior` is for everything else — the campaign was renamed, the
+results were archived, or a new campaign overlaps an old one:
+
+```yaml
+prior: [screen-base-1b, ../old-box/results/screen-base-1b]
+```
+
+Each entry is a campaign name under `results/`, or a path; both are scanned
+recursively, so run labels and phase layout need not match. A name that
+resolves to nothing is **fatal** — a typo that quietly degraded into "reuse
+nothing" would fail in the only way you cannot see, by just running and
+costing what it was supposed to save. `--prior` adds more from the command
+line.
+
+An adopted sample is **copied** into this campaign's results, not referenced,
+so a tarball of `results/<name>/` is still the whole campaign. It keeps its
+original `@timestamp` and carries `autocog.bench.reused.from`.
+
+### What makes two samples the same sample
+
+Not `(syntax, program, question)` — that names a *cell*, and the same cell
+measures something else the moment a syntax file is edited. Identity is
+`autocog.bench.fingerprint`, a digest of the model tag, the syntax and search
+JSON **content**, the compiled program's own STA hash, and the question's
+content. Reindent a syntax file and reuse still applies; change a field and
+every sample under it is re-measured, in the prior campaign *and* in this
+campaign's own directory.
+
+Two things the digest does not cover, because a hash invites more trust than
+it earns:
+
+- **The model tag is a name, not a checksum of the weights.** Pointing
+  `Llama-3.2-1B` at a different GGUF matches and measures something else. Tag
+  discipline is yours; a descriptor never sees a path.
+- **The KV slot count.** Any two counts disagree slightly on free-text
+  logprobs while agreeing on tree shape, so it is an experimental variable —
+  but it is measured per box, not declared, and keying on it would void every
+  reuse whenever the worker layout changed. It rides on the event instead;
+  group by it in analysis.
+
+Results written before fingerprints existed keep resuming on the triple: they
+are already collected, and invalidating them buys a guarantee about the past.
 
 ## The validity gate
 

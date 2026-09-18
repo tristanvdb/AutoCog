@@ -185,11 +185,11 @@ def cmd_bench(args):
                     syntaxes=args.syntaxes.split(",") if args.syntaxes else None,
                     programs=args.program, workdir=args.workdir,
                     out=args.out, seed=args.seed, n_ctx=args.ctx,
-                    workers=args.worker)
+                    workers=args.worker, prior=args.prior)
     elif args.bench_command == "campaign":
         from .bench.campaign import run_campaign
         _, failures = run_campaign(args.descriptor, phases=args.phase,
-                                   workers=args.worker)
+                                   workers=args.worker, prior=args.prior)
         if failures:
             sys.exit(1)
 
@@ -509,6 +509,12 @@ def main():
     pb_quality.add_argument("--worker", action="append", default=None,
                         help="Remote level-3 worker host:port (repeatable; "
                              "routed by model tag)")
+    pb_quality.add_argument("--prior", action="append", default=None,
+                        help="Directory of earlier results (repeatable, "
+                             "scanned recursively). A sample already "
+                             "measured there under the SAME model, syntax, "
+                             "search, program and question is copied in "
+                             "instead of re-run")
 
     pb_campaign = bench_sub.add_parser(
         "campaign", parents=[bench_json],
@@ -521,6 +527,11 @@ def main():
                              help="Level-3 worker host:port (repeatable, "
                                   "REQUIRED — workers are preassigned "
                                   "with models by the campaign launcher)")
+    pb_campaign.add_argument("--prior", action="append", default=None,
+                             help="Earlier campaign to reuse samples from: "
+                                  "a directory, or a campaign name under "
+                                  "the results root (repeatable; adds to "
+                                  "the descriptor's own `prior`)")
 
     args = parser.parse_args()
 

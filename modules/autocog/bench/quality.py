@@ -28,6 +28,7 @@ import autocog
 from autocog.recorder import Recorder
 
 from . import results
+from . import reuse
 from .formatters import load_formatter, load_questions
 from .perf import find_root
 from .workers import LocalWorker, model_tag
@@ -172,6 +173,13 @@ def existing_samples(out_dir):
     """Index (syntax, program, question) triples already MEASURED under an
     output directory — any results file, any host, torn lines tolerated.
 
+    Returns {triple: set of fingerprints}, the fingerprint being None for
+    rows written before it existed. The caller decides what counts: a row
+    whose fingerprint disagrees with the one the run would produce is a
+    measurement of a DIFFERENT configuration that happens to occupy the
+    same cell — edit a syntax file and resume, and this is the difference
+    between re-measuring and silently shipping the old numbers.
+
     Rows carrying error.message do not count: a sample that failed
     because its worker died, or the box ran out of memory, is not a
     measurement, and treating it as one makes a transient failure
@@ -179,7 +187,7 @@ def existing_samples(out_dir):
     error rows stay in the file as the record of what happened; a later
     successful row for the same sample simply supersedes them (consumers
     group by these same keys)."""
-    have = set()
+    have = {}
     for path in glob.glob(os.path.join(out_dir, "results-*.ndjson")):
         for line in open(path):
             try:
@@ -191,7 +199,8 @@ def existing_samples(out_dir):
             key = (ev.get("autocog.bench.syntax"), ev.get("autocog.bench.program"),
                    ev.get("autocog.bench.question"))
             if all(k is not None for k in key):
-                have.add(key)
+                have.setdefault(key, set()).add(
+                    ev.get("autocog.bench.fingerprint"))
     return have
 
 
@@ -270,7 +279,8 @@ class QualityRun:
     programs. Drives no scheduling itself — run_samples does."""
 
     def __init__(self, tag, data, out, root, formatter="", questions=0,
-                 syntaxes=None, programs=None, workdir=None, log=print):
+                 syntaxes=None, programs=None, workdir=None, prior=None,
+                 log=print):
         self.tag = tag
         self.root = root
         self.out = out
@@ -284,15 +294,64 @@ class QualityRun:
                         for syntax in self.syntaxes
                         for name in self.programs
                         for q in self.qs]
-        have = existing_samples(out)
-        self.pending = [s for s in self.samples
-                        if (s[0], s[1], s[2]["id"]) not in have]
         self.base = {
             "log.logger": "autocog.bench.quality",
             "event.action": "quality.run",
             "autocog.bench.model": tag,
         }
         self._writer = None
+
+        # Sample identity, then the two things it decides: what this
+        # directory already holds, and what a previous campaign already
+        # paid for. See bench/reuse.py for what the digest does and does
+        # not cover.
+        search_d = reuse.json_digest(self.search)
+        syntax_d = {s: reuse.json_digest(self.syntax_path(s))
+                    for s in self.syntaxes}
+        program_d = {n: reuse.program_hash(p)
+                     for n, (p, _) in self.programs.items()}
+        self.fingerprints = {
+            (syntax, name, q["id"]): reuse.fingerprint(
+                tag, syntax_d[syntax], search_d, program_d[name], q)
+            for syntax, name, q in self.samples}
+
+        have = existing_samples(out)
+        stale = 0
+        pending = []
+        for s in self.samples:
+            key = (s[0], s[1], s[2]["id"])
+            seen = have.get(key)
+            if seen is None:
+                pending.append(s)
+            elif None in seen or self.fingerprints[key] in seen:
+                pass                    # measured here, under this config
+            else:
+                stale += 1              # same cell, different experiment
+                pending.append(s)
+        if stale:
+            self.log(f"{stale} existing sample(s) were measured under a "
+                     f"different configuration — re-running them")
+
+        # Adopt matching measurements from previous campaigns. They are
+        # COPIED into this run's results rather than referenced, so the
+        # output directory stays self-contained: a campaign that ships as
+        # a tarball of references is a campaign that cannot be read later.
+        self.reused = []
+        if prior is not None and len(prior):
+            still = []
+            for s in pending:
+                ev = prior.get(self.fingerprints[(s[0], s[1], s[2]["id"])])
+                if ev is None:
+                    still.append(s)
+                else:
+                    self.reused.append(ev)
+            pending = still
+        self.pending = pending
+        for ev in self.reused:
+            self.emit(ev)
+        if self.reused:
+            self.log(f"reused {len(self.reused)} sample(s) from a "
+                     f"previous campaign")
 
     def syntax_path(self, syntax):
         return os.path.join(self.root, "share", "syntax", f"{syntax}.json")
@@ -319,6 +378,9 @@ class QualityRun:
             "autocog.bench.labels": labels,
             "autocog.bench.question": q["id"],
             "autocog.bench.n_choices": len(q["choice"]),
+            # Carried on every row, error rows included: it is what makes
+            # this measurement reusable by the NEXT campaign.
+            "autocog.bench.fingerprint": self.fingerprints[(syntax, name, q["id"])],
         })
         t0 = time.time()
         try:
@@ -492,19 +554,27 @@ def compatible_urls(workers, tag):
 
 def run_quality(model=None, data=None, formatter="", questions=0,
                 syntaxes=None, programs=None, out=".", root=None, seed=42,
-                n_ctx=2048, workers=None, workdir=None, log=print):
+                n_ctx=2048, workers=None, workdir=None, prior=None, log=print):
     """Run the quality matrix; returns the list of events.
 
     `programs` names what to run: see resolve_programs. Paths in it resolve
     against `workdir`. Nothing here knows where programs live or what kind of
     task they perform — a run is program x syntax x sample, and the program's
-    labels travel with every event for the analysis to slice on."""
+    labels travel with every event for the analysis to slice on.
+
+    `prior` is a list of directories holding previous campaigns' results —
+    or an already-built reuse.PriorIndex, which is what a campaign passes so
+    that gigabytes of earlier results are scanned once and not per run.
+    Samples already measured there under the SAME configuration are adopted
+    instead of re-run (see bench/reuse.py)."""
     root = root or find_root(os.getcwd())
     if root is None:
         raise autocog.errors.ConfigError("cannot locate the repo root (share/syntax)")
     data = data or os.path.join(root, "share", "benchmarks", "quality", "questions.json")
     tag = model_tag(model)
     os.makedirs(out, exist_ok=True)
+    if prior is not None and not isinstance(prior, reuse.PriorIndex):
+        prior = reuse.PriorIndex(prior, log=log)
 
     if workers:
         from autocog.remote import lane_ledger
@@ -513,10 +583,12 @@ def run_quality(model=None, data=None, formatter="", questions=0,
         log(f"workers: {len(urls)} hosting {tag!r}")
         qrun = QualityRun(tag, data, out, root, formatter=formatter,
                           questions=questions, syntaxes=syntaxes,
-                          programs=programs, workdir=workdir, log=log)
+                          programs=programs, workdir=workdir, prior=prior,
+                          log=log)
         if not qrun.pending:
             log("all samples present — nothing to do")
-            return []
+            qrun.finish()
+            return list(qrun._writer.events) if qrun._writer else []
         ledger = lane_ledger(urls)
         pools = qrun.make_pools(urls, ledger)
         for pool in pools.values():
@@ -538,6 +610,18 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                               atomic=False)
     compiled = resolve_programs(programs, workdir)
 
+    # Identity, on the local path too: an unfingerprinted row is invisible
+    # to the next campaign's reuse, and this path's output is data like any
+    # other. It honours `prior` and nothing else -- deliberately: unlike a
+    # campaign, an ad-hoc local run that silently declined to re-measure
+    # because the directory already held the numbers would be a surprise.
+    # Asking for reuse is explicit; resuming here is not offered.
+    search_d = reuse.json_digest(search)
+    syntax_d = {s: reuse.json_digest(
+        os.path.join(root, "share", "syntax", f"{s}.json")) for s in syntaxes}
+    program_d = {n: reuse.program_hash(p) for n, (p, _) in compiled.items()}
+    reused = 0
+
     base = {
         "log.logger": "autocog.bench.quality",
         "event.action": "quality.run",
@@ -549,6 +633,14 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                                search)
         for name, (prog, labels) in compiled.items():
             for q in qs:
+                fp = reuse.fingerprint(tag, syntax_d[syntax], search_d,
+                                       program_d[name], q)
+                if prior is not None:
+                    adopted = prior.get(fp)
+                    if adopted is not None:
+                        nd.emit(adopted)
+                        reused += 1
+                        continue
                 worker.set_seed(seed)
                 with tempfile.TemporaryDirectory() as tmp:
                     rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
@@ -571,6 +663,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         "autocog.bench.labels": labels,
                         "autocog.bench.question": q["id"],
                         "autocog.bench.n_choices": len(q["choice"]),
+                        "autocog.bench.fingerprint": fp,
                         "autocog.bench.wall_seconds": round(wall, 3),
                         "autocog.bench.answer": answer,
                         "autocog.bench.correct": correct,
@@ -635,6 +728,8 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     f"{ev['autocog.bench.friction.structure']} {wall:.1f}s")
 
     nd.close()
+    if reused:
+        log(f"reused {reused} sample(s) from a previous campaign")
     md = os.path.join(out, f"results-{stamp}.md")
     results.quality_md(md, f"{results.host_name()} — {tag}", nd.events)
     log(f"\nresults: {nd.path}\n         {md}")

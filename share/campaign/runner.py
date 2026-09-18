@@ -30,13 +30,37 @@ def program_specs(descriptor, layout, run):
     return out
 
 
-def run_one(descriptor, layout, run, urls, seed=42, out=None, log=print):
+def resolve_prior(layout, names):
+    """Earlier-results directories, by campaign name or by path.
+
+    A name that resolves to nothing RAISES. Reuse exists to not spend money
+    twice, so a typo that quietly degrades into "reuse nothing" fails in the
+    one way the operator cannot see: the campaign just runs, and costs what
+    it was supposed to save."""
+    out = []
+    for name in names:
+        if os.path.isdir(name):
+            out.append(os.path.abspath(name))
+            continue
+        path = layout.results_for(name)
+        if not os.path.isdir(path):
+            raise FileNotFoundError(
+                f"prior results {name!r} not found: neither a directory nor "
+                f"a campaign under {layout.results}")
+        out.append(path)
+    return out
+
+
+def run_one(descriptor, layout, run, urls, seed=42, out=None, prior=None,
+            log=print):
     """One run. Returns its events, or raises for the caller to isolate.
 
     `out` overrides the results directory. The validity gate uses that to
     write somewhere disposable: sharing the campaign's output would let four
     probe samples satisfy the resume index and the real run would find its
-    work already done."""
+    work already done. The gate passes no `prior` for the same reason — its
+    job is to see real answers come back from these workers, and an adopted
+    row proves nothing about them."""
     from autocog.bench.quality import run_quality
 
     out_dir = out or os.path.join(layout.results_for(descriptor.name), run["name"])
@@ -56,11 +80,13 @@ def run_one(descriptor, layout, run, urls, seed=42, out=None, log=print):
         seed=seed,
         n_ctx=model["ctx"] if model else 2048,
         workers=urls or None,
+        prior=prior,
         log=log,
     )
 
 
-def run_all(descriptor, layout, workers, events, seed=42, log=print):
+def run_all(descriptor, layout, workers, events, seed=42, prior=None,
+            log=print):
     """Every run, in descriptor order. Returns the names that failed."""
     failures = []
     for run in descriptor.runs:
@@ -77,6 +103,7 @@ def run_all(descriptor, layout, workers, events, seed=42, log=print):
             "autocog.campaign.model": run["model"]})
         try:
             evs = run_one(descriptor, layout, run, urls, seed=seed,
+                          prior=prior,
                           log=lambda m, _n=run["name"]: log(f"[{_n}] {m}"))
             events.emit("run.end", descriptor.name, **{
                 "autocog.campaign.run": run["name"],

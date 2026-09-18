@@ -42,6 +42,11 @@ def main(argv=None):
                     help="restrict to these run names (repeatable)")
     ap.add_argument("--skip-gate", action="store_true",
                     help="run without the answer-validity check (say why)")
+    ap.add_argument("--prior", action="append", default=None,
+                    help="earlier campaign whose samples this one may adopt "
+                         "instead of re-measuring: a name under results/, or "
+                         "a path (repeatable; adds to the descriptor's own "
+                         "`prior`)")
     args = ap.parse_args(argv)
 
     repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -63,6 +68,14 @@ def main(argv=None):
     log(f"=== campaign {descriptor.name} ===")
     log(f"workdir: {layout.workdir}")
 
+    # Resolved before the plan is printed, so a --dry-run says how much of
+    # the campaign is already paid for and a bad name costs nothing.
+    try:
+        prior_dirs = runner.resolve_prior(layout,
+                                          descriptor.prior + (args.prior or []))
+    except FileNotFoundError as e:
+        sys.exit(f"prior: {e}")
+
     machine = probing.load_profile(layout) or probing.scan_machine()
     slots = planning.plan(descriptor, layout, machine, mode=args.mode)
     missing = planning.unhosted(slots, descriptor)
@@ -77,6 +90,16 @@ def main(argv=None):
             f"syntaxes={run['syntaxes']} samples={run['samples'] or 'all'}")
     if missing:
         sys.exit(f"no worker can host {missing} — the campaign would stall")
+
+    prior_index = None
+    if prior_dirs:
+        from autocog.bench.reuse import PriorIndex
+
+        # Once for the campaign: a screening campaign's results run to
+        # gigabytes, and every run would otherwise re-read all of them.
+        prior_index = PriorIndex(prior_dirs, log=log)
+        for d in prior_dirs:
+            log(f"  prior: {d}")
 
     if args.dry_run:
         log("dry run: nothing provisioned, nothing spawned")
@@ -117,7 +140,8 @@ def main(argv=None):
                              f"Nothing was spent. Fix the program or the data; "
                              f"--skip-gate runs anyway if you know why.")
             failures = runner.run_all(descriptor, layout, workers, events,
-                                      seed=args.seed, log=log)
+                                      seed=args.seed, prior=prior_index,
+                                      log=log)
     except WorkerFailed as e:
         sys.exit(f"workers: {e}")
 
