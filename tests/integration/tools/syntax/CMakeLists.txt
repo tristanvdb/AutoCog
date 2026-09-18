@@ -88,3 +88,16 @@ print('OK:', len(seen), 'distinct renderings from', sum(len(v) for v in seen.val
 )
 set_tests_properties(syntax_grid_cells_are_distinct PROPERTIES
     LABELS "syntax" TIMEOUT 300)
+
+# The size of the real search space, over the programs a campaign uses.
+# 64 cells x 9 programs names 576 arms and only 332 of them are distinct
+# renderings -- the rest are the same measurement bought twice.
+#
+# Pinned, because the number is what a campaign is SIZED from: if a program
+# or a knob changes it, the descriptor generated from the old number is
+# quietly wrong (an arm too many is money, an arm too few is a hole in every
+# comparison). Regenerate the descriptor and update the pin together.
+add_test(NAME syntax_search_space_is_pinned
+         COMMAND ${Python_EXECUTABLE} ${SYNTAX_DIR}/dedup.py --expect 332)
+set_tests_properties(syntax_search_space_is_pinned PROPERTIES
+    LABELS "syntax" TIMEOUT 300)

@@ -16,6 +16,7 @@ import os
 import sys
 
 from . import plan as planning
+from . import preflight as preflighting
 from . import probe as probing
 from . import provision, runner
 from .descriptor import DescriptorError, load
@@ -100,6 +101,17 @@ def main(argv=None):
         prior_index = PriorIndex(prior_dirs, log=log)
         for d in prior_dirs:
             log(f"  prior: {d}")
+
+    # Every arm, once, on rng — before the weights are downloaded, because a
+    # descriptor that cannot execute should cost nothing to find out about.
+    if not args.skip_gate:
+        failures = preflighting.check(descriptor, layout, log=log)
+        if failures:
+            log(f"preflight: {len(failures)} arm(s) do not execute")
+            preflighting.report(failures, log)
+            sys.exit("preflight failed. Nothing was provisioned and nothing "
+                     "was spent. --skip-gate runs anyway if you know why.")
+        log("preflight: every arm executes")
 
     if args.dry_run:
         log("dry run: nothing provisioned, nothing spawned")

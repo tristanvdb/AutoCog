@@ -141,17 +141,31 @@ it earns:
 Results written before fingerprints existed keep resuming on the triple: they
 are already collected, and invalidating them buys a guarantee about the past.
 
-## The validity gate
+## Two gates
 
-Before the matrix runs, a few real samples are checked for answers that are
-*usable*: in range, and not identical across every question. A campaign that
-fails this stops having spent nothing.
+**Preflight**, before provisioning: every `(program, syntax)` arm in the
+descriptor is executed once on `rng`. No weights, no GPU, ~50 arms/second, so a
+descriptor that cannot execute fails before a byte of model is downloaded.
+
+It exists because a 332-arm descriptor generated from the syntax grid had 42
+arms raising `IndexError` out of the program's own resolver, and the only gate
+that ran would have passed every time — it touched one arm.
+
+**The validity gate**, once the workers are up: a few real samples are checked
+for answers that are *usable*: in range, and not identical across every
+question. A campaign that fails this stops having spent nothing.
 
 It exists because the previous gate — "samples came back, no errors" — passed
 a run in which 17% of answers were letters naming no choice, every one of them
 the same letter. An unusable answer is still *scored* (as a miss), so
-error-freedom was never the property worth asserting. `--skip-gate` runs
-anyway, and you should be able to say why.
+error-freedom was never the property worth asserting.
+
+`--skip-gate` skips both, and you should be able to say why.
+
+Neither can see an arm that runs and returns the *wrong* answer: `rng` answers
+are noise, so "plausible" is all a check without a model can mean, and a
+resolver that is off by one produces a perfectly plausible choice. Read the
+graphs (`ctest -L inspect`).
 
 ## Designing one
 
