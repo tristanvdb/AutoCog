@@ -18,6 +18,7 @@ are not bit-reproducible under pooled dispatch (plumbing instrument).
 
 import asyncio
 import glob
+import math
 import json
 import os
 import tempfile
@@ -77,6 +78,94 @@ def walk_tokens(node, depth, acc):
         acc[f"nll.{kind}"] += sum(node["logprobs"])
     for child in node.get("children", []):
         walk_tokens(child, depth + 1, acc)
+
+
+def decision_stats(ftt):
+    """How committed the model was at each choice it made.
+
+    A choose keeps EVERY candidate as a sibling in the tree -- pruning marks a
+    node (`pruned`) rather than dropping it, and ranking had to score them all
+    anyway -- so the whole candidate distribution is present at the default
+    enum.width=1, for free. That is the raw material for asking whether a
+    configuration deserves more samples: accuracy at small N is noisy, whereas
+    "the model was indifferent between all four choices" is visible in a single
+    evaluation.
+
+    NOTE the field called `logprobs` holds NLL: positive is cost, and the
+    winner is the SMALLEST. Softmaxing it directly inverts the ranking, which
+    is an easy mistake and a silent one.
+
+    Returns a list, outermost decision first, of
+        {uid, field, n, top1, margin, entropy, chosen}
+    over the normalised exp(-NLL); entropy is in nats, 0 = certain and
+    log(n) = indifferent.
+    """
+    out = []
+
+    def visit(node):
+        kids = node.get("children") or []
+        groups = {}
+        for k in kids:
+            groups.setdefault(k["uid"], []).append(k)
+        for uid, sibs in groups.items():
+            if len(sibs) < 2:
+                continue            # not a choose, or a single-candidate one
+            nlls = [sum(s["logprobs"]) for s in sibs]
+            lo = min(nlls)
+            # Shift before exp: raw NLLs run to tens of nats and exp(-x)
+            # underflows to zero, which would make every margin 0.
+            weights = [math.exp(-(n - lo)) for n in nlls]
+            total = sum(weights) or 1.0
+            per = [w / total for w in weights]
+            probs = sorted(per, reverse=True)
+            # The un-pruned sibling is the one the BACKEND ranked first, using
+            # its own sign convention. Recording its probability under ours
+            # makes the two checkable against each other: if this ever stops
+            # equalling top1, one of the two has the sign inverted.
+            idx = next((i for i, s in enumerate(sibs) if not s.get("pruned")), 0)
+            chosen = sibs[idx]
+            out.append({
+                "uid": uid,
+                "field": chosen.get("field"),
+                "n": len(sibs),
+                "p_chosen": round(per[idx], 6),
+                "top1": round(probs[0], 6),
+                "margin": round(probs[0] - (probs[1] if len(probs) > 1 else 0.0), 6),
+                "entropy": round(-sum(p * math.log(p) for p in probs if p > 0), 6),
+                "chosen": chosen.get("text"),
+            })
+        for k in kids:
+            visit(k)
+
+    visit(ftt)
+    return out
+
+
+def decision_fields(decisions):
+    """Event fields for the decision distributions.
+
+    The PRIMARY decision -- the last one carrying a schema field, which is the
+    answer commitment -- gets flat scalars, because that is what a triage
+    metric will reach for first. The full list rides alongside so a later
+    analysis is not limited to the choice made today: dropping it would mean
+    re-running to ask a different question, which is the expensive mistake.
+    """
+    if not decisions:
+        return {}
+    valued = [d for d in decisions if d.get("field") is not None]
+    primary = (valued or decisions)[-1]
+    return {
+        "autocog.bench.decision.n": primary["n"],
+        "autocog.bench.decision.top1": primary["top1"],
+        "autocog.bench.decision.margin": primary["margin"],
+        "autocog.bench.decision.entropy": primary["entropy"],
+        # log(n) is the indifference ceiling; normalising makes decisions with
+        # different candidate counts comparable, which they otherwise are not.
+        "autocog.bench.decision.entropy_norm":
+            round(primary["entropy"] / math.log(primary["n"]), 6)
+            if primary["n"] > 1 else None,
+        "autocog.bench.decisions": decisions,
+    }
 
 
 def existing_samples(out_dir):
@@ -234,7 +323,7 @@ class QualityRun:
         t0 = time.time()
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                rec = Recorder(kinds={"input", "frame"}, path=tmp)
+                rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
                 result = await pool.run_async(
                     prog, recorder=rec, topic=q.get("topic", ""),
                     question=q["question"], choice=q["choice"])
@@ -251,6 +340,7 @@ class QualityRun:
                        "nll.value": 0.0, "nll.structure": 0.0}
                 steps = 0
                 score_error = None
+                decisions = []
                 for walk_dir, _, files in os.walk(tmp):
                     for f in sorted(files):
                         if not f.endswith(".frame.json"):
@@ -261,6 +351,14 @@ class QualityRun:
                         content = (json.load(open(input_file))
                                    if os.path.exists(input_file) else {})
                         prompt = os.path.basename(walk_dir)
+
+                        # How committed the model was, read off the GENERATION
+                        # tree -- the scored one is a forced path and has no
+                        # alternatives to compare against.
+                        ftt_file = os.path.join(walk_dir, f"{step}.ftt.json")
+                        if os.path.exists(ftt_file):
+                            decisions += decision_stats(json.load(open(ftt_file)))
+
                         try:
                             scored = await pool.score_frame_async(
                                 prog, prompt, frame, content)
@@ -295,6 +393,7 @@ class QualityRun:
             "autocog.bench.friction.structure":
                 round(acc["nll.structure"] / acc["tokens.structure"], 4)
                 if acc["tokens.structure"] else None,
+            **decision_fields(decisions),
         })
         self.log(f"[{syntax}/{name}/{q['id']}] correct={ev['autocog.bench.correct']} "
                  f"tok(v/s)={acc['tokens.value']}/{acc['tokens.structure']} "
@@ -452,7 +551,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
             for q in qs:
                 worker.set_seed(seed)
                 with tempfile.TemporaryDirectory() as tmp:
-                    rec = Recorder(kinds={"input", "frame"}, path=tmp)
+                    rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
                     t0 = time.time()
                     error = None
                     try:
@@ -490,6 +589,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                            "nll.value": 0.0, "nll.structure": 0.0}
                     steps = 0
                     score_error = None
+                    decisions = []
                     for walk_dir, _, files in os.walk(tmp):
                         for f in sorted(files):
                             if not f.endswith(".frame.json"):
@@ -500,6 +600,12 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                             content = (json.load(open(input_file))
                                        if os.path.exists(input_file) else {})
                             prompt = os.path.basename(walk_dir)
+
+                            ftt_file = os.path.join(walk_dir, f"{step}.ftt.json")
+                            if os.path.exists(ftt_file):
+                                decisions += decision_stats(
+                                    json.load(open(ftt_file)))
+
                             try:
                                 scored = engine.score_frame(prog, prompt, frame, content)
                             except Exception as e:  # noqa: BLE001
@@ -520,6 +626,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     "autocog.bench.friction.structure":
                         round(acc["nll.structure"] / acc["tokens.structure"], 4)
                         if acc["tokens.structure"] else None,
+                    **decision_fields(decisions),
                 })
                 nd.emit(ev)
                 log(f"[{syntax}/{name}/{q['id']}] correct={ev['autocog.bench.correct']} "

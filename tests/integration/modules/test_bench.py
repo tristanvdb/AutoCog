@@ -1,6 +1,7 @@
 """autocog bench — in-process drivers (perf / quality / campaign)."""
 
 import json
+import math
 import os
 import textwrap
 
@@ -45,6 +46,52 @@ def test_multiprompt_demos(tmp_path):
             assert ev["autocog.bench.tokens.value"] > 0, demo
             assert ev["autocog.bench.friction.structure"], demo
             assert ev["autocog.bench.friction.value"], demo
+
+
+def test_decision_distribution_is_recorded(tmp_path):
+    """The candidate distribution at each choice must survive into the event.
+
+    A choose keeps every candidate as a sibling in the FTT -- pruning marks
+    them, ranking had to score them all -- so this costs nothing beyond
+    writing it down. It is recorded because the question it answers comes
+    LATER: at N=100 accuracy is too noisy to say which configurations deserve
+    more samples, and "the model was indifferent between all four choices" is
+    visible in one evaluation. Aggregating it away would mean re-running to
+    ask that question.
+    """
+    events = run_quality(questions=2, syntaxes=["complete"],
+                         programs=["share/demos/mcq/strings-select.stl"],
+                         out=str(tmp_path / "dec"), log=lambda *_: None)
+    assert len(events) == 2
+    for ev in events:
+        assert ev.get("error.message") is None
+        assert ev["autocog.bench.decision.n"] == 4       # four choices offered
+        top1 = ev["autocog.bench.decision.top1"]
+        margin = ev["autocog.bench.decision.margin"]
+        ent = ev["autocog.bench.decision.entropy"]
+        assert 0.25 <= top1 <= 1.0, top1      # 1/n at the floor
+        assert 0.0 <= margin <= 1.0, margin
+        assert 0.0 <= ent <= math.log(4) + 1e-9, ent
+        assert ev["autocog.bench.decision.entropy_norm"] <= 1.0 + 1e-9
+
+        full = ev["autocog.bench.decisions"]
+        assert full and isinstance(full, list)
+        answer_dec = [d for d in full if d["field"] is not None][-1]
+        assert answer_dec["top1"] == top1
+
+        # THE SIGN TRAP. `logprobs` holds NLL, so the model's preferred
+        # candidate is the one with the SMALLEST sum. The backend ranked the
+        # candidates with its own convention and left exactly one un-pruned;
+        # p_chosen is that candidate's probability under ours. If either side
+        # inverted, the backend's pick would be our least likely and this
+        # fires -- while every other number here would still look plausible.
+        assert answer_dec["p_chosen"] == answer_dec["top1"], answer_dec
+
+        # And the chosen candidate is what the model EMITTED, not what the
+        # program resolved it to: strings-select commits on an index and
+        # `return call pick` turns it into the choice text.
+        assert answer_dec["chosen"].isdigit(), answer_dec["chosen"]
+        assert ev["autocog.bench.answer"] != answer_dec["chosen"]
 
 
 def test_perf_rng_cells(tmp_path):
