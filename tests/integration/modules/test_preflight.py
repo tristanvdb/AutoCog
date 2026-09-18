@@ -47,8 +47,9 @@ def descriptor(tmp_path, syntaxes, programs=("strings-select",)):
 def resolved(descriptor, repo_root, tmp_path):
     from campaign.syntaxes import materialize_all
 
-    return materialize_all(descriptor, layout_for(repo_root, tmp_path),
-                           str(tmp_path / "syn"), log=lambda *_: None)
+    paths, _ = materialize_all(descriptor, layout_for(repo_root, tmp_path),
+                               str(tmp_path / "syn"), log=lambda *_: None)
+    return paths
 
 
 def layout_for(repo_root, tmp_path):

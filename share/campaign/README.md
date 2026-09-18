@@ -54,6 +54,7 @@ programs:
 syntaxes:
   i1-tab:                        # complete.json with two knobs changed
     filepath: complete.json
+    labels: [base1, indent-tab]
     prompt_zero_index: false
     prompt_indent: "\t"
 
@@ -108,7 +109,11 @@ pretending to be source. So name a base and state what changes:
 
 ```yaml
 syntaxes:
-  i1-tab: {filepath: complete.json, prompt_zero_index: false, prompt_indent: "\t"}
+  i1-tab:
+    filepath: complete.json
+    labels: [base1, indent-tab]
+    prompt_zero_index: false
+    prompt_indent: "\t"
 ```
 
 `filepath` resolves **beside the descriptor first**, then in `share/syntax`,
@@ -119,10 +124,34 @@ the base does not have is an **error** — a mistyped knob is otherwise a no-op
 that reads as an arm: the campaign runs, two cells render identically, and
 the contrast you wrote it for never happened.
 
+`filepath` and `labels` describe the *arm*, not the rendering, and are
+stripped before the file is written — a stray key in a syntax is a field the
+C++ codec does not know, and the campaign would die on the box long after
+this was the cheap thing to catch.
+
 The resolved syntaxes are written to `results/<campaign>/syntax/<name>.json`
 and the runs point at those. The name is not a path; it is the string in
 `autocog.bench.syntax` on every result row, which is what an analysis groups
 by.
+
+### Syntax labels
+
+`labels` is to a syntax what it is to a program, and lands in its own event
+key, `autocog.bench.syntax.labels`. Never merged with the program's: `index`
+is already a program label on `record-index` *and* the obvious name for the
+index knob, and one list would make "group by `index`" silently mix a
+mechanism with a rendering.
+
+Every knob a spec **names** also gets a `knob=value` label automatically
+(`prompt_zero_index=false`, `prompt_indent="\t"` — JSON spelling, so a label
+never holds a raw tab). Named, not "differs from the base": a cell whose value
+happens to match the base is still part of that contrast and must not drop out
+of the slice. So the written labels are free to be the human names and the
+derived ones cannot drift from what actually rendered.
+
+This is what turns the question into a groupby. "Are the one-based arms
+worse?" is one slice over `base1`, not a regex across syntax names — the same
+reason nothing parses a program's name.
 
 `python3 share/syntax/dedup.py <descriptor>` reports which of a campaign's
 syntaxes actually render differently, per program — a knob a program's schema

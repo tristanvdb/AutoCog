@@ -53,7 +53,8 @@ def resolve_prior(layout, names):
 
 
 def run_one(descriptor, layout, run, urls, seed=42, out=None, data=None,
-            questions=0, syntax_paths=None, log=print):
+            questions=0, syntax_paths=None, syntax_labels=None,
+            log=print):
     """One run. Returns its events, or raises for the caller to isolate.
 
     `data` is the campaign's SELECTION for this run's dataset (see
@@ -84,16 +85,18 @@ def run_one(descriptor, layout, run, urls, seed=42, out=None, data=None,
         n_ctx=model["ctx"] if model else 2048,
         workers=urls or None,
         syntax_paths=syntax_paths,
+        syntax_labels=syntax_labels,
         log=log,
     )
 
 
 def run_all(descriptor, layout, workers, events, seed=42, selections=None,
-            syntax_paths=None, log=print):
+            syntax_paths=None, syntax_labels=None, log=print):
     """Every run, in descriptor order. Returns the names that failed.
 
     `selections` maps a dataset name to this campaign's chosen questions;
-    `syntax_paths` maps a syntax name to its resolved JSON."""
+    `syntax_paths` / `syntax_labels` map a syntax name to its resolved
+    JSON and its labels."""
     failures = []
     for run in descriptor.runs:
         urls = workers.urls_for(run["model"])
@@ -111,6 +114,7 @@ def run_all(descriptor, layout, workers, events, seed=42, selections=None,
             evs = run_one(descriptor, layout, run, urls, seed=seed,
                           data=(selections or {}).get(run["dataset"]),
                           syntax_paths=syntax_paths,
+                          syntax_labels=syntax_labels,
                           log=lambda m, _n=run["name"]: log(f"[{_n}] {m}"))
             events.emit("run.end", descriptor.name, **{
                 "autocog.campaign.run": run["name"],

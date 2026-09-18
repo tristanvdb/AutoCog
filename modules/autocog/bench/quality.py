@@ -280,10 +280,15 @@ class QualityRun:
 
     def __init__(self, tag, data, out, root, formatter="", questions=0,
                  syntaxes=None, programs=None, workdir=None,
-                 syntax_paths=None, log=print):
+                 syntax_paths=None, syntax_labels=None, log=print):
         self.tag = tag
         self.root = root
         self.syntax_paths = dict(syntax_paths or {})
+        #: free-form tags per syntax NAME, the rendering counterpart of a
+        #: program's labels. Kept in their own event key: `index` is both a
+        #: program label and the obvious name for an index knob, and one
+        #: merged list would make grouping by it mix the two.
+        self.syntax_labels = dict(syntax_labels or {})
         self.out = out
         self.log = log
         self.syntaxes = syntaxes or ["complete", "stripped"]
@@ -369,6 +374,7 @@ class QualityRun:
             "autocog.bench.syntax": syntax,
             "autocog.bench.program": name,
             "autocog.bench.labels": labels,
+            "autocog.bench.syntax.labels": self.syntax_labels.get(syntax, []),
             "autocog.bench.question": q["id"],
             "autocog.bench.n_choices": len(q["choice"]),
             # Carried on every row, error rows included. The fingerprint
@@ -553,7 +559,7 @@ def compatible_urls(workers, tag):
 def run_quality(model=None, data=None, formatter="", questions=0,
                 syntaxes=None, programs=None, out=".", root=None, seed=42,
                 n_ctx=2048, workers=None, workdir=None, syntax_paths=None,
-                log=print):
+                syntax_labels=None, log=print):
     """Run the quality matrix; returns the list of events.
 
     `programs` names what to run: see resolve_programs. Paths in it resolve
@@ -580,7 +586,8 @@ def run_quality(model=None, data=None, formatter="", questions=0,
         qrun = QualityRun(tag, data, out, root, formatter=formatter,
                           questions=questions, syntaxes=syntaxes,
                           programs=programs, workdir=workdir,
-                          syntax_paths=syntax_paths, log=log)
+                          syntax_paths=syntax_paths,
+                          syntax_labels=syntax_labels, log=log)
         if not qrun.pending:
             log("all samples present — nothing to do")
             return []
@@ -600,6 +607,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     qs = load_questions(data, load_formatter(formatter), limit=questions)
     syntaxes = syntaxes or ["complete", "stripped"]
     paths = dict(syntax_paths or {})
+    tags = dict(syntax_labels or {})
     def syntax_file(name):
         return paths.get(name) or os.path.join(root, "share", "syntax",
                                                f"{name}.json")
@@ -650,6 +658,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                         "autocog.bench.syntax": syntax,
                         "autocog.bench.program": name,
                         "autocog.bench.labels": labels,
+                        "autocog.bench.syntax.labels": tags.get(syntax, []),
                         "autocog.bench.question": q["id"],
                         "autocog.bench.n_choices": len(q["choice"]),
                         "autocog.bench.fingerprint": fp,

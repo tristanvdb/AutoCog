@@ -109,8 +109,8 @@ def main(argv=None):
         try:
             out = scratch if args.dry_run else results
             os.makedirs(out, exist_ok=True)
-            syntax_paths = syntaxing.materialize_all(descriptor, layout, out,
-                                                     log=log)
+            syntax_paths, syntax_labels = syntaxing.materialize_all(
+                descriptor, layout, out, log=log)
         except syntaxing.SyntaxError_ as e:
             sys.exit(f"syntax: {e}")
 
@@ -157,6 +157,7 @@ def main(argv=None):
         "autocog.campaign.runs": len(descriptor.runs),
         "axes": ["model", "syntax", "program"],
         "labels": descriptor.labels(),
+        "syntax_labels": sorted({l for v in syntax_labels.values() for l in v}),
         "workers": [s.url for s in slots]})
 
     from .workers import WorkerFailed, Workers
@@ -176,7 +177,8 @@ def main(argv=None):
                              f"--skip-gate runs anyway if you know why.")
             failures = runner.run_all(descriptor, layout, workers, events,
                                       seed=args.seed, selections=selections,
-                                      syntax_paths=syntax_paths, log=log)
+                                      syntax_paths=syntax_paths,
+                                      syntax_labels=syntax_labels, log=log)
     except WorkerFailed as e:
         sys.exit(f"workers: {e}")
 

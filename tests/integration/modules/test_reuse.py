@@ -413,7 +413,7 @@ def test_an_undeclared_syntax_is_a_shipped_file(tmp_path, repo_root):
                      "programs": ["a"], "syntaxes": ["complete"]}]))
     assert d.syntax("complete") == {}
 
-    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+    paths, _ = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
                             str(tmp_path / "res"), log=lambda *_: None)
     shipped = json.load(open(os.path.join(repo_root, "share", "syntax",
                                           "complete.json")))
@@ -431,7 +431,7 @@ def test_overrides_apply_to_the_base(tmp_path, repo_root):
                              "prompt_indent": "\t"}},
         runs=[{"name": "r", "model": "rng", "dataset": "d",
                "programs": ["a"], "syntaxes": ["i1-tab"]}]))
-    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+    paths, _ = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
                             str(tmp_path / "res"), log=lambda *_: None)
     got = json.load(open(paths["i1-tab"]))
     shipped = json.load(open(os.path.join(repo_root, "share", "syntax",
@@ -456,7 +456,7 @@ def test_a_local_syntax_beats_a_shipped_one(tmp_path, repo_root):
     d = descriptor_from(tmp_path, dict(
         BASE, runs=[{"name": "r", "model": "rng", "dataset": "d",
                      "programs": ["a"], "syntaxes": ["complete"]}]))
-    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+    paths, _ = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
                             str(tmp_path / "res"), log=lambda *_: None)
     assert json.load(open(paths["complete"])) == {"prompt_indent": "MINE"}
 
@@ -505,7 +505,7 @@ def test_a_run_uses_the_resolved_syntax_not_a_shipped_name(tmp_path, repo_root,
                                "prompt_with_index": False}},
         runs=[{"name": "r", "model": "rng", "dataset": "d",
                "programs": ["a"], "syntaxes": ["no-index"]}]))
-    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+    paths, _ = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
                             str(tmp_path / "res"), log=lambda *_: None)
 
     evs = run_quality(
@@ -518,3 +518,72 @@ def test_a_run_uses_the_resolved_syntax_not_a_shipped_name(tmp_path, repo_root,
     assert len(evs) == 1
     assert evs[0]["autocog.bench.syntax"] == "no-index"
     assert evs[0].get("error.message") is None
+
+
+def test_labels_ride_along_and_stay_out_of_the_syntax_file(tmp_path, repo_root):
+    """`labels` describes the ARM, not the rendering.
+
+    A stray key in the written syntax is a field the C++ codec does not
+    know, and the campaign would die on the box with a parse error long
+    after this was the cheap thing to catch."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        syntaxes={"i1-tab": {"filepath": "complete.json",
+                             "labels": ["one-based", "indent-tab"],
+                             "prompt_zero_index": False,
+                             "prompt_indent": "\t"}},
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["a"], "syntaxes": ["i1-tab"]}]))
+    paths, labels = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                                    str(tmp_path / "res"), log=lambda *_: None)
+
+    written = json.load(open(paths["i1-tab"]))
+    assert "labels" not in written and "filepath" not in written
+    assert written["prompt_zero_index"] is False
+
+    # The written names, then a knob=value per knob the spec NAMES --
+    # named, not "differs from the base": a cell whose value happens to
+    # match the base is still part of that contrast and must not drop out
+    # of the slice. JSON spelling, so a label never holds a raw tab.
+    assert labels["i1-tab"] == ["one-based", "indent-tab",
+                                "prompt_zero_index=false",
+                                'prompt_indent="\\t"']
+
+
+def test_syntax_labels_reach_the_event_in_their_own_key(tmp_path, repo_root,
+                                                        rng_worker):
+    """Never merged into the program's labels: `index` is already a program
+    label on record-index and is the obvious name for the index knob, so
+    one list would make grouping by it mix a mechanism with a rendering."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+    from autocog.bench.quality import run_quality
+
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        syntaxes={"no-index": {"filepath": "complete.json",
+                               "labels": ["unindexed"],
+                               "prompt_with_index": False}},
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["a"], "syntaxes": ["no-index"]}]))
+    paths, labels = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                                    str(tmp_path / "res"), log=lambda *_: None)
+
+    for workers in (rng_worker, None):
+        evs = run_quality(
+            questions=1, syntaxes=["no-index"], syntax_paths=paths,
+            syntax_labels=labels, root=str(repo_root), workers=workers,
+            data=os.path.join(repo_root, "share", "benchmarks", "quality",
+                              "questions.json"),
+            programs={"record-index": {
+                "filepath": os.path.join(repo_root, "share", "demos", "mcq",
+                                         "record-index.stl"),
+                "labels": ["record", "index"]}},
+            out=str(tmp_path / f"out{bool(workers)}"), log=lambda *_: None)
+        ev = evs[0]
+        assert ev["autocog.bench.labels"] == ["record", "index"]
+        assert ev["autocog.bench.syntax.labels"] == [
+            "unindexed", "prompt_with_index=false"]
