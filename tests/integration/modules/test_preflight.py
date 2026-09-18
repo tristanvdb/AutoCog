@@ -6,9 +6,9 @@ that raised out of the program's own resolver, and that gate would have
 passed every time — it never touched them.
 """
 
+import json
 import os
 import sys
-import textwrap
 
 import pytest
 
@@ -21,27 +21,34 @@ def from_repo_root(repo_root, monkeypatch):
         sys.path.insert(0, share)
 
 
+#: complete.json with the index base flipped. `select` emits a POSITION
+#: and this decides whether it is spelled from 0 or from 1.
+ZERO = {"filepath": "complete.json", "prompt_zero_index": True}
+ONE = {"filepath": "complete.json", "prompt_zero_index": False}
+
+
 def descriptor(tmp_path, syntaxes, programs=("strings-select",)):
+    """`syntaxes` is {name: spec}; specs default to the shipped file."""
     from campaign.descriptor import load
 
     path = tmp_path / "c.yml"
-    path.write_text(textwrap.dedent(f"""
-        models:
-          - {{tag: rng, file: rng}}
-        datasets:
-          - {{name: q, source: builtin}}
-        programs:
-        """).lstrip() + "".join(
-        f"  {p}:\n    filepath: demos/mcq/{p}.stl\n    labels: [{p}]\n"
-        for p in programs) + textwrap.dedent(f"""
-        runs:
-          - name: r
-            model: rng
-            dataset: q
-            programs: [{', '.join(programs)}]
-            syntaxes: [{', '.join(syntaxes)}]
-        """))
+    path.write_text(json.dumps({
+        "models": [{"tag": "rng", "file": "rng"}],
+        "datasets": [{"name": "q", "samples": 1}],
+        "programs": {p: {"filepath": f"demos/mcq/{p}.stl", "labels": [p]}
+                     for p in programs},
+        "syntaxes": syntaxes,
+        "runs": [{"name": "r", "model": "rng", "dataset": "q",
+                  "programs": list(programs),
+                  "syntaxes": list(syntaxes)}]}))
     return load(str(path))
+
+
+def resolved(descriptor, repo_root, tmp_path):
+    from campaign.syntaxes import materialize_all
+
+    return materialize_all(descriptor, layout_for(repo_root, tmp_path),
+                           str(tmp_path / "syn"), log=lambda *_: None)
 
 
 def layout_for(repo_root, tmp_path):
@@ -56,7 +63,7 @@ def test_arms_are_deduped_across_model_runs(tmp_path, repo_root):
     it twice is only slower."""
     from campaign import preflight
 
-    desc = descriptor(tmp_path, ["complete", "stripped"],
+    desc = descriptor(tmp_path, {"complete": {}, "stripped": {}},
                       ("strings-select", "record-value"))
     desc.runs = desc.runs + [dict(desc.runs[0], name="r2")]
     got = preflight.arms(desc, layout_for(repo_root, tmp_path))
@@ -67,9 +74,11 @@ def test_arms_are_deduped_across_model_runs(tmp_path, repo_root):
 def test_a_working_arm_passes(tmp_path, repo_root):
     from campaign import preflight
 
-    desc = descriptor(tmp_path, ["complete"])
+    desc = descriptor(tmp_path, {"complete": {}})
     assert preflight.check(desc, layout_for(repo_root, tmp_path),
-                           log=lambda *_: None) == []
+                           log=lambda *_: None,
+                           syntax_paths=resolved(desc, repo_root,
+                                                 tmp_path)) == []
 
 
 def test_an_arm_that_cannot_execute_is_caught(tmp_path, repo_root):
@@ -85,11 +94,11 @@ def test_an_arm_that_cannot_execute_is_caught(tmp_path, repo_root):
     """
     from campaign import preflight
 
-    desc = descriptor(tmp_path, ["grid/i0-bare-flat-nodesc",
-                                 "grid/i1-bare-flat-nodesc"])
+    desc = descriptor(tmp_path, {"zero": ZERO, "one": ONE})
     failures = preflight.check(desc, layout_for(repo_root, tmp_path),
-                               log=lambda *_: None)
-    assert [s for _, s, _ in failures] == ["grid/i1-bare-flat-nodesc"]
+                               log=lambda *_: None,
+                               syntax_paths=resolved(desc, repo_root, tmp_path))
+    assert [s for _, s, _ in failures] == ["one"]
     assert "IndexError" in failures[0][2]
 
 

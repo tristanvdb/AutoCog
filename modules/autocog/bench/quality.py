@@ -279,9 +279,11 @@ class QualityRun:
     programs. Drives no scheduling itself — run_samples does."""
 
     def __init__(self, tag, data, out, root, formatter="", questions=0,
-                 syntaxes=None, programs=None, workdir=None, log=print):
+                 syntaxes=None, programs=None, workdir=None,
+                 syntax_paths=None, log=print):
         self.tag = tag
         self.root = root
+        self.syntax_paths = dict(syntax_paths or {})
         self.out = out
         self.log = log
         self.syntaxes = syntaxes or ["complete", "stripped"]
@@ -336,6 +338,15 @@ class QualityRun:
         self.pending = pending
 
     def syntax_path(self, syntax):
+        """Where a syntax NAME's JSON lives.
+
+        A campaign resolves its syntaxes up front (base file + overrides)
+        and passes the paths, so the name is free to be whatever names the
+        arm. Without that mapping, a name is a shipped syntax — which is
+        what `bench quality --syntaxes complete,stripped` relies on."""
+        path = self.syntax_paths.get(syntax)
+        if path:
+            return path
         return os.path.join(self.root, "share", "syntax", f"{syntax}.json")
 
     def make_pools(self, urls, ledger):
@@ -541,7 +552,8 @@ def compatible_urls(workers, tag):
 
 def run_quality(model=None, data=None, formatter="", questions=0,
                 syntaxes=None, programs=None, out=".", root=None, seed=42,
-                n_ctx=2048, workers=None, workdir=None, log=print):
+                n_ctx=2048, workers=None, workdir=None, syntax_paths=None,
+                log=print):
     """Run the quality matrix; returns the list of events.
 
     `programs` names what to run: see resolve_programs. Paths in it resolve
@@ -567,7 +579,8 @@ def run_quality(model=None, data=None, formatter="", questions=0,
         log(f"workers: {len(urls)} hosting {tag!r}")
         qrun = QualityRun(tag, data, out, root, formatter=formatter,
                           questions=questions, syntaxes=syntaxes,
-                          programs=programs, workdir=workdir, log=log)
+                          programs=programs, workdir=workdir,
+                          syntax_paths=syntax_paths, log=log)
         if not qrun.pending:
             log("all samples present — nothing to do")
             return []
@@ -586,6 +599,10 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     worker = LocalWorker(model=model, n_ctx=n_ctx)
     qs = load_questions(data, load_formatter(formatter), limit=questions)
     syntaxes = syntaxes or ["complete", "stripped"]
+    paths = dict(syntax_paths or {})
+    def syntax_file(name):
+        return paths.get(name) or os.path.join(root, "share", "syntax",
+                                               f"{name}.json")
     search = os.path.join(root, "share", "search", "default.json")
     stamp = f"{results.host_name()}-{tag}"
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"),
@@ -598,8 +615,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     # quietly measured nothing because the directory already held the
     # numbers would be a surprise.)
     search_d = reuse.json_digest(search)
-    syntax_d = {s: reuse.json_digest(
-        os.path.join(root, "share", "syntax", f"{s}.json")) for s in syntaxes}
+    syntax_d = {s: reuse.json_digest(syntax_file(s)) for s in syntaxes}
     program_d = {n: reuse.program_hash(p) for n, (p, _) in compiled.items()}
 
     base = {
@@ -609,8 +625,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     }
 
     for syntax in syntaxes:
-        engine = worker.engine(os.path.join(root, "share", "syntax", f"{syntax}.json"),
-                               search)
+        engine = worker.engine(syntax_file(syntax), search)
         for name, (prog, labels) in compiled.items():
             for q in qs:
                 fp = reuse.fingerprint(tag, syntax_d[syntax], search_d,

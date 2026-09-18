@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""Which syntax cells actually render differently, per program.
+"""Which of a campaign's syntaxes actually render differently, per program.
 
-    python share/syntax/dedup.py                       # the table
-    python share/syntax/dedup.py --json classes.json   # the mapping
+    python3 share/syntax/dedup.py my-campaign.yml
 
-The grid is a product of knobs (see generate.py), and a product
-over-counts: a knob that a program's schema never exercises renders
-nothing. `prompt_indent` emits one prefix per NESTING LEVEL, so on a flat
+A syntax grid is a product of knobs, and a product over-counts: a knob
+that a program's schema never exercises renders nothing. `prompt_indent` emits one prefix per NESTING LEVEL, so on a flat
 schema it is inert and its four levels collapse to one. `prompt_zero_index`
 sets the label base and the values a `select` offers, so under `repeat` --
 where the candidates are texts, not positions -- it goes inert too once the
 labels are unnumbered.
 
-Measured on the mcq demos, that is 332 distinct cells where the grid names
-576: 42% of a naive campaign would be the same measurement bought twice.
-Which is why this is a pass over instantiated automata rather than a
-paragraph of reasoning about the knobs -- the collapse depends on the
-program's schema, and getting it wrong costs money in one direction and a
-missing arm in the other.
+Measured on the mcq demos over a 64-cell index/typed/indent/desc grid,
+that is 332 distinct cells where the product names 576: 42% of a naive
+campaign would be the same measurement bought twice. Which is why this is
+a pass over instantiated automata rather than a paragraph of reasoning
+about the knobs -- the collapse depends on the program's schema, and
+getting it wrong costs money in one direction and a missing arm in the
+other.
 
 WHAT IS COMPARED is the FTA's `actions` array, for EVERY prompt the program
 has, with the inspection content supplied. Not the FTA's own hash: that
@@ -25,7 +24,7 @@ folds in provenance, including the syntax's hash, so it separates all 64
 cells by construction and would report a 0% collapse very convincingly.
 
 Rendering is model-free -- instantiate and read -- so this costs seconds and
-can gate a campaign before anything is spent.
+can check a descriptor before anything is spent.
 """
 
 import argparse
@@ -33,10 +32,10 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
-GRID = os.path.join(HERE, "grid")
 DEMOS = os.path.join(REPO, "share", "demos", "mcq")
 CONTENT = os.path.join(DEMOS, "inspect", "content.json")
 STLIB = os.path.join(REPO, "share", "library", "stlib")
@@ -49,9 +48,40 @@ PROGRAMS = ["strings-select", "strings-repeat", "record-index", "record-value",
             "strings-select-cot", "strings-select-iter"]
 
 
-def syntaxes(grid=GRID):
-    return [os.path.splitext(f)[0] for f in sorted(os.listdir(grid))
-            if f.endswith(".json")]
+def from_descriptor(path):
+    """{program: {syntax name: resolved JSON}} -- the ARMS a descriptor runs.
+
+    Per program, not a cross product: a run pairs its programs with its own
+    syntaxes, and checking every program against every syntax in the file
+    would report duplicates in pairings nobody asked for.
+
+    The descriptor is the only place a campaign's syntaxes exist now: they
+    are a base file plus overrides, not a directory of files. Reading them
+    from here is what keeps this honest -- it measures what will run.
+    """
+    sys.path.insert(0, os.path.join(REPO, "share"))
+    from campaign.descriptor import load
+    from campaign.layout import Layout
+    from campaign import syntaxes as syntaxing
+
+    desc = load(path)
+    layout = Layout(REPO, os.path.dirname(os.path.abspath(path)))
+    local = os.path.dirname(os.path.abspath(path))
+    cache = {}
+
+    def syntax(name):
+        if name not in cache:
+            cache[name] = syntaxing.resolve(name, desc.syntax(name) or {},
+                                            layout, local)
+        return cache[name]
+
+    arms = {}
+    for run in desc.runs:
+        for program in run["programs"]:
+            cells = arms.setdefault(program, {})
+            for name in run["syntaxes"]:
+                cells.setdefault(name, syntax(name))
+    return arms
 
 
 def render_digest(program, syntax_id, search_id, content, prompts):
@@ -93,16 +123,17 @@ def content_for(demo, prompts, table):
     return out, missing
 
 
-def classify(programs=PROGRAMS, grid=GRID, log=print):
-    """{program: {representative syntax: [every cell equal to it]}}."""
+def classify(arms, log=print):
+    """{program: {representative syntax: [every name equal to it]}}.
+
+    `arms` is {program: {syntax name: syntax dict}}."""
     import autocog
     from autocog.runtime.sta import runtime_sta_cxx as sta
 
     table = json.load(open(CONTENT))
-    cells = syntaxes(grid)
     search_id = sta.load_search(SEARCH)
     classes = {}
-    for demo in programs:
+    for demo, cells in arms.items():
         program = autocog.compile(os.path.join(DEMOS, demo + ".stl"),
                                   includes=[STLIB])
         prompts = sorted(program.prompts)
@@ -111,15 +142,18 @@ def classify(programs=PROGRAMS, grid=GRID, log=print):
             log(f"  note: {demo} has no inspection content for "
                 f"{missing} — those prompts render empty")
         groups = {}
-        for cell in cells:
-            syntax_id = sta.load_syntax(os.path.join(grid, cell + ".json"))
+        for cell, syntax in cells.items():
+            with tempfile.NamedTemporaryFile("w", suffix=".json") as f:
+                json.dump(syntax, f)
+                f.flush()
+                syntax_id = sta.load_syntax(f.name)
             try:
                 key = render_digest(program, syntax_id, search_id, content,
                                     prompts)
             finally:
                 sta.release_syntax(syntax_id)
             groups.setdefault(key, []).append(cell)
-        # The representative is the first cell in the grid's own order, so
+        # The representative is the first name in the descriptor's order, so
         # the choice is stable across runs and machines.
         classes[demo] = {members[0]: members for members in groups.values()}
     return classes
@@ -128,37 +162,36 @@ def classify(programs=PROGRAMS, grid=GRID, log=print):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("descriptor", help="campaign descriptor (YAML or JSON)")
     ap.add_argument("--program", action="append", default=None,
-                    help=f"program to measure (repeatable; default: {PROGRAMS})")
-    ap.add_argument("--grid", default=GRID, help="directory of syntax cells")
-    ap.add_argument("--json", default=None,
-                    help="write {program: [representative cells]} here")
-    ap.add_argument("--expect", type=int, default=None,
-                    help="fail unless the total is exactly this many cells")
+                    help="only these programs (repeatable)")
+    ap.add_argument("--strict", action="store_true",
+                    help="exit non-zero if any two syntaxes collapse")
     args = ap.parse_args()
 
-    classes = classify(args.program or PROGRAMS, args.grid)
-    n_cells = len(syntaxes(args.grid))
+    arms = from_descriptor(args.descriptor)
+    if args.program:
+        arms = {p: c for p, c in arms.items() if p in set(args.program)}
+    classes = classify(arms)
 
-    total = 0
+    total = naive = 0
     print(f"{'program':<24} {'distinct':>12}   collapses")
     for demo, groups in classes.items():
         total += len(groups)
+        naive += len(arms[demo])
         collapsed = sorted({len(m) for m in groups.values()} - {1})
-        print(f"{demo:<24} {len(groups):>5} / {n_cells:<4}   "
+        print(f"{demo:<24} {len(groups):>5} / {len(arms[demo]):<4}   "
               + (f"classes of {collapsed}" if collapsed else "-"))
-    naive = n_cells * len(classes)
     print(f"{'TOTAL':<24} {total:>5} / {naive:<4}   "
-          f"{(naive - total) / naive:.0%} of the grid is duplicate")
+          + (f"{(naive - total) / naive:.0%} duplicate" if naive else "-"))
 
-    if args.json:
-        with open(args.json, "w") as f:
-            json.dump({d: sorted(g) for d, g in classes.items()}, f, indent=2)
-            f.write("\n")
-        print(f"wrote {args.json}")
-
-    if args.expect is not None and total != args.expect:
-        print(f"FAIL: expected {args.expect} distinct cells, got {total}")
+    if total < naive:
+        print("\nthe duplicates, per program:")
+        for demo, groups in classes.items():
+            for rep, members in groups.items():
+                if len(members) > 1:
+                    print(f"  {demo}: {', '.join(members)}")
+    if args.strict and total < naive:
         return 1
     return 0
 

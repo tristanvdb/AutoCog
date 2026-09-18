@@ -18,6 +18,7 @@ import sys
 from . import plan as planning
 from . import preflight as preflighting
 from . import samples as sampling
+from . import syntaxes as syntaxing
 from . import probe as probing
 from . import provision, runner
 from .descriptor import DescriptorError, load
@@ -96,20 +97,40 @@ def main(argv=None):
     for d in prior_dirs:
         log(f"  prior: {d}")
 
-    # Every arm, once, on rng — before the weights are downloaded, because a
-    # descriptor that cannot execute should cost nothing to find out about.
-    if not args.skip_gate:
-        failures = preflighting.check(descriptor, layout, log=log)
-        if failures:
-            log(f"preflight: {len(failures)} arm(s) do not execute")
-            preflighting.report(failures, log)
-            sys.exit("preflight failed. Nothing was provisioned and nothing "
-                     "was spent. --skip-gate runs anyway if you know why.")
-        log("preflight: every arm executes")
+    # The campaign's syntaxes: each a base file plus the descriptor's
+    # overrides. Resolved before the preflight, because the preflight has
+    # to render the arms the campaign will actually run, not the files they
+    # were derived from -- and under --dry-run into a temporary directory,
+    # because a dry run writes nothing.
+    import tempfile
 
-    if args.dry_run:
-        log("dry run: nothing provisioned, nothing spawned")
-        return 0
+    results = layout.results_for(descriptor.name)
+    with tempfile.TemporaryDirectory() as scratch:
+        try:
+            out = scratch if args.dry_run else results
+            os.makedirs(out, exist_ok=True)
+            syntax_paths = syntaxing.materialize_all(descriptor, layout, out,
+                                                     log=log)
+        except syntaxing.SyntaxError_ as e:
+            sys.exit(f"syntax: {e}")
+
+        # Every arm, once, on rng — before the weights are downloaded,
+        # because a descriptor that cannot execute should cost nothing to
+        # find out about.
+        if not args.skip_gate:
+            failures = preflighting.check(descriptor, layout, log=log,
+                                          syntax_paths=syntax_paths)
+            if failures:
+                log(f"preflight: {len(failures)} arm(s) do not execute")
+                preflighting.report(failures, log)
+                sys.exit("preflight failed. Nothing was provisioned and "
+                         "nothing was spent. --skip-gate runs anyway if you "
+                         "know why.")
+            log("preflight: every arm executes")
+
+        if args.dry_run:
+            log("dry run: nothing provisioned, nothing spawned")
+            return 0
 
     layout.ensure()
     probing.save_profile(layout, machine)
@@ -119,9 +140,6 @@ def main(argv=None):
         provision.build_datasets(descriptor, layout, log=log)
     except provision.ProvisionError as e:
         sys.exit(f"provision: {e}")
-
-    results = layout.results_for(descriptor.name)
-    os.makedirs(results, exist_ok=True)
 
     # The campaign's questions: drawn once per dataset, before any run, so
     # every arm is asked the same thing and a `prior` campaign's questions
@@ -148,7 +166,8 @@ def main(argv=None):
             events.emit("campaign.start", descriptor.name)
             if not args.skip_gate:
                 try:
-                    _gate(descriptor, layout, workers, selections, log)
+                    _gate(descriptor, layout, workers, selections,
+                          syntax_paths, log)
                 except probing.GateFailure as e:
                     events.emit("campaign.end", descriptor.name,
                                 **{"error.message": f"gate: {e}"})
@@ -157,7 +176,7 @@ def main(argv=None):
                              f"--skip-gate runs anyway if you know why.")
             failures = runner.run_all(descriptor, layout, workers, events,
                                       seed=args.seed, selections=selections,
-                                      log=log)
+                                      syntax_paths=syntax_paths, log=log)
     except WorkerFailed as e:
         sys.exit(f"workers: {e}")
 
@@ -170,7 +189,7 @@ def main(argv=None):
     return 0
 
 
-def _gate(descriptor, layout, workers, selections, log):
+def _gate(descriptor, layout, workers, selections, syntax_paths, log):
     """A few real samples per run, checked for usable answers before the
     campaign commits to the whole matrix."""
     from autocog.bench.formatters import load_formatter, load_questions
@@ -189,6 +208,7 @@ def _gate(descriptor, layout, workers, selections, log):
         with tempfile.TemporaryDirectory() as tmp:
             events = list(runner.run_one(descriptor, layout, probe_run, urls,
                                          out=tmp, data=data, questions=4,
+                                         syntax_paths=syntax_paths,
                                          log=lambda *_: None))
         questions = load_questions(data, load_formatter(""), limit=4)
         report = probing.check_answers(events, questions)

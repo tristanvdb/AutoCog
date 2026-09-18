@@ -21,6 +21,16 @@ field to disagree with the file it lives in.
         options: []
         labels: [repeat, record, label]
 
+    syntaxes:
+      i1-typed:
+        filepath: complete.json          # local dir first, then share/syntax
+        prompt_zero_index: false         # every other field OVERRIDES it
+
+    program_groups:
+      record: [record-label, record-value]
+    syntax_groups:
+      index: [complete, i1-typed]
+
     defaults:
       syntaxes: [complete, special, stripped]
 
@@ -28,10 +38,15 @@ field to disagree with the file it lives in.
 
     runs:
       - {name: mechanism-arc, model: 1b, dataset: arc-1000,
-         programs: [record-label, record-value]}
+         programs: ["@record"], syntaxes: ["@index"]}
 
 `runs` is an ordered list, not a matrix: put the arm you most need first, so
 a campaign that dies early still leaves you the comparison you came for.
+
+A `@name` in `programs` or `syntaxes` expands the matching group. Groups
+exist because the same list is usually shared by several runs, and a list
+repeated is a list that drifts: two runs meant to be one contrast quietly
+stop being one when somebody edits one copy.
 """
 
 import json
@@ -78,13 +93,23 @@ class Descriptor:
         self.models = _models(data.get("models") or [])
         self.datasets = _datasets(data.get("datasets") or [])
         self.programs = dict(data.get("programs") or {})
+        #: name -> {filepath?, <overrides>}. `filepath` defaults to
+        #: "<name>.json", so `syntaxes: [complete]` works with nothing
+        #: declared and the mapping is only for overrides and renames.
+        self.syntaxes = dict(data.get("syntaxes") or {})
+        self.program_groups = dict(data.get("program_groups") or {})
+        self.syntax_groups = dict(data.get("syntax_groups") or {})
         self.defaults = dict(data.get("defaults") or {})
         #: earlier campaigns whose QUESTIONS this one must avoid — a name
         #: under the results root, or a path. Resolved by the app, not
         #: here: this module reads the descriptor and nothing about the
         #: machine.
         self.prior = list(data.get("prior") or [])
-        self.runs = _runs(data.get("runs") or [], self.defaults)
+        self.runs = _runs(data.get("runs") or [], self.defaults,
+                          self.program_groups, self.syntax_groups)
+        for run in self.runs:
+            for name in run["syntaxes"]:
+                self.syntaxes.setdefault(name, {})
         self._validate()
 
     def _validate(self):
@@ -117,6 +142,9 @@ class Descriptor:
     def programs_for(self, run):
         """The programs section a run needs, in the shape bench consumes."""
         return {name: self.programs[name] for name in run["programs"]}
+
+    def syntax(self, name):
+        return self.syntaxes.get(name)
 
     def labels(self):
         """Every label any program carries — the axes an analysis can slice."""
@@ -159,7 +187,33 @@ def _datasets(entries):
     return out
 
 
-def _runs(entries, defaults):
+def _expand(names, groups, what, where):
+    """`@group` -> the group's members, everything else verbatim.
+
+    Not recursive: a group of groups reads like an abstraction and behaves
+    like an indirection nobody can follow when a run turns out to have the
+    wrong arms."""
+    out = []
+    for name in names:
+        if not name.startswith("@"):
+            out.append(name)
+            continue
+        group = groups.get(name[1:])
+        if group is None:
+            raise DescriptorError(
+                f"{where}: no {what} group {name[1:]!r} "
+                f"(have {sorted(groups)})")
+        for member in group:
+            if member.startswith("@"):
+                raise DescriptorError(
+                    f"{what} group {name[1:]!r} refers to {member!r}: "
+                    f"groups do not nest")
+            if member not in out:
+                out.append(member)
+    return out
+
+
+def _runs(entries, defaults, program_groups=None, syntax_groups=None):
     out = []
     for i, entry in enumerate(entries):
         run = dict(defaults)
@@ -168,7 +222,11 @@ def _runs(entries, defaults):
         for key in ("model", "dataset", "programs"):
             if key not in run:
                 raise DescriptorError(f"run {run['name']!r} has no {key}")
-        run["syntaxes"] = list(run.get("syntaxes") or ["complete"])
+        run["programs"] = _expand(list(run["programs"]), program_groups or {},
+                                  "program", f"run {run['name']!r}")
+        run["syntaxes"] = _expand(list(run.get("syntaxes") or ["complete"]),
+                                  syntax_groups or {}, "syntax",
+                                  f"run {run['name']!r}")
         # Refused rather than ignored: a descriptor carried over from
         # before `samples` moved to the dataset would otherwise run the
         # whole dataset silently, which is a very expensive way to find

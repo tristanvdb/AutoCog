@@ -53,7 +53,7 @@ def resolve_prior(layout, names):
 
 
 def run_one(descriptor, layout, run, urls, seed=42, out=None, data=None,
-            questions=0, log=print):
+            questions=0, syntax_paths=None, log=print):
     """One run. Returns its events, or raises for the caller to isolate.
 
     `data` is the campaign's SELECTION for this run's dataset (see
@@ -83,15 +83,17 @@ def run_one(descriptor, layout, run, urls, seed=42, out=None, data=None,
         seed=seed,
         n_ctx=model["ctx"] if model else 2048,
         workers=urls or None,
+        syntax_paths=syntax_paths,
         log=log,
     )
 
 
 def run_all(descriptor, layout, workers, events, seed=42, selections=None,
-            log=print):
+            syntax_paths=None, log=print):
     """Every run, in descriptor order. Returns the names that failed.
 
-    `selections` maps a dataset name to this campaign's chosen questions."""
+    `selections` maps a dataset name to this campaign's chosen questions;
+    `syntax_paths` maps a syntax name to its resolved JSON."""
     failures = []
     for run in descriptor.runs:
         urls = workers.urls_for(run["model"])
@@ -108,6 +110,7 @@ def run_all(descriptor, layout, workers, events, seed=42, selections=None,
         try:
             evs = run_one(descriptor, layout, run, urls, seed=seed,
                           data=(selections or {}).get(run["dataset"]),
+                          syntax_paths=syntax_paths,
                           log=lambda m, _n=run["name"]: log(f"[{_n}] {m}"))
             events.emit("run.end", descriptor.name, **{
                 "autocog.campaign.run": run["name"],

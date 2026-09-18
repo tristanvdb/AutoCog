@@ -51,14 +51,22 @@ programs:
     filepath: demos/mcq/record-label.stl
     labels: [repeat, record, label]
 
-defaults:
-  syntaxes: [complete, special, stripped]
+syntaxes:
+  i1-tab:                        # complete.json with two knobs changed
+    filepath: complete.json
+    prompt_zero_index: false
+    prompt_indent: "\t"
+
+program_groups:
+  mechanism: [strings-select, record-label]
+syntax_groups:
+  index: [complete, i1-tab]
 
 runs:
   - {name: mechanism-arc, model: 1b, dataset: arc-1000,
-     programs: [strings-select, record-label]}
+     programs: ["@mechanism"], syntaxes: ["@index"]}
   - {name: mechanism-8b,  model: 8b, dataset: arc-1000,
-     programs: [strings-select, record-label]}
+     programs: ["@mechanism"], syntaxes: ["@index"]}
 ```
 
 **`models`** — `tag` is how a run names one, `file` is what to fetch (see
@@ -76,11 +84,52 @@ compiler's own flags (`-I dir`, `-D name=value`, `-e entry`); `labels` are
 free-form tags, opaque to everything, riding on every event so the analysis
 can group by them.
 
+**`syntaxes`** — a base file plus what you change. See below.
+
+**`program_groups` / `syntax_groups`** — a name for a list, used as `"@name"`
+in a run (the `@` needs the quotes). The same list is usually shared by
+several runs, and a list repeated is a list that drifts: two runs meant to be
+one contrast quietly stop being one when somebody edits a copy. Groups do not
+nest — a group of groups reads like an abstraction and behaves like an
+indirection nobody can follow when a run turns out to have the wrong arms.
+
 **`runs`** — an ordered list, not a matrix. `defaults` fills in what a run
 does not say.
 
 **`prior`** — earlier campaigns whose questions this one must not draw
 again. See below.
+
+### Syntaxes are a base plus overrides
+
+A syntax is a flat JSON of rendering knobs, and an experiment usually varies
+two or three of them. Shipping a file per combination does not scale — four
+knobs over one base is 64 near-identical files, a generated artifact
+pretending to be source. So name a base and state what changes:
+
+```yaml
+syntaxes:
+  i1-tab: {filepath: complete.json, prompt_zero_index: false, prompt_indent: "\t"}
+```
+
+`filepath` resolves **beside the descriptor first**, then in `share/syntax`,
+so your own file wins over a shipped one of the same name. It defaults to
+`<name>.json`, which is why `syntaxes: [complete]` works with nothing
+declared. Every other key overrides the loaded file, and overriding a field
+the base does not have is an **error** — a mistyped knob is otherwise a no-op
+that reads as an arm: the campaign runs, two cells render identically, and
+the contrast you wrote it for never happened.
+
+The resolved syntaxes are written to `results/<campaign>/syntax/<name>.json`
+and the runs point at those. The name is not a path; it is the string in
+`autocog.bench.syntax` on every result row, which is what an analysis groups
+by.
+
+`python3 share/syntax/dedup.py <descriptor>` reports which of a campaign's
+syntaxes actually render differently, per program — a knob a program's schema
+never exercises renders nothing, so `prompt_indent` is inert on a flat schema
+and `prompt_zero_index` is inert under `repeat`. Over the nine MCQ demos and a
+64-cell grid that is 332 distinct arms out of 576. It is model-free and takes
+seconds; run it before paying for the duplicates.
 
 ### Labels are how you ask a question
 

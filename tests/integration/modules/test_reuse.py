@@ -347,3 +347,174 @@ def test_a_run_may_not_set_its_own_sample_count(tmp_path, repo_root):
         Descriptor("bad", dict(base, runs=[
             {"name": "r", "model": "rng", "dataset": "d", "programs": ["p"],
              "samples": 10}]))
+
+
+# --- groups, and syntaxes as base + overrides ----------------------------
+
+def descriptor_from(tmp_path, data):
+    from campaign.descriptor import load
+
+    path = tmp_path / "c.yml"
+    path.write_text(json.dumps(data))
+    return load(str(path))
+
+
+BASE = {"models": [{"tag": "rng"}],
+        "datasets": [{"name": "d", "samples": 1}],
+        "programs": {"a": {"filepath": "x.stl"}, "b": {"filepath": "y.stl"},
+                     "c": {"filepath": "z.stl"}}}
+
+
+def test_at_expands_a_group(tmp_path):
+    """The same list is usually shared by several runs, and a list repeated
+    is a list that drifts: two runs meant to be one contrast quietly stop
+    being one when somebody edits a copy."""
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        program_groups={"pair": ["a", "b"]},
+        syntax_groups={"idx": ["s0", "s1"]},
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["@pair", "c"], "syntaxes": ["@idx", "complete"]}]))
+    assert d.runs[0]["programs"] == ["a", "b", "c"]
+    assert d.runs[0]["syntaxes"] == ["s0", "s1", "complete"]
+
+
+def test_an_unknown_group_is_fatal(tmp_path):
+    from campaign.descriptor import DescriptorError
+
+    with pytest.raises(DescriptorError, match="no program group 'typo'"):
+        descriptor_from(tmp_path, dict(
+            BASE, program_groups={"pair": ["a"]},
+            runs=[{"name": "r", "model": "rng", "dataset": "d",
+                   "programs": ["@typo"]}]))
+
+
+def test_groups_do_not_nest(tmp_path):
+    """A group of groups reads like an abstraction and behaves like an
+    indirection nobody can follow when a run turns out to have the wrong
+    arms."""
+    from campaign.descriptor import DescriptorError
+
+    with pytest.raises(DescriptorError, match="groups do not nest"):
+        descriptor_from(tmp_path, dict(
+            BASE, program_groups={"one": ["a"], "two": ["@one", "b"]},
+            runs=[{"name": "r", "model": "rng", "dataset": "d",
+                   "programs": ["@two"]}]))
+
+
+def test_an_undeclared_syntax_is_a_shipped_file(tmp_path, repo_root):
+    """`syntaxes: [complete]` must keep working with nothing declared —
+    the mapping is for overrides and renames, not a registration tax."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+
+    d = descriptor_from(tmp_path, dict(
+        BASE, runs=[{"name": "r", "model": "rng", "dataset": "d",
+                     "programs": ["a"], "syntaxes": ["complete"]}]))
+    assert d.syntax("complete") == {}
+
+    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                            str(tmp_path / "res"), log=lambda *_: None)
+    shipped = json.load(open(os.path.join(repo_root, "share", "syntax",
+                                          "complete.json")))
+    assert json.load(open(paths["complete"])) == shipped
+
+
+def test_overrides_apply_to_the_base(tmp_path, repo_root):
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        syntaxes={"i1-tab": {"filepath": "complete.json",
+                             "prompt_zero_index": False,
+                             "prompt_indent": "\t"}},
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["a"], "syntaxes": ["i1-tab"]}]))
+    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                            str(tmp_path / "res"), log=lambda *_: None)
+    got = json.load(open(paths["i1-tab"]))
+    shipped = json.load(open(os.path.join(repo_root, "share", "syntax",
+                                          "complete.json")))
+    assert got["prompt_zero_index"] is False
+    assert got["prompt_indent"] == "\t"
+    # Everything else is held fixed: that is the point of a base.
+    assert {k: v for k, v in got.items()
+            if k not in ("prompt_zero_index", "prompt_indent")} == \
+           {k: v for k, v in shipped.items()
+            if k not in ("prompt_zero_index", "prompt_indent")}
+
+
+def test_a_local_syntax_beats_a_shipped_one(tmp_path, repo_root):
+    """Resolution is descriptor-directory first. An operator's own file
+    winning over a shipped one of the same name is the direction that
+    surprises nobody."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+
+    (tmp_path / "complete.json").write_text('{"prompt_indent": "MINE"}')
+    d = descriptor_from(tmp_path, dict(
+        BASE, runs=[{"name": "r", "model": "rng", "dataset": "d",
+                     "programs": ["a"], "syntaxes": ["complete"]}]))
+    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                            str(tmp_path / "res"), log=lambda *_: None)
+    assert json.load(open(paths["complete"])) == {"prompt_indent": "MINE"}
+
+
+def test_an_override_of_a_field_the_base_lacks_is_fatal(tmp_path, repo_root):
+    """A typo in a knob name is otherwise a no-op that looks like an arm:
+    the campaign runs, two cells render identically, and the contrast the
+    descriptor was written for never happened."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import SyntaxError_, materialize_all
+
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        syntaxes={"oops": {"filepath": "complete.json",
+                           "prompt_with_indices": True}},   # not a field
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["a"], "syntaxes": ["oops"]}]))
+    with pytest.raises(SyntaxError_, match="prompt_with_indices"):
+        materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                        str(tmp_path / "res"), log=lambda *_: None)
+
+
+def test_a_syntax_name_is_not_a_path(tmp_path, repo_root):
+    from campaign.layout import Layout
+    from campaign.syntaxes import SyntaxError_, materialize_all
+
+    d = descriptor_from(tmp_path, dict(
+        BASE, runs=[{"name": "r", "model": "rng", "dataset": "d",
+                     "programs": ["a"], "syntaxes": ["grid/i0-typed"]}]))
+    with pytest.raises(SyntaxError_, match="a name is a name, not a path"):
+        materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                        str(tmp_path / "res"), log=lambda *_: None)
+
+
+def test_a_run_uses_the_resolved_syntax_not_a_shipped_name(tmp_path, repo_root,
+                                                           rng_worker):
+    """End to end: the name is the event's grouping key, and the file it
+    denotes is the campaign's own resolved JSON — not share/syntax/<name>."""
+    from campaign.layout import Layout
+    from campaign.syntaxes import materialize_all
+    from autocog.bench.quality import run_quality
+
+    d = descriptor_from(tmp_path, dict(
+        BASE,
+        syntaxes={"no-index": {"filepath": "complete.json",
+                               "prompt_with_index": False}},
+        runs=[{"name": "r", "model": "rng", "dataset": "d",
+               "programs": ["a"], "syntaxes": ["no-index"]}]))
+    paths = materialize_all(d, Layout(str(repo_root), str(tmp_path)),
+                            str(tmp_path / "res"), log=lambda *_: None)
+
+    evs = run_quality(
+        questions=1, syntaxes=["no-index"], syntax_paths=paths,
+        root=str(repo_root),
+        data=os.path.join(repo_root, "share", "benchmarks", "quality",
+                          "questions.json"),
+        programs=["share/demos/mcq/strings-select.stl"],
+        out=str(tmp_path / "out"), workers=rng_worker, log=lambda *_: None)
+    assert len(evs) == 1
+    assert evs[0]["autocog.bench.syntax"] == "no-index"
+    assert evs[0].get("error.message") is None

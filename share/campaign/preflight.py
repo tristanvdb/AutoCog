@@ -45,7 +45,7 @@ def arms(descriptor, layout):
     return out
 
 
-def check(descriptor, layout, log=print, limit=0):
+def check(descriptor, layout, log=print, limit=0, syntax_paths=None):
     """Run one rng sample per arm. Returns [(program, syntax, error)]."""
     from autocog.bench.quality import run_quality
 
@@ -63,7 +63,7 @@ def check(descriptor, layout, log=print, limit=0):
                 data=os.path.join(layout.repo, "share", "benchmarks",
                                   "quality", "questions.json"),
                 out=os.path.join(tmp, str(i)), root=layout.repo,
-                log=lambda *_: None)
+                syntax_paths=syntax_paths, log=lambda *_: None)
             for ev in events:
                 error = ev.get("error.message") or ev.get("autocog.bench.score_error")
                 if error:
