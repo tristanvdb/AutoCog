@@ -12,6 +12,8 @@ import importlib.util
 import os
 import sys
 
+from .errors import ConfigError
+
 
 def load_externals(program, include_paths=None):
     """Load the Python callables a program's `from "x.py" import f` names.
@@ -21,7 +23,14 @@ def load_externals(program, include_paths=None):
     be resolved is warned about and skipped rather than raised: the CLI has
     always behaved that way, and a program may legitimately be inspected
     without its resolvers present.
+
+    A name that IS resolved must carry `@autocog.runtime.extern`. That is an
+    error rather than a warning: the decorator is where a resolver declares
+    what it may do beyond returning a value, and an undeclared capability is
+    ambient authority. Required from the start, while the cost is a dozen
+    edits rather than a migration.
     """
+    from .runtime.context import is_extern
     from .program import _stdlib_path
 
     search_paths = list(include_paths or [])
@@ -35,6 +44,7 @@ def load_externals(program, include_paths=None):
     externals = {}
     loaded_modules = {}
 
+    undecorated = []
     for extern_name, info in program.python_imports.items():
         py_file = info["file"]
         target_func = info["target"]
@@ -64,6 +74,16 @@ def load_externals(program, include_paths=None):
                   file=sys.stderr)
             continue
 
+        if not is_extern(func):
+            undecorated.append(f"{py_file}:{target_func}")
+            continue
         externals[extern_name] = func
 
+    if undecorated:
+        raise ConfigError(
+            "these entrypoints are missing @autocog.runtime.extern: "
+            + ", ".join(undecorated)
+            + ". Every callable an STL program names must be decorated — it "
+              "is where a resolver declares what it may do beyond returning "
+              "a value, and an undeclared capability is ambient authority.")
     return externals

@@ -1,4 +1,7 @@
 
+from autocog.runtime import extern
+
+
 templates = {
   "bedtime" : {
     "description" : [
@@ -57,6 +60,7 @@ templates = {
   }
 }
 
+@extern
 def list_templates(age):
     try:
         age = int(age)
@@ -68,9 +72,11 @@ def list_templates(age):
       if tpl['ages'][0] <= age and age <= tpl['ages'][1]
     ]
 
+@extern
 def open_template(key):
     return templates[key]
 
+@extern
 def collate_task(query, age, key):
     res = [f"User ask for a book for children age {age}",f"User specified: \"{query}\""]
     res += ["Template description:"]
@@ -82,6 +88,7 @@ def collate_task(query, age, key):
     return res
 
 
+@extern
 def collate_comment(topic, comments):
     """Collate topic context with comments into a list of strings."""
     result = []

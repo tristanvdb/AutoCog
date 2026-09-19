@@ -248,12 +248,24 @@ async def resolve_call(channel, inputs, frames, current_prompt, engine, program,
 
     async def one_job(job):
         if extern and extern in externals:
-            # Python callable (sync or async)
-            result = externals[extern](**job)
-            if inspect.isawaitable(result):
-                result = await result
+            # Python callable (sync or async), run inside a context. A
+            # ContextVar rather than module state: a campaign has samples
+            # under DIFFERENT syntaxes in flight in one process, and a
+            # global would let one resolver read another's.
+            from .runtime.context import bind
+
+            with bind(prompt=current_prompt, syntax=syntax_of(engine),
+                      program=getattr(program, "sta", None)) as ctx:
+                result = externals[extern](**job)
+                if inspect.isawaitable(result):
+                    result = await result
             if recorder:
-                recorder.record_call(ctx_id, field_name, callable_name=extern)
+                # What the resolver READ from the ambient context. Recorded
+                # because it is the evidence for promoting an ambient read
+                # to a declared call binding: anything the return value
+                # depends on belongs in the STA, not in here.
+                recorder.record_call(ctx_id, field_name, callable_name=extern,
+                                     context_reads=ctx.reads or None)
             return result
         elif entry:
             # Sub-prompt execution

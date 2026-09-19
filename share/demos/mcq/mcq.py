@@ -22,7 +22,11 @@ It has no default on purpose. A default is how this went unnoticed: every
 answer came back plausible.
 """
 
+from autocog.runtime import extern
 
+
+
+@extern
 def pick(choices, answer, zero_index, **kwargs):
     """`select(choices)` over the list of strings: the index names a choice.
 
@@ -31,12 +35,14 @@ def pick(choices, answer, zero_index, **kwargs):
     return choices[int(answer) - (0 if zero_index else 1)]
 
 
+@extern
 def pick_value(choice, answer, zero_index, **kwargs):
     """`select(choice)` over the record list: the index names a record, and
     the answer is that record's `value`."""
     return choice[int(answer) - (0 if zero_index else 1)]["value"]
 
 
+@extern
 def by_label(choice, answer, **kwargs):
     """`repeat(choice.label)`: the model emitted one of the labels present in
     the data, so the answer is the value carried by the record wearing it.
