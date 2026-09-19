@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Convert public MCQ datasets to the questions.json format.
 
-    python3 convert.py arc  <ARC-*-Test.jsonl>  [--limit N] [--out FILE]
-    python3 convert.py mmlu <mmlu/test dir>     [--limit N] [--out FILE]
+    python3 convert.py arc  <ARC-*-Test.jsonl>  [--out FILE]
+    python3 convert.py mmlu <mmlu/test dir>     [--out FILE]
 
 Emits `[{id, topic, question, choice[4], answer}, ...]` where each choice is
 `{label, value}` — the label separate from the text, never glued onto it.
@@ -12,8 +12,14 @@ that wants only the texts pulls `choice.value` through a channel.
 
 Only clean 4-choice items with a resolvable answer are kept (ARC has a few
 3/5-choice questions and numeric labels; MMLU is uniformly 4-choice).
---limit takes a deterministic stratified sample (every k-th item of the
-full ordered set) so a small run still spans topics/subjects.
+
+The WHOLE split is emitted. Sampling belongs to whoever runs the
+experiment -- a campaign draws `samples` per dataset, stratified by topic
+(bench.formatters.stratify) -- and a capped file only shrinks the pool
+later campaigns can draw questions nobody has used yet from. This script
+used to take --limit and call the result stratified; it was a stride, and
+a stride over a subject-sorted frame drops any subject smaller than the
+step.
 """
 
 import argparse
@@ -85,7 +91,6 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset", choices=["arc", "mmlu"])
     ap.add_argument("path", help="ARC test JSONL / MMLU test csv directory")
-    ap.add_argument("--limit", type=int, default=0, help="stratified sample size (0 = all)")
     ap.add_argument("--four-only", action="store_true",
                     help="ARC: keep only 4-choice items (uniform cost, e.g. perf runs)")
     ap.add_argument("--out", default="", help="output file (default: stdout)")
@@ -95,9 +100,6 @@ def main():
              if args.dataset == "arc" else load_mmlu(args.path))
     if not items:
         sys.exit(f"no usable questions found in {args.path}")
-    if args.limit and args.limit < len(items):
-        step = len(items) / args.limit
-        items = [items[int(i * step)] for i in range(args.limit)]
 
     text = "[\n" + ",\n".join("  " + json.dumps(q, ensure_ascii=False) for q in items) + "\n]\n"
     if args.out:

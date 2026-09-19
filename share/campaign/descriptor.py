@@ -13,7 +13,7 @@ field to disagree with the file it lives in.
       - {tag: 1b, file: Llama-3.2-1B-Instruct-Q8_0.gguf, ctx: 4096}
 
     datasets:
-      - {name: arc-1000, source: arc, split: test, limit: 1000, samples: 200}
+      - {name: arc, source: arc, split: test, samples: 200}
 
     programs:
       record-label:
@@ -37,7 +37,7 @@ field to disagree with the file it lives in.
     prior: [screen-base-1b]        # draw questions that campaign did not use
 
     runs:
-      - {name: mechanism-arc, model: 1b, dataset: arc-1000,
+      - {name: mechanism-arc, model: 1b, dataset: arc,
          programs: ["@record"], syntaxes: ["@index"]}
 
 `runs` is an ordered list, not a matrix: put the arm you most need first, so
@@ -173,7 +173,14 @@ def _datasets(entries):
     """`samples` lives HERE, not on a run: a campaign draws its questions
     once per dataset and every run sees the same ones. A run that could
     set its own would make two arms incomparable while looking like a
-    single matrix (see share/campaign/samples.py). 0 = the whole dataset."""
+    single matrix (see share/campaign/samples.py). 0 = the whole dataset.
+
+    There is no `limit`. It used to cap the BUILT file, from back when a
+    run took the dataset whole; with `samples` doing the drawing its only
+    effect was to shrink the pool `prior` carves disjoint campaigns out of
+    -- a 1000-item cap is ten campaigns where the full MMLU test is a
+    hundred and forty. It was also a cache footgun: the built file is
+    keyed by name alone, so editing the cap silently did nothing."""
     out = []
     for entry in entries:
         if isinstance(entry, str):
@@ -182,7 +189,6 @@ def _datasets(entries):
             raise DescriptorError(f"dataset entry has no name: {entry}")
         out.append({"name": entry["name"], "source": entry.get("source"),
                     "split": entry.get("split"),
-                    "limit": int(entry.get("limit", 0) or 0),
                     "samples": int(entry.get("samples", 0) or 0)})
     return out
 
@@ -231,10 +237,11 @@ def _runs(entries, defaults, program_groups=None, syntax_groups=None):
         # before `samples` moved to the dataset would otherwise run the
         # whole dataset silently, which is a very expensive way to find
         # out a field was dropped.
-        if "samples" in run:
+        if "limit" in run or "samples" in run:
             raise DescriptorError(
-                f"run {run['name']!r} sets `samples`: it belongs to the "
-                f"dataset now, so that every run in a campaign draws the "
-                f"same questions and the arms stay comparable")
+                f"run {run['name']!r} sets `samples`/`limit`: the sample "
+                f"count belongs to the dataset now, so that every run in a "
+                f"campaign draws the same questions and the arms stay "
+                f"comparable")
         out.append(run)
     return out

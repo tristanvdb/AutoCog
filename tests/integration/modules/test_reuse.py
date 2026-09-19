@@ -7,6 +7,7 @@ already used, so their sample sets do not intersect and their results can
 be unioned without double-counting anything.
 """
 
+import collections
 import json
 import os
 import shutil
@@ -292,22 +293,26 @@ def test_unfingerprinted_rows_still_count_as_done(tmp_path, repo_root):
     """Results written before fingerprints existed keep resuming on the
     triple. Invalidating them would re-run every campaign already on disk
     to buy a guarantee about data that is already collected."""
+    from autocog.bench.formatters import load_questions
+    from autocog.bench.quality import QualityRun
+
     root = fake_root(repo_root, str(tmp_path / "root"))
+    data = os.path.join(root, *SHARED[-1])
+    drawn = [q["id"] for q in load_questions(data, limit=2)]
+
     out = tmp_path / "legacy"
     out.mkdir()
     write(out / "results-old-rng.ndjson",
           [{"autocog.bench.syntax": "complete",
             "autocog.bench.program": "strings-select",
             "autocog.bench.question": q,
-            "autocog.bench.answer": "Water"} for q in ("water", "twelve")])
+            "autocog.bench.answer": "Water"} for q in drawn])
 
-    from autocog.bench.quality import QualityRun
-
-    run = QualityRun("rng", os.path.join(root, *SHARED[-1]), str(out),
-                     str(root), questions=2, syntaxes=["complete"],
+    run = QualityRun("rng", data, str(out), str(root), questions=2,
+                     syntaxes=["complete"],
                      programs=["share/demos/mcq/strings-select.stl"],
                      log=lambda *_: None)
-    assert [q["id"] for q in run.qs] == ["water", "twelve"]
+    assert [q["id"] for q in run.qs] == drawn
     assert run.pending == []
 
 
@@ -587,3 +592,66 @@ def test_syntax_labels_reach_the_event_in_their_own_key(tmp_path, repo_root,
         assert ev["autocog.bench.labels"] == ["record", "index"]
         assert ev["autocog.bench.syntax.labels"] == [
             "unindexed", "prompt_with_index=false"]
+
+
+# --- how the draw is spread -----------------------------------------------
+
+def test_the_draw_covers_every_topic(tmp_path):
+    """Round-robin over `topic`, not a stride.
+
+    A stride is systematic sampling, and over a subject-sorted frame any
+    topic smaller than the step contributes 0 or 1 — so at N=100 over a
+    1000-item pool a subject holding seven of them vanished, and which
+    subjects vanished was decided by filename order."""
+    from autocog.bench.formatters import load_questions
+
+    pool = [dict(QUESTION, id=f"{t}-{i}", question=f"{t}{i}?", topic=t)
+            for t, n in (("big", 50), ("mid", 10), ("tiny", 3))
+            for i in range(n)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+
+    drawn = load_questions(str(data), limit=9)
+    assert len(drawn) == 9
+    assert {q["topic"] for q in drawn} == {"big", "mid", "tiny"}
+    # Equal allocation: MMLU subjects span an order of magnitude, and
+    # proportional would give this draw 7 'big' and none of 'tiny'.
+    assert [q["topic"] for q in drawn].count("big") == 3
+
+    # Draw order, so the gate taking the first four still spans topics.
+    assert {q["topic"] for q in drawn[:3]} == {"big", "mid", "tiny"}
+
+
+def test_a_topic_running_out_does_not_stall_the_draw(tmp_path):
+    from autocog.bench.formatters import load_questions
+
+    pool = [dict(QUESTION, id=f"{t}-{i}", question=f"{t}{i}?", topic=t)
+            for t, n in (("big", 20), ("tiny", 1)) for i in range(n)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+    drawn = load_questions(str(data), limit=10)
+    assert len(drawn) == 10
+    assert [q["topic"] for q in drawn].count("tiny") == 1
+
+
+def test_the_next_campaign_continues_down_each_topic(tmp_path):
+    """The property `exclude` needs and a stride could not give: removing
+    one campaign's draw leaves each topic's remainder in order, so the next
+    campaign is drawn the same way rather than on a different composition."""
+    from autocog.bench.formatters import load_questions
+
+    pool = [dict(QUESTION, id=f"{t}-{i}", question=f"{t}{i}?", topic=t)
+            for t in ("a", "b", "c") for i in range(10)]
+    data = tmp_path / "pool.json"
+    write(data, pool)
+
+    first = load_questions(str(data), limit=6)
+    used = {reuse.question_digest(q) for q in first}
+    second = load_questions(str(data), limit=6, exclude=used)
+
+    for drawn in (first, second):
+        assert sorted(collections.Counter(
+            q["topic"] for q in drawn).values()) == [2, 2, 2]
+    assert not used & {reuse.question_digest(q) for q in second}
+    assert {q["id"] for q in first} == {"a-0", "b-0", "c-0", "a-1", "b-1", "c-1"}
+    assert {q["id"] for q in second} == {"a-2", "b-2", "c-2", "a-3", "b-3", "c-3"}

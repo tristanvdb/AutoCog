@@ -39,8 +39,8 @@ models:
   - {tag: 8b,  file: Llama-3.1-8B-Instruct-Q8_0.gguf, ctx: 4096}
 
 datasets:
-  - {name: arc-1000,  source: arc,  split: test, limit: 1000, samples: 200}
-  - {name: mmlu-1000, source: mmlu, split: test, limit: 1000, samples: 200}
+  - {name: arc,  source: arc,  split: test, samples: 200}
+  - {name: mmlu, source: mmlu, split: test, samples: 200}
 
 programs:
   strings-select:
@@ -64,9 +64,9 @@ syntax_groups:
   index: [complete, i1-tab]
 
 runs:
-  - {name: mechanism-arc, model: 1b, dataset: arc-1000,
+  - {name: mechanism-arc, model: 1b, dataset: arc,
      programs: ["@mechanism"], syntaxes: ["@index"]}
-  - {name: mechanism-8b,  model: 8b, dataset: arc-1000,
+  - {name: mechanism-8b,  model: 8b, dataset: arc,
      programs: ["@mechanism"], syntaxes: ["@index"]}
 ```
 
@@ -77,8 +77,9 @@ worker, which proves a campaign's plumbing for free.
 
 **`datasets`** — `name` is what a run asks for and what the built file is
 called; `source`/`split` say how to build it when it is missing. Conversion is
-where choice labels come from, decided once. **`samples`** is how many
-questions the campaign draws from it (0 = all) — see below.
+where choice labels come from, decided once, and it emits the **whole** split.
+**`samples`** is how many questions the campaign draws from it (0 = all) — see
+below.
 
 **`programs`** — `filepath` absolute or relative to `share/`; `options` are the
 compiler's own flags (`-I dir`, `-D name=value`, `-e entry`); `labels` are
@@ -188,6 +189,21 @@ dataset and not on a run: arms are only comparable if they were asked the same
 questions, and a per-run draw makes "syntax A beat syntax B" indistinguishable
 from "syntax A got the easier questions". A run that sets `samples` is a
 descriptor error.
+
+The draw is **round-robin over `topic`**: the first question of every topic,
+then the second, until the count is reached. Equal allocation, not
+proportional — MMLU subject sizes span an order of magnitude and at N=100
+proportional allocation lets the big subjects crowd out the small ones for no
+reason anybody chose. Every topic is present while it has questions left, and
+the result is in draw order, so truncating it (the validity gate takes four)
+is still spread across topics.
+
+There is no `limit` on a dataset. It used to cap the built file, from when a
+run took the dataset whole; with `samples` doing the drawing its only effect
+was to shrink the pool `prior` carves disjoint campaigns out of — a 1000-item
+cap is ten campaigns where the full MMLU test is about a hundred and forty.
+It was also a cache footgun: the built file is keyed by name alone, so editing
+the cap silently did nothing to a dataset that already existed.
 
 The selection is a real dataset file — readable, diffable, and the thing you
 hand someone who asks what the campaign actually measured. It is written once:

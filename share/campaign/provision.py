@@ -69,9 +69,10 @@ def build_datasets(descriptor, layout, log=print):
         if not os.path.exists(raw):
             raise ProvisionError(
                 f"dataset {dataset['name']!r}: no raw data at {raw}")
+        # The WHOLE converted split. How many of it a campaign uses is
+        # `samples`, drawn per campaign (samples.py); capping the built file
+        # would only shrink the pool `prior` carves disjoint campaigns from.
         cmd = ["python3", convert, source, raw, "--out", dest]
-        if dataset["limit"]:
-            cmd += ["--limit", str(dataset["limit"])]
         log(f"building: {dataset['name']} ({source})")
         r = subprocess.run(cmd)
         if r.returncode != 0:
