@@ -74,18 +74,79 @@ def resolve_dataflow(channel, frames, current_prompt):
     return data
 
 
-def resolve_call_kwargs(kwargs, inputs, frames, current_prompt, content=None):
+#: syntax_id -> the syntax dict. The datastore is content-addressed, so an
+#: id is stable for identical content and this cannot go stale.
+_SYNTAX_CACHE = {}
+
+
+def syntax_of(engine):
+    """The syntax an engine renders with, as a dict.
+
+    Engine, RemoteBackend and EnginePool share no base class but all carry a
+    `syntax_id` -- instantiation happens client-side even for a remote
+    backend -- so this is the one accessor that works for every runner."""
+    # An engine that knows its syntax without the datastore answers first:
+    # a level-2 client instantiates nothing locally, so it has no id and
+    # fetches the server's instead.
+    own = getattr(engine, "syntax", None)
+    if isinstance(own, dict):
+        return own
+    sid = getattr(engine, "syntax_id", None)
+    if sid is None:
+        return None
+    if sid not in _SYNTAX_CACHE:
+        from .runtime.sta import runtime_sta_cxx
+
+        _SYNTAX_CACHE[sid] = runtime_sta_cxx.get_syntax(sid)
+    return _SYNTAX_CACHE[sid]
+
+
+def resolve_system(ref, engine):
+    """A `__syntax__.<field>` reference -> its value for THIS run.
+
+    Deferred rather than constant-folded at compile time because a syntax is
+    chosen when a prompt is instantiated: the same program renders under 64
+    of them in one campaign. A resolver that has to invert a rendering
+    decision -- `select` emits a position, and prompt_zero_index decides
+    whether that position is spelled from 0 or from 1 -- can only get it
+    here.
+
+    An unknown field is an ERROR. The alternative is None flowing into a
+    resolver as if it were a value, which is how the rendering knobs went
+    unnoticed in the first place.
+    """
+    namespace, _, field = ref.partition(".")
+    if namespace != "__syntax__":
+        raise ConfigError(f"unsupported system namespace in a call: {ref!r}")
+    syntax = syntax_of(engine)
+    if not isinstance(syntax, dict):
+        raise ConfigError(
+            f"{ref!r} needs the engine's syntax, which this runner did not "
+            f"provide")
+    if field not in syntax:
+        raise ConfigError(
+            f"{ref!r}: the syntax has no field {field!r} "
+            f"(have {sorted(syntax)})")
+    return syntax[field]
+
+
+def resolve_call_kwargs(kwargs, inputs, frames, current_prompt, content=None,
+                        engine=None):
     """Resolve call kwargs, handling mapped expansion.
-    
+
     content: the partially-built content dict for the current prompt,
     used for self-referencing kwargs (use .field).
+    engine: needed only by `__syntax__.*` kwargs, whose value is a property
+    of the run rather than of the program.
     """
     resolved = {}
     mapped_axes = {}  # kwarg_name → list of values to iterate
 
     for kw in kwargs:
         name = kw["name"]
-        if kw.get("value") is not None:
+        if kw.get("system") is not None:
+            data = resolve_system(kw["system"], engine)
+        elif kw.get("value") is not None:
             # Literal value (from "is" keyword)
             data = kw["value"]
         elif kw["is_input"]:
@@ -151,6 +212,7 @@ async def resolve_call(channel, inputs, frames, current_prompt, engine, program,
     3. Apply link-level clauses to results
     """
     spread = channel.get("spread")
+    base_kwargs, mapped_axes = {}, {}
     if spread is not None:
         # `call f <path>` — the record at <path> IS the argument list, `_` (an
         # empty path) being the root: for a return, the prompt's frame.
@@ -160,11 +222,15 @@ async def resolve_call(channel, inputs, frames, current_prompt, engine, program,
             raise ConfigError(
                 f"call spread expects a record, got {type(record).__name__}")
         base_kwargs = {k: v for k, v in record.items() if k not in FLOW_FIELDS}
-        mapped_axes = {}
-    else:
-        base_kwargs, mapped_axes = resolve_call_kwargs(
-            channel["kwargs"], inputs, frames, current_prompt, content
-        )
+    if channel.get("kwargs"):
+        # `call f _ { k use ... }` — the spread is the default and a named
+        # argument overrides it. A resolver needing one thing the frame does
+        # not carry should not have to give up the spread and list every
+        # field by hand.
+        named, mapped_axes = resolve_call_kwargs(
+            channel["kwargs"], inputs, frames, current_prompt, content,
+            engine=engine)
+        base_kwargs.update(named)
     jobs = expand_mapped(base_kwargs, mapped_axes)
 
     entry = channel.get("entry")

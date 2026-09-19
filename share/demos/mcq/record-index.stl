@@ -20,7 +20,7 @@ prompt main {
     question get question;
     choice get choice;
   }
-  return call pick_value _;
+  return call pick_value _ { zero_index use __syntax__.prompt_zero_index; };
   annotate {
     _ as "You are answering a multiple choice questionnaire.";
     topic as "the general category from which the question was taken";

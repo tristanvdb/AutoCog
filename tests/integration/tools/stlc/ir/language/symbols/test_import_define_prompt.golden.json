@@ -18,7 +18,8 @@
                   "name": "seed"
                 }
               ],
-              "prompt": null
+              "prompt": null,
+              "system": null
             }
           },
           "link_clauses": [

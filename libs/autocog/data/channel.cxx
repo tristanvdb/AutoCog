@@ -38,7 +38,7 @@ std::string ChannelKwarg::hash() const {
   h.put(name).put(is_input);
   put_paths(h, path);
   put_clauses(h, clauses);
-  h.put(prompt).put(value);
+  h.put(prompt).put(value).put(system);
   return h.hash();
 }
 

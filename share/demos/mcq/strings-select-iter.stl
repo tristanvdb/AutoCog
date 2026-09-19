@@ -27,7 +27,7 @@ prompt main {
   }
   return {
     status is "answer is ready";
-    answer call pick _;
+    answer call pick _ { zero_index use __syntax__.prompt_zero_index; };
   }
   annotate {
     _ as "You are answering a multiple choice questionnaire.";

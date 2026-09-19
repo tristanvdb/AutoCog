@@ -1145,7 +1145,9 @@ static void assemble_prompts(
                 // `_` names the root -- an empty path, as `annotate` reads it.
                 if (steps.size() == 1 && steps[0].name == "_") steps.clear();
                 cc.spread = ir::DocPath(std::move(steps), false, std::nullopt);
-                return;
+                // NOT a return: a call may spread AND name arguments
+                // (`call f _ { k use ... }`), the spread being the default
+                // and a named argument the override.
             }
             for (auto const & kwarg : src.arguments) {
                 auto kw_name = kwarg.data.name.data.name;
@@ -1156,8 +1158,26 @@ static void assemble_prompts(
                         irk.is_input = true;
                         irk.path = convert_path(ks, evaluator, scope, node.context);
                     } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
+                        // `use __syntax__.prompt_zero_index` parses as a
+                        // prompt-qualified field, and reads as one: a
+                        // namespace and a name. But a system namespace is
+                        // RECORDED, not resolved -- its value does not exist
+                        // until a syntax is chosen at instantiation, and the
+                        // same program renders under sixty-four of them in
+                        // one campaign. Recorded before resolve_prompt_ref,
+                        // which would look for a prompt called __syntax__.
                         if (ks.data.prompt) {
-                            irk.prompt = resolve_prompt_ref(ks.data.prompt->data.name.data.name);
+                            auto const & ns = ks.data.prompt->data.name.data.name;
+                            if (ns.size() >= 4 && ns.compare(0, 2, "__") == 0
+                                    && ns.compare(ns.size() - 2, 2, "__") == 0) {
+                                auto steps = convert_path(ks.data.field, evaluator,
+                                                          scope, node.context);
+                                std::string ref = ns;
+                                for (auto const & st : steps) ref += "." + st.name;
+                                irk.system = ref;
+                                return;
+                            }
+                            irk.prompt = resolve_prompt_ref(ns);
                         }
                         irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
                     } else if constexpr (std::is_same_v<KS, ast::Expression>) {

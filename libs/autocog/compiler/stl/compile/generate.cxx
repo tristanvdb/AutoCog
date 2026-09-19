@@ -231,7 +231,8 @@ static data::CallChannel convert_call_channel(ir::CallChannel const & c) {
         ck.is_input = kwarg.is_input;
         ck.prompt = kwarg.prompt;
         ck.path = convert_steps(kwarg.path);
-        ck.value = kwarg.value;
+        ck.system = kwarg.system;
+      ck.value = kwarg.value;
         ck.clauses = convert_clauses(kwarg.clauses);
         cc.kwargs.push_back(std::move(ck));
     }

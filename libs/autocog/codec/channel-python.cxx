@@ -85,6 +85,7 @@ pybind11::object to_py(ChannelKwarg const & k) {
   d["clauses"]  = clauses_to_py(k.clauses);
   d["prompt"]   = k.prompt ? py::cast(*k.prompt) : py::none();
   d["value"]    = k.value  ? py::cast(*k.value)  : py::none();
+  d["system"]   = k.system ? py::cast(*k.system) : py::none();
   return d;
 }
 
@@ -97,6 +98,7 @@ void from_py(pybind11::object const & obj, ChannelKwarg & k) {
   clauses_from_py(d["clauses"], k.clauses);
   if (d.contains("prompt") && !d["prompt"].is_none()) k.prompt = d["prompt"].cast<std::string>();
   if (d.contains("value")  && !d["value"].is_none())  k.value  = d["value"].cast<std::string>();
+  if (d.contains("system") && !d["system"].is_none()) k.system = d["system"].cast<std::string>();
 }
 
 template <>

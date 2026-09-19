@@ -34,6 +34,10 @@ struct ChannelKwarg {
   std::optional<std::string> prompt;   ///< source prompt (null = self)
   std::vector<PathStep> path;
   std::optional<std::string> value;    ///< literal value (null = none)
+  ///< dotted system reference, e.g. "__syntax__.prompt_zero_index" -- read at
+  ///< call time, because a syntax is chosen at instantiation and a compiled
+  ///< program cannot know it
+  std::optional<std::string> system;
   std::vector<Clause> clauses;
   std::string hash() const;
 };

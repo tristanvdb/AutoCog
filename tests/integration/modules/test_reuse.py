@@ -367,3 +367,111 @@ def test_the_next_campaign_continues_down_each_topic(tmp_path):
     assert not used & {reuse.question_digest(q) for q in second}
     assert {q["id"] for q in first} == {"a-0", "b-0", "c-0", "a-1", "b-1", "c-1"}
     assert {q["id"] for q in second} == {"a-2", "b-2", "c-2", "a-3", "b-3", "c-3"}
+
+
+# --- __syntax__ bound at a call site --------------------------------------
+
+def syntax_variant(repo_root, tmp_path, **overrides):
+    base = json.load(open(os.path.join(repo_root, "share", "syntax",
+                                       "complete.json")))
+    path = tmp_path / f"syn-{len(overrides)}-{hash(tuple(sorted(overrides.items())))}.json"
+    path.write_text(json.dumps(dict(base, **overrides)))
+    return str(path)
+
+
+def test_a_call_may_spread_and_name(repo_root):
+    """`call f _ { k use ... }`. The two used to be exclusive in the grammar
+    AND the runtime, so a resolver needing one thing the frame does not
+    carry had to give up the spread and list every field by hand."""
+    import autocog
+
+    prog = autocog.compile(
+        os.path.join(repo_root, "share", "demos", "mcq", "record-index.stl"),
+        includes=[os.path.join(repo_root, "share", "library", "stlib")])
+    call = json.loads(prog.dump_json())["prompts"]["main"]["flows"]["return"] \
+        ["fields"][0]["call"]
+    assert call["spread"] == []                       # `_`: the whole frame
+    assert [k["name"] for k in call["kwargs"]] == ["zero_index"]
+    # RECORDED, not evaluated: the syntax is chosen at instantiation, so a
+    # compiled program cannot carry the value.
+    assert call["kwargs"][0]["system"] == "__syntax__.prompt_zero_index"
+    assert call["kwargs"][0]["value"] is None
+    assert call["kwargs"][0]["prompt"] is None        # not a prompt reference
+
+
+def test_the_binding_moves_the_program_hash(repo_root, tmp_path):
+    """It is part of the program, so it is part of the program's identity —
+    which is what makes `autocog.bench.fingerprint` notice."""
+    import autocog
+    from autocog.bench import reuse
+
+    stlib = os.path.join(repo_root, "share", "library", "stlib")
+    src = open(os.path.join(repo_root, "share", "demos", "mcq",
+                            "record-index.stl")).read()
+    demos = os.path.join(repo_root, "share", "demos", "mcq")
+    plain = tmp_path / "plain.stl"
+    plain.write_text(src.replace(
+        " { zero_index use __syntax__.prompt_zero_index; }", ""))
+
+    bound = reuse.program_hash(autocog.compile(
+        os.path.join(demos, "record-index.stl"), includes=[stlib]))
+    unbound = reuse.program_hash(autocog.compile(
+        str(plain), includes=[stlib, demos]))
+    assert bound != unbound
+
+
+def test_select_resolves_under_either_index_base(repo_root, tmp_path):
+    """THE BUG. `select` emits a POSITION and prompt_zero_index decides
+    whether it is spelled from 0 or from 1 — it sets the candidate values,
+    not just the `[i]` on a label. Reading the emitted text as a 0-based
+    index under a one-indexed syntax names the NEXT choice along, and
+    raises only when the model happens to pick the last one."""
+    import autocog
+    from autocog.externals import load_externals
+    from autocog.recorder import Recorder
+    import tempfile
+
+    demos = os.path.join(repo_root, "share", "demos", "mcq")
+    prog = autocog.compile(os.path.join(demos, "record-index.stl"),
+                           includes=[os.path.join(repo_root, "share",
+                                                  "library", "stlib")])
+    externals = load_externals(prog)
+    q = json.load(open(os.path.join(repo_root, *SHARED[-1])))[0]
+    search = os.path.join(repo_root, "share", "search", "default.json")
+
+    for zero in (True, False):
+        engine = autocog.Engine(
+            syntax=syntax_variant(repo_root, tmp_path,
+                                  prompt_zero_index=zero),
+            search=search)
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = Recorder(kinds={"frame"}, path=tmp)
+            out = engine.run(prog, externals=externals, recorder=rec,
+                             topic=q.get("topic", ""), question=q["question"],
+                             choice=q["choice"])
+            frames = [json.load(open(os.path.join(d, f)))
+                      for d, _, fs in os.walk(tmp) for f in fs
+                      if f.endswith(".frame.json")]
+
+        # The frame keeps what the model EMITTED, verbatim — that is what
+        # makes it re-renderable. The resolver un-spells it.
+        emitted = int(frames[0]["answer"])
+        meant = q["choice"][emitted - (0 if zero else 1)]["value"]
+        assert out == meant, (zero, emitted, out, meant)
+
+
+def test_an_unknown_syntax_field_is_an_error(repo_root, tmp_path):
+    """None flowing into a resolver as if it were a value is how the
+    rendering knobs went unnoticed in the first place."""
+    import autocog
+    from autocog.channels import resolve_system
+    from autocog.errors import ConfigError
+
+    engine = autocog.Engine(
+        syntax=syntax_variant(repo_root, tmp_path),
+        search=os.path.join(repo_root, "share", "search", "default.json"))
+    assert resolve_system("__syntax__.prompt_zero_index", engine) in (True, False)
+    with pytest.raises(ConfigError, match="no field 'nope'"):
+        resolve_system("__syntax__.nope", engine)
+    with pytest.raises(ConfigError, match="unsupported system namespace"):
+        resolve_system("__status__.tree.tokens", engine)

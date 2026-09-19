@@ -7,6 +7,7 @@ passed every time — it never touched them.
 """
 
 import json
+import os
 
 import pytest
 
@@ -18,17 +19,29 @@ from conftest import layout_for
 ZERO = {"filepath": "complete.json", "prompt_zero_index": True}
 ONE = {"filepath": "complete.json", "prompt_zero_index": False}
 
+#: an arm that renders fine and dies on the return (fixtures/broken.stl)
+BROKEN = {"filepath": os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "fixtures", "broken.stl")}
+
 
 def descriptor(tmp_path, syntaxes, programs=("strings-select",)):
-    """`syntaxes` is {name: spec}; specs default to the shipped file."""
+    """`syntaxes` is {name: spec}; `programs` are mcq demo names, or
+    (name, spec) pairs for anything else."""
     from campaign.descriptor import load
+
+    specs = {}
+    for p in programs:
+        if isinstance(p, tuple):
+            specs[p[0]] = p[1]
+        else:
+            specs[p] = {"filepath": f"demos/mcq/{p}.stl", "labels": [p]}
+    programs = list(specs)
 
     path = tmp_path / "c.yml"
     path.write_text(json.dumps({
         "models": [{"tag": "rng", "file": "rng"}],
         "datasets": [{"name": "q", "samples": 1}],
-        "programs": {p: {"filepath": f"demos/mcq/{p}.stl", "labels": [p]}
-                     for p in programs},
+        "programs": specs,
         "syntaxes": syntaxes,
         "runs": [{"name": "r", "model": "rng", "dataset": "q",
                   "programs": list(programs),
@@ -68,25 +81,41 @@ def test_a_working_arm_passes(tmp_path, repo_root):
                                                  tmp_path)) == []
 
 
-def test_an_arm_that_cannot_execute_is_caught(tmp_path, repo_root):
-    """THE REGRESSION. `select` emits a POSITION, and prompt_zero_index
-    decides whether that position is spelled from 0 or from 1 — but the
-    demos' resolver (share/demos/mcq/mcq.py) indexes the choice list
-    directly. Under a one-indexed syntax every answer names the next choice
-    along, and the last one raises.
+def test_both_index_bases_execute(tmp_path, repo_root):
+    """THE REGRESSION, now inverted.
 
-    Pinned here as failing until the index base reaches the resolver.
-    When it does, this test flips to passing and should be rewritten
-    against an arm that is broken on purpose.
-    """
+    `select` emits a POSITION and prompt_zero_index decides whether that
+    position is spelled from 0 or from 1 — it sets the candidate values,
+    not just the `[i]` on a label. The demos' resolver used to index the
+    choice list directly, so under a one-indexed syntax every answer named
+    the next choice along and the last one raised; 88 of this campaign's
+    332 arms were affected and only 42 announced it.
+
+    The base now reaches the resolver as a call binding
+    (`__syntax__.prompt_zero_index`), so both render and both resolve."""
     from campaign import preflight
 
     desc = descriptor(tmp_path, {"zero": ZERO, "one": ONE})
+    assert preflight.check(desc, layout_for(repo_root, tmp_path),
+                           log=lambda *_: None,
+                           syntax_paths=resolved(desc, repo_root,
+                                                 tmp_path)) == []
+
+
+def test_an_arm_that_cannot_execute_is_caught(tmp_path, repo_root):
+    """The gate itself: an arm that dies must be reported, not swallowed.
+
+    Broken on purpose — a stop token the renderer never emits, so the
+    field never terminates."""
+    from campaign import preflight
+
+    desc = descriptor(tmp_path, {"complete": {}},
+                      ("strings-select", ("broken", BROKEN)))
     failures = preflight.check(desc, layout_for(repo_root, tmp_path),
                                log=lambda *_: None,
                                syntax_paths=resolved(desc, repo_root, tmp_path))
-    assert [s for _, s, _ in failures] == ["one"]
-    assert "IndexError" in failures[0][2]
+    assert [name for name, _, _ in failures] == ["broken"], failures
+    assert "this arm cannot execute" in failures[0][2]
 
 
 def test_report_groups_by_defect(tmp_path, repo_root, capsys):

@@ -149,8 +149,13 @@ regenerate_e2e_one() {
     # --content is required; default to an empty object when none was supplied.
     local content_val="$content"
     [[ -z "$content_val" ]] && content_val='{}'
+    # --simplify none, matching what the e2e tests themselves run. ista
+    # SIMPLIFIES by default, and a simplified FTA has no per-field node for
+    # psta to walk -- so without this the regenerated golden for a prefilled
+    # fixture is a frame of nulls, and six tests quietly start asserting
+    # nothing. Silent emptying is the worst way for a golden to change.
     if ! "$ISTA" --sta "$sta" --prompt "$prompt" --syntax "$SYNTAX" --search "$SEARCH" \
-                 --content "$content_val" --fta "$fta" 2>/dev/null; then
+                 --simplify none --content "$content_val" --fta "$fta" 2>/dev/null; then
         echo "REGEN FAILED: $rel — step: ista"; fail=$((fail + 1)); return
     fi
     local verr

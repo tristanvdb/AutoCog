@@ -23,7 +23,8 @@
                   "name": "steps"
                 }
               ],
-              "prompt": null
+              "prompt": null,
+              "system": null
             }
           },
           "link_clauses": [

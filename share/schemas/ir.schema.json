@@ -404,6 +404,17 @@
             }
           ]
         },
+        "system": {
+          "description": "Dotted system reference read at call time, e.g. '__syntax__.prompt_zero_index'. Not a literal: a syntax is chosen at instantiation, so a compiled program cannot carry its value.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "path": {
           "$ref": "#/$defs/path_steps"
         },

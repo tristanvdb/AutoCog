@@ -35,7 +35,8 @@
                   "name": "input"
                 }
               ],
-              "prompt": null
+              "prompt": null,
+              "system": null
             }
           },
           "link_clauses": [],

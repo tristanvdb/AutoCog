@@ -23,7 +23,8 @@
                   "name": "items"
                 }
               ],
-              "prompt": null
+              "prompt": null,
+              "system": null
             }
           },
           "link_clauses": [],

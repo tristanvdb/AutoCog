@@ -94,6 +94,7 @@ nlohmann::json to_json(ChannelKwarg const & k) {
   j["clauses"]  = clauses_to_json(k.clauses);
   j["prompt"]   = k.prompt ? nlohmann::json(*k.prompt) : nlohmann::json(nullptr);
   j["value"]    = k.value  ? nlohmann::json(*k.value)  : nlohmann::json(nullptr);
+  j["system"]   = k.system ? nlohmann::json(*k.system) : nlohmann::json(nullptr);
   return j;
 }
 
@@ -106,6 +107,7 @@ void from_json(nlohmann::json const & dom, ChannelKwarg & k) {
   clauses_from_json(dom.at("clauses"), k.clauses);
   if (dom.contains("prompt") && !dom["prompt"].is_null()) k.prompt = dom["prompt"].get<std::string>();
   if (dom.contains("value")  && !dom["value"].is_null())  k.value  = dom["value"].get<std::string>();
+  if (dom.contains("system") && !dom["system"].is_null()) k.system = dom["system"].get<std::string>();
   });
 }
 

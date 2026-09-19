@@ -62,6 +62,19 @@ def create_app(program=None, model_path: str = None, syntax_path: str = None,
         """Return entry points with input/output schemas."""
         return program.entry_points
 
+    @app.get("/syntax")
+    async def get_syntax():
+        """The syntax this server renders with.
+
+        Instantiation happens HERE at level 2, so the client cannot know it
+        — and a program whose resolver binds `__syntax__.<field>` needs it,
+        because that resolver runs on the client. Published rather than
+        guessed: a client that assumed a default would silently resolve a
+        `select` against the wrong index base."""
+        from autocog.channels import syntax_of
+
+        return syntax_of(engine)
+
     add_status_endpoint(app, queue)
 
     return app

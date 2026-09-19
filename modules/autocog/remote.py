@@ -36,9 +36,23 @@ class RemoteEngine:
         self.server_url = server_url.rstrip("/")
         self.poll_interval = poll_interval
         self.timeout = timeout
-        # RemoteEngine doesn't need syntax_id or model_id
+        # Instantiation happens server-side at level 2, so there is no local
+        # syntax to load. But a program's resolver runs HERE and may bind
+        # `__syntax__.<field>`, so the server's syntax is fetched on demand.
         self.syntax_id = None
         self.model_id = None
+        self._syntax = None
+
+    @property
+    def syntax(self):
+        """The syntax the server renders with (fetched once)."""
+        if self._syntax is None:
+            import urllib.request
+
+            with urllib.request.urlopen(f"{self.server_url}/syntax",
+                                        timeout=self.timeout) as r:
+                self._syntax = json.loads(r.read())
+        return self._syntax
 
     def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
         """Submit a prompt to the remote server and wait for the result.

@@ -32,7 +32,7 @@ prompt main {
       choice get choice.value mapped;
     } bind(choice, value);
   }
-  return call pick_value _;
+  return call pick_value _ { zero_index use __syntax__.prompt_zero_index; };
   annotate {
     _ as "You are answering a multiple choice question. You have been given the opportunity to look at each possible answer individually to decide whether or not they could be correct.";
     topic as "the general category from which the question was taken";

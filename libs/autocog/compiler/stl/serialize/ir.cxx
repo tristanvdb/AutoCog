@@ -160,6 +160,7 @@ static json channel_to_json(ir::Channel const & channel) {
                 json kj;
                 kj["is_input"] = kwarg.is_input;
                 kj["prompt"] = kwarg.prompt.has_value() ? json(kwarg.prompt.value()) : json(nullptr);
+                kj["system"] = kwarg.system.has_value() ? json(kwarg.system.value()) : json(nullptr);
                 kj["path"] = json::array();
                 for (auto const & step : kwarg.path) {
                     kj["path"].push_back(pathstep_to_json(step));
