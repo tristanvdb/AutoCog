@@ -2,7 +2,7 @@
 #
 # Run one cells file against one model, on a machine you control.
 #
-#     autocog/share/perf/cells.sh <cells> [MODEL.gguf|--rng] [extra args...]
+#     autocog/share/experiments/perf/cells.sh <cells> [MODEL.gguf|--rng] [extra args...]
 #
 # <cells> is a name under share/benchmarks/compute (bottleneck, termination,
 # mech, workload) or a path to a cells JSON file.

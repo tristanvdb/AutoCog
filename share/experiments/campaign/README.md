@@ -1,7 +1,7 @@
 # Campaigns
 
 ```bash
-cd ~/my-nfs && autocog/share/campaign.sh my-campaign.yml
+cd ~/my-nfs && autocog/share/experiments/campaign.sh my-campaign.yml
 ```
 
 That is the whole interface. Setup is part of it — the venv, the build, the
@@ -24,7 +24,7 @@ nothing is hidden:
 Watch it from a second terminal:
 
 ```bash
-python3 autocog/share/campaign/monitor.py results/campaign-events.ndjson
+python3 autocog/share/experiments/campaign/monitor.py results/campaign-events.ndjson
 ```
 
 ## The descriptor
@@ -154,7 +154,7 @@ This is what turns the question into a groupby. "Are the one-based arms
 worse?" is one slice over `base1`, not a regex across syntax names — the same
 reason nothing parses a program's name.
 
-`python3 share/syntax/dedup.py <descriptor>` reports which of a campaign's
+`python3 share/experiments/dedup.py <descriptor>` reports which of a campaign's
 syntaxes actually render differently, per program — a knob a program's schema
 never exercises renders nothing, so `prompt_indent` is inert on a flat schema
 and `prompt_zero_index` is inert under `repeat`. Over the nine MCQ demos and a
@@ -303,4 +303,4 @@ graphs (`ctest -L inspect`).
 
 Quality runs want every lane busy on whatever machine was cheapest today. Perf
 runs want an idle machine you control. They do not belong in one descriptor —
-see `share/perf/`.
+see `share/experiments/perf/`.

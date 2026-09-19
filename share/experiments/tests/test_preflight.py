@@ -7,18 +7,10 @@ passed every time — it never touched them.
 """
 
 import json
-import os
-import sys
 
 import pytest
 
-
-@pytest.fixture(autouse=True)
-def from_repo_root(repo_root, monkeypatch):
-    monkeypatch.chdir(repo_root)
-    share = os.path.join(repo_root, "share")
-    if share not in sys.path:
-        sys.path.insert(0, share)
+from conftest import layout_for
 
 
 #: complete.json with the index base flipped. `select` emits a POSITION
@@ -50,12 +42,6 @@ def resolved(descriptor, repo_root, tmp_path):
     paths, _ = materialize_all(descriptor, layout_for(repo_root, tmp_path),
                                str(tmp_path / "syn"), log=lambda *_: None)
     return paths
-
-
-def layout_for(repo_root, tmp_path):
-    from campaign.layout import Layout
-
-    return Layout(str(repo_root), str(tmp_path / "work"))
 
 
 def test_arms_are_deduped_across_model_runs(tmp_path, repo_root):

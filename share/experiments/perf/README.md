@@ -15,8 +15,8 @@ no worker pool — each script here is a thin call to `autocog bench perf` with
 one cells file and one model, on a box you are not sharing.
 
 ```bash
-autocog/share/perf/cells.sh bottleneck models/Llama-3.2-1B-Instruct-Q8_0.gguf
-autocog/share/perf/cells.sh termination --rng
+autocog/share/experiments/perf/cells.sh bottleneck models/Llama-3.2-1B-Instruct-Q8_0.gguf
+autocog/share/experiments/perf/cells.sh termination --rng
 ```
 
 Cell files live in `share/benchmarks/compute/` alongside the programs they

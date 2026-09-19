@@ -1,10 +1,9 @@
 # The shipped syntax configs.
 #
-# A campaign's own syntaxes are NOT here: they are a base file plus
-# overrides, declared in its descriptor and resolved into
-# results/<campaign>/syntax/ (share/campaign/syntaxes.py). This directory
-# holds the bases they override -- eleven files, not a generated product of
-# every knob combination.
+# These are DATA the runtime loads, so they are gated here. A campaign's own
+# syntaxes are not: they are a base file plus overrides declared in a
+# descriptor, and both the resolver and the dedup pass over them belong to
+# the benchmarking harness (share/experiments), which carries its own tests.
 
 set(SYNTAX_DIR ${PROJECT_SOURCE_DIR}/share/syntax)
 set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
@@ -37,41 +36,3 @@ json.dump(json.load(open(sys.argv[1]))['record-value.main'], open(sys.argv[2],'w
         "
 )
 set_tests_properties(syntax_all_instantiate PROPERTIES LABELS "syntax" TIMEOUT 300)
-
-# dedup.py measures which of a DESCRIPTOR's syntaxes render differently for
-# each of its programs. The fixture varies one knob that bites and one that
-# cannot: prompt_indent emits a prefix per nesting level, so on the flat
-# strings-* schema its levels collapse into one, while the index base
-# changes what `select` offers and does not.
-#
-# This is the check that stops a campaign paying twice for one measurement,
-# so the thing under test is that it still SEES a collapse -- a dedup pass
-# that reported everything distinct would be silently useless.
-add_test(
-    NAME syntax_dedup_finds_the_collapse
-    COMMAND ${CMAKE_COMMAND} -E env
-        bash -c "
-            set -e
-            D=$(mktemp -d)
-            cat > \$D/probe.yml <<'EOF'
-models: [{tag: rng, file: rng}]
-datasets: [{name: q, samples: 1}]
-programs:
-  strings-select: {filepath: demos/mcq/strings-select.stl}
-syntaxes:
-  i0-flat: {filepath: complete.json, prompt_zero_index: true,  prompt_indent: \"\"}
-  i0-gt:   {filepath: complete.json, prompt_zero_index: true,  prompt_indent: \"> \"}
-  i1-flat: {filepath: complete.json, prompt_zero_index: false, prompt_indent: \"\"}
-runs:
-  - {name: r, model: rng, dataset: q, programs: [strings-select],
-     syntaxes: [i0-flat, i0-gt, i1-flat]}
-EOF
-            ${Python_EXECUTABLE} ${SYNTAX_DIR}/dedup.py \$D/probe.yml > \$D/out
-            cat \$D/out
-            grep -q 'strings-select *2 / 3' \$D/out
-            grep -q 'i0-flat, i0-gt' \$D/out
-            rm -rf \$D
-        "
-)
-set_tests_properties(syntax_dedup_finds_the_collapse PROPERTIES
-    LABELS "syntax" TIMEOUT 300)

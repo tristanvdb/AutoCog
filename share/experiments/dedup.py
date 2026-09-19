@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Which of a campaign's syntaxes actually render differently, per program.
 
-    python3 share/syntax/dedup.py my-campaign.yml
+    python3 share/experiments/dedup.py my-campaign.yml
 
 A syntax grid is a product of knobs, and a product over-counts: a knob
 that a program's schema never exercises renders nothing. `prompt_indent` emits one prefix per NESTING LEVEL, so on a flat
@@ -34,7 +34,7 @@ import os
 import sys
 import tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.abspath(__file__))     # share/experiments
 REPO = os.path.dirname(os.path.dirname(HERE))
 DEMOS = os.path.join(REPO, "share", "demos", "mcq")
 CONTENT = os.path.join(DEMOS, "inspect", "content.json")
@@ -59,7 +59,7 @@ def from_descriptor(path):
     are a base file plus overrides, not a directory of files. Reading them
     from here is what keeps this honest -- it measures what will run.
     """
-    sys.path.insert(0, os.path.join(REPO, "share"))
+    sys.path.insert(0, HERE)
     from campaign.descriptor import load
     from campaign.layout import Layout
     from campaign import syntaxes as syntaxing

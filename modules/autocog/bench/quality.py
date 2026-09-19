@@ -570,7 +570,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
     WHICH questions run is not decided here: `data` is taken as given. A
     campaign draws its question set once per dataset, up front, so that
     every arm sees the same datapoints and a later campaign can draw from
-    what is left — see share/campaign/samples.py."""
+    what is left — see share/experiments/campaign/samples.py."""
     root = root or find_root(os.getcwd())
     if root is None:
         raise autocog.errors.ConfigError("cannot locate the repo root (share/syntax)")

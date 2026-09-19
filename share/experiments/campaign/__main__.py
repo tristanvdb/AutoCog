@@ -1,6 +1,6 @@
 """Run a campaign.
 
-    autocog/share/campaign.sh my-campaign.yml
+    autocog/share/experiments/campaign.sh my-campaign.yml
 
 Stages, each idempotent, so a campaign that died halfway resumes by being run
 again: provision -> probe -> plan -> workers up -> run -> workers down.
@@ -51,8 +51,10 @@ def main(argv=None):
                          "(repeatable; adds to the descriptor's own `prior`)")
     args = ap.parse_args(argv)
 
-    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    repo = os.path.dirname(repo)             # share/campaign -> share -> repo
+    # share/experiments/campaign -> share/experiments -> share -> repo
+    repo = os.path.abspath(__file__)
+    for _ in range(4):
+        repo = os.path.dirname(repo)
     layout = Layout(repo, args.workdir)
 
     try:

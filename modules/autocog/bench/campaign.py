@@ -52,7 +52,7 @@ on completion only).
 Not here: WHICH questions a run sees. A run takes `data` as given, and
 choosing a campaign's datapoints — once per dataset, so every arm sees
 the same ones, and drawn around whatever an earlier campaign already
-used — belongs to the launcher (share/campaign/samples.py). This layer
+used — belongs to the launcher (share/experiments/campaign/samples.py). This layer
 would have to make that choice once per run, which is how two arms end
 up incomparable.
 """

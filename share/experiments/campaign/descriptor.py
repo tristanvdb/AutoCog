@@ -173,7 +173,7 @@ def _datasets(entries):
     """`samples` lives HERE, not on a run: a campaign draws its questions
     once per dataset and every run sees the same ones. A run that could
     set its own would make two arms incomparable while looking like a
-    single matrix (see share/campaign/samples.py). 0 = the whole dataset.
+    single matrix (see share/experiments/campaign/samples.py). 0 = the whole dataset.
 
     There is no `limit`. It used to cap the BUILT file, from back when a
     run took the dataset whole; with `samples` doing the drawing its only
