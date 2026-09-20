@@ -68,6 +68,12 @@ class RemoteEngine:
         # Poll
         return self._poll(request_id)
 
+    async def evaluate_prompt_async(self, program, prompt_name, content,
+                                    record_kinds=None):
+        """Async hook for Context.step_async (blocking transport for now)."""
+        return self.evaluate_prompt(program, prompt_name, content,
+                                    record_kinds=record_kinds)
+
     def _poll(self, request_id):
         """Poll until the request completes or times out."""
         deadline = time.time() + self.timeout
@@ -87,17 +93,25 @@ class RemoteEngine:
         )
 
     def run(self, program, entry="main", externals=None, max_steps=100, **inputs):
-        """Run a program using the remote engine for evaluation.
+        """Run a program using the remote engine for evaluation (sync facade).
 
         Channel resolution happens locally. Only evaluate_prompt is remote.
         """
+        import asyncio
+
+        return asyncio.run(self.run_async(
+            program, entry=entry, externals=externals, max_steps=max_steps,
+            **inputs))
+
+    async def run_async(self, program, entry="main", externals=None,
+                        max_steps=100, **inputs):
         from .context import Context
 
         prompt = program.entry_prompt(entry)
         ctx = Context(program, self, prompt, inputs, externals or {})
         steps = 0
         while not ctx.done and steps < max_steps:
-            ctx.step()
+            await ctx.step_async()
             steps += 1
         if not ctx.done:
             raise RemoteError(
@@ -181,6 +195,96 @@ class RemoteBackend:
             return frame, artifacts
         return frame
 
+    async def evaluate_prompt_async(self, program, prompt_name, content,
+                                    record_kinds=None):
+        """evaluate_prompt with an awaitable transport: the loop stays free
+        while this job sits in the worker's queue (store operations are
+        local and fast; only the submit/poll waits are async)."""
+        fta_id = self._sta.instantiate(
+            program.id, prompt_name, content, self.syntax_id, self.search_id
+        )
+        artifacts = {}
+        try:
+            fta = self._sta.get_fta(fta_id)
+            if record_kinds and "fta" in record_kinds:
+                artifacts["fta"] = fta
+
+            reply = await self._submit_async(
+                "/evaluate", {"fta": fta, "model": self.model_tag})
+            ftt = reply["ftt"]
+            self.last_perf = reply.get("perf")
+            if record_kinds and "perf" in record_kinds:
+                artifacts["perf"] = self.last_perf
+
+            ftt_id = self._sta.read_ftt(ftt)
+            try:
+                frame = self._sta.walk_ftt_to_frame(
+                    program.id, prompt_name, ftt_id, content
+                )
+                if record_kinds:
+                    if "frame" in record_kinds:
+                        artifacts["frame"] = frame
+                    if "ftt" in record_kinds:
+                        artifacts["ftt"] = ftt
+            finally:
+                self._sta.release_ftt(ftt_id)
+        finally:
+            self._sta.release_fta(fta_id)
+
+        if record_kinds is not None:
+            return frame, artifacts
+        return frame
+
+    async def score_frame_async(self, program, prompt_name, frame, content=None):
+        """score_frame with an awaitable transport."""
+        content = content or {}
+        fta_id = self._sta.instantiate(
+            program.id, prompt_name, content, self.syntax_id, self.search_id
+        )
+        try:
+            ftt_id = self._sta.encode_frame(
+                program.id, prompt_name, fta_id, frame, content
+            )
+            try:
+                ftt = self._sta.get_ftt(ftt_id)
+            finally:
+                self._sta.release_ftt(ftt_id)
+        finally:
+            self._sta.release_fta(fta_id)
+        reply = await self._submit_async(
+            "/score", {"ftt": ftt, "model": self.model_tag})
+        return reply["ftt"]
+
+    async def _submit_async(self, endpoint, payload):
+        """POST a job to a queued endpoint and poll asynchronously. The HTTP
+        round trips themselves are short (submit returns a request id, status
+        returns state) and run on the default executor; the waiting happens
+        in asyncio.sleep, so many jobs can be in flight from one loop."""
+        import asyncio
+
+        loop = asyncio.get_running_loop()
+        submit = await loop.run_in_executor(
+            None, lambda: self._post(endpoint, payload))
+        request_id = submit["request_id"]
+        deadline = time.time() + self.timeout
+        while time.time() < deadline:
+            await asyncio.sleep(self.poll_interval)
+            status = await loop.run_in_executor(
+                None, lambda: self._get(f"/status/{request_id}"))
+            state = status["state"]
+            if state == "complete":
+                return status["result"]
+            elif state == "error":
+                raise RemoteError(f"Remote evaluation failed: {status['error']}")
+        raise Timeout(
+            f"Remote evaluation timed out after {self.timeout}s "
+            f"(request_id={request_id})"
+        )
+
+    def _get(self, endpoint):
+        with urllib.request.urlopen(f"{self.server_url}{endpoint}") as resp:
+            return json.loads(resp.read())
+
     def _submit(self, endpoint, payload):
         """POST a job payload to a queued endpoint and poll for its result."""
         req = urllib.request.Request(
@@ -244,7 +348,16 @@ class RemoteBackend:
 
     def run(self, program, entry="main", externals=None, max_steps=100,
             recorder=None, **inputs):
-        """Run a program, dispatching only the evaluation step to the backend."""
+        """Run a program, dispatching only the evaluation step to the backend
+        (sync facade over run_async)."""
+        import asyncio
+
+        return asyncio.run(self.run_async(
+            program, entry=entry, externals=externals, max_steps=max_steps,
+            recorder=recorder, **inputs))
+
+    async def run_async(self, program, entry="main", externals=None,
+                        max_steps=100, recorder=None, **inputs):
         from .context import Context
 
         prompt = program.entry_prompt(entry)
@@ -252,7 +365,7 @@ class RemoteBackend:
                       recorder=recorder)
         steps = 0
         while not ctx.done and steps < max_steps:
-            ctx.step()
+            await ctx.step_async()
             steps += 1
         if not ctx.done:
             raise RemoteError(
@@ -260,6 +373,154 @@ class RemoteBackend:
                 f"(at prompt '{ctx.prompt}')"
             )
         return ctx.result
+
+
+class EnginePool:
+    """Virtual engine over N level-3 workers hosting one model tag.
+
+    Drop-in Engine for Context: every evaluate/score job is dispatched to
+    a free lane (worker in-flight ≤ its advertised "lanes", 1 today), so
+    concurrent program executions — and a single execution's mapped-call
+    fan-out — spread across all workers. A chain's steps hop lanes freely:
+    prompts of one execution share no token prefix, and per-config prefix
+    warmth establishes itself per worker after first touch. An idle-lane
+    preference for the last-served (program, prompt) config keeps that
+    warmth without ever delaying a job (heuristic only).
+
+    Engine surface parity: run/run_async, evaluate_prompt[_async],
+    score_frame[_async], set_seed/reset (broadcast), capabilities (first
+    worker). Must be used from a single event loop.
+    """
+
+    def __init__(self, urls, model_tag=None, syntax=None, search=None,
+                 poll_interval=0.5, timeout=300):
+        from .errors import ConfigError
+
+        if not urls:
+            raise ConfigError("EnginePool needs at least one worker URL")
+        self.backends = []
+        self._lanes = {}
+        for u in urls:
+            b = RemoteBackend(u, syntax=syntax, search=search,
+                              poll_interval=poll_interval, timeout=timeout)
+            b.model_tag = model_tag
+            caps = b.capabilities()
+            if model_tag is not None and model_tag not in caps["models"]:
+                raise ConfigError(
+                    f"worker {b.server_url} does not host {model_tag!r} "
+                    f"(hosts: {caps['models']})")
+            self.backends.append(b)
+            self._lanes[id(b)] = int(caps.get("lanes") or 1)
+        self.model_tag = model_tag
+        self.syntax_id = self.backends[0].syntax_id
+        self.search_id = self.backends[0].search_id
+        self.model_id = None
+        self.last_perf = None
+        self._cv = None            # created lazily on the running loop
+        self._inflight = {id(b): 0 for b in self.backends}
+        self._last_key = {}
+
+    def total_lanes(self):
+        return sum(self._lanes.values())
+
+    def _condition(self):
+        import asyncio
+
+        if self._cv is None:
+            self._cv = asyncio.Condition()
+        return self._cv
+
+    async def _acquire(self, key=None):
+        cv = self._condition()
+        async with cv:
+            while True:
+                chosen = None
+                for b in self.backends:
+                    if self._inflight[id(b)] < self._lanes[id(b)]:
+                        if key is not None and self._last_key.get(id(b)) == key:
+                            chosen = b
+                            break
+                        chosen = chosen or b
+                if chosen is not None:
+                    self._inflight[id(chosen)] += 1
+                    if key is not None:
+                        self._last_key[id(chosen)] = key
+                    return chosen
+                await cv.wait()
+
+    async def _release(self, backend):
+        cv = self._condition()
+        async with cv:
+            self._inflight[id(backend)] -= 1
+            cv.notify_all()
+
+    async def evaluate_prompt_async(self, program, prompt_name, content,
+                                    record_kinds=None):
+        backend = await self._acquire(key=(program.id, prompt_name))
+        try:
+            result = await backend.evaluate_prompt_async(
+                program, prompt_name, content, record_kinds=record_kinds)
+            self.last_perf = backend.last_perf
+            return result
+        finally:
+            await self._release(backend)
+
+    async def score_frame_async(self, program, prompt_name, frame, content=None):
+        backend = await self._acquire(key=(program.id, prompt_name))
+        try:
+            return await backend.score_frame_async(
+                program, prompt_name, frame, content=content)
+        finally:
+            await self._release(backend)
+
+    def evaluate_prompt(self, program, prompt_name, content, record_kinds=None):
+        import asyncio
+
+        return asyncio.run(self.evaluate_prompt_async(
+            program, prompt_name, content, record_kinds=record_kinds))
+
+    def score_frame(self, program, prompt_name, frame, content=None):
+        import asyncio
+
+        return asyncio.run(self.score_frame_async(
+            program, prompt_name, frame, content=content))
+
+    def run(self, program, entry="main", externals=None, max_steps=100,
+            recorder=None, **inputs):
+        import asyncio
+
+        return asyncio.run(self.run_async(
+            program, entry=entry, externals=externals, max_steps=max_steps,
+            recorder=recorder, **inputs))
+
+    async def run_async(self, program, entry="main", externals=None,
+                        max_steps=100, recorder=None, **inputs):
+        from .context import Context
+
+        prompt = program.entry_prompt(entry)
+        ctx = Context(program, self, prompt, inputs, externals or {},
+                      recorder=recorder)
+        steps = 0
+        while not ctx.done and steps < max_steps:
+            await ctx.step_async()
+            steps += 1
+        if not ctx.done:
+            raise RemoteError(
+                f"Program did not complete after {max_steps} steps "
+                f"(at prompt '{ctx.prompt}')"
+            )
+        return ctx.result
+
+    def set_seed(self, seed):
+        for b in self.backends:
+            b.set_seed(seed)
+
+    def reset(self, kv=True):
+        for b in self.backends:
+            b.reset(kv)
+
+    def capabilities(self):
+        return self.backends[0].capabilities()
 
 
 def _poll(server_url, request_id, poll_interval, timeout):

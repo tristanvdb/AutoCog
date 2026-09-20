@@ -50,10 +50,11 @@ void Manager::initialize() {
   Manager::initialized = true;
 }
 
-ModelID Manager::add_model(std::string const & path, int n_ctx) {
+ModelID Manager::add_model(std::string const & path, int n_ctx,
+                           int ngl, int kv_slots) {
   auto & manager = instance();
   ModelID id = manager.models.size();
-  manager.models.emplace_back(id, path, n_ctx);
+  manager.models.emplace_back(id, path, n_ctx, ngl, kv_slots);
   return id;
 }
 
@@ -62,10 +63,10 @@ Model & Manager::get_model(ModelID id) {
   return manager.models[id];
 }
 
-EvalID Manager::add_eval(ModelID const model, data::FTA const & fta) {
+EvalID Manager::add_eval(ModelID const model, data::FTA const & fta,
+                         EvaluationConfig const & config) {
   auto & manager = instance();
   EvalID id = manager.next_eval_id++;
-  EvaluationConfig config;
   manager.evaluations.try_emplace(id, config, model, fta);
   return id;
 }
