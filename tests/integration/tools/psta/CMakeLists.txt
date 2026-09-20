@@ -1,7 +1,7 @@
 # psta integration tests
 
 set(STA_GOLDEN ${PROJECT_SOURCE_DIR}/tests/integration/tools/stlc/sta)
-set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
+set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/complete.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 set(BR ${STA_GOLDEN}/language/structures/test_basic_record.golden.json)
 

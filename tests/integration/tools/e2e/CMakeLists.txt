@@ -4,7 +4,7 @@
 
 set(E2E_GOLDEN ${CMAKE_CURRENT_SOURCE_DIR}/golden)
 set(STL_FIXTURES ${PROJECT_SOURCE_DIR}/tests/fixtures/stl)
-set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/default.json)
+set(SYNTAX ${PROJECT_SOURCE_DIR}/share/syntax/complete.json)
 set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 set(STLIB ${PROJECT_SOURCE_DIR}/share/library/stlib)
 set(COMPARE ${PROJECT_SOURCE_DIR}/tests/scripts/golden_compare.py)

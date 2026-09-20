@@ -1,0 +1,46 @@
+// MCQ over labelled records, committing by INDEX.
+//
+// Same commitment as strings-select — a digit naming a position — but the
+// choices carry a label alongside their text, so the index names a record and
+// the answer is that record's value.
+
+from "record.stl" import a_choice;
+from "mcq.py" import pick_value;
+
+// A `select` commits on a POSITION, and the syntax decides whether that
+// position is SPELLED from 0 or from 1 (prompt_zero_index). Saying which
+// is the difference between a model that can answer and one that guesses,
+// so the description has to say it -- and it cannot be written here,
+// because the syntax is not chosen until the prompt is instantiated.
+//
+// So it is not written here: this is an expression that resolves then.
+// Under a syntax that fixes the knob the conditional collapses and the
+// annotation is plain text again. Program-scope, so `-D index_label=...`
+// can still override it with a fixed string.
+argument index_label = (__syntax__.prompt_zero_index ? ", counted from 0"
+                                                     : ", counted from 1");
+
+prompt main {
+  argument max_choices = 10;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choice[2:max_choices] is a_choice;
+    answer is select(choice);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choice get choice;
+  }
+  return call pick_value _ { zero_index use __syntax__.prompt_zero_index; };
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choice as "the possible choices to answer the question, only one is correct";
+    answer as f"you pick the index of the choice that best answer the question{index_label}";
+  }
+}
+
+export main<> as main;

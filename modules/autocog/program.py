@@ -155,13 +155,13 @@ def _stdlib_path():
 def _default_syntax_path():
     """Return the path to the default syntax JSON file."""
     pkg_dir = os.path.dirname(os.path.abspath(__file__))
-    # Installed layout: autocog/syntax/default.json
-    candidate = os.path.join(pkg_dir, "syntax", "default.json")
+    # Installed layout: autocog/syntax/complete.json
+    candidate = os.path.join(pkg_dir, "syntax", "complete.json")
     if os.path.isfile(candidate):
         return candidate
-    # Dev layout: share/syntax/default.json
+    # Dev layout: share/syntax/complete.json
     repo = os.path.dirname(os.path.dirname(pkg_dir))
-    candidate = os.path.join(repo, "share", "syntax", "default.json")
+    candidate = os.path.join(repo, "share", "syntax", "complete.json")
     if os.path.isfile(candidate):
         return candidate
     return None
@@ -182,8 +182,12 @@ def _default_search_path():
     return None
 
 
-def compile(filepath, includes=None, entry_points=None):
-    """Compile an STL file into a Program."""
+def compile(filepath, includes=None, entry_points=None, defines=None):
+    """Compile an STL file into a Program.
+
+    `defines` overrides program arguments by name (the CLI's -D): the values
+    may be int, float, bool, or str.
+    """
     # A missing top-level input is a file error, not a compile diagnostic:
     # there is no source to point into. (Imports that fail to resolve are
     # reported as located CompileError diagnostics by the compiler instead.)
@@ -198,7 +202,8 @@ def compile(filepath, includes=None, entry_points=None):
     pid = compiler_stl_cxx.compile(
         filepath,
         includes=inc,
-        entry_points=entry_points or []
+        entry_points=entry_points or [],
+        defines=defines or {}
     )
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).

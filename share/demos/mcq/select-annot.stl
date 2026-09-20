@@ -7,10 +7,11 @@ record correctness {
 }
 
 prompt main {
+  argument max_choices = 8;
   is {
     topic is text<length=20>;
     question is text<length=50>;
-    choices[4] is {
+    choices[2:max_choices] is {
       value is text<length=30>;
       correct is correctness;
     }
@@ -66,4 +67,4 @@ prompt annotator {
   }
 }
 
-export main;
+export main<> as main;

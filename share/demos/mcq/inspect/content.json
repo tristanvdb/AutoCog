@@ -1,0 +1,130 @@
+{
+  "_README": [
+    "Content for the inspection graphs: what each prompt is fed when its FTA",
+    "is rendered for reading. Keyed '<demo>.<prompt>'; a prompt with no entry",
+    "is instantiated with {} and gets the schema's full shape (arrays expanded",
+    "to their maximum, every field a generation) instead of one forced path.",
+    "",
+    "CONTENT, not inputs: keyed by the prompt's own field names, after the",
+    "channel block has resolved. That is why the strings-* family lists",
+    "'choices' (plain texts, pulled through `choices get choice.value`) while",
+    "the record-* family lists 'choice' (labelled records).",
+    "",
+    "One question, four choices, everywhere. The point is to read the graphs",
+    "side by side, so nothing varies here that does not have to."
+  ],
+
+  "_question": "Deliberately a question whose choices are NOT in a natural order, so a model that answers by position rather than by content is visible.",
+
+  "strings-select.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-repeat.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-select-cot.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-repeat-cot.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-select-iter.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-repeat-iter.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+
+  "strings-select-hyp.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?"
+  },
+  "strings-select-hyp.choose": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+  "strings-repeat-hyp.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?"
+  },
+  "strings-repeat-hyp.choose": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choices": ["Ribosome", "Mitochondrion", "Golgi apparatus", "Nucleus"]
+  },
+
+  "record-index.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": [
+      {"label": "A", "value": "Ribosome"},
+      {"label": "B", "value": "Mitochondrion"},
+      {"label": "C", "value": "Golgi apparatus"},
+      {"label": "D", "value": "Nucleus"}
+    ]
+  },
+  "record-value.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": [
+      {"label": "A", "value": "Ribosome"},
+      {"label": "B", "value": "Mitochondrion"},
+      {"label": "C", "value": "Golgi apparatus"},
+      {"label": "D", "value": "Nucleus"}
+    ]
+  },
+  "record-label.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": [
+      {"label": "A", "value": "Ribosome"},
+      {"label": "B", "value": "Mitochondrion"},
+      {"label": "C", "value": "Golgi apparatus"},
+      {"label": "D", "value": "Nucleus"}
+    ]
+  },
+
+  "record-index-annot.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": [
+      {"value": "Ribosome", "correct": "no"},
+      {"value": "Mitochondrion", "correct": "yes"},
+      {"value": "Golgi apparatus", "correct": "no"},
+      {"value": "Nucleus", "correct": "maybe"}
+    ]
+  },
+  "record-index-annot.annotator": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": "Mitochondrion"
+  },
+  "record-value-annot.main": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": [
+      {"value": "Ribosome", "correct": "no"},
+      {"value": "Mitochondrion", "correct": "yes"},
+      {"value": "Golgi apparatus", "correct": "no"},
+      {"value": "Nucleus", "correct": "maybe"}
+    ]
+  },
+  "record-value-annot.annotator": {
+    "topic": "Biology",
+    "question": "Which organelle produces most of a cell's ATP?",
+    "choice": "Mitochondrion"
+  }
+}

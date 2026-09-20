@@ -21,7 +21,7 @@ def share_dir(repo_root):
 
 @pytest.fixture(scope="session")
 def syntax_path(share_dir):
-    return str(share_dir / "syntax" / "default.json")
+    return str(share_dir / "syntax" / "complete.json")
 
 
 @pytest.fixture(scope="session")

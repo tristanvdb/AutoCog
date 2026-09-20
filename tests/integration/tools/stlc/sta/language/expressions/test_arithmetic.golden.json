@@ -9,17 +9,17 @@
           "type": "text"
         }
       },
-      "prompt": "test__2"
+      "prompt": "main"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "72ea417ca5c0c36eeacafa8731d1da99d4b9cf66f1bdb5f3db6068780548a966",
+    "hash": "dd32bfaf785685275da46104381ca2e94f6fa3af61b83919a0adba164d7a608a",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "test__2": {
+    "main": {
       "abstracts": [
         {
           "exit": -1,
@@ -65,7 +65,32 @@
           },
           "index": 0,
           "name": "short",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -77,7 +102,32 @@
           },
           "index": 1,
           "name": "long",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -92,7 +142,32 @@
           "range": [
             6,
             6
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -104,7 +179,32 @@
           },
           "index": 3,
           "name": "scaled",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -138,7 +238,17 @@
           "type": "return"
         }
       },
-      "name": "test__2"
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

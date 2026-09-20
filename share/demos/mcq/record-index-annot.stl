@@ -1,0 +1,85 @@
+// Multiple Choice Question - Select with Per-Choice Annotation
+// Demonstrates: call channels with map/bind, nested field annotations
+
+from "mcq.py" import pick_value;
+
+// A `select` commits on a POSITION, and the syntax decides whether that
+// position is SPELLED from 0 or from 1 (prompt_zero_index). Saying which
+// is the difference between a model that can answer and one that guesses,
+// so the description has to say it -- and it cannot be written here,
+// because the syntax is not chosen until the prompt is instantiated.
+//
+// So it is not written here: this is an expression that resolves then.
+// Under a syntax that fixes the knob the conditional collapses and the
+// annotation is plain text again. Program-scope, so `-D index_label=...`
+// can still override it with a fixed string.
+argument index_label = (__syntax__.prompt_zero_index ? ", counted from 0"
+                                                     : ", counted from 1");
+
+record correctness {
+  is enum("yes", "no", "maybe");
+  annotate "Evaluation of the correctness of a statement, can be yes, no, or maybe.";
+}
+
+prompt main {
+  argument max_choices = 8;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choice[2:max_choices] is {
+      value is text<length=30>;
+      correct is correctness;
+    }
+    answer is select(choice);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    // Annotate each proposed answer independently: one annotator call per
+    // input choice, renaming the returned "choice" to this prompt's "value".
+    // The run's input is a list of labelled records, so the texts come out of
+    // it the same way the strings-* programs get theirs.
+    choice call annotator {
+      topic get topic;
+      question get question;
+      choice get choice.value mapped;
+    } bind(choice, value);
+  }
+  return call pick_value _ { zero_index use __syntax__.prompt_zero_index; };
+  annotate {
+    _ as "You are answering a multiple choice question. You have been given the opportunity to look at each possible answer individually to decide whether or not they could be correct.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choice as "the four possible choices to answer the question, only one is really correct";
+    choice.value as "the value of the choice";
+    choice.correct as "your independent evaluation of whether or not this choice could be correct";
+    answer as f"you pick the index of the choice that best answer the question{index_label}";
+  }
+}
+
+prompt annotator {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choice is text<length=30>;
+    correct is correctness;
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choice get choice;
+  }
+  return {
+    use choice;
+    use correct;
+  }
+  annotate {
+    _ as "You are answering a multiple choice question. You must evaluate one of the proposed answer to this question";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choice as "one of the proposed answer to this question";
+    correct as "do you know if this answer is correct or not, then use yes or no. If unsure use maybe.";
+  }
+}
+
+export main<> as main;

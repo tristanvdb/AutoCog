@@ -1,0 +1,27 @@
+{
+  "system_msg": "You are an AI expert interacting with your environment using a set of interactive questionnaires.",
+  "header_pre": "",
+  "header_mid": "<|reserved_special_token_100|>",
+  "header_post": "<|reserved_special_token_100|>",
+  "header_mechanic": "You are using the following syntax:",
+  "header_formats": "It includes the following named formats:",
+  "format_listing": "<|reserved_special_token_101|>",
+  "prompt_indent": "<|reserved_special_token_102|>",
+  "field_separator": "<|reserved_special_token_100|>",
+  "field_suffix": "<|reserved_special_token_103|>",
+  "desc_pre": "<|reserved_special_token_104|>",
+  "desc_post": "<|reserved_special_token_100|>",
+  "desc_inline": false,
+  "prompt_with_format": true,
+  "prompt_with_index": true,
+  "prompt_zero_index": true,
+  "detailed_formats": false,
+  "completion_stop": "<|reserved_special_token_100|>",
+  "completion_vocab": {
+    "kind": "diff",
+    "operands": [
+      { "kind": "regex", "strings": ["^[ -~\t\n]+$"] },
+      { "kind": "regex", "strings": ["<\\|"] }
+    ]
+  }
+}

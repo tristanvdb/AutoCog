@@ -1,0 +1,34 @@
+// MCQ over labelled records, committing by TEXT.
+//
+// The label is rendered beside each choice but the model commits on the value,
+// so the labels are context it can see and not use. What it emits is the
+// answer; the return hands the field over unchanged.
+
+from "record.stl" import a_choice;
+
+prompt main {
+  argument max_choices = 10;
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choice[2:max_choices] is a_choice;
+    answer is repeat(choice.value);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choice get choice;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choice as "the possible choices to answer the question, only one is correct";
+    answer as "you repeat verbatim the choice that best answer the question";
+  }
+}
+
+export main<> as main;

@@ -1,5 +1,6 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
+#include "autocog/data/search-registry.hxx"
 #include "autocog/utilities/errors.hxx"
 #include "autocog/utilities/exception.hxx"
 
@@ -561,7 +562,7 @@ static std::string prompt_label(ConcreteState const & state,
     if (syntax.prompt_with_format) {
         label += "(" + format_label(fld) + ")";
     }
-    if (fld.is_list() && !state.indices.empty()) {
+    if (syntax.prompt_with_index && fld.is_list() && !state.indices.empty()) {
         int idx = state.indices.back();
         if (!syntax.prompt_zero_index) idx += 1;
         label += "[" + std::to_string(idx) + "]";
@@ -691,43 +692,128 @@ struct FTABuilder {
 
     // Resolve a per-field policy against the config defaults into the typed
     // structs xfta consumes. The policy (open category->param map from the IR/
-    // STA) wins per-param; otherwise the config default is used. The full
-    // context (field policy, prompt/STA, state, indices) is available for future
-    // advanced policies; the raw policy below is just policy-value ?? config.
-    static std::optional<float> pol_f(SearchParams const & pol, std::string const & cat, char const * key) {
-        auto c = pol.categories.find(cat);
-        if (c == pol.categories.end()) return std::nullopt;
-        auto p = c->second.find(key);
-        if (p == c->second.end()) return std::nullopt;
-        if (auto const * v = std::get_if<float>(&p->second)) return *v;
-        if (auto const * iv = std::get_if<int>(&p->second)) return static_cast<float>(*iv);
-        return std::nullopt;
+    // STA) wins per-param; otherwise the config default is used. Reads are
+    // typed by the search-param registry: an unknown, mistyped, or
+    // out-of-domain policy value throws (stage 5 rejects these at compile
+    // time; this guards artifacts produced before that check existed).
+    // What a policy expression may name here: the rendering knobs, and the
+    // search config's own values. A policy that references its own parameter
+    // (`text.beams is __search__.text.beams`) therefore resolves to the config
+    // default -- which is what "tracks the default" always meant, now said by
+    // the expression instead of by a string prefix every reader had to test
+    // for. A parameter that is legitimately unset resolves to null.
+    autocog::data::Resolver refs() const {
+        return [this](std::string const & ref) -> std::optional<Val> {
+            auto const dot = ref.find('.');
+            if (dot == std::string::npos) return std::nullopt;
+            auto const ns = ref.substr(0, dot);
+            auto const field = ref.substr(dot + 1);
+            if (ns == "__syntax__") return autocog::data::syntax_get(syntax, field);
+            if (ns == "__search__") {
+                auto const sep = field.find('.');
+                if (sep == std::string::npos) return std::nullopt;
+                auto v = autocog::data::search_get(search, field.substr(0, sep),
+                                                   field.substr(sep + 1));
+                return v ? *v : Val{std::monostate{}};
+            }
+            return std::nullopt;
+        };
     }
-    static std::optional<unsigned> pol_u(SearchParams const & pol, std::string const & cat, char const * key) {
+
+    std::optional<Val> pol_raw(SearchParams const & pol, std::string const & cat,
+                               std::string const & key) const {
         auto c = pol.categories.find(cat);
         if (c == pol.categories.end()) return std::nullopt;
         auto p = c->second.find(key);
         if (p == c->second.end()) return std::nullopt;
-        if (auto const * iv = std::get_if<int>(&p->second)) return static_cast<unsigned>(*iv);
-        return std::nullopt;
+        auto const resolved = autocog::data::residual(p->second, refs());
+        auto v = resolved.as_value();
+        if (!v) {
+            // Nothing a search parameter may name outlives instantiation, so
+            // anything left here is a reference that cannot be bound at all.
+            std::vector<std::string> left;
+            resolved.collect_refs(left);
+            throw autocog::SchemaError(
+                "search policy '" + cat + "." + key + "' cannot be resolved at "
+                "instantiation: '" + (left.empty() ? "?" : left.front()) + "'",
+                cat + "." + key);
+        }
+        if (std::holds_alternative<std::monostate>(*v)) return std::nullopt;  // null = unset
+        return v;
+    }
+    static autocog::data::registry::SearchParam const & pol_param(
+            std::string const & cat, std::string const & key) {
+        auto const * param = autocog::data::registry::find(cat, key);
+        if (!param)
+            throw autocog::SchemaError(
+                "search policy '" + cat + "." + key + "' is not a known parameter",
+                cat + "." + key);
+        return *param;
+    }
+    std::optional<float> pol_float(SearchParams const & pol,
+            std::string const & cat, std::string const & key) const {
+        auto v = pol_raw(pol, cat, key);
+        if (!v) return std::nullopt;
+        pol_param(cat, key);
+        if (auto const * f = std::get_if<float>(&*v)) return *f;
+        if (auto const * i = std::get_if<int>(&*v)) return static_cast<float>(*i);
+        throw autocog::SchemaError(
+            "search policy '" + cat + "." + key + "' expects a number", cat + "." + key);
+    }
+    std::optional<unsigned> pol_uint(SearchParams const & pol,
+            std::string const & cat, std::string const & key) const {
+        auto v = pol_raw(pol, cat, key);
+        if (!v) return std::nullopt;
+        pol_param(cat, key);
+        if (auto const * i = std::get_if<int>(&*v)) return static_cast<unsigned>(*i);
+        throw autocog::SchemaError(
+            "search policy '" + cat + "." + key + "' expects an integer", cat + "." + key);
+    }
+    std::optional<std::string> pol_str_raw(SearchParams const & pol,
+            std::string const & cat, std::string const & key) const {
+        auto v = pol_raw(pol, cat, key);
+        if (!v) return std::nullopt;
+        if (auto const * s = std::get_if<std::string>(&*v)) return *s;
+        throw autocog::SchemaError(
+            "search policy '" + cat + "." + key + "' expects a string", cat + "." + key);
+    }
+    std::optional<std::string> pol_str(SearchParams const & pol,
+            std::string const & cat, std::string const & key) const {
+        auto v = pol_raw(pol, cat, key);
+        if (!v) return std::nullopt;
+        auto const & param = pol_param(cat, key);
+        auto const * s = std::get_if<std::string>(&*v);
+        if (!s)
+            throw autocog::SchemaError(
+                "search policy '" + cat + "." + key + "' expects a string",
+                cat + "." + key);
+        if (!autocog::data::registry::in_domain(param, *s))
+            throw autocog::SchemaError(
+                "search policy '" + cat + "." + key + "': invalid value '" + *s
+                + "' (allowed: " + autocog::data::registry::domain_text(param) + ")", *s);
+        return *s;
     }
 
     TextSearch resolve_text(SearchParams const & pol) const {
         TextSearch r = search.text;  // config defaults
-        if (auto v = pol_f(pol, "text", "threshold")) r.threshold = *v;
-        if (auto v = pol_u(pol, "text", "beams"))     r.beams = *v;
-        if (auto v = pol_u(pol, "text", "topk"))      r.topk = *v;
-        if (auto v = pol_u(pol, "text", "ahead"))     r.ahead = *v;
-        if (auto v = pol_u(pol, "text", "width"))     r.width = *v;
-        if (auto v = pol_f(pol, "text", "repetition")) r.repetition = *v;
-        if (auto v = pol_f(pol, "text", "diversity"))  r.diversity = *v;
+        if (auto v = pol_float(pol, "text", "threshold")) r.threshold = *v;
+        if (auto v = pol_uint(pol, "text", "beams"))      r.beams = *v;
+        if (auto v = pol_uint(pol, "text", "topk"))       r.topk = *v;
+        if (auto v = pol_uint(pol, "text", "ahead"))      r.ahead = *v;
+        if (auto v = pol_uint(pol, "text", "width"))      r.width = *v;
+        if (auto v = pol_float(pol, "text", "repetition")) r.repetition = *v;
+        if (auto v = pol_float(pol, "text", "diversity"))  r.diversity = *v;
         return r;
     }
     ChoiceSearch resolve_choice(SearchParams const & pol, std::string const & cat,
                                 ChoiceSearch const & defaults) const {
         ChoiceSearch r = defaults;
-        if (auto v = pol_f(pol, cat, "threshold")) r.threshold = *v;
-        if (auto v = pol_u(pol, cat, "width"))     r.width = *v;
+        // Bare "threshold" is shorthand for "threshold.value".
+        if (auto v = pol_float(pol, cat, "threshold.value")) r.threshold = *v;
+        else if (auto v2 = pol_float(pol, cat, "threshold")) r.threshold = *v2;
+        if (auto v = pol_uint(pol, cat, "width"))            r.width = *v;
+        if (auto v = pol_str(pol, cat, "ranking.metric"))    r.ranking = *v;
+        if (auto v = pol_str(pol, cat, "threshold.metric"))  r.threshold_metric = *v;
         return r;
     }
 
@@ -736,7 +822,8 @@ struct FTABuilder {
         int id = action_id++;
         actions.push_back(autocog::data::Action{
             uid, {}, std::nullopt, std::nullopt,
-            autocog::data::ChooseAction{choices, cs.threshold, cs.width}
+            autocog::data::ChooseAction{choices, cs.threshold, cs.width,
+                                        cs.ranking, cs.threshold_metric}
         });
         return id;
     }
@@ -823,6 +910,9 @@ struct FTABuilder {
                 if (val && !doc_is_null(*val)) {
                     field_id = add_text("field." + succ_safe, value_to_text(*val, fld.name));
                 } else {
+                    // An empty candidate list is legal HERE (the ista tooling
+                    // instantiates without content to inspect FTAs); it only
+                    // becomes an error if such a choose is evaluated.
                     auto choices = ravel_choices(content, fmt, syntax);
                     field_id = add_choose("field." + succ_safe, choices,
                                           resolve_choice(pol, "enum", search.enums));
@@ -869,9 +959,13 @@ struct FTABuilder {
             int desc_id = -1;
             if (syntax.desc_inline && !fld.desc.empty() && described_fields.find(succ.field) == described_fields.end()) {
                 described_fields.insert(succ.field);
+                // This is where an annotation that asks about the rendering
+                // is answered: the syntax is finally known, so `render` folds
+                // what is left of the expression into text.
                 std::string desc_text;
                 for (auto const & d : fld.desc)
-                    desc_text += syntax.desc_pre + d + syntax.desc_post;
+                    desc_text += syntax.desc_pre + autocog::data::render(d, refs())
+                               + syntax.desc_post;
                 desc_id = add_text("desc." + succ_safe, desc_text);
             }
 
@@ -969,12 +1063,12 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     hdr << syntax.header_pre << syntax.system_msg << syntax.header_mid;
 
     // Prompt description
-    for (auto const & d : prompt.desc) hdr << d << " ";
+    for (auto const & d : prompt.desc) hdr << autocog::data::render(d, b.refs()) << " ";
     hdr << "\n";
 
-    // Mechanics: schema preview in a code block
+    // Mechanics: schema preview in a code block. The entry label ("start:")
+    // belongs to the actual run, not to the syntax presentation.
     hdr << syntax.header_mechanic << "\n```\n";
-    hdr << "start:\n";
     for (auto const & fld : prompt.fields) {
         std::string indent;
         for (int i = 1; i < fld.depth; ++i) indent += syntax.prompt_indent;
@@ -983,7 +1077,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         hdr << range_str(fld);
         hdr << ":";
         if (!fld.desc.empty()) {
-            for (auto const & d : fld.desc) hdr << " " << d;
+            for (auto const & d : fld.desc) hdr << " " << autocog::data::render(d, b.refs());
         }
         hdr << "\n";
     }
@@ -1003,7 +1097,8 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         for (auto const & [fld_ptr, ref_name] : named_formats) {
             hdr << syntax.format_listing << ref_name << ": " << format_str(*fld_ptr) << "\n";
             for (auto const & d : fld_ptr->format_desc) {
-                hdr << "  " << syntax.format_listing << d << "\n";
+                hdr << "  " << syntax.format_listing
+                    << autocog::data::render(d, b.refs()) << "\n";
             }
         }
     }
@@ -1019,25 +1114,54 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         b.connect(header_id, first_branch);
     }
 
-    // Queue params (prompt-scope). Policy (prompt.search["queue"]) wins over
-    // the config default; an STL policy provides a single metric name, which
-    // becomes a one-element lexicographic list. The stop predicate only comes
-    // from the search config (no STL surface syntax for expressions).
+    // Queue params (prompt-scope). Policy (prompt.search["queue"]) wins over the
+    // config default. The metric is carried comma-joined (the STL comma-list
+    // RHS); a policy that references __search__.queue.metric resolves to the
+    // config's own list, so tracking the default needs no special case here.
     std::vector<std::string> metric = search.queue.metric;
     auto qit = prompt.search.categories.find("queue");
     if (qit != prompt.search.categories.end()) {
-        auto mit = qit->second.find("metric");
-        if (mit != qit->second.end())
-            if (auto const * s = std::get_if<std::string>(&mit->second)) metric = {*s};
+        if (auto joined = b.pol_str_raw(prompt.search, "queue", "metric")) {
+            metric.clear();
+            std::string cur;
+            for (char ch : *joined) {
+                if (ch == ',') { if (!cur.empty()) metric.push_back(cur); cur.clear(); }
+                else cur += ch;
+            }
+            if (!cur.empty()) metric.push_back(cur);
+        }
+    }
+    // Registry-validated here (not just at the backend) so a bad metric fails
+    // at instantiation with a source-attributable message, not mid-evaluation.
+    if (auto const * mp = autocog::data::registry::find("queue", "metric")) {
+        for (auto const & name : metric) {
+            if (!autocog::data::registry::in_domain(*mp, name))
+                throw autocog::SchemaError(
+                    "queue.metric: unknown metric '" + name + "' (allowed: "
+                    + autocog::data::registry::domain_text(*mp) + ")", name);
+        }
     }
 
     // Assemble the finalized FTA. The vocab table is carried so the backend
     // (xfta) can build token masks from each vocab_<hash> -> STL expression;
     // complete actions reference an entry by its key.
+    // The STL policy's termination predicate wins over the search config's.
+    // It is an expression like any other: what is knowable now (a define, a
+    // rendering knob) folds here, and what is not -- the running evaluation,
+    // the model's context window -- stays a reference for xfta to bind.
+    std::optional<autocog::data::Expr> stop = search.queue.stop;
+    if (qit != prompt.search.categories.end()) {
+        auto sit = qit->second.find("stop");
+        if (sit != qit->second.end()
+                && !(sit->second.kind == autocog::data::Expr::Kind::Ref
+                     && sit->second.ref == "__search__.queue.stop"))
+            stop = autocog::data::residual(sit->second, b.refs());
+    }
+
     autocog::data::FTA fta;
     fta.actions = std::move(b.actions);
     fta.queue_metric = std::move(metric);
-    fta.queue_stop = search.queue.stop;
+    fta.queue_stop = std::move(stop);
     fta.vocabs = prompt.vocabs;
     for (auto & [ref, expr] : b.minted_vocabs) fta.vocabs.emplace(ref, std::move(expr));
 

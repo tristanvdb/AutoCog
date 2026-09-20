@@ -7,24 +7,27 @@ record correctness {
 }
 
 prompt main {
+  argument max_choices = 8;
   is {
     topic is text<length=20>;
     question is text<length=50>;
-    choices[4] is {
+    choice[2:max_choices] is {
       value is text<length=30>;
       correct is correctness;
     }
-    answer is repeat(choices);
+    answer is repeat(choice.value);
   }
   channel {
     topic get topic;
     question get question;
     // Annotate each proposed answer independently: one annotator call per
     // input choice, renaming the returned "choice" to this prompt's "value".
-    choices call annotator {
+    // The run's input is a list of labelled records, so the texts come out of
+    // it the same way the strings-* programs get theirs.
+    choice call annotator {
       topic get topic;
       question get question;
-      choice get choices mapped;
+      choice get choice.value mapped;
     } bind(choice, value);
   }
   return {
@@ -34,9 +37,9 @@ prompt main {
     _ as "You are answering a multiple choice question. You have been given the opportunity to look at each possible answer individually to decide whether or not they could be correct.";
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
-    choices as "the four possible choices to answer the question, only one is really correct";
-    choices.value as "the value of the choice";
-    choices.correct as "your independent evaluation of whether or not this choice could be correct";
+    choice as "the four possible choices to answer the question, only one is really correct";
+    choice.value as "the value of the choice";
+    choice.correct as "your independent evaluation of whether or not this choice could be correct";
     answer as "you repeat verbatim of the choice that best answer the question";
   }
 }
@@ -66,4 +69,4 @@ prompt annotator {
   }
 }
 
-export main;
+export main<> as main;

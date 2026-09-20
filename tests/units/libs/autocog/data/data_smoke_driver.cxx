@@ -124,8 +124,8 @@ int main(int argc, char ** argv) {
 
   // --- Syntax: load the real config input ----------------------------------
   {
-    auto syn = from_string<Syntax>(read_file(share + "/syntax/default.json"));
-    check(syn != nullptr, "syntax load from share/syntax/default.json");
+    auto syn = from_string<Syntax>(read_file(share + "/syntax/complete.json"));
+    check(syn != nullptr, "syntax load from share/syntax/complete.json");
     if (syn) {
       check(syn->metadata && syn->metadata->format == std::string("syntax"), "syntax stamped on load");
       json_roundtrip(*syn, "syntax");

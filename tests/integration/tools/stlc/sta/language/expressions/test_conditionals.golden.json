@@ -9,17 +9,17 @@
           "type": "text"
         }
       },
-      "prompt": "test__1_true"
+      "prompt": "main"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "2bbb6b7314bb26274ba9f18410f434e18b4e97850f086e90fefe16786626c4e9",
+    "hash": "3d4b797c8594cf6557e3f63710c2e792c4fae73ec41438fbfcbe4b5b097c1074",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "test__1_true": {
+    "main": {
       "abstracts": [
         {
           "exit": -1,
@@ -60,7 +60,32 @@
           },
           "index": 0,
           "name": "output",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -75,7 +100,32 @@
           "range": [
             3,
             3
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -87,7 +137,32 @@
           },
           "index": 2,
           "name": "detail",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -121,7 +196,17 @@
           "type": "return"
         }
       },
-      "name": "test__1_true"
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

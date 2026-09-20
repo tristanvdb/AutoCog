@@ -9,17 +9,17 @@
           "type": "text"
         }
       },
-      "prompt": "test__7"
+      "prompt": "main"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "3986ab005e4e8bc1246c33af4b8b7feda8a7cace0ce588db6f9cb8c968b5e01c",
+    "hash": "a1ee0c3b265b252176073bcc0ba8778408155cc89a68e9dbd3d0a7b8e65a51fd",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "test__7": {
+    "main": {
       "abstracts": [
         {
           "exit": -1,
@@ -105,7 +105,32 @@
           },
           "index": 0,
           "name": "diff",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -117,7 +142,32 @@
           },
           "index": 1,
           "name": "div_check",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -129,7 +179,32 @@
           },
           "index": 2,
           "name": "remainder",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -141,7 +216,32 @@
           },
           "index": 3,
           "name": "both",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -153,7 +253,32 @@
           },
           "index": 4,
           "name": "either",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -165,7 +290,32 @@
           },
           "index": 5,
           "name": "negated",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -177,7 +327,32 @@
           },
           "index": 6,
           "name": "lt_result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -189,7 +364,32 @@
           },
           "index": 7,
           "name": "lte_result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -201,7 +401,32 @@
           },
           "index": 8,
           "name": "gte_result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -213,7 +438,32 @@
           },
           "index": 9,
           "name": "neq_result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -225,7 +475,32 @@
           },
           "index": 10,
           "name": "neg_add",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -237,7 +512,32 @@
           },
           "index": 11,
           "name": "complex",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -271,7 +571,17 @@
           "type": "return"
         }
       },
-      "name": "test__7"
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

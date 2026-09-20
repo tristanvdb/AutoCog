@@ -22,3 +22,7 @@ vocab ascii_inline = (ascii_token - regex("\n"));
 
 // Digits: exact-length numeric fields (text<length=N, vocab=digit, stop="">).
 vocab digit = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+
+// Uppercase letters A-H: single-letter label fields, the "symbol" answer
+// mechanism of the MCQ literature (text<length=1, vocab=letter, stop="">).
+vocab letter = tokenize("A", "B", "C", "D", "E", "F", "G", "H");

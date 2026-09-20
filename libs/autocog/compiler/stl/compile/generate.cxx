@@ -560,6 +560,53 @@ std::optional<int> Driver::run_generate() {
 
     SPDLOG_LOGGER_INFO(autocog::log(), "STA generated (#6): {} prompts", sta.prompts.size());
 
+    // Publish exported prompts under their export names: `export main<> as
+    // main;` must yield a prompt addressable as "main" by the tools that take
+    // --prompt (ista/efta), not only through the entry-point indirection.
+    // The first (sorted) export name wins for a given prompt; a name already
+    // taken by a different prompt is left mangled (indirection still works).
+    {
+        std::map<std::string, std::string> sorted_entries(entry_point_map.begin(), entry_point_map.end());
+        std::map<std::string, std::string> renamed;  // mangled -> public
+        for (auto const & [entry_name, mangled] : sorted_entries) {
+            if (!specialized_entry_points.count(entry_name)) continue;
+            if (entry_name == mangled || renamed.count(mangled)) continue;
+            if (sta.prompts.count(entry_name)) continue;
+            auto node = sta.prompts.extract(mangled);
+            if (node.empty()) continue;
+            node.key() = entry_name;
+            node.mapped().name = entry_name;
+            sta.prompts.insert(std::move(node));
+            renamed[mangled] = entry_name;
+        }
+        if (!renamed.empty()) {
+            auto fix = [&renamed](std::optional<std::string> & p) {
+                if (!p) return;
+                auto it = renamed.find(*p);
+                if (it != renamed.end()) *p = it->second;
+            };
+            for (auto & [pname, prompt] : sta.prompts) {
+                for (auto & [label, flow] : prompt.flows) {
+                    if (auto * fc = std::get_if<data::FlowControl>(&flow.value)) {
+                        auto it = renamed.find(fc->prompt);
+                        if (it != renamed.end()) fc->prompt = it->second;
+                    }
+                }
+                for (auto & ch : prompt.channels) {
+                    if (auto * df = std::get_if<data::DataflowChannel>(&ch.value)) {
+                        fix(df->prompt);
+                    } else if (auto * cc = std::get_if<data::CallChannel>(&ch.value)) {
+                        for (auto & kw : cc->kwargs) fix(kw.prompt);
+                    }
+                }
+            }
+            for (auto & [entry_name, mangled] : entry_point_map) {
+                auto it = renamed.find(mangled);
+                if (it != renamed.end()) mangled = it->second;
+            }
+        }
+    }
+
     // Build entry points with schemas (must be after prompts are populated)
     for (auto const & [entry_name, mangled] : entry_point_map) {
         data::EntryPoint ep;

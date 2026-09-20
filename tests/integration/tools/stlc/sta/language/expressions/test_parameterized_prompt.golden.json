@@ -8,7 +8,7 @@
           "type": "text"
         }
       },
-      "prompt": "worker__10_3a3127f5ea0269b5"
+      "prompt": "default_worker"
     },
     "fast_worker": {
       "inputs": {},
@@ -18,7 +18,7 @@
           "type": "text"
         }
       },
-      "prompt": "worker__5_acd85c97bf4d40bd"
+      "prompt": "fast_worker"
     },
     "main": {
       "inputs": {},
@@ -28,17 +28,17 @@
           "type": "text"
         }
       },
-      "prompt": "worker__10_3a3127f5ea0269b5"
+      "prompt": "default_worker"
     }
   },
   "metadata": {
     "format": "sta",
-    "hash": "ca18315185f0f5dd785c7163eb8fa87c6dfb11a1d821823bcfdfe4416510df51",
+    "hash": "302b5b75e5b06248804682bb685a5b91043e0f16b6a03df4476af2dfadb284ce",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
   "prompts": {
-    "worker__10_3a3127f5ea0269b5": {
+    "default_worker": {
       "abstracts": [
         {
           "exit": -1,
@@ -76,7 +76,32 @@
           "range": [
             10,
             10
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -87,7 +112,32 @@
           },
           "index": 1,
           "name": "result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -121,9 +171,19 @@
           "type": "return"
         }
       },
-      "name": "worker__10_3a3127f5ea0269b5"
+      "name": "default_worker",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     },
-    "worker__5_acd85c97bf4d40bd": {
+    "fast_worker": {
       "abstracts": [
         {
           "exit": -1,
@@ -161,7 +221,32 @@
           "range": [
             5,
             5
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -172,7 +257,32 @@
           },
           "index": 1,
           "name": "result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -206,7 +316,17 @@
           "type": "return"
         }
       },
-      "name": "worker__5_acd85c97bf4d40bd"
+      "name": "fast_worker",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},
