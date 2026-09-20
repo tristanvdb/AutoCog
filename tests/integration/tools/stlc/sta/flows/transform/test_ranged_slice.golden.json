@@ -28,7 +28,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "60bf7b7a3db41bd8fd3a477c7a58ceb198872f38e6124e60572ef16b1a961f68",
+    "hash": "3d70009d363498127323fa96d70a0db583c6085ce06e4034b8da484f825a03dc",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -90,13 +90,27 @@
           ],
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -135,8 +149,12 @@
       "name": "consumer",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     },
@@ -191,13 +209,27 @@
           ],
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -227,8 +259,12 @@
       "name": "producer",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     }

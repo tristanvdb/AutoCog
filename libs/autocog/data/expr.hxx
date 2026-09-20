@@ -104,6 +104,16 @@ struct Expr {
 
     Expr() : value(std::monostate{}) {}
 
+    // A value IS an expression -- the literal one. Implicit, because every
+    // place that binds a name to a resolved scalar should read the same as it
+    // did when a binding was a scalar.
+    Expr(Value v) : kind(Kind::Lit), value(std::move(v)) {}
+    Expr(std::string v) : kind(Kind::Lit), value(std::move(v)) {}
+    Expr(char const * v) : kind(Kind::Lit), value(std::string(v)) {}
+    Expr(int v) : kind(Kind::Lit), value(v) {}
+    Expr(float v) : kind(Kind::Lit), value(v) {}
+    Expr(bool v) : kind(Kind::Lit), value(v) {}
+
     static Expr lit(Value v);
     static Expr lit(int v);
     static Expr lit(float v);

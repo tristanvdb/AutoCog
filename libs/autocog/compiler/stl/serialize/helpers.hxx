@@ -1,6 +1,7 @@
 #ifndef AUTOCOG_COMPILER_STL_SERIALIZE_HELPERS_HXX
 #define AUTOCOG_COMPILER_STL_SERIALIZE_HELPERS_HXX
 
+#include "autocog/codec/json.hxx"
 #include "autocog/compiler/stl/ir.hxx"
 #include <nlohmann/json.hpp>
 #include <cmath>
@@ -30,8 +31,11 @@ inline json value_to_json(ir::Value const & value) {
 
 inline json varmap_to_json(ir::VarMap const & varmap) {
     json j = json::object();
+    // A binding is an expression: its value when it is a literal (which is what
+    // an IR dump has always shown), its tree when it defers.
     for (auto const & [name, value] : varmap) {
-        j[name] = value_to_json(value);
+        if (auto v = value.as_value()) j[name] = value_to_json(*v);
+        else j[name] = autocog::codec::to_json(value);
     }
     return j;
 }

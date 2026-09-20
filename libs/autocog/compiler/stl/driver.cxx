@@ -34,6 +34,11 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
 
         const auto& value = bindings.at(key);
 
+        // A binding is an expression; almost always a literal, and mangled by
+        // its value so a mangled name stays readable. A residual one is mangled
+        // by its structure: two instantiations that defer the SAME expression
+        // are the same prompt, and two that defer different ones are not.
+        if (auto v = value.as_value()) {
         std::visit([&result](auto&& val) {
             using T = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<T, int>) {
@@ -51,7 +56,10 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
             } else if constexpr (std::is_same_v<T, std::monostate>) {
                 result += "null";
             }
-        }, value);
+        }, *v);
+        } else {
+            result += value.hash().substr(0, 16);
+        }
     }
 
     return result;

@@ -122,7 +122,7 @@ int main() {
     check(Expr::lit(1).stage() == Stage::Compile, "a literal is bound at compile time");
     check(Expr::reference("__model__.n_ctx").stage() == Stage::Execute,
           "a model property is bound at execution");
-    auto mixed = Expr::binary(OpKind::Lt, Expr::reference("__status__.tokens"),
+    auto mixed = Expr::binary(OpKind::Lt, Expr::reference("__status__.tree.tokens"),
                               Expr::reference("__model__.n_ctx"));
     check(mixed.stage() == Stage::Execute, "a tree takes the latest stage it contains");
     check(threw_compile_error([] { autocog::data::namespaces::check("__syntax__.nope"); }),
@@ -144,7 +144,7 @@ int main() {
           "and it reads as an s-expression");
     auto cat = Expr::concat({Expr::lit(std::string("a")), zero_index});
     check(Expr::from_compact(cat.to_compact()) == cat, "including concatenations");
-    auto cmp = Expr::binary(OpKind::Gte, Expr::reference("__status__.terminals"), Expr::lit(5.0f));
+    auto cmp = Expr::binary(OpKind::Gte, Expr::reference("__status__.tree.terminals"), Expr::lit(5.0f));
     check(Expr::from_compact(cmp.to_compact()) == cmp, "and comparisons");
   }
   {
@@ -155,7 +155,7 @@ int main() {
           "the legacy `any` is the variadic or");
     std::vector<std::string> refs;
     legacy.collect_refs(refs);
-    check(refs.size() == 2 && refs[0] == "__status__.terminals" && refs[1] == "__status__.tokens",
+    check(refs.size() == 2 && refs[0] == "__status__.tree.terminals" && refs[1] == "__status__.tree.tokens",
           "and its bare scalars are qualified into __status__");
     check(legacy.stage() == Stage::Execute, "so it is an execution-stage predicate");
   }

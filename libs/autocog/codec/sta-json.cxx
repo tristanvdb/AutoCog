@@ -39,22 +39,6 @@ void paths_from_json(nlohmann::json const & a, std::vector<PathStep> & out) {
   for (auto const & e : a) { out.emplace_back(); from_json(e, out.back()); }
 }
 
-nlohmann::json sv_to_json(autocog::types::Value const & v) {
-  return std::visit(overloaded{
-    [](int x) -> nlohmann::json { return x; },
-    [](float x) -> nlohmann::json { return x; },
-    [](bool x) -> nlohmann::json { return x; },
-    [](std::string const & x) -> nlohmann::json { return x; },
-    [](std::monostate) -> nlohmann::json { return nullptr; },
-  }, v);
-}
-autocog::types::Value sv_from_json(nlohmann::json const & j) {
-  if (j.is_number_integer()) return j.get<int>();
-  if (j.is_number_float())   return j.get<float>();
-  if (j.is_boolean())        return j.get<bool>();
-  if (j.is_string())         return j.get<std::string>();
-  return std::monostate{};
-}
 
 }  // namespace
 
@@ -63,7 +47,7 @@ nlohmann::json to_json(SearchParams const & sp) {
   nlohmann::json sj = nlohmann::json::object();
   for (auto const & [cat, params] : sp.categories) {
     nlohmann::json pj = nlohmann::json::object();
-    for (auto const & [key, val] : params) pj[key] = sv_to_json(val);
+    for (auto const & [key, val] : params) pj[key] = to_json(val);
     sj[cat] = pj;
   }
   return sj;
@@ -73,7 +57,7 @@ void from_json(nlohmann::json const & dom, SearchParams & sp) {
   autocog::codec::read_guarded("SearchParams", [&]{
   for (auto const & [cat, params] : dom.items())
     for (auto const & [key, val] : params.items())
-      sp.categories[cat][key] = sv_from_json(val);
+      from_json(val, sp.categories[cat][key]);
   });
 }
 

@@ -14,7 +14,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "1ea2e8a19cdb3a18f680ea4233355667691844ec6e961fc27508f9e1fb010b21",
+    "hash": "a195434fe4e7e42622ea53394457a0dd5a93ab5a6a160680d69a149be6563cbe",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -108,13 +108,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -131,13 +145,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -154,13 +182,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -177,13 +219,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -200,13 +256,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -223,13 +293,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -246,13 +330,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -269,13 +367,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -292,13 +404,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -315,13 +441,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -338,13 +478,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -361,13 +515,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -406,8 +574,12 @@
       "name": "main",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     }

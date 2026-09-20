@@ -20,7 +20,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "9cc9e31596d83a7553f90cb27945eb3d24d409d3af785f50747a750eec02f0fa",
+    "hash": "2e975e553911ae89618f4dfc2a922622731c09080f110a9385181551599b98c2",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -118,13 +118,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -141,13 +155,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -186,8 +214,12 @@
       "name": "main",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     },
@@ -244,13 +276,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -267,13 +313,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -312,8 +372,12 @@
       "name": "worker",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     }

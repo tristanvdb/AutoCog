@@ -18,7 +18,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "a07996720596cf7225b1d66991b00473e0ec65f0e8750df793607519f38a751b",
+    "hash": "b4ecd112cc95ad5a4a24b60c1af519261dc24759739771e8329927b3b9a6a188",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -57,10 +57,18 @@
           "range": null,
           "search": {
             "enum": {
-              "ranking.metric": "__search__.enum.ranking.metric",
-              "threshold.metric": "__search__.enum.threshold.metric",
-              "threshold.value": "__search__.enum.threshold.value",
-              "width": "__search__.enum.width"
+              "ranking.metric": {
+                "ref": "__search__.enum.ranking.metric"
+              },
+              "threshold.metric": {
+                "ref": "__search__.enum.threshold.metric"
+              },
+              "threshold.value": {
+                "ref": "__search__.enum.threshold.value"
+              },
+              "width": {
+                "ref": "__search__.enum.width"
+              }
             }
           }
         }
@@ -69,8 +77,12 @@
       "name": "test",
       "search": {
         "queue": {
-          "metric": "__search__.queue.metric",
-          "stop": "__search__.queue.stop"
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     }

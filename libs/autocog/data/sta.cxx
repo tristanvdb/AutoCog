@@ -16,16 +16,23 @@ void put_paths(ContentHasher & h, std::vector<PathStep> const & v) {
   for (auto const & p : v) h.put(p.hash());
 }
 
-void put_sv(ContentHasher & h, autocog::types::Value const & v) {
-  h.put(static_cast<unsigned>(v.index()));
+// A search parameter hashes as its VALUE when it is a literal -- which is what
+// it was before parameters became expressions, so a program that was not
+// written to defer anything keeps the identity it already had. A residual one
+// hashes by structure.
+void put_param(ContentHasher & h, autocog::data::Expr const & e) {
+  auto v = e.as_value();
+  if (!v) { h.put(e.hash()); return; }
+  h.put(static_cast<unsigned>(v->index()));
   std::visit(overloaded{
     [&](int x){ h.put(static_cast<std::int32_t>(x)); },
     [&](float x){ h.put(x); },
     [&](bool x){ h.put(x); },
     [&](std::string const & x){ h.put(x); },
     [&](std::monostate){ },
-  }, v);
+  }, *v);
 }
+
 
 }  // namespace
 
@@ -35,7 +42,7 @@ std::string SearchParams::hash() const {
   for (auto const & [cat, params] : categories) {
     h.put(cat);
     h.put(static_cast<unsigned>(params.size()));
-    for (auto const & [key, val] : params) { h.put(key); put_sv(h, val); }
+    for (auto const & [key, val] : params) { h.put(key); put_param(h, val); }
   }
   return h.hash();
 }

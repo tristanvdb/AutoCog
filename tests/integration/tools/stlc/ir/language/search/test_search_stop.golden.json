@@ -39,13 +39,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         }
@@ -74,7 +88,42 @@
       "search": {
         "queue": {
           "metric": "perplexity",
-          "stop": "(any (ge terminals 5.000000) (all (ge best.proba 0.900000) (not (gt tokens 1000.000000))))"
+          "stop": {
+            "or": [
+              {
+                "ge": [
+                  {
+                    "ref": "__status__.tree.terminals"
+                  },
+                  5
+                ]
+              },
+              {
+                "and": [
+                  {
+                    "ge": [
+                      {
+                        "ref": "__status__.best.proba"
+                      },
+                      0.8999999761581421
+                    ]
+                  },
+                  {
+                    "not": [
+                      {
+                        "gt": [
+                          {
+                            "ref": "__status__.tree.tokens"
+                          },
+                          1000
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     }

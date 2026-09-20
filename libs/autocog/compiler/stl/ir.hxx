@@ -13,18 +13,26 @@
 
 #include "autocog/runtime/fta/vocab.hxx"   // VocabExpr (still the runtime rep; unified later)
 #include "autocog/utilities/types.hxx"     // Value
+#include "autocog/data/expr.hxx"           // Expr (a binding is an expression)
 #include "autocog/data/path.hxx"           // PathStep, StepRange
 #include "autocog/data/channel.hxx"        // clause leaf structs
 #include "autocog/data/sta.hxx"            // CompletionFormat, EnumFormat, ChoiceFormat
 
 namespace autocog::compiler::stl::ir {
 
-// A resolved STL scalar value. Identical to the runtime's SearchValue (all STL
-// expressions are constexpr, so values are concrete by IR time); shared so the
-// IR->STA carry needs no re-wrap. The distinct names mark role (compiler value
-// vs search param), not a distinct shape.
+// A resolved STL scalar value. Identical to the runtime's SearchValue; shared
+// so the IR->STA carry needs no re-wrap. The distinct names mark role (compiler
+// value vs search param), not a distinct shape.
 using Value = ::autocog::types::Value;
-using VarMap = std::unordered_map<std::string, Value>;
+
+// What a name is bound to. NOT a Value: an STL expression is constexpr only as
+// far as what it names is known, and `__syntax__` is not -- the syntax is
+// chosen when a prompt is instantiated, long after the program is compiled. So
+// a binding is an Expr, which is a Value in the overwhelming majority of cases
+// (Expr::is_literal) and a residual tree in the few that defer. Everything that
+// needs a constant here asks for one and says so when it does not get it.
+using Expr = ::autocog::data::Expr;
+using VarMap = std::unordered_map<std::string, Expr>;
 
 // Search policies carried from `search { <category>.<param> is <expr>; }`.
 // Keyed by category (text/enum/branch/flow/queue), each holding an OPEN map of

@@ -43,15 +43,15 @@ constexpr FieldDecl FIELDS[] = {
   // Statistics of the running evaluation -- the scalars a termination
   // predicate asks about. Wall time is deliberately not among them: it would
   // make a run nondeterministic, and termination is part of program identity.
-  {"__status__", "terminals",          FieldType::Float, Stage::Execute},
-  {"__status__", "coverage.fta",       FieldType::Float, Stage::Execute},
-  {"__status__", "coverage.sta",       FieldType::Float, Stage::Execute},
+  {"__status__", "tree.terminals",     FieldType::Float, Stage::Execute},
+  {"__status__", "tree.tokens",        FieldType::Float, Stage::Execute},
+  {"__status__", "tree.leaves",        FieldType::Float, Stage::Execute},
+  {"__status__", "tree.coverage.fta",  FieldType::Float, Stage::Execute},
+  {"__status__", "tree.coverage.sta",  FieldType::Float, Stage::Execute},
   {"__status__", "best.proba",         FieldType::Float, Stage::Execute},
+  {"__status__", "best.zscore",        FieldType::Float, Stage::Execute},
   {"__status__", "mean.proba",         FieldType::Float, Stage::Execute},
   {"__status__", "std.proba",          FieldType::Float, Stage::Execute},
-  {"__status__", "best.zscore",        FieldType::Float, Stage::Execute},
-  {"__status__", "tokens",             FieldType::Float, Stage::Execute},
-  {"__status__", "queue.size",         FieldType::Float, Stage::Execute},
 };
 
 constexpr char const * NAMESPACES[] = {
@@ -183,9 +183,22 @@ void check(std::string const & ref,
 
 std::string qualify(std::string const & bare) {
   if (!root_of(bare).empty()) return bare;               // already qualified
-  if (bare.rfind("model.", 0) == 0)
-    return "__model__." + bare.substr(6);
-  if (find_field("__status__", bare)) return "__status__." + bare;
+  // The flat names the backend used for evaluation scalars, and the one model
+  // property a predicate could name, before either had a namespace.
+  static std::pair<char const *, char const *> const LEGACY[] = {
+    {"terminals",    "__status__.tree.terminals"},
+    {"tokens",       "__status__.tree.tokens"},
+    {"queue.size",   "__status__.tree.leaves"},
+    {"coverage.fta", "__status__.tree.coverage.fta"},
+    {"coverage.sta", "__status__.tree.coverage.sta"},
+    {"best.proba",   "__status__.best.proba"},
+    {"best.zscore",  "__status__.best.zscore"},
+    {"mean.proba",   "__status__.mean.proba"},
+    {"std.proba",    "__status__.std.proba"},
+    {"model.n_ctx",  "__model__.n_ctx"},
+  };
+  for (auto const & [old_name, qualified] : LEGACY)
+    if (bare == old_name) return qualified;
   return bare;
 }
 

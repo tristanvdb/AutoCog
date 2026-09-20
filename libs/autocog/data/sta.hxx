@@ -4,6 +4,7 @@
 #include "autocog/data/base.hxx"
 #include "autocog/data/path.hxx"
 #include "autocog/data/channel.hxx"
+#include "autocog/data/expr.hxx"
 #include "autocog/data/vocab.hxx"
 #include "autocog/utilities/types.hxx"
 
@@ -22,8 +23,11 @@ namespace autocog::data {
 // --- SearchParams: open dict category -> key -> scalar -----------------------
 
 struct SearchParams {
-  // category -> key -> resolved scalar (monostate = null).
-  std::map<std::string, std::map<std::string, autocog::types::Value>> categories;
+  // category -> key -> expression (monostate = null). Usually a literal; a
+  // reference when the parameter tracks something chosen later -- its own
+  // config default (__search__.<cat>.<key>), a rendering knob, or, for
+  // queue.stop, the running evaluation.
+  std::map<std::string, std::map<std::string, autocog::data::Expr>> categories;
 
   bool empty() const { return categories.empty(); }
 

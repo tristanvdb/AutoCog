@@ -1,5 +1,7 @@
 #include "autocog/backend/llama/manager.hxx"
 #include "autocog/backend/llama/evaluation.hxx"
+
+#include "autocog/data/namespaces.hxx"
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/logging.hxx"
 #include "autocog/utilities/errors.hxx"
@@ -56,35 +58,29 @@ static MetricKey parse_metric_key(std::string const & name) {
 // nondeterministic and machine-dependent, and termination is part of program
 // identity (hashed into the FTA). Wall-clock limits belong to the engine /
 // bench budget layer.
-static bool known_stop_scalar(std::string const & name) {
-  return name == "terminals" || name == "coverage.fta" || name == "coverage.sta"
-      || name == "best.proba" || name == "mean.proba" || name == "std.proba"
-      || name == "best.zscore" || name == "tokens" || name == "queue.size";
-}
-
-static void validate_stop(data::TermExpr const & e) {
-  if (!e.scalar.empty() && !known_stop_scalar(e.scalar))
-    throw autocog::SchemaError("Unknown stop scalar '" + e.scalar + "'", e.scalar);
-  if (!e.ref.empty())
-    throw autocog::SchemaError("Unresolved model reference '" + e.ref
-                               + "' in stop predicate", e.ref);
-  for (auto const & op : e.operands) validate_stop(op);
-}
-
-// Fold model-property references (the scalarization boundary): after this,
-// the predicate is pure scalars-vs-constants and the hot loop never sees a
-// ref. Unknown refs throw here, before any model work.
-static void fold_stop_refs(data::TermExpr & e, Model const & model) {
-  if (!e.ref.empty()) {
-    if (e.ref == "model.n_ctx") {
-      e.value = static_cast<float>(model.context_size);
-      e.ref.clear();
-    } else {
-      throw autocog::SchemaError("Unknown model reference '" + e.ref
-                                 + "' in stop predicate", e.ref);
-    }
+// Everything a predicate may still name once it reaches the backend: the
+// running evaluation, and the properties of the bound model. Anything else
+// should have been bound before it got here, and saying which is the whole
+// point of the namespaces carrying a stage.
+static void validate_stop(data::Expr const & e) {
+  std::vector<std::string> refs;
+  e.collect_refs(refs);
+  for (auto const & ref : refs) {
+    data::namespaces::check(ref);                 // unknown field -> throws
+    if (data::namespaces::stage_of(ref) != data::Stage::Execute)
+      throw autocog::SchemaError("'" + ref + "' should have been bound before "
+                                 "execution", ref);
   }
-  for (auto & op : e.operands) fold_stop_refs(op, model);
+}
+
+// Fold the model properties (the scalarization boundary): after this the
+// predicate names only the running evaluation, and the loop never resolves a
+// model property again. An unknown one throws here, before any model work.
+static void fold_stop_refs(data::Expr & e, Model const & model) {
+  e = data::residual(e, [&model](std::string const & ref) -> std::optional<types::Value> {
+    if (ref == "__model__.n_ctx") return static_cast<int>(model.context_size);
+    return std::nullopt;
+  });
 }
 
 Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, data::FTA const & fta_) :
@@ -216,15 +212,15 @@ void Evaluation::on_terminal(data::FTTNode const & node, ActionID action) {
 double Evaluation::scalar_value(std::string const & name) const {
   double const n = static_cast<double>(terminals_);
   double const mean = terminals_ ? proba_sum_ / n : 0.0;
-  if (name == "terminals")    return n;
-  if (name == "coverage.fta") {
+  if (name == "__status__.tree.terminals") return n;
+  if (name == "__status__.tree.coverage.fta") {
     size_t const total = visited_actions_.size();
     if (!total) return 1.0;
     size_t visited = 0;
     for (bool v : visited_actions_) visited += v;
     return static_cast<double>(visited) / static_cast<double>(total);
   }
-  if (name == "coverage.sta")
+  if (name == "__status__.tree.coverage.sta")
     return total_fields_ ? static_cast<double>(visited_fields_.size()) / total_fields_ : 1.0;
   // Geometric-mean per-token probability of the best COMPLETE path — a
   // confidence statistic on one terminal, NOT residual mass over the
@@ -232,51 +228,46 @@ double Evaluation::scalar_value(std::string const & name) const {
   // terminal, so with the terminals_ >= 1 gate in advance(), thresholds
   // well under that value degenerate to stop-at-first-terminal (v0.8
   // campaign: 0.25 and 0.05 both stopped at terminals == 1).
-  if (name == "best.proba")
+  if (name == "__status__.best.proba")
     return best_terminal_ && best_terminal_->length
         ? std::exp(-static_cast<double>(best_terminal_->logprob) / best_terminal_->length) : 0.0;
-  if (name == "mean.proba") return mean;
-  if (name == "std.proba" || name == "best.zscore") {
+  if (name == "__status__.mean.proba") return mean;
+  if (name == "__status__.std.proba" || name == "__status__.best.zscore") {
     double const var = terminals_ ? proba_sq_sum_ / n - mean * mean : 0.0;
     double const sd = var > 0.0 ? std::sqrt(var) : 0.0;
-    if (name == "std.proba") return sd;
+    if (name == "__status__.std.proba") return sd;
     if (terminals_ < 3 || sd <= 0.0) return 0.0;   // undefined on a tiny field
-    return (scalar_value("best.proba") - mean) / sd;
+    return (scalar_value("__status__.best.proba") - mean) / sd;
   }
   // Cumulative eval+restore total across ALL phases of the evaluation —
   // a throughput/budget counter, NOT a per-path length. Comparing it to
   // model.n_ctx is NOT a context guard: cumulative throughput crosses
   // the window long before any single path does (the v0.8 "ctx-guard"
   // cell fired at the first terminal for exactly this reason).
-  if (name == "tokens")     return static_cast<double>(tokens_total_);
-  if (name == "queue.size") return static_cast<double>(queue.size());
+  if (name == "__status__.tree.tokens")  return static_cast<double>(tokens_total_);
+  if (name == "__status__.tree.leaves") return static_cast<double>(queue.size());
   return 0.0;  // unreachable: validated at construction
 }
 
-bool Evaluation::eval_stop(data::TermExpr const & e) const {
-  using Kind = data::TermExpr::Kind;
-  switch (e.kind) {
-    case Kind::All:
-      for (auto const & op : e.operands) if (!eval_stop(op)) return false;
-      return true;
-    case Kind::Any:
-      for (auto const & op : e.operands) if (eval_stop(op)) return true;
-      return false;
-    case Kind::Not:
-      return e.operands.empty() ? true : !eval_stop(e.operands[0]);
-    case Kind::Ge: return scalar_value(e.scalar) >= e.value;
-    case Kind::Gt: return scalar_value(e.scalar) >  e.value;
-    case Kind::Le: return scalar_value(e.scalar) <= e.value;
-    case Kind::Lt: return scalar_value(e.scalar) <  e.value;
-  }
-  return false;
+bool Evaluation::eval_stop(data::Expr const & e) const {
+  // The evaluation's own statistics are what is left to bind: the model
+  // properties folded at construction, and everything knowable earlier folded
+  // at compile time or instantiation. evaluate() walks the tree directly, so
+  // asking this on every queue step allocates nothing.
+  auto const v = data::evaluate(e, [this](std::string const & ref) -> std::optional<types::Value> {
+    if (ref.rfind("__status__.", 0) != 0) return std::nullopt;
+    return static_cast<float>(scalar_value(ref));
+  });
+  if (auto const * b = std::get_if<bool>(&v)) return *b;
+  throw autocog::SchemaError("a termination predicate must be a condition, not "
+                             "a value", "queue.stop");
 }
 
 SearchStats Evaluation::search_stats() const {
   SearchStats s;
   s.terminals = terminals_;
-  s.coverage_fta = scalar_value("coverage.fta");
-  s.coverage_sta = scalar_value("coverage.sta");
+  s.coverage_fta = scalar_value("__status__.tree.coverage.fta");
+  s.coverage_sta = scalar_value("__status__.tree.coverage.sta");
   s.stopped = stopped_;
   s.abandoned = abandoned_;
   return s;

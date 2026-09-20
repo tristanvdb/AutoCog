@@ -4,6 +4,7 @@
 #include "autocog/utilities/exception.hxx"
 
 #include "autocog/compiler/stl/symbol-table.hxx"
+#include "autocog/data/namespaces.hxx"
 
 #include <stdexcept>
 
@@ -15,124 +16,120 @@ Evaluator::Evaluator(std::list<autocog::data::Diagnostic> & diagnostics_, Symbol
   tables(tables_)
 {}
 
-ir::Value Evaluator::evaluate(std::string const & scope, ast::Unary const & op, ir::VarMap & varmap) {
-  return autocog::data::apply_unary(
-      op.data.kind, evaluate(scope, *op.data.operand, varmap), op.location);
+// Each node is built and immediately folded: an operator over literals IS its
+// value, so what comes back is a literal unless something under it deferred.
+// data::residual with no resolver is the fold -- the operator semantics are the
+// shared ones, so a constant folded here and one evaluated at instantiation
+// cannot disagree.
+
+ir::Expr Evaluator::evaluate(std::string const & scope, ast::Unary const & op, ir::VarMap & varmap) {
+  return autocog::data::residual(
+      ir::Expr::unary(op.data.kind, evaluate(scope, *op.data.operand, varmap)),
+      autocog::data::no_refs(), op.location);
 }
 
-ir::Value Evaluator::evaluate(std::string const & scope, ast::Binary const & op, ir::VarMap & varmap) {
-  ir::Value lhs_val = evaluate(scope, *op.data.lhs, varmap);
-  ir::Value rhs_val = evaluate(scope, *op.data.rhs, varmap);
-  return autocog::data::apply_binary(op.data.kind, lhs_val, rhs_val, op.location);
+ir::Expr Evaluator::evaluate(std::string const & scope, ast::Binary const & op, ir::VarMap & varmap) {
+  auto lhs = evaluate(scope, *op.data.lhs, varmap);
+  auto rhs = evaluate(scope, *op.data.rhs, varmap);
+  return autocog::data::residual(ir::Expr::binary(op.data.kind, std::move(lhs), std::move(rhs)),
+                                 autocog::data::no_refs(), op.location);
 }
 
-ir::Value Evaluator::evaluate(std::string const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
-  ir::Value cond_val = evaluate(scope, *op.data.cond, varmap);
-  
-  bool condition = std::visit([&op](auto const & v) -> bool {
-    using V = std::decay_t<decltype(v)>;
-    if constexpr (std::is_same_v<V, bool>) {
-      return v;
-    } else {
-      throw CompileError("Conditional expression requires boolean condition", op.location);
-    }
-  }, cond_val);
-  
-  if (condition) {
-    return evaluate(scope, *op.data.e_true, varmap);
-  } else {
-    return evaluate(scope, *op.data.e_false, varmap);
+ir::Expr Evaluator::evaluate(std::string const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
+  // Only the taken branch is walked when the condition is known -- the untaken
+  // one may not even be well-formed (`n > 0 ? 1/n : 0`), and it is exactly a
+  // knob-switched annotation collapsing to plain text under a fixed syntax.
+  auto cond = evaluate(scope, *op.data.cond, varmap);
+  if (auto c = cond.as_value()) {
+    bool const taken = std::visit([&op](auto const & v) -> bool {
+      using V = std::decay_t<decltype(v)>;
+      if constexpr (std::is_same_v<V, bool>) return v;
+      else throw CompileError("Conditional expression requires boolean condition", op.location);
+    }, *c);
+    return evaluate(scope, taken ? *op.data.e_true : *op.data.e_false, varmap);
   }
+  return ir::Expr::conditional(std::move(cond),
+                               evaluate(scope, *op.data.e_true, varmap),
+                               evaluate(scope, *op.data.e_false, varmap));
 }
 
-ir::Value Evaluator::evaluate(std::string const & scope, ast::String const & fstring, ir::VarMap & varmap) {
+ir::Expr Evaluator::evaluate(std::string const & scope, ast::String const & fstring, ir::VarMap & varmap) {
   if (!fstring.data.is_format) {
-    return fstring.data.value;
+    return ir::Expr::lit(fstring.data.value);
   }
-  
+
+  // An f-string is a concatenation. Every part that resolves now becomes text
+  // now and neighbours merge, so a fully-known one comes back as the single
+  // string it has always been; a part that defers keeps the concatenation
+  // alive for the stage that can bind it.
+  std::vector<ir::Expr> parts;
+  std::string literal;
+  auto flush = [&] {
+    if (!literal.empty()) { parts.push_back(ir::Expr::lit(literal)); literal.clear(); }
+  };
+
   const std::string & fmt = fstring.data.value;
-  std::string result;
-  result.reserve(fmt.length() * 1.5);
-  
   size_t i = 0;
   while (i < fmt.length()) {
     // Handle escaped braces
     if (i + 1 < fmt.length()) {
-      if (fmt[i] == '{' && fmt[i + 1] == '{') {
-        result += '{';
-        i += 2;
-        continue;
-      }
-      if (fmt[i] == '}' && fmt[i + 1] == '}') {
-        result += '}';
-        i += 2;
-        continue;
-      }
+      if (fmt[i] == '{' && fmt[i + 1] == '{') { literal += '{'; i += 2; continue; }
+      if (fmt[i] == '}' && fmt[i + 1] == '}') { literal += '}'; i += 2; continue; }
     }
-    
-    // Handle variable substitution
+
     if (fmt[i] == '{') {
-      // Find closing brace
       size_t j = i + 1;
-      while (j < fmt.length() && fmt[j] != '}') {
-        j++;
-      }
-      
+      while (j < fmt.length() && fmt[j] != '}') j++;
       if (j >= fmt.length()) {
         throw CompileError("Unclosed '{' in format string", fstring.location);
       }
-      
-      // Extract variable name
+
       std::string var_name = fmt.substr(i + 1, j - i - 1);
-      
-      // Validate it's a valid identifier
       if (var_name.empty()) {
         throw CompileError("Empty variable name in format string", fstring.location);
       }
-      
-      // Simple identifier validation (first char is letter or _, rest are alphanumeric or _)
+      // A name, or a dotted system reference (`{__syntax__.prompt_zero_index}`).
       if (!std::isalpha(var_name[0]) && var_name[0] != '_') {
         throw CompileError("Invalid variable name in format string: " + var_name, fstring.location);
       }
       for (size_t k = 1; k < var_name.length(); k++) {
-        if (!std::isalnum(var_name[k]) && var_name[k] != '_') {
+        if (!std::isalnum(var_name[k]) && var_name[k] != '_' && var_name[k] != '.') {
           throw CompileError("Invalid variable name in format string: " + var_name, fstring.location);
         }
       }
-      
-      // Look up variable
-      ir::Value value = retrieve_value(scope, var_name, varmap, fstring.location);
-      
-      // Convert value to string and append. Shared with every other stage: an
-      // interpolated value must read the same whether it was folded here or
-      // rendered at instantiation.
-      result += autocog::data::stringify(value);
-      
+
+      ir::Expr part = retrieve(scope, var_name, varmap, fstring.location);
+      if (auto v = part.as_value()) literal += autocog::data::stringify(*v);
+      else { flush(); parts.push_back(std::move(part)); }
+
       i = j + 1;
     } else if (fmt[i] == '}') {
       throw CompileError("Unmatched '}' in format string", fstring.location);
     } else {
-      result += fmt[i];
+      literal += fmt[i];
       i++;
     }
   }
-  
-  return result;
+  flush();
+
+  if (parts.empty()) return ir::Expr::lit(std::string{});
+  if (parts.size() == 1 && parts[0].is_literal()) return std::move(parts[0]);
+  return ir::Expr::concat(std::move(parts));
 }
 
-ir::Value Evaluator::evaluate(std::string const & scope, ast::Expression const & expr, ir::VarMap & varmap) {
-  return std::visit([&](auto const & e) -> ir::Value {
+ir::Expr Evaluator::evaluate(std::string const & scope, ast::Expression const & expr, ir::VarMap & varmap) {
+  return std::visit([&](auto const & e) -> ir::Expr {
     using T = std::decay_t<decltype(e)>;
     if constexpr (std::is_same_v<T, ast::Integer>) {
-      return e.data.value;
+      return ir::Expr::lit(e.data.value);
     } else if constexpr (std::is_same_v<T, ast::Float>) {
-      return e.data.value;
+      return ir::Expr::lit(e.data.value);
     } else if constexpr (std::is_same_v<T, ast::Boolean>) {
-      return e.data.value;
+      return ir::Expr::lit(e.data.value);
     } else if constexpr (std::is_same_v<T, ast::String>) {
       return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Identifier>) {
-      return retrieve_value(scope, e.data.name, varmap, e.location);
+      return retrieve(scope, e.data.name, varmap, e.location);
     } else if constexpr (std::is_same_v<T, ast::Unary>) {
       return evaluate(scope, e, varmap);
     } else if constexpr (std::is_same_v<T, ast::Binary>) {
@@ -158,8 +155,30 @@ ir::Value Evaluator::retrieve_value(
   ir::VarMap & varmap,
   std::optional<autocog::location::SourceRange> const & loc
 ) {
-  SPDLOG_LOGGER_TRACE(autocog::log(), "Evaluator::retrieve_value( )");
-  ir::Value value = std::monostate{};
+  return require_constant(retrieve(scope, varname, varmap, loc), loc);
+}
+
+ir::Value Evaluator::require_constant(
+  ir::Expr const & e,
+  std::optional<autocog::location::SourceRange> const & loc
+) {
+  if (auto v = e.as_value()) return *v;
+  std::vector<std::string> refs;
+  e.collect_refs(refs);
+  throw CompileError("`" + (refs.empty() ? std::string("this expression") : refs.front())
+                     + "` is not known at compile time (it is bound at "
+                     + autocog::data::stage_word(e.stage())
+                     + " time), and this position requires a constant.", loc);
+}
+
+ir::Expr Evaluator::retrieve(
+  std::string const & scope,
+  std::string const & varname,
+  ir::VarMap & varmap,
+  std::optional<autocog::location::SourceRange> const & loc
+) {
+  SPDLOG_LOGGER_TRACE(autocog::log(), "Evaluator::retrieve( )");
+  ir::Expr value;                      // default: the error/in-progress marker
 
   auto varmap_it = varmap.find(varname);
   if (varmap_it != varmap.end()) {
@@ -175,30 +194,15 @@ ir::Value Evaluator::retrieve_value(
         sym_it = this->tables.symbols.find(parent_scope+"::"+varname);
       }
 
-      // If still not found, throw error. Dotted names are system-namespace
-      // references (never user symbols); diagnose by root.
+      // Not a symbol of the program. A dotted name is a system reference:
+      // the registry says whether it exists and when it can be bound, and if
+      // it does we hand back the reference itself -- resolving it is a later
+      // stage's job. Whether THIS position can wait that long is decided by
+      // the position, not here.
       if (sym_it == this->tables.symbols.end()) {
-        auto const dot = varname.find('.');
-        if (dot != std::string::npos) {
-          auto const root = varname.substr(0, dot);
-          bool const dunder = root.size() >= 4
-              && root.compare(0, 2, "__") == 0
-              && root.compare(root.size() - 2, 2, "__") == 0;
-          if (root == "__status__" || root == "__model__") {
-            throw CompileError("'" + varname + "' is only available inside "
-                               "`queue.stop` termination predicates", loc);
-          } else if (root == "__search__") {
-            throw CompileError("'" + varname + "' is only available as the "
-                               "entire value of the matching search parameter",
-                               loc);
-          } else if (root == "__syntax__" || root == "__program__") {
-            throw CompileError("system namespace '" + root + "' is reserved "
-                               "but not yet available", loc);
-          } else if (dunder) {
-            throw CompileError("unknown system namespace '" + root + "'", loc);
-          }
-          throw CompileError("'" + root + "' is not a namespace root (dotted "
-                             "names resolve against system namespaces)", loc);
+        if (varname.find('.') != std::string::npos) {
+          autocog::data::namespaces::check(varname, loc);
+          return ir::Expr::reference(varname);
         }
         throw CompileError("Undefined symbol: " + varname, loc);
       }
@@ -228,7 +232,7 @@ ir::Value Evaluator::retrieve_value(
         throw CompileError("Define `" + varname + "` has no initializer to evaluate.", loc);
       }
       
-      varmap[varname] = std::monostate{}; // causes cycles to return error values
+      varmap[varname] = ir::Expr{};   // causes cycles to return error values
       value = evaluate(scope, defn.data.init.value(), varmap);
       varmap[varname] = value;
 
@@ -242,8 +246,8 @@ ir::Value Evaluator::retrieve_value(
       }
       auto target_scope = std::to_string(imp->fileid);
       auto const & target_name = imp->target.data.name.data.name;
-      varmap[varname] = std::monostate{};
-      value = retrieve_value(target_scope, target_name, this->tables.contexts[target_scope], loc);
+      varmap[varname] = ir::Expr{};
+      value = retrieve(target_scope, target_name, this->tables.contexts[target_scope], loc);
       varmap[varname] = value;
 
     } else if (auto const * ali = std::get_if<UnresolvedAlias>(&sym)) {
@@ -253,8 +257,8 @@ ir::Value Evaluator::retrieve_value(
       }
       auto target_scope = std::to_string(ali->fileid);
       auto const & target_name = ali->target.data.name.data.name;
-      varmap[varname] = std::monostate{};
-      value = retrieve_value(target_scope, target_name, this->tables.contexts[target_scope], loc);
+      varmap[varname] = ir::Expr{};
+      value = retrieve(target_scope, target_name, this->tables.contexts[target_scope], loc);
       varmap[varname] = value;
 
     } else {
@@ -262,7 +266,7 @@ ir::Value Evaluator::retrieve_value(
       throw CompileError("Symbol `" + varname + "` is not a define or argument: it cannot be evaluated in an expression.", loc);
     }
   }
-  if (std::holds_alternative<std::monostate>(value)) {
+  if (value.is_literal() && std::holds_alternative<std::monostate>(value.value)) {
     throw CompileError(
               "Found error value when retriving variable `" + varname + "`." +
                 "If no previous error was reported then it is likely a circular " +
@@ -278,7 +282,29 @@ ir::Value Evaluator::evaluate_expression(
   ast::Expression const & expr,
   ir::VarMap & varmap
 ) {
-  return evaluate(scope, expr, varmap);
+  return require_constant(evaluate(scope, expr, varmap), expr.location);
+}
+
+ir::Expr Evaluator::residualize(
+  std::string const & scope,
+  ast::Expression const & expr,
+  ir::VarMap & varmap,
+  autocog::data::Stage latest
+) {
+  auto e = evaluate(scope, expr, varmap);
+  // The slot says how long it can wait; a reference that outlives it is a
+  // compile error here rather than a blank in a prompt or a null in a policy.
+  std::vector<std::string> refs;
+  e.collect_refs(refs);
+  for (auto const & ref : refs) {
+    auto const stage = autocog::data::namespaces::stage_of(ref, expr.location);
+    if (static_cast<unsigned>(stage) > static_cast<unsigned>(latest))
+      throw CompileError("`" + ref + "` is bound at " + autocog::data::stage_word(stage)
+                         + " time, and this position is resolved at "
+                         + autocog::data::stage_word(latest) + " time.",
+                         expr.location);
+  }
+  return e;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,13 +324,18 @@ std::string vocab_key(std::string const & name, ir::VarMap const & ctx) {
   std::sort(keys.begin(), keys.end());
   for (auto const & kk : keys) {
     k += "|" + kk + "=";
-    std::visit([&](auto const & v) {
-      using T = std::decay_t<decltype(v)>;
-      if constexpr (std::is_same_v<T, std::string>) k += v;
-      else if constexpr (std::is_same_v<T, std::monostate>) k += "null";
-      else if constexpr (std::is_same_v<T, bool>) k += (v ? "true" : "false");
-      else k += std::to_string(v);
-    }, ctx.at(kk));
+    auto const & bound = ctx.at(kk);
+    if (auto v = bound.as_value()) {
+      std::visit([&](auto const & val) {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::string>) k += val;
+        else if constexpr (std::is_same_v<T, std::monostate>) k += "null";
+        else if constexpr (std::is_same_v<T, bool>) k += (val ? "true" : "false");
+        else k += std::to_string(val);
+      }, *v);
+    } else {
+      k += bound.hash();      // a residual binding keys by its structure
+    }
   }
   return k;
 }
@@ -315,7 +346,7 @@ std::unique_ptr<ir::VocabExpr> Evaluator::translate_vocab(
   std::optional<autocog::location::SourceRange> const & loc
 ) {
   auto eval_str = [&](ast::String const & s) -> std::string {
-    ir::Value v = evaluate(scope, s, ctx);
+    ir::Value v = require_constant(evaluate(scope, s, ctx), s.location);
     if (auto const * sv = std::get_if<std::string>(&v)) return *sv;
     throw CompileError("vocab string argument did not evaluate to a string.", loc);
     return "";

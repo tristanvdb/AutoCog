@@ -1,6 +1,10 @@
-"""Perf cells: the `stop` key carries a termination predicate (TermExpr
-JSON object form) through the cell's search config into the FTA, and the
-evaluation actually terminates early on rng."""
+"""Perf cells: the `stop` key carries a termination predicate (an expression,
+in JSON object form) through the cell's search config into the FTA, and the
+evaluation actually terminates early on rng.
+
+The predicate here is written the way it was before the namespaces existed
+(a bare scalar name), which the codec still reads -- that compatibility is
+part of what is under test."""
 
 import json
 

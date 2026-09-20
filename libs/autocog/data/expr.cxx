@@ -589,13 +589,44 @@ Expr residual(Expr const & e, Resolver const & resolve,
 
 Value evaluate(Expr const & e, Resolver const & resolve,
                std::optional<autocog::location::SourceRange> const & loc) {
-  Expr const r = residual(e, resolve, loc);
-  if (auto v = r.as_value()) return *v;
-  std::vector<std::string> refs;
-  r.collect_refs(refs);
-  std::string const what = refs.empty() ? std::string("an expression") : ("`" + refs[0] + "`");
-  throw CompileError("Cannot evaluate " + what + " here: it is bound at "
-                     + stage_word(r.stage()) + " time.", loc);
+  // A direct walk, not residual()-then-unwrap: this runs inside the evaluation
+  // loop (queue.stop is asked on every step) and must not allocate a tree to
+  // answer a question about three nodes.
+  switch (e.kind) {
+    case Expr::Kind::Lit:
+      return e.value;
+
+    case Expr::Kind::Ref: {
+      if (auto bound = resolve(e.ref)) return *bound;
+      throw CompileError("Cannot evaluate `" + e.ref + "` here: it is bound at "
+                         + stage_word(ref_stage(e.ref)) + " time.", loc);
+    }
+
+    case Expr::Kind::Op: {
+      if (op_is_unary(e.op)) return apply_unary(e.op, evaluate(e.operands[0], resolve, loc), loc);
+      Value acc = evaluate(e.operands[0], resolve, loc);
+      for (size_t i = 1; i < e.operands.size(); ++i)
+        acc = apply_binary(e.op, acc, evaluate(e.operands[i], resolve, loc), loc);
+      return acc;
+    }
+
+    case Expr::Kind::Cond: {
+      Value const c = evaluate(e.operands[0], resolve, loc);
+      bool const taken = std::visit([&loc](auto const & v) -> bool {
+        using V = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<V, bool>) return v;
+        else throw CompileError("Conditional expression requires boolean condition", loc);
+      }, c);
+      return evaluate(e.operands[taken ? 1 : 2], resolve, loc);
+    }
+
+    case Expr::Kind::Cat: {
+      std::string out;
+      for (auto const & o : e.operands) out += stringify(evaluate(o, resolve, loc));
+      return out;
+    }
+  }
+  return Value{std::monostate{}};
 }
 
 std::string render(Expr const & e, Resolver const & resolve,

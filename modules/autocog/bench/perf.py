@@ -46,9 +46,9 @@ def cell_content(cell):
 
 def search_config(cell):
     queue = {"metric": cell.get("metric", ["perplexity"])}
-    # Termination predicate, in the TermExpr JSON object form the search
-    # codec accepts (e.g. {"ge": ["terminals", 8]}); reaches the FTA as
-    # queue.stop, so cells can sweep early-termination policies.
+    # Termination predicate, in the expression form the search codec accepts
+    # (e.g. {"ge": [{"ref": "__status__.tree.terminals"}, 8]}); reaches the FTA
+    # as queue.stop, so cells can sweep early-termination policies.
     if cell.get("stop") is not None:
         queue["stop"] = cell["stop"]
     return {

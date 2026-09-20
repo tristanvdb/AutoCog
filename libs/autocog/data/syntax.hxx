@@ -2,6 +2,7 @@
 #define AUTOCOG_DATA_SYNTAX_HXX
 
 #include "autocog/data/base.hxx"
+#include "autocog/data/expr.hxx"
 #include "autocog/data/vocab.hxx"
 
 #include <optional>
@@ -50,6 +51,11 @@ class Syntax : public Base<Syntax> {
   public:
     std::string content_hash() const;
 };
+
+/// A knob by name, for the expressions that read `__syntax__.<field>`. nullopt
+/// only for a name that is not a knob -- the namespace registry is what rejects
+/// those, so reaching here with one is a bug, not a user error.
+std::optional<Value> syntax_get(Syntax const & syntax, std::string const & field);
 
 }
 

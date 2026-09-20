@@ -179,14 +179,16 @@ def test_queue_stop_translation(repo_root, tmp_path):
 
     fta = instantiate_fta(repo_root, autocog.compile(str(stl)), {"q": "x"})
     stop = fta["queue"]["stop"]
-    assert stop == {"all": [{"any": [{"ge": ["terminals", 5.0]},
-                                     {"ge": ["best.proba", pytest.approx(0.9)]}]},
-                            {"lt": ["tokens", 100000.0]}]}
+    assert stop == {"and": [{"or": [{"ge": [{"ref": "__status__.tree.terminals"}, 5.0]},
+                                    {"ge": [{"ref": "__status__.best.proba"},
+                                            pytest.approx(0.9)]}]},
+                            {"lt": [{"ref": "__status__.tree.tokens"}, 100000.0]}]}
 
     fta8 = instantiate_fta(repo_root,
                            autocog.compile(str(stl), defines={"max_terms": 8}),
                            {"q": "x"})
-    assert fta8["queue"]["stop"]["all"][0]["any"][0] == {"ge": ["terminals", 8.0]}
+    assert fta8["queue"]["stop"]["and"][0]["or"][0] == {
+        "ge": [{"ref": "__status__.tree.terminals"}, 8.0]}
 
 
 def test_model_ref_in_stop(repo_root, tmp_path):
@@ -207,7 +209,8 @@ prompt main {
 """)
     prog = autocog.compile(str(stl))
     fta = instantiate_fta(repo_root, prog, {"q": "x"})
-    assert fta["queue"]["stop"] == {"ge": ["tokens", {"ref": "model.n_ctx"}]}
+    assert fta["queue"]["stop"] == {"ge": [{"ref": "__status__.tree.tokens"},
+                                           {"ref": "__model__.n_ctx"}]}
 
     engine = Engine(model=None,
                     syntax=str(repo_root / "share" / "syntax" / "complete.json"),
@@ -252,7 +255,7 @@ def test_search_config_object_forms_roundtrip(repo_root, tmp_path):
 
 
 # Every stop operator the language can produce: ! -> not, > -> gt, <= -> le,
-# < -> lt, >= -> ge, || -> any, && -> all, plus a __model__ ref constant.
+# < -> lt, >= -> ge, || -> or, && -> and, plus a __model__ reference.
 FULL_STOP_STL = """
 prompt main {
   is { q is text<length=8>; }
@@ -268,11 +271,12 @@ prompt main {
 """
 
 FULL_STOP_DICT = {
-    "any": [
-        {"not": {"gt": ["terminals", 3.0]}},
-        {"all": [{"all": [{"le": ["best.proba", 0.5]},
-                          {"lt": ["tokens", {"ref": "model.n_ctx"}]}]},
-                 {"ge": ["queue.size", 1.0]}]},
+    "or": [
+        {"not": [{"gt": [{"ref": "__status__.tree.terminals"}, 3.0]}]},
+        {"and": [{"and": [{"le": [{"ref": "__status__.best.proba"}, 0.5]},
+                          {"lt": [{"ref": "__status__.tree.tokens"},
+                                  {"ref": "__model__.n_ctx"}]}]},
+                 {"ge": [{"ref": "__status__.tree.leaves"}, 1.0]}]},
     ],
 }
 
@@ -328,9 +332,10 @@ def test_stop_predicate_codec_rejections(repo_root, tmp_path):
 
     for door in (lambda o: runtime_sta_cxx.read_fta(json.dumps(o)),
                  runtime_sta_cxx.read_fta):
-        with pytest.raises(AutoCogError, match="unknown TermExpr operator"):
-            door(reshaped({"between": ["tokens", 1.0]}))
-        with pytest.raises(AutoCogError, match="empty TermExpr combinator"):
-            door(reshaped({"all": []}))
-        with pytest.raises(AutoCogError, match="single-key"):
-            door(reshaped({"ge": ["tokens", 1.0], "lt": ["tokens", 2.0]}))
+        with pytest.raises(AutoCogError, match="not an expression operator"):
+            door(reshaped({"between": [{"ref": "__status__.tree.tokens"}, 1.0]}))
+        with pytest.raises(AutoCogError, match="has no operands"):
+            door(reshaped({"and": []}))
+        with pytest.raises(AutoCogError, match="exactly one key"):
+            door(reshaped({"ge": [{"ref": "__status__.tree.tokens"}, 1.0],
+                           "lt": [{"ref": "__status__.tree.tokens"}, 2.0]}))

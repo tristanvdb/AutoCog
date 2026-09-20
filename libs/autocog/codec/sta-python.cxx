@@ -38,22 +38,6 @@ void paths_from_py(py::object const & obj, std::vector<PathStep> & out) {
   for (auto const & e : obj.cast<py::list>()) { out.emplace_back(); from_py(py::reinterpret_borrow<py::object>(e), out.back()); }
 }
 
-py::object sv_to_py(autocog::types::Value const & v) {
-  return std::visit(overloaded{
-    [](int x) -> py::object { return py::cast(x); },
-    [](float x) -> py::object { return py::cast(x); },
-    [](bool x) -> py::object { return py::cast(x); },
-    [](std::string const & x) -> py::object { return py::cast(x); },
-    [](std::monostate) -> py::object { return py::none(); },
-  }, v);
-}
-autocog::types::Value sv_from_py(py::handle h) {
-  if (py::isinstance<py::bool_>(h))  return h.cast<bool>();   // bool before int
-  if (py::isinstance<py::int_>(h))   return h.cast<int>();
-  if (py::isinstance<py::float_>(h)) return h.cast<float>();
-  if (py::isinstance<py::str>(h))    return h.cast<std::string>();
-  return std::monostate{};
-}
 
 }  // namespace
 
@@ -62,7 +46,7 @@ pybind11::object to_py(SearchParams const & sp) {
   py::dict d;
   for (auto const & [cat, params] : sp.categories) {
     py::dict pj;
-    for (auto const & [key, val] : params) pj[py::str(key)] = sv_to_py(val);
+    for (auto const & [key, val] : params) pj[py::str(key)] = to_py(val);
     d[py::str(cat)] = pj;
   }
   return d;
@@ -73,7 +57,8 @@ void from_py(pybind11::object const & obj, SearchParams & sp) {
   for (auto const & cat_item : d) {
     std::string cat = cat_item.first.cast<std::string>();
     for (auto const & p : cat_item.second.cast<py::dict>())
-      sp.categories[cat][p.first.cast<std::string>()] = sv_from_py(p.second);
+      from_py(py::reinterpret_borrow<py::object>(p.second),
+              sp.categories[cat][p.first.cast<std::string>()]);
   }
 }
 

@@ -63,11 +63,9 @@ static data::FieldFormat extract_format(ir::Format const & fmt) {
 // Convert resolved IR search policies to the STA SearchParams shape.
 static data::SearchParams convert_policies(ir::SearchPolicies const & pol) {
     data::SearchParams out;
-    for (auto const & [category, params] : pol) {
-        for (auto const & [key, val] : params) {
-            std::visit([&](auto const & v) { out.categories[category][key] = v; }, val);
-        }
-    }
+    for (auto const & [category, params] : pol)
+        for (auto const & [key, val] : params)
+            out.categories[category][key] = val;
     return out;
 }
 
@@ -511,16 +509,13 @@ std::optional<int> Driver::run_generate() {
         pstas.name = pmt.mangled_name;
         pstas.desc = pmt.desc;
 
-        // Carry the prompt-scope search params verbatim (IR Value -> STA
-        // SearchValue; identical scalar shapes). Per-field/per-state resolution
-        // is applied later at instantiation.
-        for (auto const & [category, params] : pmt.search) {
-            for (auto const & [key, val] : params) {
-                std::visit([&](auto const & v) {
-                    pstas.search.categories[category][key] = v;
-                }, val);
-            }
-        }
+        // Carry the prompt-scope search params verbatim (the IR and the STA
+        // hold the same expressions). Per-field/per-state resolution is applied
+        // later, at instantiation, where the syntax and the search config are
+        // known and most of these fold to a number.
+        for (auto const & [category, params] : pmt.search)
+            for (auto const & [key, val] : params)
+                pstas.search.categories[category][key] = val;
 
         // Carry the vocab table: vocab_<hash> -> resolved expression tree.
         for (auto const & [key, ve] : pmt.vocabs) {

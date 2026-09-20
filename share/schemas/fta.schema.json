@@ -48,11 +48,27 @@
     },
     "queue": {
       "type": "object",
-      "description": "Scheduling config carried into the FTA (e.g. the best-path metric)."
+      "description": "Scheduling config carried into the FTA (e.g. the best-path metric).",
+      "properties": {
+        "stop": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Early-termination predicate, as far as it could be resolved before the model was bound."
+        }
+      }
     },
     "simplified": {
       "type": "string",
-      "enum": ["limited", "full"],
+      "enum": [
+        "limited",
+        "full"
+      ],
       "description": "Present when this FTA is the collapsed form of another: adjacent text actions merged for finetuning export. Such an FTA must not be scored - merging re-tokenizes across the seams, so its token sequence is not the one the runtime forces."
     }
   },
@@ -251,6 +267,184 @@
         "kind"
       ],
       "additionalProperties": false
+    },
+    "expr": {
+      "description": "An expression. A literal is the bare value -- which is what every expression that resolves at compile time serializes as, so most of these are just a number or a string. Anything that could not be resolved yet is a one-key object: a reference, a conditional, a concatenation, or an operator over its operands.",
+      "oneOf": [
+        {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "A namespaced reference: __syntax__.<knob>, __search__.<category>.<key>, __model__.<property>, __status__.<statistic>."
+            },
+            "cond": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "condition ? then : else."
+            },
+            "cat": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Concatenation of the stringified operands (an f-string)."
+            },
+            "not": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "neg": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "sub": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mul": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "div": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mod": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "and": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "band": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "bor": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "lt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "gt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "le": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ge": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "eq": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ne": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `and`."
+            },
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `or`."
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

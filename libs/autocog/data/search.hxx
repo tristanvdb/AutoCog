@@ -2,7 +2,7 @@
 #define AUTOCOG_DATA_SEARCH_HXX
 
 #include "autocog/data/base.hxx"
-#include "autocog/data/term.hxx"
+#include "autocog/data/expr.hxx"
 
 #include <optional>
 #include <string>
@@ -40,12 +40,25 @@ struct QueueSearch {
   /// probability, shortest/longest, shallowest/deepest, near_leaf/far_leaf,
   /// fifo); earlier entries dominate, "fifo" is the implicit final tie-break.
   std::vector<std::string> metric;
-  /// Early-termination predicate; absent = run the queue to exhaustion.
-  std::optional<TermExpr> stop;
+  /// Early-termination predicate; absent = run the queue to exhaustion. An
+  /// ordinary expression over the __status__ and __model__ namespaces: the
+  /// model properties fold when the evaluation is set up, so the hot loop only
+  /// ever compares numbers.
+  std::optional<Expr> stop;
 };
 
 /// Search configuration: per-category search parameters. Conversion lives in
 /// the free functions in json.hxx / python.hxx.
+/// The configured value of a search parameter, named as the registry names it
+/// ("text.beams", "enum.threshold.value"). This is what `__search__.<cat>.<key>`
+/// reads: a policy that references its own parameter tracks the config default,
+/// and one that computes from it (`__search__.text.beams * 2`) can.
+/// nullopt when the parameter is unset (an optional one) or is not a scalar
+/// (queue.stop is a predicate, and a predicate is not a value).
+std::optional<Value> search_get(class SearchConfig const & cfg,
+                                std::string const & category,
+                                std::string const & key);
+
 class SearchConfig : public Base<SearchConfig> {
   public:
     static constexpr char const * format = "search";

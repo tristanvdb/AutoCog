@@ -27,37 +27,61 @@ class Evaluator {
     void emit_error(std::string msg, std::optional<autocog::location::SourceRange> const & loc);
 
   private:
-    ir::Value evaluate(
+    // Residualizing evaluation: folds what is known and keeps what is not. The
+    // result is a literal for every expression that names only symbols of the
+    // program, which is nearly all of them.
+    ir::Expr evaluate(
       std::string const &, ast::Expression  const &, ir::VarMap &
     );
 
-    ir::Value evaluate(
+    ir::Expr evaluate(
       std::string const &, ast::Unary const &, ir::VarMap &
     );
 
-    ir::Value evaluate(
+    ir::Expr evaluate(
       std::string const &, ast::Binary const &, ir::VarMap &
     );
 
-    ir::Value evaluate(
+    ir::Expr evaluate(
       std::string const &, ast::Conditional const &, ir::VarMap &
     );
 
-    ir::Value evaluate(
+    ir::Expr evaluate(
       std::string const &, ast::String const &, ir::VarMap &
     );
 
   public:
     Evaluator(std::list<autocog::data::Diagnostic> & diagnostics_, SymbolTable & tables);
 
+    // What a name is bound to, as an expression.
+    ir::Expr retrieve(
+      std::string const &, std::string const &, ir::VarMap &,
+      std::optional<autocog::location::SourceRange> const & = std::nullopt
+    );
+
+    // ... and the same, for a position that requires a constant.
     ir::Value retrieve_value(
       std::string const &, std::string const &, ir::VarMap &,
       std::optional<autocog::location::SourceRange> const & = std::nullopt
     );
 
-    // Public interface for evaluating expressions
+    // Evaluate an expression where a constant is required: the common case,
+    // and the one that reports which reference made it impossible.
     ir::Value evaluate_expression(
       std::string const & scope, ast::Expression const & expr, ir::VarMap & varmap
+    );
+
+    // Evaluate an expression in a position that can wait: everything knowable
+    // now is folded, and what is left must be bindable by `latest` at the
+    // latest.
+    ir::Expr residualize(
+      std::string const & scope, ast::Expression const & expr, ir::VarMap & varmap,
+      autocog::data::Stage latest
+    );
+
+    // The value of a folded expression, or a diagnostic naming what deferred.
+    static ir::Value require_constant(
+      ir::Expr const &, std::optional<autocog::location::SourceRange> const & = std::nullopt
     );
 
     // Vocab translation: turn a vocab expression (AST) into a resolved,

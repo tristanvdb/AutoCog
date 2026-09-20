@@ -3,7 +3,7 @@
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
 #include "autocog/data/search-registry.hxx"
-#include "autocog/data/term.hxx"
+#include "autocog/data/namespaces.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
@@ -33,167 +33,36 @@ static std::optional<int> eval_opt_int(
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
 
-// --- queue.stop translation --------------------------------------------------
-// A termination predicate is written in the ordinary expression grammar and
-// TRANSLATED (vocab precedent) to data::TermExpr: comparisons whose one side
-// is a `__status__` scalar become leaves (the other side constant-folds, so
-// defines/arguments work); &&/||/! become all/any/not. The result travels
-// compact-serialized in the (scalar) policy value and is parsed back at ista.
-
-// STL name -> backend termination scalar. Entries commented out exist in the
-// design but not yet in the backend.
-static std::optional<std::string> stop_scalar_name(std::string const & dotted) {
-    static std::map<std::string, std::string> const M = {
-        {"__status__.tree.terminals",    "terminals"},
-        {"__status__.tree.tokens",       "tokens"},
-        {"__status__.tree.leaves",       "queue.size"},
-        {"__status__.tree.coverage.fta", "coverage.fta"},
-        {"__status__.tree.coverage.sta", "coverage.sta"},
-        {"__status__.best.proba",        "best.proba"},
-        {"__status__.best.zscore",       "best.zscore"},
-    };
-    auto it = M.find(dotted);
-    if (it == M.end()) return std::nullopt;
-    return it->second;
-}
-
-static bool translate_stop(
-    ast::Expression const & e,
-    Evaluator & evaluator,
-    std::string const & scope,
-    ir::VarMap & ctx,
-    Driver & driver,
-    std::optional<autocog::location::SourceRange> const & loc,
-    autocog::data::TermExpr & out
-);
-
-// The scalar side of a comparison: a dotted __status__ identifier.
-static std::optional<std::string> stop_scalar_of(ast::Expression const & e, Driver & driver,
-        std::optional<autocog::location::SourceRange> const & loc) {
-    if (auto const * id = std::get_if<ast::Identifier>(&e.data.expr)) {
-        auto const & name = id->data.name;
-        if (name.rfind("__status__.", 0) == 0 || name.rfind("__model__.", 0) == 0
-                || name.rfind("__node__.", 0) == 0) {
-            auto mapped = stop_scalar_name(name);
-            if (!mapped) {
-                driver.emit_error("'" + name + "' is not yet available in "
-                                  "termination predicates", loc);
-                return std::nullopt;
-            }
-            return mapped;
-        }
-    }
-    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
-        return stop_scalar_of(*par->data.expr, driver, loc);
-    return std::nullopt;
-}
-
-static bool translate_stop(
-    ast::Expression const & e,
-    Evaluator & evaluator,
-    std::string const & scope,
-    ir::VarMap & ctx,
-    Driver & driver,
-    std::optional<autocog::location::SourceRange> const & loc,
-    autocog::data::TermExpr & out
-) {
-    using TE = autocog::data::TermExpr;
-    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
-        return translate_stop(*par->data.expr, evaluator, scope, ctx, driver, loc, out);
-    if (auto const * un = std::get_if<ast::Unary>(&e.data.expr)) {
-        if (un->data.kind != ast::OpKind::Not) {
-            driver.emit_error("only `!` composes termination predicates", loc);
-            return false;
-        }
-        out.kind = TE::Kind::Not;
-        out.operands.emplace_back();
-        return translate_stop(*un->data.operand, evaluator, scope, ctx, driver, loc,
-                              out.operands.back());
-    }
-    auto const * bin = std::get_if<ast::Binary>(&e.data.expr);
-    if (!bin) {
-        driver.emit_error("queue.stop expects a predicate: comparisons of "
-                          "__status__ scalars composed with &&, ||, !", loc);
-        return false;
-    }
-    switch (bin->data.kind) {
-        case ast::OpKind::And:
-        case ast::OpKind::Or: {
-            out.kind = bin->data.kind == ast::OpKind::And ? TE::Kind::All : TE::Kind::Any;
-            out.operands.emplace_back();
-            if (!translate_stop(*bin->data.lhs, evaluator, scope, ctx, driver, loc,
-                                out.operands.back())) return false;
-            out.operands.emplace_back();
-            return translate_stop(*bin->data.rhs, evaluator, scope, ctx, driver, loc,
-                                  out.operands.back());
-        }
-        case ast::OpKind::Gte:
-        case ast::OpKind::Gt:
-        case ast::OpKind::Lte:
-        case ast::OpKind::Lt: {
-            auto lhs_scalar = stop_scalar_of(*bin->data.lhs, driver, loc);
-            std::optional<std::string> rhs_scalar;
-            if (!lhs_scalar) rhs_scalar = stop_scalar_of(*bin->data.rhs, driver, loc);
-            bool const flipped = !lhs_scalar && rhs_scalar.has_value();
-            auto const & scalar = lhs_scalar.has_value() ? lhs_scalar : rhs_scalar;
-            if (!scalar) {
-                driver.emit_error("one side of a termination comparison must be "
-                                  "a __status__ scalar", loc);
-                return false;
-            }
-            auto const & const_side = lhs_scalar ? *bin->data.rhs : *bin->data.lhs;
-            // The constant side may be a model property, resolved at the
-            // worker when the model loads (e.g. the context-overflow guard
-            // `__status__.tree.tokens >= __model__.n_ctx`).
-            std::string ref;
-            {
-                ast::Expression const * cs = &const_side;
-                while (auto const * par = std::get_if<ast::Parenthesis>(&cs->data.expr))
-                    cs = par->data.expr.get();
-                if (auto const * cid = std::get_if<ast::Identifier>(&cs->data.expr)) {
-                    if (cid->data.name == "__model__.n_ctx") ref = "model.n_ctx";
-                    else if (cid->data.name.rfind("__model__.", 0) == 0) {
-                        driver.emit_error("'" + cid->data.name + "' is not yet "
-                                          "available in termination predicates", loc);
-                        return false;
-                    }
-                }
-            }
-            double num = 0.0;
-            if (ref.empty()) {
-                auto v = evaluator.evaluate_expression(scope, const_side, ctx);
-                if (auto const * f = std::get_if<float>(&v)) num = *f;
-                else if (auto const * i = std::get_if<int>(&v)) num = *i;
-                else {
-                    driver.emit_error("the constant side of a termination comparison "
-                                      "must be numeric", loc);
+// True when an expression can only produce a boolean: a comparison, a logical
+// operator, or a conditional whose arms both do. The type of a bare reference
+// is declared, so `__status__.tree.terminals` (a float) is caught here rather
+// than at the first queue step of a run.
+static bool yields_condition(ir::Expr const & e) {
+    using K = ir::Expr::Kind;
+    switch (e.kind) {
+        case K::Lit: return std::holds_alternative<bool>(e.value);
+        case K::Ref: return autocog::data::namespaces::type_of(e.ref)
+                         == autocog::data::namespaces::FieldType::Bool;
+        case K::Cat: return false;
+        case K::Cond: return yields_condition(e.operands[1])
+                         && yields_condition(e.operands[2]);
+        case K::Op:
+            switch (e.op) {
+                case autocog::data::OpKind::Not:
+                case autocog::data::OpKind::And:
+                case autocog::data::OpKind::Or:
+                case autocog::data::OpKind::Lt:
+                case autocog::data::OpKind::Gt:
+                case autocog::data::OpKind::Lte:
+                case autocog::data::OpKind::Gte:
+                case autocog::data::OpKind::Eq:
+                case autocog::data::OpKind::Neq:
+                    return true;
+                default:
                     return false;
-                }
             }
-            auto k = bin->data.kind;
-            if (flipped) {  // c OP scalar  ==  scalar OP' c
-                if (k == ast::OpKind::Lt)  k = ast::OpKind::Gt;
-                else if (k == ast::OpKind::Gt)  k = ast::OpKind::Lt;
-                else if (k == ast::OpKind::Lte) k = ast::OpKind::Gte;
-                else if (k == ast::OpKind::Gte) k = ast::OpKind::Lte;
-            }
-            switch (k) {
-                case ast::OpKind::Gte: out.kind = TE::Kind::Ge; break;
-                case ast::OpKind::Gt:  out.kind = TE::Kind::Gt; break;
-                case ast::OpKind::Lte: out.kind = TE::Kind::Le; break;
-                case ast::OpKind::Lt:  out.kind = TE::Kind::Lt; break;
-                default: out.kind = TE::Kind::Ge; break;
-            }
-            out.scalar = *scalar;
-            out.value = static_cast<float>(num);
-            out.ref = ref;
-            return true;
-        }
-        default:
-            driver.emit_error("operator not allowed in a termination predicate "
-                              "(use <, <=, >, >=, &&, ||, !)", loc);
-            return false;
     }
+    return false;
 }
 
 // Lower an `ast::Search` block into ir::SearchPolicies. Each param's locator is a
@@ -266,37 +135,28 @@ static void lower_search(
             continue;
         }
         if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
-        // Explicit reference: `text.beams is __search__.text.beams;` pins the
-        // param to tracking its config default (the fill-up value written by
-        // hand). First cut: the reference must name the parameter it sets.
-        if (param.data.values.size() == 1) {
-            if (auto const * id = std::get_if<ast::Identifier>(
-                    &param.data.values.front().data.expr)) {
-                auto const & nm = id->data.name;
-                if (nm.rfind("__search__.", 0) == 0) {
-                    if (nm != "__search__." + category + "." + key) {
-                        driver.emit_error(
-                            "'" + nm + "' must reference the parameter it sets "
-                            "(__search__." + category + "." + key + ")",
-                            param.location);
-                    } else {
-                        out[category][key] = nm;
-                    }
-                    continue;
-                }
-            }
-        }
-        // Predicate params (queue.stop): translate, don't evaluate.
+        // Predicate params (queue.stop) are conditions about a run in progress:
+        // they may name the evaluation's own statistics and the model, and are
+        // resolved when the run reaches them. Everything else in them -- a
+        // define, an argument, a rendering knob -- folds here.
         if (info->kind == reg::Kind::Predicate) {
             if (param.data.values.size() > 1) {
                 driver.emit_error("search parameter '" + category + "." + key
                                   + "' takes a single predicate", param.location);
                 continue;
             }
-            autocog::data::TermExpr te;
-            if (translate_stop(param.data.values.front(), evaluator, scope, ctx,
-                               driver, param.location, te)) {
-                out[category][key] = te.to_compact();
+            try {
+                auto pred = evaluator.residualize(
+                    scope, param.data.values.front(), ctx, autocog::data::Stage::Execute);
+                if (!yields_condition(pred)) {
+                    driver.emit_error("search parameter '" + category + "." + key
+                                      + "' takes a condition, not a value",
+                                      param.location);
+                    continue;
+                }
+                out[category][key] = std::move(pred);
+            } catch (CompileError const & e) {
+                driver.emit_error(e.message, e.location ? e.location : param.location);
             }
             continue;
         }
@@ -334,7 +194,43 @@ static void lower_search(
                 + "' takes a single value", param.location);
             continue;
         }
-        auto val = evaluator.evaluate_expression(scope, param.data.values.front(), ctx);
+        // A search parameter is resolved when the prompt is instantiated, so it
+        // may name a rendering knob or another search parameter
+        // (`text.beams is __search__.text.beams * 2`). A reference that tracks
+        // the config default is now just the identity case of that, rather than
+        // a magic string the instantiator has to recognise.
+        ir::Expr expr;
+        try {
+            expr = evaluator.residualize(scope, param.data.values.front(), ctx,
+                                         autocog::data::Stage::Instantiate);
+        } catch (CompileError const & e) {
+            driver.emit_error(e.message, e.location ? e.location : param.location);
+            continue;
+        }
+        if (!expr.is_literal()) {
+            // Type-check what can be checked: a bare reference declares its
+            // type, so a string knob in an integer parameter fails here.
+            if (expr.kind == ir::Expr::Kind::Ref) {
+                namespace ns = autocog::data::namespaces;
+                auto const rt = ns::type_of(expr.ref, param.location);
+                bool const ok =
+                    (info->type == reg::Type::Float && (rt == ns::FieldType::Float || rt == ns::FieldType::Int))
+                 || (info->type == reg::Type::UInt  && rt == ns::FieldType::Int)
+                 || (info->type == reg::Type::Str   && rt == ns::FieldType::Str);
+                if (!ok) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key + "' expects "
+                        + (info->type == reg::Type::Str ? "a string"
+                           : info->type == reg::Type::UInt ? "an integer" : "a number")
+                        + ", but '" + expr.ref + "' is a "
+                        + ns::type_word(rt), param.location);
+                    continue;
+                }
+            }
+            out[category][key] = std::move(expr);
+            continue;
+        }
+        auto val = *expr.as_value();
         bool const is_null = std::holds_alternative<std::monostate>(val);
         if (!is_null) {
             bool type_ok = false;
@@ -373,7 +269,7 @@ static void lower_search(
                 param.location);
             continue;
         }
-        out[category][key] = val;
+        out[category][key] = ir::Expr::lit(val);
     }
 }
 
@@ -539,7 +435,8 @@ static void fill_default_refs(std::vector<std::unique_ptr<ir::Field>> & fields) 
         auto & params = f.search[cat];
         for (auto const * key : keys) {
             if (!params.count(key))
-                params[key] = std::string("__search__.") + cat + "." + key;
+                params[key] = ir::Expr::reference(
+                    std::string("__search__.") + cat + "." + key);
         }
     };
     for (auto & f : fields) {
@@ -1142,8 +1039,10 @@ static void assemble_prompts(
         fill_default_refs(pmt->fields);
         {
             auto & qp = pmt->search["queue"];
-            if (!qp.count("metric")) qp["metric"] = std::string("__search__.queue.metric");
-            if (!qp.count("stop"))   qp["stop"]   = std::string("__search__.queue.stop");
+            if (!qp.count("metric"))
+                qp["metric"] = ir::Expr::reference("__search__.queue.metric");
+            if (!qp.count("stop"))
+                qp["stop"] = ir::Expr::reference("__search__.queue.stop");
         }
 
         // `call <entry> { ... }` / `call <entry> <path>`: shared by channels

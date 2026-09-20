@@ -7,8 +7,16 @@
   "properties": {
     "metadata": {
       "allOf": [
-        { "$ref": "common/metadata.schema.json" },
-        { "properties": { "format": { "const": "search" } } }
+        {
+          "$ref": "common/metadata.schema.json"
+        },
+        {
+          "properties": {
+            "format": {
+              "const": "search"
+            }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -16,73 +24,322 @@
       "type": "object",
       "description": "Defaults for `complete` (text) actions.",
       "properties": {
-        "threshold":  { "type": "number", "description": "Probability threshold for pruning." },
-        "beams":      { "type": "integer", "minimum": 0, "description": "Number of beams (0 = disabled)." },
-        "topk":       { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }], "description": "Candidate tokens sampled per beam expansion (null = same as beams)." },
-        "ahead":      { "type": "integer", "minimum": 0, "description": "Look-ahead depth (0 = disabled)." },
-        "width":      { "type": "integer", "minimum": 1, "description": "Beam width." },
-        "repetition": { "oneOf": [{ "type": "number" }, { "type": "null" }], "description": "Repetition penalty (null = disabled)." },
-        "diversity":  { "oneOf": [{ "type": "number" }, { "type": "null" }], "description": "Diversity penalty (null = disabled)." }
+        "threshold": {
+          "type": "number",
+          "description": "Probability threshold for pruning."
+        },
+        "beams": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of beams (0 = disabled)."
+        },
+        "topk": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Candidate tokens sampled per beam expansion (null = same as beams)."
+        },
+        "ahead": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Look-ahead depth (0 = disabled)."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Beam width."
+        },
+        "repetition": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Repetition penalty (null = disabled)."
+        },
+        "diversity": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Diversity penalty (null = disabled)."
+        }
       },
-      "required": ["threshold", "beams", "ahead", "width"],
+      "required": [
+        "threshold",
+        "beams",
+        "ahead",
+        "width"
+      ],
       "additionalProperties": false
     },
-    "enum":   { "$ref": "#/$defs/choice", "description": "Defaults for enum-content `choose` actions." },
-    "branch": { "$ref": "#/$defs/choice", "description": "Defaults for record-successor branch `choose` actions." },
-    "flow":   { "$ref": "#/$defs/choice", "description": "Defaults for the flow / next `choose` action." },
+    "enum": {
+      "$ref": "#/$defs/choice",
+      "description": "Defaults for enum-content `choose` actions."
+    },
+    "branch": {
+      "$ref": "#/$defs/choice",
+      "description": "Defaults for record-successor branch `choose` actions."
+    },
+    "flow": {
+      "$ref": "#/$defs/choice",
+      "description": "Defaults for the flow / next `choose` action."
+    },
     "queue": {
       "type": "object",
       "description": "Prompt-scope queue parameters: exploration order and early termination.",
       "properties": {
         "metric": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
           ],
           "description": "Lexicographic ordering keys (perplexity, probability, shortest, longest, shallowest, deepest, near_leaf, far_leaf, fifo); a bare string is a one-element list; fifo is the implicit final tie-break."
         },
         "stop": {
-          "oneOf": [ { "$ref": "#/$defs/term" }, { "type": "null" } ],
-          "description": "Early-termination predicate; null/absent = run the queue to exhaustion."
+          "oneOf": [
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Early-termination predicate; null/absent = run the queue to exhaustion. An expression over __status__ (the running evaluation) and __model__ (the bound model)."
         }
       },
-      "required": ["metric"],
+      "required": [
+        "metric"
+      ],
       "additionalProperties": false
     }
   },
-  "required": ["text", "enum", "branch", "flow", "queue"],
+  "required": [
+    "text",
+    "enum",
+    "branch",
+    "flow",
+    "queue"
+  ],
   "additionalProperties": false,
   "$defs": {
     "choice": {
       "type": "object",
       "properties": {
-        "threshold": { "type": "number", "description": "Probability threshold." },
-        "width":     { "type": "integer", "minimum": 1, "description": "Top-k width." }
+        "threshold": {
+          "type": "number",
+          "description": "Probability threshold."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Top-k width."
+        }
       },
-      "required": ["threshold", "width"],
+      "required": [
+        "threshold",
+        "width"
+      ],
       "additionalProperties": false
     },
-    "term": {
-      "description": "Termination predicate: a single-key object — all/any of sub-predicates, not of one, or a comparison [scalar-name, constant] with ge/gt/le/lt. Scalars: terminals, coverage.fta, coverage.sta, best.proba, mean.proba, std.proba, best.zscore, tokens, queue.size, seconds.",
-      "type": "object",
-      "minProperties": 1,
-      "maxProperties": 1,
-      "properties": {
-        "all": { "type": "array", "items": { "$ref": "#/$defs/term" }, "minItems": 1 },
-        "any": { "type": "array", "items": { "$ref": "#/$defs/term" }, "minItems": 1 },
-        "not": { "$ref": "#/$defs/term" },
-        "ge":  { "$ref": "#/$defs/cmp" },
-        "gt":  { "$ref": "#/$defs/cmp" },
-        "le":  { "$ref": "#/$defs/cmp" },
-        "lt":  { "$ref": "#/$defs/cmp" }
-      },
-      "additionalProperties": false
-    },
-    "cmp": {
-      "type": "array",
-      "prefixItems": [ { "type": "string" }, { "type": "number" } ],
-      "minItems": 2,
-      "maxItems": 2
+    "expr": {
+      "description": "An expression. A literal is the bare value -- which is what every expression that resolves at compile time serializes as, so most of these are just a number or a string. Anything that could not be resolved yet is a one-key object: a reference, a conditional, a concatenation, or an operator over its operands.",
+      "oneOf": [
+        {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "A namespaced reference: __syntax__.<knob>, __search__.<category>.<key>, __model__.<property>, __status__.<statistic>."
+            },
+            "cond": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "condition ? then : else."
+            },
+            "cat": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Concatenation of the stringified operands (an f-string)."
+            },
+            "not": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "neg": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "sub": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mul": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "div": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mod": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "and": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "band": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "bor": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "lt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "gt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "le": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ge": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "eq": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ne": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `and`."
+            },
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `or`."
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

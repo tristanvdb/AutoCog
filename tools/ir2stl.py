@@ -33,7 +33,54 @@ def _num(v):
 def _value(v):
     if isinstance(v, str):
         return '"' + v.replace('"', '\\"') + '"'
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if v is None:
+        return "null"
     return _num(v)
+
+
+# The STL spelling of each expression operator, keyed by its wire name (the
+# mirror of data::op_symbol; see libs/autocog/data/expr.cxx).
+_OPS = {
+    "not": "!", "neg": "-",
+    "add": "+", "sub": "-", "mul": "*", "div": "/", "mod": "%",
+    "and": "&&", "or": "||", "all": "&&", "any": "||",
+    "band": "&", "bor": "|",
+    "lt": "<", "gt": ">", "le": "<=", "ge": ">=", "eq": "==", "ne": "!=",
+}
+
+
+def _expr(e):
+    """Render an expression back to STL source.
+
+    A literal is its value, which is what nearly every expression in an IR is.
+    Anything else is a one-key object -- a reference that could not be resolved
+    at compile time, or an operator over its operands. Fully parenthesized, so
+    it reparses to the same tree."""
+    if not isinstance(e, dict):
+        return _value(e)
+    (key, arg), = e.items()
+    if key == "ref":
+        return arg
+    if key == "cond":
+        c, t, f = (_expr(o) for o in arg)
+        return f"({c} ? {t} : {f})"
+    if key == "cat":
+        # An f-string: literal parts are text, the rest are interpolations.
+        out = ""
+        for o in arg:
+            if isinstance(o, str):
+                out += o.replace('"', '\\"').replace("{", "{{").replace("}", "}}")
+            else:
+                out += "{" + _expr(o) + "}"
+        return 'f"' + out + '"'
+    sym = _OPS.get(key)
+    if sym is None:
+        raise ValueError(f"not an expression operator: {key}")
+    if key in ("not", "neg"):
+        return f"({sym}{_expr(arg[0])})"
+    return "(" + f" {sym} ".join(_expr(o) for o in arg) + ")"
 
 
 def unparse_search(search, level):
@@ -48,16 +95,14 @@ def unparse_search(search, level):
         params = search[category]
         for param in sorted(params.keys()):
             value = params[param]
-            # Fill-up references ("__search__.<cat>.<key>") are the
-            # materialized defaults: recompiling regenerates them, so they
-            # are omitted rather than rendered as string literals. Compact
-            # predicates ("(...)" from queue.stop translation) have no STL
-            # re-rendering yet and are likewise skipped.
-            if isinstance(value, str) and (value.startswith("__search__.")
-                                           or value.startswith("(")):
+            # Fill-up references ({"ref": "__search__.<cat>.<key>"}) are the
+            # materialized defaults: recompiling regenerates them, so they are
+            # omitted rather than written back out.
+            if isinstance(value, dict) and \
+                    str(value.get("ref", "")).startswith("__search__."):
                 continue
             loc = f"{category}.{param}" if category else param
-            lines.append(f"{_indent(level + 1)}{loc} is {_value(value)};")
+            lines.append(f"{_indent(level + 1)}{loc} is {_expr(value)};")
             emitted += 1
     lines.append(_indent(level) + "}")
     return lines if emitted else []

@@ -20,7 +20,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "dd751b2f8331cbdca54b44f3879a95300e81b309b3fcb69ecdd31e4f18b490cc",
+    "hash": "9a996b0ac53a679306b82177be89d556b2035fb832e66a24e9473c54fd688956",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -73,13 +73,27 @@
           "range": null,
           "search": {
             "text": {
-              "ahead": "__search__.text.ahead",
-              "beams": "__search__.text.beams",
-              "diversity": "__search__.text.diversity",
-              "repetition": "__search__.text.repetition",
-              "threshold": "__search__.text.threshold",
-              "topk": "__search__.text.topk",
-              "width": "__search__.text.width"
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -119,7 +133,42 @@
       "search": {
         "queue": {
           "metric": "perplexity",
-          "stop": "(any (ge terminals 5.000000) (all (ge best.proba 0.900000) (not (gt tokens 1000.000000))))"
+          "stop": {
+            "or": [
+              {
+                "ge": [
+                  {
+                    "ref": "__status__.tree.terminals"
+                  },
+                  5
+                ]
+              },
+              {
+                "and": [
+                  {
+                    "ge": [
+                      {
+                        "ref": "__status__.best.proba"
+                      },
+                      0.8999999761581421
+                    ]
+                  },
+                  {
+                    "not": [
+                      {
+                        "gt": [
+                          {
+                            "ref": "__status__.tree.tokens"
+                          },
+                          1000
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     }
