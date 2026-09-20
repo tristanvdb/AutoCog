@@ -15,6 +15,9 @@ record a_choice {
     value is text<length=40>;
   }
   annotate {
+    // `_` is what the named-format listing shows. Without it the header says
+    // "a_choice: record", which is the shape and not the meaning.
+    _ as "one answer option: the letter that names it, then the text it carries";
     label as "the letter naming this choice";
     value as "the text of this choice";
   }

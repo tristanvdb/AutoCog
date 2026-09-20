@@ -23,7 +23,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "59f5709ce159918ab9e65deea1a4247e3cd08d279d773d0bc4948874b9aaa198",
+    "hash": "5f1cbadd99f638300f9d348fb8eaa2a45afd7b5e04228c35c9321c69a802f4ae",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -77,13 +77,14 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "The subject matter being discussed"
-          ],
+          "desc": [],
           "flat_index": 0,
           "format": {
             "type": "completion"
           },
+          "format_desc": [
+            "The subject matter being discussed"
+          ],
           "format_ref": "Topic",
           "index": 0,
           "name": "topic",

@@ -8,6 +8,13 @@ from "thinking/thought.stl" import Thought;
 
 alias Thought<mode="tentative", goal="guess the answer"> as thought;
 
+// Program-scope so `-D index_label=...` can set it: -D binds the
+// PROGRAM's arguments, while a prompt's `argument` is the prompt's
+// own parameter. Empty by default -- a description that names an
+// index base must agree with prompt_zero_index, and nothing here can
+// see the syntax yet.
+argument index_label = "";
+
 prompt main {
   is {
     topic is text<length=20>;
@@ -51,7 +58,7 @@ prompt choose {
     question as "the question that you have to answer";
     hyphothesis as "your guess at what the answer should be";
     choices as "the possible choices to answer the question, only one is correct";
-    answer as "you pick the index of the choice that best answer the question";
+    answer as f"you pick the index of the choice that best answer the question{index_label}";
   }
 }
 

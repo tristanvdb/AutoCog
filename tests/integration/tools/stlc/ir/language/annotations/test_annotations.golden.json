@@ -31,9 +31,7 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "The subject matter being discussed"
-          ],
+          "desc": [],
           "format": {
             "type": "completion"
           },

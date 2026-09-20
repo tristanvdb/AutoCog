@@ -23,7 +23,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "b8fb05d7bfeae6169365ea738780ce98ca1c754f59ec43bfbd4127ab8ce055bd",
+    "hash": "b79dd5502673a83ae4962452a27fcf9baec8d9ca2a81813bc0dc1aa030fe52fc",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -65,14 +65,15 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "A record from the library"
-          ],
+          "desc": [],
           "flat_index": 0,
           "format": {
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A record from the library"
+          ],
           "format_ref": "LibRecord",
           "index": 0,
           "name": "data",
@@ -188,14 +189,15 @@
         },
         {
           "depth": 2,
-          "desc": [
-            "A record from the library"
-          ],
+          "desc": [],
           "flat_index": 1,
           "format": {
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A record from the library"
+          ],
           "format_ref": "LibRecord",
           "index": 0,
           "name": "item",

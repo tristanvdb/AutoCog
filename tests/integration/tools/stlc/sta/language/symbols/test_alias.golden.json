@@ -30,7 +30,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "272b92091a7c657854b2fba325ea7af70ddc83ecee0235ac03fa2bd5f77500d1",
+    "hash": "8589aa1a888a8dedf2b4833d70ce1ae2e788717538994aaceefaa73d65c93c22",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -108,14 +108,15 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "A formal message."
-          ],
+          "desc": [],
           "flat_index": 0,
           "format": {
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A formal message."
+          ],
           "format_ref": "SimpleMessage",
           "index": 0,
           "name": "simple",
@@ -134,14 +135,15 @@
         },
         {
           "depth": 1,
-          "desc": [
-            "A casual message."
-          ],
+          "desc": [],
           "flat_index": 1,
           "format": {
             "length": 50,
             "type": "completion"
           },
+          "format_desc": [
+            "A casual message."
+          ],
           "format_ref": "LongCasualMessage",
           "index": 1,
           "name": "long",
@@ -160,14 +162,15 @@
         },
         {
           "depth": 1,
-          "desc": [
-            "A technical message."
-          ],
+          "desc": [],
           "flat_index": 2,
           "format": {
             "length": 20,
             "type": "completion"
           },
+          "format_desc": [
+            "A technical message."
+          ],
           "format_ref": "TechnicalMessage",
           "index": 2,
           "name": "tech",

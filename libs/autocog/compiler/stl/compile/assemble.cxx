@@ -748,7 +748,7 @@ static void generate_fields(
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
-                for (auto & d : res.desc) f->desc.push_back(d);
+                for (auto & d : res.desc) f->format_desc.push_back(d);
                 // The field's policy in scope, plus the referenced record's own
                 // search { } as the innermost layer (only meaningful for a
                 // collapsed self-form record; empty otherwise).
@@ -783,7 +783,7 @@ static void generate_fields(
                     f->format = std::move(res.format);
                     f->refname = res.refname;
                     f->refargs = res.refargs;
-                    for (auto & d : res.desc) f->desc.push_back(d);
+                    for (auto & d : res.desc) f->format_desc.push_back(d);
                     ir::SearchPolicies field_here = merge_search(struct_here, res.own_search);
                     if (f->is_struct()) {
                         f->search = prune_search(field_here, {"branch"});
@@ -962,6 +962,34 @@ static FormatResult generate_format(
             }, rec_decl.data.record);
 
             builder.expanding_records.pop_back();
+
+            // The record's PER-FIELD annotations. The loop above takes only
+            // its `_` (which becomes the named-format description); these
+            // have to wait until the sub-fields exist. Without this the
+            // record's own documentation is silently dropped the moment it
+            // is used as a format -- `a_choice` annotates `label` and
+            // `value`, and every prompt using it rendered them bare.
+            if (auto * sub = std::get_if<std::vector<std::unique_ptr<ir::Field>>>(&result.format)) {
+                for (auto const & construct : rec_decl.data.constructs) {
+                    auto const * annotate = std::get_if<ast::Annotate>(&construct);
+                    if (!annotate) continue;
+                    for (auto const & ann : annotate->data.annotations) {
+                        if (!ann.data.path) continue;
+                        auto val = evaluator.evaluate_expression(
+                            target_scope, ann.data.description, target_ctx);
+                        auto * sv = std::get_if<std::string>(&val);
+                        if (!sv) continue;
+                        if (auto * target = resolve_annotate_path(*ann.data.path, *sub)) {
+                            target->desc.push_back(*sv);
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of record '" + rec_name + "'",
+                                ann.location);
+                        }
+                    }
+                }
+            }
         }
     }, fref.data.type);
     return result;
@@ -995,7 +1023,7 @@ static void assemble_records(
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
-                for (auto & d : res.desc) f->desc.push_back(d);
+                for (auto & d : res.desc) f->format_desc.push_back(d);
                 rec->fields.push_back(std::move(f));
             }
         }, decl.data.record);

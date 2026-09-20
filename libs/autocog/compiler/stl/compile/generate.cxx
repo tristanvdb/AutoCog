@@ -93,6 +93,7 @@ static void collect_fields(
         info.flat_index = static_cast<int>(flat.size());
         info.range = f.range;
         info.desc = f.desc;
+        info.format_desc = f.format_desc;  // the record's own `_`, listed once
         info.format_ref = f.refname;       // collapsed self-form record name, if any
         info.search = convert_policies(f.search);
 

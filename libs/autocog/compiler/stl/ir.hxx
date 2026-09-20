@@ -141,6 +141,13 @@ struct Field : public Object {
                                           // struct -> branch only.
   std::optional<std::string> refname;     // Original record name (e.g. "Thought"), if any
   VarMap refargs;                         // Record instantiation args (empty if none)
+  std::vector<std::string> format_desc;   // The referenced record's own `_`
+                                          // annotation. NOT this field's desc:
+                                          // it documents the FORMAT, and the
+                                          // header lists it once under the
+                                          // named formats rather than
+                                          // repeating it on every field that
+                                          // uses the record.
 
   Field(std::string name_, int depth_, int index_) :
     Object(std::move(name_)),

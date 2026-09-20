@@ -63,9 +63,7 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "A formal message."
-          ],
+          "desc": [],
           "format": {
             "length": 10,
             "type": "completion"
@@ -88,9 +86,7 @@
         },
         {
           "depth": 1,
-          "desc": [
-            "A casual message."
-          ],
+          "desc": [],
           "format": {
             "length": 50,
             "type": "completion"
@@ -113,9 +109,7 @@
         },
         {
           "depth": 1,
-          "desc": [
-            "A technical message."
-          ],
+          "desc": [],
           "format": {
             "length": 20,
             "type": "completion"

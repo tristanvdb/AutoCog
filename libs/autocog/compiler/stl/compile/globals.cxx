@@ -4,6 +4,7 @@
 #include "autocog/logging.hxx"
 #include "autocog/compiler/stl/evaluate.hxx"
 
+#include <set>
 #include <tuple>
 #include <vector>
 #include <stdexcept>
@@ -42,6 +43,14 @@ static std::tuple<int, std::optional<std::string>, std::string> parse_scope(std:
 }
 
 std::optional<int> Driver::run_globals() {
+    // Which -D names actually bound. `-D` sets a PROGRAM argument; a prompt's
+    // or a record's `argument` is that object's parameter, a different scope
+    // and not a target. That is by design -- but a -D naming nothing at all
+    // used to be accepted in silence, so a typo, or a reach for a
+    // prompt-scope argument, produced exactly the program you did not ask
+    // for with nothing to notice.
+    std::set<std::string> bound_defines;
+
     // Collect file-scope defines that need evaluation
     std::vector<std::tuple<int, std::string, std::optional<autocog::location::SourceRange>>> need_evaluation;
     for (auto const & [qname, symbol] : tables.symbols) {
@@ -61,6 +70,7 @@ std::optional<int> Driver::run_globals() {
                     // A -D value was supplied for this name.
                     if (is_argument) {
                         context[name] = def_it->second;          // arguments take -D
+                        bound_defines.insert(name);
                     } else {
                         // -D targets program arguments, not defines. Ignore it
                         // (warn) and evaluate the define's own initializer.
@@ -95,6 +105,16 @@ std::optional<int> Driver::run_globals() {
         }
     }
     if (report_errors()) return 3;
+
+    for (auto const & [name, value] : defines) {
+        (void)value;
+        if (bound_defines.count(name)) continue;
+        emit_warning("-D " + name + " binds nothing: `" + name
+                     + "` is not a program argument. A prompt's or a record's "
+                       "`argument` is that object's own parameter, set where it "
+                       "is used, not by -D.",
+                     std::nullopt);
+    }
 
     SPDLOG_LOGGER_DEBUG(autocog::log(), "Contexts evaluated (#3)");
 

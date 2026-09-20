@@ -7,6 +7,13 @@
 from "record.stl" import a_choice;
 from "mcq.py" import pick_value;
 
+// Program-scope so `-D index_label=...` can set it: -D binds the
+// PROGRAM's arguments, while a prompt's `argument` is the prompt's
+// own parameter. Empty by default -- a description that names an
+// index base must agree with prompt_zero_index, and nothing here can
+// see the syntax yet.
+argument index_label = "";
+
 prompt main {
   argument max_choices = 10;
   is {
@@ -26,7 +33,7 @@ prompt main {
     topic as "the general category from which the question was taken";
     question as "the question that you have to answer";
     choice as "the possible choices to answer the question, only one is correct";
-    answer as "you pick the index of the choice that best answer the question";
+    answer as f"you pick the index of the choice that best answer the question{index_label}";
   }
 }
 
