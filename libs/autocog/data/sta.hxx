@@ -85,11 +85,14 @@ struct Field {
   int depth = 0;
   int index = 0;
   int flat_index = 0;
-  std::vector<std::string> desc;
+  // Descriptions are expressions: an annotation may ask about the rendering
+  // (`__syntax__.prompt_zero_index`), which is not chosen until the prompt is
+  // instantiated. Literal for every annotation that does not.
+  std::vector<Expr> desc;
   std::optional<std::pair<int,int>> range;   // null = scalar
   FieldFormat format;
   std::optional<std::string> format_ref;
-  std::vector<std::string> format_desc;
+  std::vector<Expr> format_desc;
   SearchParams search;
 
   std::string hash() const;
@@ -106,7 +109,7 @@ struct Field {
 
 struct Prompt {
   std::string name;
-  std::vector<std::string> desc;
+  std::vector<Expr> desc;
   std::vector<Field> fields;
   std::vector<Abstract> abstracts;
   std::map<std::string, Flow> flows;

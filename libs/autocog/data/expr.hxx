@@ -1,6 +1,7 @@
 #ifndef AUTOCOG_DATA_EXPR_HXX
 #define AUTOCOG_DATA_EXPR_HXX
 
+#include "autocog/data/utility.hxx"
 #include "autocog/utilities/types.hxx"
 #include "autocog/utilities/errors.hxx"
 
@@ -194,6 +195,12 @@ std::string render(Expr const & e, Resolver const & resolve,
 /// `true`/`false`, null as empty. The single definition of what a value looks
 /// like when it lands in a prompt.
 std::string stringify(Value const & v);
+
+/// Append an expression to a content hash: its VALUE when it is a literal, its
+/// structure when it is not. Every artifact that holds expressions hashes them
+/// this way, so identity depends on what an expression MEANS rather than on how
+/// it happens to be spelled at that stage.
+void hash_put(ContentHasher & h, Expr const & e);
 
 /// Operator semantics, shared by compile-time folding and every later stage.
 /// The location is carried only for diagnostics.

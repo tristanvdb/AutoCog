@@ -26,6 +26,7 @@ the instantiator resolves per element: `can_flow = count < max`,
 the node so the two can be read together.
 """
 
+from exprtext import expr_text
 import html
 import json
 import sys
@@ -118,6 +119,10 @@ def _field_node(f):
                     f'repeats</FONT></TD><TD ALIGN="LEFT">'
                     f'<FONT POINT-SIZE="8">{rng[0]}..{rng[1]}</FONT></TD></TR>')
     for d in f.get("desc", [])[:2]:
+        # A description may be an expression (it can ask about the rendering);
+        # the graph is a picture of the PROGRAM, not of one instantiation, so
+        # show what was written.
+        d = expr_text(d) if not isinstance(d, str) else d
         for line in [d[i:i + WIDTH] for i in range(0, len(d), WIDTH)][:3]:
             rows.append('<TR><TD COLSPAN="2" ALIGN="LEFT">'
                         f'<FONT POINT-SIZE="8" COLOR="#555555"><I>{_h(line)}'

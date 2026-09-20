@@ -11,6 +11,7 @@ Usage:
     stlc --ir /dev/stdout program.stl | python ir2stl.py
     python ir2stl.py program.ir.json [prompt_name]
 """
+from exprtext import expr_text
 import json
 import sys
 
@@ -40,49 +41,6 @@ def _value(v):
     return _num(v)
 
 
-# The STL spelling of each expression operator, keyed by its wire name (the
-# mirror of data::op_symbol; see libs/autocog/data/expr.cxx).
-_OPS = {
-    "not": "!", "neg": "-",
-    "add": "+", "sub": "-", "mul": "*", "div": "/", "mod": "%",
-    "and": "&&", "or": "||", "all": "&&", "any": "||",
-    "band": "&", "bor": "|",
-    "lt": "<", "gt": ">", "le": "<=", "ge": ">=", "eq": "==", "ne": "!=",
-}
-
-
-def _expr(e):
-    """Render an expression back to STL source.
-
-    A literal is its value, which is what nearly every expression in an IR is.
-    Anything else is a one-key object -- a reference that could not be resolved
-    at compile time, or an operator over its operands. Fully parenthesized, so
-    it reparses to the same tree."""
-    if not isinstance(e, dict):
-        return _value(e)
-    (key, arg), = e.items()
-    if key == "ref":
-        return arg
-    if key == "cond":
-        c, t, f = (_expr(o) for o in arg)
-        return f"({c} ? {t} : {f})"
-    if key == "cat":
-        # An f-string: literal parts are text, the rest are interpolations.
-        out = ""
-        for o in arg:
-            if isinstance(o, str):
-                out += o.replace('"', '\\"').replace("{", "{{").replace("}", "}}")
-            else:
-                out += "{" + _expr(o) + "}"
-        return 'f"' + out + '"'
-    sym = _OPS.get(key)
-    if sym is None:
-        raise ValueError(f"not an expression operator: {key}")
-    if key in ("not", "neg"):
-        return f"({sym}{_expr(arg[0])})"
-    return "(" + f" {sym} ".join(_expr(o) for o in arg) + ")"
-
-
 def unparse_search(search, level):
     """Render a search policy dict {category: {param: value}} as a search { }
     block. Categories and params are emitted in sorted order for stable output.
@@ -102,7 +60,7 @@ def unparse_search(search, level):
                     str(value.get("ref", "")).startswith("__search__."):
                 continue
             loc = f"{category}.{param}" if category else param
-            lines.append(f"{_indent(level + 1)}{loc} is {_expr(value)};")
+            lines.append(f"{_indent(level + 1)}{loc} is {expr_text(value)};")
             emitted += 1
     lines.append(_indent(level) + "}")
     return lines if emitted else []
@@ -154,7 +112,7 @@ def unparse_field(field, level):
 
     # Field annotations.
     for d in field.get("desc", []):
-        lines.append(f'{_indent(inner)}annotate is "{d}";')
+        lines.append(f'{_indent(inner)}annotate is {expr_text(d)};')
 
     fmt = field.get("format") or {}
     if fmt.get("type") == "struct":

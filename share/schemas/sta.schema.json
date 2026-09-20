@@ -139,8 +139,9 @@
         "desc": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "$ref": "#/$defs/expr"
+          },
+          "description": "Descriptions, as expressions: a plain string for an annotation that does not ask about the rendering, which is most of them, and a tree for one that does."
         },
         "fields": {
           "type": "array",
@@ -215,8 +216,9 @@
         "desc": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "$ref": "#/$defs/expr"
+          },
+          "description": "Descriptions, as expressions: a plain string for an annotation that does not ask about the rendering, which is most of them, and a tree for one that does."
         },
         "format": {
           "$ref": "#/$defs/field_format"
@@ -236,7 +238,7 @@
             {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/expr"
               }
             },
             {

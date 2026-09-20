@@ -959,9 +959,13 @@ struct FTABuilder {
             int desc_id = -1;
             if (syntax.desc_inline && !fld.desc.empty() && described_fields.find(succ.field) == described_fields.end()) {
                 described_fields.insert(succ.field);
+                // This is where an annotation that asks about the rendering
+                // is answered: the syntax is finally known, so `render` folds
+                // what is left of the expression into text.
                 std::string desc_text;
                 for (auto const & d : fld.desc)
-                    desc_text += syntax.desc_pre + d + syntax.desc_post;
+                    desc_text += syntax.desc_pre + autocog::data::render(d, refs())
+                               + syntax.desc_post;
                 desc_id = add_text("desc." + succ_safe, desc_text);
             }
 
@@ -1059,7 +1063,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
     hdr << syntax.header_pre << syntax.system_msg << syntax.header_mid;
 
     // Prompt description
-    for (auto const & d : prompt.desc) hdr << d << " ";
+    for (auto const & d : prompt.desc) hdr << autocog::data::render(d, b.refs()) << " ";
     hdr << "\n";
 
     // Mechanics: schema preview in a code block. The entry label ("start:")
@@ -1073,7 +1077,7 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         hdr << range_str(fld);
         hdr << ":";
         if (!fld.desc.empty()) {
-            for (auto const & d : fld.desc) hdr << " " << d;
+            for (auto const & d : fld.desc) hdr << " " << autocog::data::render(d, b.refs());
         }
         hdr << "\n";
     }
@@ -1093,7 +1097,8 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         for (auto const & [fld_ptr, ref_name] : named_formats) {
             hdr << syntax.format_listing << ref_name << ": " << format_str(*fld_ptr) << "\n";
             for (auto const & d : fld_ptr->format_desc) {
-                hdr << "  " << syntax.format_listing << d << "\n";
+                hdr << "  " << syntax.format_listing
+                    << autocog::data::render(d, b.refs()) << "\n";
             }
         }
     }

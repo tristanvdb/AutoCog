@@ -89,7 +89,12 @@ std::optional<int> Driver::run_globals() {
         auto sfid = std::to_string(fid);
         auto & context = tables.contexts[sfid];
         try {
-            evaluator->retrieve_value(sfid, name, context, loc);
+            // retrieve, not retrieve_value: a global's initializer may defer
+            // (an annotation that asks about the syntax, say). Whether THIS
+            // global can be deferred is decided where it is used, by the
+            // position that uses it -- most positions require a constant and
+            // say so.
+            evaluator->retrieve(sfid, name, context, loc);
         } catch (CompileError const & e) {
             emit_error(e.message, e.location);
         }

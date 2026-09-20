@@ -33,6 +33,26 @@ static std::optional<int> eval_opt_int(
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
 
+// An annotation is an expression that becomes TEXT when it is rendered, and it
+// is rendered at instantiation -- which is what lets one ask about the syntax
+// it will be rendered under. A literal string stays a literal string, which is
+// what every annotation that does not ask was, and still is. A non-string
+// constant is ignored here, as it always has been.
+static std::optional<ir::Expr> annotation_expr(
+        Evaluator & evaluator, std::string const & scope,
+        ast::Expression const & desc, ir::VarMap & ctx, Driver & driver) {
+    try {
+        auto e = evaluator.residualize(scope, desc, ctx,
+                                       autocog::data::Stage::Instantiate);
+        if (e.is_literal() && !std::holds_alternative<std::string>(e.value))
+            return std::nullopt;
+        return e;
+    } catch (CompileError const & err) {
+        driver.emit_error(err.message, err.location);
+        return std::nullopt;
+    }
+}
+
 // True when an expression can only produce a boolean: a comparison, a logical
 // operator, or a conditional whose arms both do. The type of a bare reference
 // is declared, so `__status__.tree.terminals` (a float) is caught here rather
@@ -576,7 +596,7 @@ struct FormatResult {
     std::optional<std::string> refname;
     ir::VarMap refargs;
     ir::SearchPolicies own_search;   // the referenced record's own search { }
-    std::vector<std::string> desc;   // annotations from a referenced record
+    std::vector<ir::Expr> desc;      // annotations from a referenced record
 };
 
 static FormatResult generate_format(
@@ -667,8 +687,9 @@ static void generate_fields(
                         if constexpr (std::is_same_v<C, ast::Annotate>) {
                             for (auto const & ann : c.data.annotations) {
                                 if (!ann.data.path) {
-                                    auto val = evaluator.evaluate_expression(scope, ann.data.description, ctx);
-                                    if (auto * sv = std::get_if<std::string>(&val)) f->desc.push_back(*sv);
+                                    if (auto d = annotation_expr(evaluator, scope,
+                                            ann.data.description, ctx, driver))
+                                        f->desc.push_back(std::move(*d));
                                 }
                             }
                         }
@@ -809,10 +830,9 @@ static FormatResult generate_format(
                     } else if constexpr (std::is_same_v<C, ast::Annotate>) {
                         for (auto const & ann : c.data.annotations) {
                             if (!ann.data.path) {
-                                auto val = evaluator.evaluate_expression(target_scope, ann.data.description, target_ctx);
-                                if (auto * sv = std::get_if<std::string>(&val)) {
-                                    result.desc.push_back(*sv);
-                                }
+                                if (auto d = annotation_expr(evaluator, target_scope,
+                                        ann.data.description, target_ctx, driver))
+                                    result.desc.push_back(std::move(*d));
                             }
                         }
                     }
@@ -872,12 +892,11 @@ static FormatResult generate_format(
                     if (!annotate) continue;
                     for (auto const & ann : annotate->data.annotations) {
                         if (!ann.data.path) continue;
-                        auto val = evaluator.evaluate_expression(
-                            target_scope, ann.data.description, target_ctx);
-                        auto * sv = std::get_if<std::string>(&val);
-                        if (!sv) continue;
+                        auto d = annotation_expr(evaluator, target_scope,
+                                                 ann.data.description, target_ctx, driver);
+                        if (!d) continue;
                         if (auto * target = resolve_annotate_path(*ann.data.path, *sub)) {
-                            target->desc.push_back(*sv);
+                            target->desc.push_back(std::move(*d));
                         } else {
                             driver.emit_error(
                                 "annotate path '" + annotate_path_text(*ann.data.path)
@@ -931,13 +950,13 @@ static void assemble_records(
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
-                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        auto * sv = std::get_if<std::string>(&val);
-                        if (!sv) continue;
+                        auto d = annotation_expr(evaluator, scope,
+                                                 ann.data.description, node.context, driver);
+                        if (!d) continue;
                         if (!ann.data.path) {
-                            rec->desc.push_back(*sv);
+                            rec->desc.push_back(std::move(*d));
                         } else if (auto * target = resolve_annotate_path(*ann.data.path, rec->fields)) {
-                            target->desc.push_back(*sv);
+                            target->desc.push_back(std::move(*d));
                         } else {
                             driver.emit_error(
                                 "annotate path '" + annotate_path_text(*ann.data.path)
@@ -1242,17 +1261,17 @@ static void assemble_prompts(
 
                 } else if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
-                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        auto * sv = std::get_if<std::string>(&val);
-                        if (!sv) continue;
+                        auto d = annotation_expr(evaluator, scope,
+                                                 ann.data.description, node.context, driver);
+                        if (!d) continue;
                         if (!ann.data.path) {
-                            pmt->desc.push_back(*sv);
+                            pmt->desc.push_back(std::move(*d));
                         } else if (auto * target = resolve_annotate_path(*ann.data.path, pmt->fields)) {
                             // Full-path resolution: `annotate { a.b as ...; }`
                             // lands on the nested field (previously only the
                             // first step was matched, silently annotating the
                             // container).
-                            target->desc.push_back(*sv);
+                            target->desc.push_back(std::move(*d));
                         } else {
                             driver.emit_error(
                                 "annotate path '" + annotate_path_text(*ann.data.path)

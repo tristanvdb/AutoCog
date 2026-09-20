@@ -1,4 +1,5 @@
 
+#include "autocog/codec/json.hxx"
 #include "autocog/compiler/stl/serialize.hxx"
 #include "autocog/compiler/stl/driver.hxx"
 #include "helpers.hxx"
@@ -81,6 +82,14 @@ static json clause_to_json(ir::Clause const & clause) {
     }, clause);
 }
 
+// Descriptions are expressions; a literal one dumps as the bare string it has
+// always been.
+static json descs_to_json(std::vector<ir::Expr> const & v) {
+    json a = json::array();
+    for (auto const & e : v) a.push_back(autocog::codec::to_json(e));
+    return a;
+}
+
 static json field_to_json(ir::Field const & field);
 static json search_to_json(ir::SearchPolicies const & search);
 
@@ -115,7 +124,7 @@ static json format_to_json(ir::Format const & format) {
 static json field_to_json(ir::Field const & field) {
     json j;
     j["name"] = field.name;
-    j["desc"] = field.desc;
+    j["desc"] = descs_to_json(field.desc);
     j["depth"] = field.depth;
     j["index"] = field.index;
     j["range"] = range_to_json(field.range);
@@ -221,7 +230,7 @@ static json search_to_json(ir::SearchPolicies const & search) {
 static json record_to_json(ir::Record const & record) {
     json j;
     j["name"] = record.name;
-    j["desc"] = record.desc;
+    j["desc"] = descs_to_json(record.desc);
     if (!record.search.empty()) j["search"] = search_to_json(record.search);
     if (!record.vocabs.empty()) {
         json vj = json::object();
@@ -238,7 +247,7 @@ static json record_to_json(ir::Record const & record) {
 static json prompt_to_json(ir::Prompt const & prompt) {
     json j;
     j["name"] = prompt.name;
-    j["desc"] = prompt.desc;
+    j["desc"] = descs_to_json(prompt.desc);
     j["mangled_name"] = prompt.mangled_name;
     j["context"] = serialize::varmap_to_json(prompt.context);
     if (!prompt.search.empty()) j["search"] = search_to_json(prompt.search);

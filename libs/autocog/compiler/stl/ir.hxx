@@ -91,7 +91,12 @@ struct DocPath {
 // Base class for all named IR objects
 struct Object {
   std::string name;
-  std::vector<std::string> desc;  // Annotations for LLM prompt engineering
+  // Annotations for LLM prompt engineering. Expressions, because an annotation
+  // is the one place where the rendering that the text describes is not known
+  // yet: `annotate f"the choice{index_label}"` where index_label reads
+  // __syntax__.prompt_zero_index has to wait for the syntax. Literal for every
+  // annotation that does not ask about the rendering, which is most of them.
+  std::vector<Expr> desc;
 
   Object(std::string name_) :
     name(std::move(name_)),
@@ -149,7 +154,7 @@ struct Field : public Object {
                                           // struct -> branch only.
   std::optional<std::string> refname;     // Original record name (e.g. "Thought"), if any
   VarMap refargs;                         // Record instantiation args (empty if none)
-  std::vector<std::string> format_desc;   // The referenced record's own `_`
+  std::vector<Expr> format_desc;          // The referenced record's own `_`
                                           // annotation. NOT this field's desc:
                                           // it documents the FORMAT, and the
                                           // header lists it once under the

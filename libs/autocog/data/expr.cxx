@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
 
@@ -285,6 +286,18 @@ std::string Expr::hash() const {
   return h.hash();
 }
 
+void hash_put(ContentHasher & h, Expr const & e) {
+  auto v = e.as_value();
+  if (!v) { h.put(std::string("expr")); h.put(e.hash()); return; }
+  h.put(static_cast<unsigned>(v->index()));
+  std::visit([&h](auto const & x) {
+    using V = std::decay_t<decltype(x)>;
+    if constexpr (std::is_same_v<V, std::monostate>) h.put(std::string{});
+    else if constexpr (std::is_same_v<V, int>) h.put(static_cast<std::int32_t>(x));
+    else h.put(x);
+  }, *v);
+}
+
 // ---------------------------------------------------------------------------
 // Text forms
 // ---------------------------------------------------------------------------
@@ -362,21 +375,30 @@ std::string Expr::str() const {
       return "(" + operands[0].str() + " ? " + operands[1].str()
            + " : " + operands[2].str() + ")";
     case Kind::Cat: {
-      // An f-string unparses as one: the literal parts are the text, the rest
-      // are interpolations. Round-trips through the STL string parser.
-      std::string out = "f\"";
-      for (auto const & o : operands) {
-        if (o.kind == Kind::Lit && std::holds_alternative<std::string>(o.value)) {
-          for (char c : std::get<std::string>(o.value)) {
-            if (c == '{' || c == '}') out += c;      // doubled below
+      // An f-string unparses as one when every interpolation is a plain name,
+      // because that is exactly what the f-string grammar accepts. Anything
+      // more (a conditional, say) has no interpolation syntax to go back to,
+      // so it unparses as string concatenation -- right-folded, since binary
+      // expressions are parenthesized pairs.
+      bool simple = true;
+      for (auto const & o : operands)
+        if (o.kind != Kind::Lit && o.kind != Kind::Ref) { simple = false; break; }
+      if (simple) {
+        std::string out = "f\"";
+        for (auto const & o : operands) {
+          if (o.kind == Kind::Ref) { out += "{" + o.ref + "}"; continue; }
+          for (char c : stringify(o.value)) {
+            if (c == '{' || c == '}') { out += c; out += c; continue; }
             if (c == '"' || c == '\\') out += '\\';
             out += c;
           }
-        } else {
-          out += "{" + o.str() + "}";
         }
+        return out + "\"";
       }
-      return out + "\"";
+      std::string out = operands.back().str();
+      for (size_t i = operands.size() - 1; i-- > 0; )
+        out = "(" + operands[i].str() + " + " + out + ")";
+      return out;
     }
   }
   return "";

@@ -7,12 +7,18 @@
 from "record.stl" import a_choice;
 from "mcq.py" import pick_value;
 
-// Program-scope so `-D index_label=...` can set it: -D binds the
-// PROGRAM's arguments, while a prompt's `argument` is the prompt's
-// own parameter. Empty by default -- a description that names an
-// index base must agree with prompt_zero_index, and nothing here can
-// see the syntax yet.
-argument index_label = "";
+// A `select` commits on a POSITION, and the syntax decides whether that
+// position is SPELLED from 0 or from 1 (prompt_zero_index). Saying which
+// is the difference between a model that can answer and one that guesses,
+// so the description has to say it -- and it cannot be written here,
+// because the syntax is not chosen until the prompt is instantiated.
+//
+// So it is not written here: this is an expression that resolves then.
+// Under a syntax that fixes the knob the conditional collapses and the
+// annotation is plain text again. Program-scope, so `-D index_label=...`
+// can still override it with a fixed string.
+argument index_label = (__syntax__.prompt_zero_index ? ", counted from 0"
+                                                     : ", counted from 1");
 
 prompt main {
   argument max_choices = 10;

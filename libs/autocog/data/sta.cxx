@@ -16,21 +16,9 @@ void put_paths(ContentHasher & h, std::vector<PathStep> const & v) {
   for (auto const & p : v) h.put(p.hash());
 }
 
-// A search parameter hashes as its VALUE when it is a literal -- which is what
-// it was before parameters became expressions, so a program that was not
-// written to defer anything keeps the identity it already had. A residual one
-// hashes by structure.
-void put_param(ContentHasher & h, autocog::data::Expr const & e) {
-  auto v = e.as_value();
-  if (!v) { h.put(e.hash()); return; }
-  h.put(static_cast<unsigned>(v->index()));
-  std::visit(overloaded{
-    [&](int x){ h.put(static_cast<std::int32_t>(x)); },
-    [&](float x){ h.put(x); },
-    [&](bool x){ h.put(x); },
-    [&](std::string const & x){ h.put(x); },
-    [&](std::monostate){ },
-  }, *v);
+void put_exprs(ContentHasher & h, std::vector<autocog::data::Expr> const & v) {
+  h.put(static_cast<unsigned>(v.size()));
+  for (auto const & e : v) hash_put(h, e);
 }
 
 
@@ -42,7 +30,7 @@ std::string SearchParams::hash() const {
   for (auto const & [cat, params] : categories) {
     h.put(cat);
     h.put(static_cast<unsigned>(params.size()));
-    for (auto const & [key, val] : params) { h.put(key); put_param(h, val); }
+    for (auto const & [key, val] : params) { h.put(key); hash_put(h, val); }
   }
   return h.hash();
 }
@@ -79,12 +67,13 @@ std::string Flow::hash() const {
 std::string Field::hash() const {
   ContentHasher h;
   h.put(name).put(static_cast<std::int32_t>(depth)).put(static_cast<std::int32_t>(index))
-   .put(static_cast<std::int32_t>(flat_index)).put(desc);
+   .put(static_cast<std::int32_t>(flat_index));
+  put_exprs(h, desc);
   h.put(range.has_value());
   if (range) { h.put(static_cast<std::int32_t>(range->first)).put(static_cast<std::int32_t>(range->second)); }
   h.put(format.hash());
   h.put(format_ref);
-  h.put(format_desc);
+  put_exprs(h, format_desc);
   h.put(search.hash());
   return h.hash();
 }
@@ -121,7 +110,8 @@ std::string PythonImport::hash() const { ContentHasher h; h.put(file).put(target
 
 std::string Prompt::hash() const {
   ContentHasher h;
-  h.put(name).put(desc);
+  h.put(name);
+  put_exprs(h, desc);
   h.put(static_cast<unsigned>(fields.size()));
   for (auto const & f : fields) h.put(f.hash());
   h.put(static_cast<unsigned>(abstracts.size()));
