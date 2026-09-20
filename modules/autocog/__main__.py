@@ -138,10 +138,32 @@ def cmd_pack(args):
     )
 
 
+def parse_cpus(spec):
+    """Parse a taskset-style CPU list ("0-3,8") into a set of ints."""
+    cpus = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if "-" in part:
+            lo, hi = part.split("-", 1)
+            cpus.update(range(int(lo), int(hi) + 1))
+        elif part:
+            cpus.add(int(part))
+    return cpus
+
+
 def cmd_backend(args):
-    """Start level-3 backend server."""
+    """Start level-3 backend server (a bench worker)."""
     import uvicorn
     from .server.backend import create_app
+
+    # Pinning happens before the model loads so llama's thread pools are
+    # created inside the mask and sized to it (AUTOCOG_THREADS).
+    if args.cpus:
+        cpus = parse_cpus(args.cpus)
+        os.sched_setaffinity(0, cpus)
+        os.environ.setdefault("AUTOCOG_THREADS", str(len(cpus)))
+    if args.kv_slots is not None:
+        os.environ["AUTOCOG_KV_SLOTS"] = str(args.kv_slots)
 
     model_path = args.model if not args.rng else None
     app = create_app(model_path=model_path, n_ctx=args.ctx)
@@ -164,6 +186,27 @@ def cmd_rpc(args):
     finally:
         if cleanup:
             cleanup()
+
+
+def cmd_bench(args):
+    """Run a benchmark (perf cells / quality matrix / campaign manifest)."""
+    if args.bench_command == "perf":
+        from .bench.perf import run_perf
+        run_perf(model=args.model, cells=args.cells, out=args.out,
+                 tag=args.tag, budget_seconds=args.budget_seconds,
+                 ctx=args.ctx, seed=args.seed, quick=args.quick,
+                 workers=args.worker)
+    elif args.bench_command == "quality":
+        from .bench.quality import run_quality
+        run_quality(model=args.model, data=args.data, formatter=args.formatter,
+                    questions=args.questions,
+                    syntaxes=args.syntaxes.split(",") if args.syntaxes else None,
+                    demos=args.demos.split(",") if args.demos else None,
+                    out=args.out, seed=args.seed, n_ctx=args.ctx,
+                    workers=args.worker)
+    elif args.bench_command == "campaign":
+        from .bench.campaign import run_campaign
+        run_campaign(args.manifest)
 
 
 def cmd_serve(args):
@@ -404,6 +447,11 @@ def main():
     # --- backend (level 3) ---
     p_backend = subparsers.add_parser("backend", help="Serve FTA evaluation (level 3)")
     _add_server_args(p_backend)
+    p_backend.add_argument("--cpus", default=None,
+                           help="Pin this worker to a CPU set, e.g. 0-3,8 "
+                                "(also caps the model's thread pools)")
+    p_backend.add_argument("--kv-slots", type=int, default=None,
+                           help="KV sequence-slot pool size for the loaded model")
 
     # --- rpc (level 2) ---
     p_rpc = subparsers.add_parser("rpc", help="Serve prompt evaluation (level 2)")
@@ -418,6 +466,41 @@ def main():
     _add_server_args(p_serve)
     p_serve.add_argument("--syntax", default=None, help="Syntax description JSON (default: share/syntax/complete.json)")
     p_serve.add_argument("--search", default=None, help="Search config JSON (default: share/search/default.json)")
+
+    p_bench = subparsers.add_parser("bench", help="Run benchmarks")
+    bench_sub = p_bench.add_subparsers(dest="bench_command", required=True)
+
+    pb_perf = bench_sub.add_parser("perf", help="Computational cells (benchmarks/compute semantics)")
+    pb_perf.add_argument("--model", default=None, help="GGUF model (default: RNG)")
+    pb_perf.add_argument("--cells", default=None, help="Cells JSON (default: the classic matrix)")
+    pb_perf.add_argument("--quick", action="store_true", help="Reduced classic matrix")
+    pb_perf.add_argument("--out", default=".", help="Results directory")
+    pb_perf.add_argument("--tag", default="", help="Results file suffix")
+    pb_perf.add_argument("--budget-seconds", type=float, default=0)
+    pb_perf.add_argument("--ctx", type=int, default=2048)
+    pb_perf.add_argument("--seed", type=int, default=42)
+    pb_perf.add_argument("--worker", action="append", default=None,
+                        help="Remote level-3 worker host:port (repeatable; "
+                             "routed by model tag)")
+
+    pb_quality = bench_sub.add_parser("quality", help="MCQ accuracy / friction matrix")
+    pb_quality.add_argument("--model", default=None, help="GGUF model (default: RNG)")
+    pb_quality.add_argument("--data", default=None,
+                            help="Questions .json/.jsonl (default: benchmarks/quality/questions.json)")
+    pb_quality.add_argument("--formatter", default="",
+                            help="file.py:fn applied to each datapoint (raw -> question; None = skip)")
+    pb_quality.add_argument("--questions", type=int, default=0, help="Stratified sample size (0 = all)")
+    pb_quality.add_argument("--syntaxes", default=None, help="Comma list (default: complete,stripped)")
+    pb_quality.add_argument("--demos", default=None, help="Comma list (default: select)")
+    pb_quality.add_argument("--out", default=".", help="Results directory")
+    pb_quality.add_argument("--ctx", type=int, default=2048)
+    pb_quality.add_argument("--seed", type=int, default=42)
+    pb_quality.add_argument("--worker", action="append", default=None,
+                        help="Remote level-3 worker host:port (repeatable; "
+                             "routed by model tag)")
+
+    pb_campaign = bench_sub.add_parser("campaign", help="Run a campaign manifest")
+    pb_campaign.add_argument("manifest", help="Campaign manifest JSON")
 
     args = parser.parse_args()
 
@@ -456,6 +539,8 @@ def main():
             cmd_rpc(args)
         elif args.command == "serve":
             cmd_serve(args)
+        elif args.command == "bench":
+            cmd_bench(args)
     except AutoCogError as e:
         if args.json:
             # Structured record carries error.type, event.outcome, recoverable,

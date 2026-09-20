@@ -18,7 +18,7 @@ class Recorder:
     reflects progress even when execution crashes mid-way.
     """
 
-    VALID_KINDS = {"input", "frame", "fta", "ftt"}
+    VALID_KINDS = {"input", "frame", "fta", "ftt", "perf"}
 
     def __init__(self, kinds, path=None):
         if isinstance(kinds, str):
@@ -59,10 +59,18 @@ class Recorder:
         self._write_trace(ctx_id, trace)
 
     def record_call(self, ctx_id, field, *, callable_name=None,
-                    prompt_name=None, sub_ctx=None):
-        """Record a channel call (extern or sub-prompt) on the current prompt."""
+                    prompt_name=None, sub_ctx=None, context_reads=None):
+        """Record a channel call (extern or sub-prompt) on the current prompt.
+
+        `context_reads` is what an entrypoint read from the ambient runtime
+        context. Recorded because it is the evidence for promoting an
+        ambient read to a declared call binding: a resolver reading
+        `syntax.prompt_zero_index` is telling you its return value depends
+        on the rendering, and that dependency belongs in the STA."""
         trace = self._read_trace(ctx_id)
         entry = {"field": field}
+        if context_reads:
+            entry["context_reads"] = list(context_reads)
         if callable_name is not None:
             entry["callable"] = callable_name
         if prompt_name is not None:
@@ -97,6 +105,7 @@ class Recorder:
             {step}.ftt.json   — the FTT document
             {step}.frame.json — the frame
             {step}.input.json — the input content (raw JSON; not a tracked type)
+            {step}.perf.json  — autocog.perf.* deltas of the evaluation
         """
         step_dir = os.path.join(self.path, f"ctx-{ctx_id}", prompt_name)
         os.makedirs(step_dir, exist_ok=True)

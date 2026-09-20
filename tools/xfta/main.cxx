@@ -62,7 +62,7 @@ static std::string ecs_timestamp() {
   auto const ms = duration_cast<milliseconds>(now.time_since_epoch()).count() % 1000;
   std::tm tm{};
   gmtime_r(&t, &tm);
-  char buf[40];
+  char buf[64];
   std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                 tm.tm_hour, tm.tm_min, tm.tm_sec, static_cast<int>(ms));
@@ -228,6 +228,20 @@ static int run(int argc, char** argv) {
         pc.text.tokens_restore + pc.complete.tokens_restore + pc.choose.tokens_restore;
     f["autocog.perf.tokens.eval"] =
         pc.text.tokens_eval + pc.complete.tokens_eval + pc.choose.tokens_eval;
+    KvStats const & kv = Manager::get_model(model_id).kv_stats();
+    f["autocog.perf.kv.slots"] = Manager::get_model(model_id).kv_slots();
+    f["autocog.perf.kv.exact"] = kv.exact;
+    f["autocog.perf.kv.extends"] = kv.extends;
+    f["autocog.perf.kv.trims"] = kv.trims;
+    f["autocog.perf.kv.forks"] = kv.forks;
+    f["autocog.perf.kv.evictions"] = kv.evictions;
+    f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
+    SearchStats const st = Manager::get_eval(eval_id).search_stats();
+    f["autocog.perf.search.terminals"] = st.terminals;
+    f["autocog.perf.search.coverage.fta"] = st.coverage_fta;
+    f["autocog.perf.search.coverage.sta"] = st.coverage_sta;
+    f["autocog.perf.search.stopped"] = st.stopped;
+    f["autocog.perf.search.abandoned"] = st.abandoned;
     perf.emit("eval.summary", "evaluation complete", std::move(f));
   }
 

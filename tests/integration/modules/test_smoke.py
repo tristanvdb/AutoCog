@@ -288,10 +288,13 @@ class TestSchema:
     def test_loaded_program_schema(self, repo_root):
         import autocog, json, tempfile, os
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(prog.sta, f)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             tmp = f.name
         try:
+            # The C++ file door (store) and string door (dump_json) agree.
+            prog.store(tmp)
+            with open(tmp) as f:
+                assert json.load(f) == json.loads(prog.dump_json())
             prog2 = autocog.load(tmp)
             s = prog2.input_schema("main")
             assert "topic" in s
@@ -507,10 +510,14 @@ class TestBackendServer:
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/status/{request_id}") as resp:
                     status = json.loads(resp.read())
                 if status["state"] == "complete":
-                    # Backend returns the FTT (xfta over the wire), not text.
-                    ftt = status["result"]
-                    assert isinstance(ftt, dict)
+                    # Backend returns {"ftt", "perf"} (xfta over the wire:
+                    # the tree plus the evaluation's autocog.perf.* deltas).
+                    reply = status["result"]
+                    assert isinstance(reply, dict)
+                    ftt = reply["ftt"]
                     assert "children" in ftt and "text" in ftt
+                    perf = reply["perf"]
+                    assert perf["autocog.perf.tokens.eval"] > 0
                     return
                 elif status["state"] == "error":
                     raise AssertionError(f"Backend error: {status['error']}")
@@ -1736,6 +1743,12 @@ class TestWriterRecording:
         from autocog.context import Context
         from autocog.__main__ import load_externals
 
+        # The writer flow's page count is rng-trajectory dependent: the picked
+        # template's step count drives create_pages, and Book requires
+        # pages[5:100]. Not every seed clears that minimum (a legitimate
+        # runtime rejection, not a bug) — pin one that completes.
+        engine.set_seed(0)
+
         prog = autocog.compile(
             str(repo_root / "share/demos/story-writer/writer.stl"),
             includes=[
@@ -1819,6 +1832,9 @@ class TestWriterRecording:
         from autocog.recorder import Recorder
         from autocog.context import Context
         from autocog.__main__ import load_externals
+
+        # Same seed pin as test_writer_recorded_trace (pages[5:100] minimum).
+        engine.set_seed(0)
 
         prog = autocog.compile(
             str(repo_root / "share/demos/story-writer/writer.stl"),

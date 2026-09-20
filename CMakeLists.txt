@@ -22,7 +22,11 @@ endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_compile_definitions(DEBUG=1)
+  # AUTOCOG_DEBUG, not DEBUG: RE/flex claims the bare macro (debug.h) and
+  # answers it with an fprintf+fflush per lexer operation into a DEBUG.log
+  # in the working directory — 2 GB over three days of Debug-build testing,
+  # and a synchronous flush on every token of every STL compile.
+  add_compile_definitions(AUTOCOG_DEBUG=1)
   add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 else()
   add_compile_definitions(NDEBUG=1)
@@ -209,6 +213,12 @@ add_compile_definitions(AUTOCOG_VULKAN=$<BOOL:${AUTOCOG_VULKAN}>)
 add_compile_definitions(AUTOCOG_METAL=$<BOOL:${AUTOCOG_METAL}>)
 add_compile_definitions(AUTOCOG_SYCL=$<BOOL:${AUTOCOG_SYCL}>)
 
+set(AUTOCOG_LSE_CUTOFF "" CACHE STRING
+    "Sampling log-sum-exp cutoff in nats (empty = built-in default 20; 30 pushes the error bound under float epsilon)")
+if(AUTOCOG_LSE_CUTOFF)
+    add_compile_definitions(AUTOCOG_LSE_CUTOFF=${AUTOCOG_LSE_CUTOFF})
+endif()
+
 # Tests configure by default for a direct CMake build (developer workflow), but
 # NOT inside a scikit-build (pip/wheel) build: the manylinux wheel's Python has
 # only Development.Module, not Development.Embed (the data smoke test embeds the
@@ -243,6 +253,7 @@ add_subdirectory(libs/autocog/compiler/stl)
 add_subdirectory(tools/stlc)
 add_subdirectory(bindings/compiler-stl)
 
+add_subdirectory(libs/autocog/runtime/fta)
 add_subdirectory(libs/autocog/runtime/sta)
 add_subdirectory(bindings/runtime-sta)
 
@@ -250,8 +261,8 @@ add_subdirectory(libs/autocog/backend/llama)
 add_subdirectory(tools/xfta)
 add_subdirectory(tools/ista)
 add_subdirectory(tools/psta)
-add_subdirectory(tools/efta)
 add_subdirectory(bindings/backend-llama)
+add_subdirectory(share/benchmarks/micro)
 
 if(AUTOCOG_BUILD_TESTS)
 add_subdirectory(tests/units/libs/autocog/compiler/stl/parser)
@@ -268,7 +279,9 @@ add_subdirectory(tests/integration/tools/ista)
 add_subdirectory(tests/integration/tools/psta)
 add_subdirectory(tests/integration/tools/xfta)
 add_subdirectory(tests/integration/tools/e2e)
-add_subdirectory(tests/integration/tools/efta)
+add_subdirectory(tests/integration/tools/rerender)
+add_subdirectory(tests/integration/tools/simplify)
+add_subdirectory(tests/integration/tools/syntax)
 add_subdirectory(tests/integration/bindings)
 add_subdirectory(tests/integration/stdlib/thinking)
 endif()

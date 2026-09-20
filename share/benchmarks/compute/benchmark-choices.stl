@@ -1,0 +1,31 @@
+// Computational benchmark, choice-scoring variant (score-bound): a select
+// over 32 padded choices concentrates the work in eval_sequences (forced
+// scoring of imposed tokens). Text actions carry evaluate=false, so choice
+// scoring is the production path that exercises scoring — pad the choices
+// via sweep.py content_pad to scale it.
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[32] is text<length=100>;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the possible choices to answer the question, only one is correct";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+export main;

@@ -67,6 +67,7 @@ class Context:
                 frame=artifacts.get("frame"),
                 fta=artifacts.get("fta"),
                 ftt=artifacts.get("ftt"),
+                perf=artifacts.get("perf"),
             )
         else:
             frame = self.engine.evaluate_prompt(

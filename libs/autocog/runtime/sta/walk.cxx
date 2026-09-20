@@ -20,10 +20,6 @@ Doc str_doc(std::string s) { return Doc{ Val{ std::move(s) } }; }
 
 bool is_obj(Doc const & d) { return std::holds_alternative<Doc::Object>(d.value); }
 bool is_arr(Doc const & d) { return std::holds_alternative<Doc::Array>(d.value); }
-bool doc_is_null(Doc const & d) {
-    auto const * v = std::get_if<Val>(&d.value);
-    return v && std::holds_alternative<std::monostate>(*v);
-}
 Doc::Object & as_object(Doc & d) {
     if (!is_obj(d)) d.value = Doc::Object{};
     return std::get<Doc::Object>(d.value);
@@ -56,55 +52,6 @@ double leaf_score(autocog::data::FTTNode const & leaf) {
     double length  = leaf.length;
     if (length <= 0.0) return 0.0;
     return std::exp(-logprob / length);
-}
-
-// Resolve a `select` choice index to the actual value from content, by walking
-// the choice format's path into the content document. On any miss, the raw
-// index string is returned unchanged.
-Doc resolve_select(std::string const & index_str,
-                   autocog::data::ChoiceFormat const & cf,
-                   Doc const & content) {
-    int idx;
-    try {
-        size_t consumed = 0;
-        idx = std::stoi(index_str, &consumed);
-        if (consumed != index_str.size()) return str_doc(index_str);  // not a clean int
-    } catch (...) {
-        return str_doc(index_str);
-    }
-
-    Doc const * current = &content;
-    Doc gathered;   // backing storage for array-gather steps
-    for (auto const & step : cf.path) {
-        if (is_obj(*current)) {
-            auto const & o = std::get<Doc::Object>(current->value);
-            auto it = o.find(step.name);
-            if (it == o.end()) return str_doc(index_str);
-            current = &it->second;
-        } else if (is_arr(*current)) {
-            Doc::Array collected;
-            for (auto const & item : std::get<Doc::Array>(current->value)) {
-                if (is_obj(item)) {
-                    auto const & io = std::get<Doc::Object>(item.value);
-                    auto it = io.find(step.name);
-                    collected.push_back(it != io.end() ? it->second : null_doc());
-                } else {
-                    collected.push_back(item);
-                }
-            }
-            gathered = Doc{ std::move(collected) };
-            current = &gathered;
-        } else {
-            return str_doc(index_str);
-        }
-        if (doc_is_null(*current)) return str_doc(index_str);
-    }
-
-    if (is_arr(*current)) {
-        auto const & arr = std::get<Doc::Array>(current->value);
-        if (idx >= 0 && idx < static_cast<int>(arr.size())) return arr[idx];
-    }
-    return str_doc(index_str);
 }
 
 // Set a value into the nested frame using the field hierarchy (depth + indices).
@@ -179,9 +126,8 @@ autocog::types::Document walk_ftt_to_frame(
     autocog::data::FTT const & ftt,
     autocog::data::STA const & sta,
     std::string const & prompt_name,
-    autocog::types::Document const & content,
-    bool resolve_selects,
-    std::string const & metric
+    std::string const & metric,
+    autocog::types::Document const & content
 ) {
     auto const & prompt = sta.prompts.at(prompt_name);
     auto const & fields = prompt.fields;
@@ -204,24 +150,24 @@ autocog::types::Document walk_ftt_to_frame(
         if (s > best) { best = s; path = candidate; }
     }
 
-    Doc frame{ Doc::Object{} };
+    // Seed from the content the prompt was instantiated with, so fields a
+    // simplified FTA merged away are still present; the walk below overwrites
+    // whatever the FTT actually recorded. Seeding rather than merging
+    // afterwards also means an array arrives already populated, so a generated
+    // element written at index i lands on top of the given ones instead of
+    // padding the gap with nulls.
+    Doc frame = is_obj(content) ? content : Doc{ Doc::Object{} };
     for (auto const * node : path) {
         if (!node->field) continue;  // header/branch/endl: no value
 
         int field_idx = *node->field;
-        autocog::data::Field const & fld = fields[field_idx];
 
         std::string raw = node->text;
         while (!raw.empty() && (raw.back() == '\n' || raw.back() == '\r')) raw.pop_back();
 
+        // Verbatim: whatever the model emitted at this field is what the frame
+        // records. A `select` keeps its index.
         Doc value = str_doc(raw);
-        if (resolve_selects && !doc_is_null(content)) {
-            if (auto const * cf = std::get_if<autocog::data::ChoiceFormat>(&fld.format.value)) {
-                if (cf->mode == "select") {
-                    value = resolve_select(raw, *cf, content);
-                }
-            }
-        }
 
         std::vector<int> indices;
         if (node->indices) {

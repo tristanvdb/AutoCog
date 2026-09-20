@@ -57,7 +57,7 @@ template <> nlohmann::json to_json(autocog::data::Metadata const &);
 template <> nlohmann::json to_json(autocog::data::Syntax const &);
 template <> nlohmann::json to_json(autocog::data::SearchConfig const &);
 template <> nlohmann::json to_json(autocog::data::VocabExpr const &);   // shared by FTA and STA
-template <> nlohmann::json to_json(autocog::data::TermExpr const &);    // shared by FTA and SearchConfig
+template <> nlohmann::json to_json(autocog::data::Expr const &);        // shared by STA, FTA and SearchConfig
 template <> nlohmann::json to_json(autocog::data::FTT const &);
 template <> nlohmann::json to_json(autocog::data::FTA const &);
 template <> nlohmann::json to_json(autocog::data::STA const &);
@@ -75,7 +75,7 @@ template <> void from_json(nlohmann::json const &, autocog::data::Metadata &);
 template <> void from_json(nlohmann::json const &, autocog::data::Syntax &);
 template <> void from_json(nlohmann::json const &, autocog::data::SearchConfig &);
 template <> void from_json(nlohmann::json const &, autocog::data::VocabExpr &);
-template <> void from_json(nlohmann::json const &, autocog::data::TermExpr &);
+template <> void from_json(nlohmann::json const &, autocog::data::Expr &);
 template <> void from_json(nlohmann::json const &, autocog::data::FTT &);
 template <> void from_json(nlohmann::json const &, autocog::data::FTA &);
 template <> void from_json(nlohmann::json const &, autocog::data::STA &);
@@ -119,7 +119,10 @@ template <class T> std::unique_ptr<T> from_file(std::string const & path) {
 // JSON text. Convenient for the dev/debug command-line tools, where small
 // configs/content can be passed directly on the command line.
 inline nlohmann::json json_from_file_or_string(std::string const & arg) {
-    if (std::filesystem::exists(arg)) {
+    // Non-throwing exists: inline JSON longer than the OS path limit would
+    // otherwise raise filesystem_error (ENAMETOOLONG) instead of parsing.
+    std::error_code ec;
+    if (std::filesystem::exists(arg, ec)) {
         std::ifstream in(arg);
         if (!in)
             throw autocog::FileError("autocog::data: cannot open '" + arg + "' for reading", arg);

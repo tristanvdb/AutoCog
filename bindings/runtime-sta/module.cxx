@@ -1,6 +1,7 @@
 
 #include "autocog/runtime/sta/instantiate.hxx"
 #include "autocog/runtime/sta/walk.hxx"
+#include "autocog/runtime/fta/simplify.hxx"
 #include "autocog/codec/json.hxx"      // load/store/dump: file + JSON-string boundary
 #include "autocog/codec/python.hxx"    // read/get: direct data:: <-> py::object
 #include "autocog/data/store.hxx"
@@ -17,6 +18,7 @@
 
 namespace py    = pybind11;
 namespace sta   = autocog::runtime::sta;
+namespace rfta  = autocog::runtime::fta;
 namespace data  = autocog::data;
 namespace codec = autocog::codec;
 
@@ -103,11 +105,47 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
 
 #undef AUTOCOG_BIND_STORE
 
+    // ===== evaluate an expression =====
+    // The Python side resolves call arguments, and an argument may be an
+    // expression that only a running engine can finish -- `zero_index use
+    // __syntax__.prompt_zero_index`, whose value is a property of the run.
+    // The expression semantics are not reimplemented here: this is a door onto
+    // the same evaluator the compiler and the instantiator use.
+    module.def("eval_expr",
+        [](py::object expr, py::dict bindings) -> py::object {
+            data::Expr e;
+            codec::from_py(expr, e);
+            auto const v = data::evaluate(e, [&bindings](std::string const & ref)
+                    -> std::optional<autocog::types::Value> {
+                auto const dot = ref.find('.');
+                if (dot == std::string::npos) return std::nullopt;
+                auto const ns = ref.substr(0, dot);
+                auto const field = ref.substr(dot + 1);
+                if (!bindings.contains(py::str(ns))) return std::nullopt;
+                py::object table = bindings[py::str(ns)];
+                if (!py::isinstance<py::dict>(table)) return std::nullopt;
+                py::dict d = table.cast<py::dict>();
+                if (!d.contains(py::str(field)))
+                    throw autocog::ConfigError(
+                        "'" + ref + "': " + ns + " has no field '" + field + "'", ref);
+                data::Expr bound;
+                codec::from_py(d[py::str(field)], bound);
+                return bound.as_value();
+            });
+            return codec::to_py(data::Expr::lit(v));
+        },
+        "Evaluate an expression against a {namespace: {field: value}} table.\n\n"
+        "An expression that is already a literal is returned as it is; a "
+        "reference to a namespace the table does not carry is an error naming "
+        "the reference, never a silent None.",
+        py::arg("expr"), py::arg("bindings"));
+
     // ===== instantiate (STA -> FTA) =====
     module.def("instantiate",
         [](std::string const & program_id, std::string const & prompt_name,
            py::object content, std::string const & syntax_id,
-           std::string const & search_id) -> std::string {
+           std::string const & search_id,
+           std::string const & simplify) -> std::string {
             auto const & program = data::datastore().sta.get(program_id);
             auto const & syntax  = data::datastore().syntax.get(syntax_id);
             auto const & search  = data::datastore().search.get(search_id);
@@ -120,11 +158,18 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
             auto content_doc = to_document(content);
             std::string sta_uid = program.metadata ? program.metadata->hash : std::string{};
             auto fta = sta::instantiate(it->second, content_doc, syntax, search, sta_uid);
+            auto mode = rfta::parse_simplification(simplify);
+            if (mode != rfta::Simplification::None) fta = rfta::simplify(fta, mode);
             return data::datastore().fta.add(std::make_unique<data::FTA>(std::move(fta)));
         },
-        "Instantiate an STA prompt into an FTA; returns a handle",
+        "Instantiate an STA prompt into an FTA; returns a handle.\n\n"
+        "simplify ('none' | 'limited' | 'full') collapses a fully-determined "
+        "FTA — one whose content was a complete frame — for finetuning export. "
+        "It throws if anything is left to generate, and the result cannot be "
+        "scored: merging text re-tokenizes across the seams.",
         py::arg("program_id"), py::arg("prompt"), py::arg("content"),
-        py::arg("syntax_id"), py::arg("search_id"));
+        py::arg("syntax_id"), py::arg("search_id"),
+        py::arg("simplify") = "none");
 
     // ===== FTT -> frame =====
     module.def("walk_ftt_to_frame",
@@ -132,11 +177,18 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
            std::string const & ftt_id, py::object content) -> py::object {
             auto const & program = data::datastore().sta.get(program_id);
             auto const & ftt     = data::datastore().ftt.get(ftt_id);
-            auto content_doc = to_document(content);
-            auto frame = sta::walk_ftt_to_frame(
-                ftt, program, prompt_name, content_doc, /*resolve_selects=*/true);
+            auto content_doc = content.is_none() ? autocog::types::Document{}
+                                                 : to_document(content);
+            auto frame = sta::walk_ftt_to_frame(ftt, program, prompt_name,
+                                                "best", content_doc);
             return codec::to_py(frame);
         },
-        "Walk a stored FTT (by handle) into the prompt's frame; returns the frame dict",
-        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"), py::arg("content"));
+        "Walk a stored FTT (by handle) into the prompt's frame; returns the frame dict. "
+        "Field values are verbatim: a select field holds the emitted index.\n\n"
+        "content seeds the frame with the document the prompt was instantiated "
+        "from. A simplified FTA has no node for a field its content supplied, so "
+        "those fields would otherwise be absent; the FTT overwrites whatever it "
+        "recorded. Harmless on an unsimplified FTT, where every field has a node.",
+        py::arg("program_id"), py::arg("prompt"), py::arg("ftt_id"),
+        py::arg("content") = py::none());
 }
