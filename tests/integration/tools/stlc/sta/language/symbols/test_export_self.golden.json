@@ -1,0 +1,55 @@
+{
+  "entry_points": {
+    "worker": {
+      "inputs": {},
+      "outputs": {
+        "out": {
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "worker"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "22890a4e2796e06913bfa4d49b0c99f725bd97e1696caf8a2079cf8c875883fc",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "worker": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 0,
+          "field": 0,
+          "flow": -1
+        }
+      ],
+      "channels": [],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "out",
+          "range": null
+        }
+      ],
+      "flows": {},
+      "name": "worker"
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}

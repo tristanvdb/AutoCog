@@ -45,7 +45,7 @@ std::string FieldFormat::hash() const {
   h.put(static_cast<unsigned>(value.index()));
   std::visit(overloaded{
     [&](std::monostate){ },
-    [&](CompletionFormat const & f){ h.put(f.length); h.put(f.vocab); },
+    [&](CompletionFormat const & f){ h.put(f.length); h.put(f.vocab); h.put(f.stop); },
     [&](EnumFormat const & f){ h.put(f.values); },
     [&](ChoiceFormat const & f){ h.put(f.mode); put_paths(h, f.path); },
   }, value);

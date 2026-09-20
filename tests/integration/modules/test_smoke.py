@@ -79,6 +79,29 @@ class TestCompile:
         assert "main" in prog.prompts
         assert "main" in prog.entry_points
 
+    def test_compile_exports_are_entry_points(self, tmp_path):
+        """Each export creates an entry point; bare `export X;` uses X's name."""
+        import autocog
+        stl = tmp_path / "multi.stl"
+        stl.write_text(
+            'prompt first { is { t is text<length=10>; } return { use t; } }\n'
+            'prompt second { is { t is text<length=10>; } return { use t; } }\n'
+            'export first;\n'
+            'export second as alt;\n'
+        )
+        prog = autocog.compile(str(stl))
+        assert set(prog.entry_points.keys()) == {"first", "alt"}
+
+    def test_compile_exportless_implicit_main(self, tmp_path):
+        """No exports and no requested entries: implicit `main` entry point."""
+        import autocog
+        stl = tmp_path / "plain.stl"
+        stl.write_text(
+            'prompt main { is { t is text<length=10>; } return { use t; } }\n'
+        )
+        prog = autocog.compile(str(stl))
+        assert "main" in prog.entry_points
+
     def test_emit_sta(self, repo_root):
         import autocog
         prog = autocog.compile(str(repo_root / "share/demos/mcq/select.stl"))
@@ -806,9 +829,32 @@ class TestCoverageEdgeCases:
             with zipfile.ZipFile(stapp_path) as zf:
                 names = zf.namelist()
                 assert any(n.startswith("stlib/") for n in names), f"No stlib in {names}"
-                assert "stlib/thoughts.stl" in names
+                # Vendoring is recursive and preserves the stdlib layout.
+                assert "stlib/thinking/thoughts.stl" in names
+                assert "stlib/thinking/thought.stl" in names
+                assert "stlib/datastore.py" in names
+                # Only importable files are vendored (no READMEs etc).
+                assert not any(n.endswith(".md") for n in names if n.startswith("stlib/"))
         finally:
             os.unlink(stapp_path)
+
+    def test_stapp_vendor_stdlib_recompile(self, repo_root):
+        """A vendored .stapp recompiles using its bundled stdlib tree."""
+        import tempfile, os, shutil
+        from autocog.stapp import pack, load_stapp
+        stl = str(repo_root / "share/demos/mcq/select-iter.stl")
+        with tempfile.NamedTemporaryFile(suffix=".stapp", delete=False) as f:
+            stapp_path = f.name
+        temp_dir = None
+        try:
+            pack(stl, [], stapp_path, vendor_stdlib=True)
+            prog, manifest, temp_dir, include_paths = load_stapp(stapp_path, recompile=True)
+            assert any(p.endswith("stlib") for p in include_paths)
+            assert "main" in prog.sta["entry_points"]
+        finally:
+            os.unlink(stapp_path)
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_stapp_no_compile(self, repo_root):
         """Pack with --no-compile omits STA."""

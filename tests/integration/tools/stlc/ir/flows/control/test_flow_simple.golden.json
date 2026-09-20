@@ -1,7 +1,7 @@
 {
   "defines": {},
   "entry_points": {
-    "main": "main"
+    "entry": "main"
   },
   "prompts": {
     "main": {

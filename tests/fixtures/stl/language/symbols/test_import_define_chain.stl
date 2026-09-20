@@ -1,0 +1,15 @@
+// Two-hop imported defines: provider -> hub -> here, plus a hub-side alias.
+
+from "test_define_hub_lib.stl" import base_length, hub_length;
+
+prompt main {
+  is {
+    a is text<length=base_length>;
+    b is text<length=hub_length>;
+  }
+  return {
+    use a;
+  }
+}
+
+export main;

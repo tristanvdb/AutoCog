@@ -1,0 +1,35 @@
+// Brainstorm: divergent idea generation. Produces many rough thoughts
+// from a task description — quantity over polish. Pair with critique/
+// revise (or reflexion) to converge on a result.
+//
+// Call shape:
+//   ideas call brainstorm<subject="...", max_ideas=8> {
+//     task use ...;
+//   } bind(_,response);
+
+from "thinking/thought.stl" import Thought;
+
+prompt brainstorm {
+  argument subject;
+
+  argument length = 15;
+  argument min_ideas = 3;
+  argument max_ideas = 10;
+
+  is {
+    task[1:10] is text;
+    ideas[min_ideas:max_ideas] is Thought<length=length, mode="rough", goal="brainstorm ideas">;
+  }
+  channel {
+    task get task;
+  }
+  return {
+    subject is f"Brainstorm about {subject}";
+    response use ideas;
+  }
+  annotate {
+    _ as "You are brainstorming: produce many distinct rough ideas, without judging them.";
+    task as "the task to brainstorm about";
+    ideas as "distinct rough ideas, one per line, no elaboration";
+  }
+}

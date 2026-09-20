@@ -1,0 +1,51 @@
+// Critique: adversarial review of a draft. Produces structured critiques
+// (issue, severity, suggestion) instead of free-form commentary, so a
+// downstream prompt (see revise.stl) can act on each one.
+//
+// Call shape:
+//   feedback call critique<subject="..."> {
+//     draft use ...;
+//   } bind(_,critiques);
+
+from "thinking/thought.stl" import Thought;
+
+record Critique {
+  argument length = 30;
+
+  is {
+    issue is text<length=length>;
+    severity is enum("minor", "major", "blocking");
+    suggestion is text<length=length>;
+  }
+}
+
+prompt critique {
+  argument subject;
+
+  argument length = 30;
+  argument min_critiques = 1;
+  argument max_critiques = 5;
+
+  is {
+    draft[1:20] is text;
+    reading[1:5] is Thought<length=20, mode="critical", goal="find weaknesses">;
+    critiques[min_critiques:max_critiques] is Critique<length=length>;
+  }
+  channel {
+    draft get draft;
+  }
+  return {
+    subject is f"Critique of {subject}";
+    intermediate use reading;
+    critiques use critiques;
+  }
+  annotate {
+    _ as "You are reviewing a draft: find its weaknesses and say how to fix them.";
+    draft as "the draft under review";
+    reading as "your critical reading of the draft";
+    critiques as "one entry per distinct problem found";
+    critiques.issue as "what is wrong";
+    critiques.severity as "how serious the issue is";
+    critiques.suggestion as "how to address the issue";
+  }
+}

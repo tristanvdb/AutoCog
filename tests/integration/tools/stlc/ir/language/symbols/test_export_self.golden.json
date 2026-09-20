@@ -1,0 +1,30 @@
+{
+  "defines": {},
+  "entry_points": {
+    "worker": "worker"
+  },
+  "prompts": {
+    "worker": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "out",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "worker",
+      "name": "worker",
+      "return": null
+    }
+  },
+  "records": {}
+}

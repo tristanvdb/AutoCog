@@ -342,6 +342,10 @@
         "vocab": {
           "type": "string",
           "description": "Reference into the prompt vocab table (vocab_<hash>)."
+        },
+        "stop": {
+          "type": "string",
+          "description": "Per-field stop override: absent = the syntax's completion_stop; empty string = no early stop (the completion fills its exact token budget); otherwise the stop text."
         }
       },
       "required": [

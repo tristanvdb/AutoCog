@@ -380,10 +380,14 @@ static FormatResult generate_format(
                 auto v = evaluator.evaluate_expression(scope, assign.data.value, ctx);
                 if (k == "length" && std::holds_alternative<int>(v)) {
                     fmt.length = std::get<int>(v);
+                } else if (k == "stop" && std::holds_alternative<std::string>(v)) {
+                    // Per-field stop override: "" means no early stop (the
+                    // completion fills its exact token budget).
+                    fmt.stop = std::get<std::string>(v);
                 } else {
                     driver.emit_error(
                         "'" + k + "' is not a structural parameter of text "
-                        "(only length, vocab). Search tuning belongs in a "
+                        "(only length, vocab, stop). Search tuning belongs in a "
                         "search { text." + k + " is ...; } block.",
                         assign.location);
                 }

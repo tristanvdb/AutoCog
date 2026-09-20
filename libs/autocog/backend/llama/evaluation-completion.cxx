@@ -76,7 +76,7 @@ static void calculate_diversity_bonuses(std::vector<BeamState> & beams, float co
 
 static unsigned expand_beam(
   Model & model, ContextID ctx, BeamState const & beam,
-  data::CompleteAction const & ca, TokenSequence const & stop,
+  data::CompleteAction const & ca, std::vector<bool> const * stop_mask,
   std::vector<bool> const & mask, TokenSequence const & base_tokens,
   std::vector<BeamState> & beams
 ) {
@@ -101,10 +101,12 @@ static unsigned expand_beam(
       calculate_repetition_penalty(beam_tokens, new_beam.repetition_penalty, ca.repetition.value());
     }
 
-    new_beam.stopped = (stop.size() <= new_beam.tokens.size()) &&
-      std::equal(stop.begin(), stop.end(), new_beam.tokens.end() - stop.size());
+    // A completion stops when it emits any token of the stop vocab; the stop
+    // token itself is not part of the output. No stop vocab: never stops early.
+    TokenID const emitted = new_beam.tokens.back();
+    new_beam.stopped = stop_mask && (*stop_mask)[emitted];
     if (new_beam.stopped)
-      new_beam.tokens.erase(new_beam.tokens.end() - stop.size(), new_beam.tokens.end());
+      new_beam.tokens.pop_back();
   }
   return num_token_eval;
 }
@@ -125,14 +127,14 @@ static void prune_beams(std::vector<BeamState> & beams, unsigned beam_width) {
 
 static bool beam_search_step(
   Model & model, ContextID ctx,
-  data::CompleteAction const & ca, TokenSequence const & stop,
+  data::CompleteAction const & ca, std::vector<bool> const * stop_mask,
   std::vector<bool> const & mask, TokenSequence const & base_tokens,
   std::vector<BeamState> & current_beams, unsigned & num_token_eval
 ) {
   std::vector<BeamState> next_beams;
   for (BeamState const & beam : current_beams) {
     if (beam.stopped) next_beams.push_back(beam);
-    else num_token_eval += expand_beam(model, ctx, beam, ca, stop, mask, base_tokens, next_beams);
+    else num_token_eval += expand_beam(model, ctx, beam, ca, stop_mask, mask, base_tokens, next_beams);
   }
   if (ca.diversity) calculate_diversity_bonuses(next_beams, ca.diversity.value());
 
@@ -153,16 +155,27 @@ unsigned Evaluation::evaluate_completion(PathState & state) {
   PreparedAction const & p = prepared.actions[state.action];
 
   auto [model, ctx] = this->restore(state);
-  std::vector<bool> const & mask = ca.vocab
+  std::vector<bool> const & gen_mask = ca.vocab
       ? model.vocab_mask(*ca.vocab, fta.vocabs.at(*ca.vocab))
       : model.full_vocab_mask();
+  std::vector<bool> const * stop_mask = ca.stop
+      ? &model.vocab_mask(*ca.stop, fta.vocabs.at(*ca.stop))
+      : nullptr;
+
+  // The stop set is unioned into the generation mask so a restrictive vocab
+  // cannot make termination unreachable. A vocab that must fill its exact
+  // token budget (e.g. exactly three digits) simply has no stop set.
+  std::vector<bool> mask = gen_mask;
+  if (stop_mask)
+    for (size_t i = 0; i < mask.size() && i < stop_mask->size(); ++i)
+      if ((*stop_mask)[i]) mask[i] = true;
 
   std::vector<BeamState> beams;
   beams.emplace_back();
 
   unsigned num_token_eval = 0;
   for (unsigned pos = 0; pos < ca.length; ++pos) {
-    bool should_stop = beam_search_step(model, ctx, ca, p.stop, mask, state.tokens, beams, num_token_eval);
+    bool should_stop = beam_search_step(model, ctx, ca, stop_mask, mask, state.tokens, beams, num_token_eval);
     if (should_stop) break;
   }
 

@@ -85,6 +85,7 @@ nlohmann::json to_json(FieldFormat const & ff) {
       nlohmann::json j = {{"type","completion"}};
       if (f.length) j["length"] = *f.length;
       if (f.vocab)  j["vocab"]  = *f.vocab;
+      if (f.stop)   j["stop"]   = *f.stop;
       return j;
     },
     [](EnumFormat const & f) -> nlohmann::json { return {{"type","enum"}, {"values", f.values}}; },
@@ -103,6 +104,7 @@ void from_json(nlohmann::json const & dom, FieldFormat & out) {
     auto & f = out.value.emplace<CompletionFormat>();
     if (dom.contains("length")) f.length = dom["length"].get<int>();
     if (dom.contains("vocab") && !dom["vocab"].is_null()) f.vocab = dom["vocab"].get<std::string>();
+    if (dom.contains("stop") && !dom["stop"].is_null()) f.stop = dom["stop"].get<std::string>();
   } else if (type == "enum") {
     auto & f = out.value.emplace<EnumFormat>();
     for (auto const & v : dom.at("values")) f.values.push_back(v.get<std::string>());

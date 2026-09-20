@@ -1,0 +1,13 @@
+// Bare export: `export X;` makes X an entry point under its own name.
+
+record Data {
+  is text;
+}
+
+prompt processor {
+  is {
+    input is Data;
+  }
+}
+
+export processor;

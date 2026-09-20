@@ -1,0 +1,18 @@
+// Driver: brainstorm called as a sub-prompt.
+from "thinking/brainstorm.stl" import brainstorm;
+
+prompt entry {
+  is {
+    ideas[3:10] is text<length=15>;
+  }
+  channel {
+    ideas call brainstorm<subject="the driver test", max_ideas=10> {
+      task get task;
+    } bind(_,response);
+  }
+  return {
+    use ideas;
+  }
+}
+
+export entry as main;

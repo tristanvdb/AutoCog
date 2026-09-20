@@ -1,0 +1,25 @@
+// One-hop imported defines, exercised at every kind of use site.
+
+from "test_define_provider_lib.stl" import base_length, derived_length;
+
+define local_offset = (base_length + 2);
+
+record Note {
+  argument length = base_length;
+  is text<length=length>;
+}
+
+prompt main {
+  is {
+    a is text<length=base_length>;
+    b[base_length] is text<length=4>;
+    c is Note<length=derived_length>;
+    d is Note;
+    e is text<length=local_offset>;
+  }
+  return {
+    use a;
+  }
+}
+
+export main;

@@ -29,10 +29,10 @@ pybind11::object to_py(Action const & act) {
       d["beams"]     = a.beams;
       d["ahead"]     = a.ahead;
       d["width"]     = a.width;
-      d["stop_text"] = a.stop_text;
       if (a.repetition) d["repetition"] = *a.repetition;
       if (a.diversity)  d["diversity"]  = *a.diversity;
       if (a.vocab)      d["vocab"]      = *a.vocab;
+      if (a.stop)       d["stop"]       = *a.stop;
     },
     [&](ChooseAction const & a) {
       d["type"]      = "choose";
@@ -64,10 +64,10 @@ void from_py(pybind11::object const & obj, Action & a) {
     c.beams     = d["beams"].cast<unsigned>();
     c.ahead     = d["ahead"].cast<unsigned>();
     c.width     = d["width"].cast<unsigned>();
-    c.stop_text = d["stop_text"].cast<std::string>();
     if (d.contains("repetition") && !d["repetition"].is_none()) c.repetition = d["repetition"].cast<float>();
     if (d.contains("diversity")  && !d["diversity"].is_none())  c.diversity  = d["diversity"].cast<float>();
     if (d.contains("vocab")      && !d["vocab"].is_none())      c.vocab      = d["vocab"].cast<std::string>();
+    if (d.contains("stop")       && !d["stop"].is_none())       c.stop       = d["stop"].cast<std::string>();
   } else if (type == "choose") {
     auto & ch = a.body.emplace<ChooseAction>();
     if (d.contains("choices")) ch.choices = d["choices"].cast<std::vector<std::string>>();

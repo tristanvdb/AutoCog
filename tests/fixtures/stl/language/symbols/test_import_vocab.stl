@@ -1,0 +1,20 @@
+// Imported vocabs: one-hop from the provider, and via a hub re-export.
+
+from "test_vocab_provider_lib.stl" import digits, letters;
+from "test_vocab_hub_lib.stl" import alnum;
+
+vocab local_mix = (digits | letters);
+
+prompt main {
+  is {
+    pin is text<length=4, vocab=digits, stop="">;
+    word is text<length=8, vocab=letters>;
+    tag is text<length=8, vocab=alnum>;
+    mix is text<length=8, vocab=local_mix>;
+  }
+  return {
+    use pin;
+  }
+}
+
+export main;

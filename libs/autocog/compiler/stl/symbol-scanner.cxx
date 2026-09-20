@@ -122,6 +122,18 @@ void SymbolScanner::pre<ast::Tag::Alias>(ast::Alias const & node) {
     name = node.data.target.data.name.data.name;
   }
   auto scope = this->scope();
+
+  if (node.data.is_export) {
+    this->driver.exported_entry_points.emplace_back(this->fileid.value(), name);
+    // A self-named export (`export X;` or `export X as X;`) declares an entry
+    // point without introducing a new symbol: the exported declaration already
+    // owns that name in this scope.
+    if (name == node.data.target.data.name.data.name
+        && node.data.target.data.config.empty()) {
+      return;
+    }
+  }
+
   auto alias = scope + "::" + name;
   auto sym = UnresolvedAlias(this->fileid.value(), alias, node.data.target, node);
 

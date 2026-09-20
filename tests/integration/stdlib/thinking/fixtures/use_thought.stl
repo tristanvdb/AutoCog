@@ -1,0 +1,20 @@
+// Driver: Thought record — direct use, parameterization, alias.
+from "thinking/thought.stl" import Thought;
+
+alias Thought<length=10, mode="concise", goal="summarize"> as ConciseThought;
+
+prompt entry {
+  is {
+    topic is text<length=20>;
+    work[1:5] is Thought<length=25, mode="analytical", goal="reason step by step">;
+    summary is ConciseThought;
+  }
+  channel {
+    topic get topic;
+  }
+  return {
+    use summary;
+  }
+}
+
+export entry as main;

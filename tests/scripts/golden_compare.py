@@ -23,6 +23,11 @@ import json
 import sys
 from pathlib import Path
 
+# jsonschema descends recursive schemas (FTT children, vocab expressions) with
+# a deep Python call stack per level; legitimate deep artifacts (e.g. the
+# deep-nesting fixtures' FTTs) overflow the default 1000-frame limit.
+sys.setrecursionlimit(20000)
+
 import deepdiff
 
 # ---------------------------------------------------------------------------

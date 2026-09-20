@@ -1,0 +1,48 @@
+{
+  "defines": {},
+  "entry_points": {
+    "processor": "processor"
+  },
+  "prompts": {
+    "processor": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "input",
+          "range": null,
+          "refname": "Data"
+        }
+      ],
+      "flows": [],
+      "mangled_name": "processor",
+      "name": "processor",
+      "return": null
+    }
+  },
+  "records": {
+    "Data": {
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "Data",
+          "range": null
+        }
+      ],
+      "name": "Data"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // Error: a non-define symbol (prompt) used as a value
-// expect-error: Found a symbol for another object than a define
+// expect-error: Symbol `other` is not a define or argument
 prompt other { is { z is text<length=4>; } return { use z; } }
 define x = (other + 1);
 prompt p { is { f is text<length=4>; } return { use f; } }

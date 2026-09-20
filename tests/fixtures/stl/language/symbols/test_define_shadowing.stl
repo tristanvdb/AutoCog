@@ -1,0 +1,23 @@
+// Defines resolve lexically, in the file that references them: this file's
+// base_length must NOT leak into the imported prompt, whose own file imports
+// base_length = 12 from the provider (pinned by the golden STA lengths).
+
+define base_length = 99;
+
+from "test_define_user_lib.stl" import refine;
+
+prompt main {
+  is {
+    got[1:3] is text<length=base_length>;
+  }
+  channel {
+    got call refine {
+      seed get seed;
+    } bind(_,response);
+  }
+  return {
+    use got;
+  }
+}
+
+export main;

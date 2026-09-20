@@ -1,0 +1,17 @@
+// An arm that is broken on purpose: it renders fine and dies on the return.
+// The preflight exists to find these before a campaign pays for them, so it
+// needs one that stays broken.
+from "broken.py" import explode;
+
+prompt main {
+  is {
+    question is text<length=50>;
+    answer is text<length=10>;
+  }
+  channel {
+    question get question;
+  }
+  return call explode _;
+}
+
+export main as main;

@@ -91,7 +91,7 @@ int main(int argc, char ** argv) {
     fta.queue_metric = "logprob";
     { Action a; a.uid = "a0"; TextAction t; t.text = "hello"; a.body = t; a.successors = {"a1"}; fta.actions.push_back(a); }
     { Action a; a.uid = "a1"; ChooseAction c; c.choices = {"x", "y"}; c.threshold = 0.5f; c.width = 2; a.body = c; a.successors = {"a2", "a2"}; a.field = 0; fta.actions.push_back(a); }
-    { Action a; a.uid = "a2"; CompleteAction c; c.length = 8; c.threshold = 0.1f; c.beams = 1; c.ahead = 1; c.width = 1; c.stop_text = "\n"; c.vocab = "vocab_x"; a.body = c; fta.actions.push_back(a); }
+    { Action a; a.uid = "a2"; CompleteAction c; c.length = 8; c.threshold = 0.1f; c.beams = 1; c.ahead = 1; c.width = 1; c.vocab = "vocab_x"; c.stop = "vocab_x"; a.body = c; fta.actions.push_back(a); }
     VocabExpr leaf; leaf.kind = VocabExpr::Kind::Tokenize; leaf.strings = {"0", "1"};
     fta.vocabs.emplace("vocab_x", leaf);
     fta.finalize();

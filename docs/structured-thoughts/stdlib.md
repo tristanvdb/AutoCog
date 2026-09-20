@@ -1,15 +1,31 @@
 # Standard Library
 
-The stdlib ships with the autocog package. Its components are available via bare imports — no path prefix needed:
+The stdlib ships with the autocog package. Its components are imported by path
+relative to the stdlib root (which is always on the include path):
 
 ```
-from "thoughts.stl" import Thought, reflexion;
+from "thinking/thoughts.stl" import Thought, reflexion;
 from "datastore.py" import store, retrieve;
 ```
 
-## thoughts.stl
+## thinking/ — Thinking Library
 
-Reusable thinking primitives for chain-of-thought, reflection, and iterative refinement.
+Reusable thinking primitives and patterns: chain-of-thought, reflection,
+iterative refinement, planning, and deliberation. One pattern per file;
+`thinking/thoughts.stl` is an umbrella that re-exports everything. See
+[share/library/stlib/thinking/README.md](../../share/library/stlib/thinking/README.md)
+for the full catalog and the conventions the patterns follow.
+
+| File | Exports | Pattern |
+|------|---------|---------|
+| `thinking/thought.stl` | `Thought` | The core parameterized reasoning record |
+| `thinking/reflexion.stl` | `reflexion` | Refine an initial attempt through private work |
+| `thinking/brainstorm.stl` | `brainstorm` | Divergent idea generation |
+| `thinking/critique.stl` | `Critique`, `critique` | Structured review of a draft |
+| `thinking/revise.stl` | `revise` | Apply feedback to a draft (pairs with critique) |
+| `thinking/decompose.stl` | `Step`, `decompose` | Plan-then-act task breakdown |
+| `thinking/hypothesize.stl` | `Hypothesis`, `hypothesize` | Guess-then-check with explicit confidence |
+| `thinking/deliberate.stl` | `Perspective`, `deliberate` | Multi-perspective debate and synthesis |
 
 ### Thought
 
@@ -92,6 +108,22 @@ channel {
     initial use draft.outline;
   } bind(_, response);
 }
+```
+
+## vocabs.stl
+
+Default vocabularies — building blocks for constraining `text` completions,
+defined over token *surfaces* so they adapt to whatever model runs the program:
+
+| Vocab | Tokens |
+|-------|--------|
+| `ascii_token` | Surface entirely printable ASCII (plus tab/newline) — no partial multi-byte characters |
+| `ascii_char` | Single printable-ASCII-character tokens: `text<length=N, vocab=ascii_char>` is exactly N characters |
+| `ascii_inline` | `ascii_token` without newline-carriers (the shape of the syntaxes' default completion vocab) |
+| `digit` | The ten digits — exact-length numeric fields via `text<length=N, vocab=digit, stop="">` |
+
+```
+from "vocabs.stl" import ascii_char, digit;
 ```
 
 ## datastore.py

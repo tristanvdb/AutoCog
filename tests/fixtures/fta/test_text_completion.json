@@ -5,7 +5,9 @@
       "type": "text",
       "text": "Hello ",
       "evaluate": false,
-      "successors": ["response"]
+      "successors": [
+        "response"
+      ]
     },
     {
       "uid": "response",
@@ -15,9 +17,11 @@
       "beams": 1,
       "ahead": 1,
       "width": 1,
-      "stop_text": "<|eot_id|>",
       "vocab": "vocab_test_lower",
-      "successors": ["end"]
+      "successors": [
+        "end"
+      ],
+      "stop": "vocab_stop"
     },
     {
       "uid": "end",
@@ -28,6 +32,17 @@
     }
   ],
   "vocabs": {
-    "vocab_test_lower": { "kind": "regex", "strings": ["^[a-z]+$"] }
+    "vocab_test_lower": {
+      "kind": "regex",
+      "strings": [
+        "^[a-z]+$"
+      ]
+    },
+    "vocab_stop": {
+      "kind": "tokenize",
+      "strings": [
+        "<|eot_id|>"
+      ]
+    }
   }
 }

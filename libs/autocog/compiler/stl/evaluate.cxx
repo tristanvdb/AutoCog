@@ -297,10 +297,35 @@ ir::Value Evaluator::retrieve_value(
       varmap[varname] = std::monostate{}; // causes cycles to return error values
       value = evaluate(scope, defn.data.init.value(), varmap);
       varmap[varname] = value;
-      
+
+    } else if (auto const * imp = std::get_if<UnresolvedImport>(&sym)) {
+      // A define imported from another file: follow the import and evaluate
+      // the target lexically, in its own file scope (memoized in that file's
+      // context). The varmap sentinel makes import cycles surface as the
+      // circular-dependency diagnostic below instead of recursing forever.
+      if (!imp->target.data.config.empty()) {
+        throw CompileError("Imported symbol `" + varname + "` is parametrized: it cannot be evaluated in an expression.", loc);
+      }
+      auto target_scope = std::to_string(imp->fileid);
+      auto const & target_name = imp->target.data.name.data.name;
+      varmap[varname] = std::monostate{};
+      value = retrieve_value(target_scope, target_name, this->tables.contexts[target_scope], loc);
+      varmap[varname] = value;
+
+    } else if (auto const * ali = std::get_if<UnresolvedAlias>(&sym)) {
+      // Same for a file-local alias of a define.
+      if (!ali->target.data.config.empty()) {
+        throw CompileError("Alias `" + varname + "` of a parametrized object cannot be evaluated in an expression.", loc);
+      }
+      auto target_scope = std::to_string(ali->fileid);
+      auto const & target_name = ali->target.data.name.data.name;
+      varmap[varname] = std::monostate{};
+      value = retrieve_value(target_scope, target_name, this->tables.contexts[target_scope], loc);
+      varmap[varname] = value;
+
     } else {
       // FIXME could look up the value in the parent scope but do we authorize shadowing of globals by object of different kind?
-      throw CompileError("Found a symbol for another object than a define when looking up " + varname + " for evaluation!", loc);
+      throw CompileError("Symbol `" + varname + "` is not a define or argument: it cannot be evaluated in an expression.", loc);
     }
   }
   if (std::holds_alternative<std::monostate>(value)) {
@@ -439,6 +464,26 @@ std::unique_ptr<ir::VocabExpr> Evaluator::resolve_vocab(
   if (sym_it == tables.symbols.end()) {
     throw CompileError("undefined vocab `" + name + "`.", loc);
     return nullptr;
+  }
+  // A vocab imported from another file (or aliased locally): follow the
+  // reference and resolve the target lexically, in its own file scope —
+  // mirroring how retrieve_value() follows imported defines. Cross-file
+  // cycles trip the vocab_in_progress guard above.
+  if (auto const * imp = std::get_if<UnresolvedImport>(&sym_it->second)) {
+    if (!imp->target.data.config.empty()) {
+      throw CompileError("imported vocab `" + name + "` cannot be parametrized.", loc);
+    }
+    auto target_scope = std::to_string(imp->fileid);
+    return resolve_vocab(target_scope, imp->target.data.name.data.name,
+                         this->tables.contexts[target_scope], loc);
+  }
+  if (auto const * ali = std::get_if<UnresolvedAlias>(&sym_it->second)) {
+    if (!ali->target.data.config.empty()) {
+      throw CompileError("alias `" + name + "` of a parametrized object is not a vocab.", loc);
+    }
+    auto target_scope = std::to_string(ali->fileid);
+    return resolve_vocab(target_scope, ali->target.data.name.data.name,
+                         this->tables.contexts[target_scope], loc);
   }
   if (!std::holds_alternative<DefineSymbol>(sym_it->second)) {
     throw CompileError("`" + name + "` is not a vocab.", loc);

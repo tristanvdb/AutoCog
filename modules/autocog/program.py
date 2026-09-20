@@ -198,7 +198,7 @@ def compile(filepath, includes=None, entry_points=None):
     pid = compiler_stl_cxx.compile(
         filepath,
         includes=inc,
-        entry_points=entry_points or ["main"]
+        entry_points=entry_points or []
     )
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).

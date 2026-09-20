@@ -1,0 +1,18 @@
+// Driver: hypothesize called as a sub-prompt, Hypothesis results.
+from "thinking/hypothesize.stl" import Hypothesis, hypothesize;
+
+prompt entry {
+  is {
+    guesses[1:5] is Hypothesis<length=30>;
+  }
+  channel {
+    guesses call hypothesize<subject="the driver test"> {
+      question get question;
+    } bind(_,hypotheses);
+  }
+  return {
+    use guesses;
+  }
+}
+
+export entry as main;

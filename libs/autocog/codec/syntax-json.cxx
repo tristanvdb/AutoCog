@@ -25,6 +25,7 @@ nlohmann::json to_json(Syntax const & s) {
     {"detailed_formats",   s.detailed_formats},
     {"completion_stop",    s.completion_stop},
   };
+  if (s.completion_vocab) j["completion_vocab"] = to_json(*s.completion_vocab);
   if (s.metadata) j["metadata"] = to_json(*s.metadata);
   j["provenance"] = s.provenance;
   return j;
@@ -51,6 +52,10 @@ void from_json(nlohmann::json const & dom, Syntax & s) {
   s.prompt_zero_index  = dom.at("prompt_zero_index").get<bool>();
   s.detailed_formats   = dom.at("detailed_formats").get<bool>();
   s.completion_stop    = dom.at("completion_stop").get<std::string>();
+  if (dom.contains("completion_vocab") && !dom["completion_vocab"].is_null()) {
+    s.completion_vocab.emplace();
+    from_json(dom["completion_vocab"], *s.completion_vocab);
+  }
   if (dom.contains("metadata")) { s.metadata.emplace(); from_json(dom.at("metadata"), *s.metadata); }
   if (dom.contains("provenance"))
     s.provenance = dom.at("provenance").get<std::map<std::string, std::string>>();

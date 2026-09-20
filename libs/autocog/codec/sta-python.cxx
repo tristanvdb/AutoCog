@@ -85,6 +85,7 @@ pybind11::object to_py(FieldFormat const & ff) {
       py::dict d; d["type"]="completion";
       if (f.length) d["length"]=*f.length;
       if (f.vocab)  d["vocab"]=*f.vocab;
+      if (f.stop)   d["stop"]=*f.stop;
       return d;
     },
     [](EnumFormat const & f) -> py::object { py::dict d; d["type"]="enum"; d["values"]=f.values; return d; },
@@ -103,6 +104,7 @@ void from_py(pybind11::object const & obj, FieldFormat & out) {
     auto & f = out.value.emplace<CompletionFormat>();
     if (d.contains("length")) f.length = d["length"].cast<int>();
     if (d.contains("vocab") && !d["vocab"].is_none()) f.vocab = d["vocab"].cast<std::string>();
+    if (d.contains("stop") && !d["stop"].is_none()) f.stop = d["stop"].cast<std::string>();
   } else if (type == "enum") {
     auto & f = out.value.emplace<EnumFormat>();
     f.values = d["values"].cast<std::vector<std::string>>();

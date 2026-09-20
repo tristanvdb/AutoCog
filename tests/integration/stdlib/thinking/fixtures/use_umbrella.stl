@@ -1,0 +1,25 @@
+// Driver: the umbrella re-exports every pattern (compile-only coverage
+// that thoughts.stl stays in sync with the library contents).
+from "thinking/thoughts.stl" import Thought, reflexion, brainstorm;
+from "thinking/thoughts.stl" import Critique, critique, revise;
+from "thinking/thoughts.stl" import Step, decompose, Hypothesis, hypothesize;
+from "thinking/thoughts.stl" import Perspective, deliberate;
+
+prompt entry {
+  is {
+    topic is text<length=20>;
+    work[1:3] is Thought<length=20>;
+    guess is Hypothesis;
+    view is Perspective;
+    todo is Step;
+    note is Critique;
+  }
+  channel {
+    topic get topic;
+  }
+  return {
+    use work;
+  }
+}
+
+export entry as main;

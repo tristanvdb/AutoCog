@@ -186,8 +186,9 @@
         "threshold": {
           "type": "number"
         },
-        "stop_text": {
-          "type": "string"
+        "stop": {
+          "type": "string",
+          "description": "Reference into the FTA vocab table: emitting any member token ends the completion (the token is dropped from the output); the set is unioned into the generation mask. Absent: no early stop, the completion runs to exactly `length` tokens."
         },
         "successors": {
           "type": "array",

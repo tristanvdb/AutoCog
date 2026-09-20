@@ -1,0 +1,24 @@
+// Default vocabularies: building blocks for constraining text completions.
+//
+// A token's *surface* is the text it detokenizes to. These sets are defined
+// over surfaces, so they adapt to whatever model the program runs on.
+//
+//   from "vocabs.stl" import ascii_token, ascii_char;
+
+// Tokens whose surface is entirely printable ASCII (plus tab and newline).
+// Under this vocab no token carries a partial multi-byte character, so every
+// generated sequence decodes cleanly and character counts equal byte counts.
+vocab ascii_token = regex("^[ -~\t\n]+$");
+
+// Single printable-ASCII-character tokens: with this vocab, one token is one
+// character, so text<length=N> means exactly N characters.
+vocab ascii_char = regex("^[ -~\t\n]$");
+
+// ASCII tokens that do not carry a newline anywhere in their surface. This is
+// the shape of the shipped syntaxes' default completion vocab: a newline can
+// then only be emitted as the bare stop token, so the stop fires exactly
+// instead of sailing past newlines glued inside multi-character tokens.
+vocab ascii_inline = (ascii_token - regex("\n"));
+
+// Digits: exact-length numeric fields (text<length=N, vocab=digit, stop="">).
+vocab digit = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");

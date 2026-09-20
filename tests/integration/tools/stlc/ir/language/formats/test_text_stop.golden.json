@@ -1,0 +1,88 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion",
+            "vocab": "vocab_7a0420aad451c74a"
+          },
+          "index": 0,
+          "name": "pin",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 1,
+          "name": "word",
+          "range": null
+        },
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 10,
+            "type": "completion"
+          },
+          "index": 2,
+          "name": "line",
+          "range": null
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "pin"
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      },
+      "vocabs": {
+        "vocab_7a0420aad451c74a": {
+          "kind": "tokenize",
+          "strings": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ]
+        }
+      }
+    }
+  },
+  "records": {}
+}

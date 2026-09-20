@@ -25,6 +25,7 @@ pybind11::object to_py(Syntax const & s) {
   d["prompt_zero_index"]  = s.prompt_zero_index;
   d["detailed_formats"]   = s.detailed_formats;
   d["completion_stop"]    = s.completion_stop;
+  if (s.completion_vocab) d["completion_vocab"] = to_py(*s.completion_vocab);
   if (s.metadata) d["metadata"] = to_py(*s.metadata);
   d["provenance"] = s.provenance;
   return d;
@@ -52,6 +53,10 @@ void from_py(pybind11::object const & obj, Syntax & s) {
   s.prompt_zero_index  = d["prompt_zero_index"].cast<bool>();
   s.detailed_formats   = d["detailed_formats"].cast<bool>();
   s.completion_stop    = d["completion_stop"].cast<std::string>();
+  if (d.contains("completion_vocab") && !d["completion_vocab"].is_none()) {
+    s.completion_vocab.emplace();
+    from_py(py::reinterpret_borrow<py::object>(d["completion_vocab"]), *s.completion_vocab);
+  }
   if (d.contains("metadata")) { s.metadata.emplace(); from_py(d["metadata"], *s.metadata); }
   if (d.contains("provenance"))
     s.provenance = d["provenance"].cast<std::map<std::string, std::string>>();

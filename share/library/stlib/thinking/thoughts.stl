@@ -1,0 +1,14 @@
+// Umbrella for the thinking library: importing from here pulls in every
+// pattern. Existing programs that used the old stlib-root thoughts.stl
+// only need to update the path:
+//
+//   from "thinking/thoughts.stl" import Thought, reflexion;
+
+from "thinking/thought.stl" import Thought;
+from "thinking/reflexion.stl" import reflexion;
+from "thinking/brainstorm.stl" import brainstorm;
+from "thinking/critique.stl" import Critique, critique;
+from "thinking/revise.stl" import revise;
+from "thinking/decompose.stl" import Step, decompose;
+from "thinking/hypothesize.stl" import Hypothesis, hypothesize;
+from "thinking/deliberate.stl" import Perspective, deliberate;

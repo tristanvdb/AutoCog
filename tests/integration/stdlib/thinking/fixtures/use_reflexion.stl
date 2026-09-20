@@ -1,0 +1,19 @@
+// Driver: reflexion called as a sub-prompt with bound response.
+from "thinking/reflexion.stl" import reflexion;
+
+prompt entry {
+  is {
+    refined[3:10] is text<length=20>;
+  }
+  channel {
+    refined call reflexion<subject="the driver test"> {
+      task get task;
+      initial get initial;
+    } bind(_,response);
+  }
+  return {
+    use refined;
+  }
+}
+
+export entry as main;

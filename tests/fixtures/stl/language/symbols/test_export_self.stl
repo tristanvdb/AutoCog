@@ -1,0 +1,9 @@
+// Self-named export: `export X as X;` is equivalent to `export X;`.
+
+prompt worker {
+  is {
+    out is text;
+  }
+}
+
+export worker as worker;
