@@ -101,33 +101,40 @@ def syntax_of(engine):
     return _SYNTAX_CACHE[sid]
 
 
-def resolve_system(ref, engine):
-    """A `__syntax__.<field>` reference -> its value for THIS run.
+def resolve_argument(expr, engine):
+    """A call argument's value expression -> its value for THIS run.
 
-    Deferred rather than constant-folded at compile time because a syntax is
-    chosen when a prompt is instantiated: the same program renders under 64
-    of them in one campaign. A resolver that has to invert a rendering
-    decision -- `select` emits a position, and prompt_zero_index decides
-    whether that position is spelled from 0 or from 1 -- can only get it
-    here.
+    Nearly always a literal, in which case this is the value. When it is not,
+    it is an expression the program could not finish: a syntax is chosen when a
+    prompt is instantiated, and the same program renders under 64 of them in
+    one campaign, so a resolver that has to invert a rendering decision --
+    `select` emits a position, and prompt_zero_index decides whether that
+    position is spelled from 0 or from 1 -- can only get it here.
 
-    An unknown field is an ERROR. The alternative is None flowing into a
-    resolver as if it were a value, which is how the rendering knobs went
-    unnoticed in the first place.
+    The evaluation is the C++ one, through a binding: the expression semantics
+    exist once (libs/autocog/data/expr.cxx) and this is a door onto them, not a
+    second implementation that can drift.
+
+    An unknown field is an ERROR, raised by the evaluator. The alternative is
+    None flowing into a resolver as if it were a value, which is how the
+    rendering knobs went unnoticed in the first place.
     """
-    namespace, _, field = ref.partition(".")
-    if namespace != "__syntax__":
-        raise ConfigError(f"unsupported system namespace in a call: {ref!r}")
+    if not isinstance(expr, dict):
+        return expr                       # a literal, which is the usual case
+
     syntax = syntax_of(engine)
     if not isinstance(syntax, dict):
         raise ConfigError(
-            f"{ref!r} needs the engine's syntax, which this runner did not "
+            f"{expr!r} needs the engine's syntax, which this runner did not "
             f"provide")
-    if field not in syntax:
-        raise ConfigError(
-            f"{ref!r}: the syntax has no field {field!r} "
-            f"(have {sorted(syntax)})")
-    return syntax[field]
+    from .runtime.sta import runtime_sta_cxx
+
+    try:
+        return runtime_sta_cxx.eval_expr(expr, {"__syntax__": syntax})
+    except ConfigError:
+        raise
+    except Exception as e:                # the evaluator's own diagnostics
+        raise ConfigError(str(e)) from e
 
 
 def resolve_call_kwargs(kwargs, inputs, frames, current_prompt, content=None,
@@ -136,19 +143,17 @@ def resolve_call_kwargs(kwargs, inputs, frames, current_prompt, content=None,
 
     content: the partially-built content dict for the current prompt,
     used for self-referencing kwargs (use .field).
-    engine: needed only by `__syntax__.*` kwargs, whose value is a property
-    of the run rather than of the program.
+    engine: needed only by kwargs whose value expression is not a literal --
+    a `__syntax__.*` reference is a property of the run, not of the program.
     """
     resolved = {}
     mapped_axes = {}  # kwarg_name → list of values to iterate
 
     for kw in kwargs:
         name = kw["name"]
-        if kw.get("system") is not None:
-            data = resolve_system(kw["system"], engine)
-        elif kw.get("value") is not None:
-            # Literal value (from "is" keyword)
-            data = kw["value"]
+        if kw.get("value") is not None:
+            # The argument's value: `is <expr>` or `use <namespace>.<field>`.
+            data = resolve_argument(kw["value"], engine)
         elif kw["is_input"]:
             data = resolve_path(inputs, kw["path"])
         else:

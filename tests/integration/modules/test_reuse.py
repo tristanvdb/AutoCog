@@ -394,8 +394,7 @@ def test_a_call_may_spread_and_name(repo_root):
     assert [k["name"] for k in call["kwargs"]] == ["zero_index"]
     # RECORDED, not evaluated: the syntax is chosen at instantiation, so a
     # compiled program cannot carry the value.
-    assert call["kwargs"][0]["system"] == "__syntax__.prompt_zero_index"
-    assert call["kwargs"][0]["value"] is None
+    assert call["kwargs"][0]["value"] == {"ref": "__syntax__.prompt_zero_index"}
     assert call["kwargs"][0]["prompt"] is None        # not a prompt reference
 
 
@@ -464,14 +463,19 @@ def test_an_unknown_syntax_field_is_an_error(repo_root, tmp_path):
     """None flowing into a resolver as if it were a value is how the
     rendering knobs went unnoticed in the first place."""
     import autocog
-    from autocog.channels import resolve_system
+    from autocog.channels import resolve_argument
     from autocog.errors import ConfigError
 
     engine = autocog.Engine(
         syntax=syntax_variant(repo_root, tmp_path),
         search=os.path.join(repo_root, "share", "search", "default.json"))
-    assert resolve_system("__syntax__.prompt_zero_index", engine) in (True, False)
+    ref = {"ref": "__syntax__.prompt_zero_index"}
+    assert resolve_argument(ref, engine) in (True, False)
+    # A literal needs nothing resolved, and keeps its type.
+    assert resolve_argument(4, engine) == 4
     with pytest.raises(ConfigError, match="no field 'nope'"):
-        resolve_system("__syntax__.nope", engine)
-    with pytest.raises(ConfigError, match="unsupported system namespace"):
-        resolve_system("__status__.tree.tokens", engine)
+        resolve_argument({"ref": "__syntax__.nope"}, engine)
+    # A namespace the caller cannot bind names itself in the diagnostic
+    # rather than arriving as None.
+    with pytest.raises(ConfigError, match="__status__.tree.tokens"):
+        resolve_argument({"ref": "__status__.tree.tokens"}, engine)

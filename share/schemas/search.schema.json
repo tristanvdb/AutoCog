@@ -118,14 +118,7 @@
           "description": "Lexicographic ordering keys (perplexity, probability, shortest, longest, shallowest, deepest, near_leaf, far_leaf, fifo); a bare string is a one-element list; fifo is the implicit final tie-break."
         },
         "stop": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/expr"
-            },
-            {
-              "type": "null"
-            }
-          ],
+          "$ref": "#/$defs/expr",
           "description": "Early-termination predicate; null/absent = run the queue to exhaustion. An expression over __status__ (the running evaluation) and __model__ (the bound model)."
         }
       },

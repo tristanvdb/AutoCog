@@ -239,14 +239,10 @@ struct Kwarg {
   bool is_input;                          // True if source is external input
   std::optional<std::string> prompt;      // For cross-prompt dataflow
   std::vector<PathStep> path;             // Source path
-  std::optional<std::string> value;       // Literal value (from "is" keyword)
-  // A dotted system reference, e.g. "__syntax__.prompt_zero_index". NOT a
-  // literal: the syntax is chosen when a prompt is instantiated, long after
-  // the program is compiled, so this can only be a reference the runtime
-  // dereferences. That is also why it earns its own field rather than
-  // riding in `value` -- a constant and a deferred read are not the same
-  // thing, and the STA has to say which it is.
-  std::optional<std::string> system;
+  // The argument's value when it is not read from the document: an
+  // expression, so `zero_index is 0` and `zero_index use
+  // __syntax__.prompt_zero_index` are one field. Resolved at call time.
+  std::optional<Expr> value;
   std::vector<Clause> clauses;            // Transformation clauses
 
   Kwarg() :
@@ -254,7 +250,6 @@ struct Kwarg {
     prompt(std::nullopt),
     path(),
     value(std::nullopt),
-    system(std::nullopt),
     clauses()
   {}
 };

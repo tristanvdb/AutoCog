@@ -105,6 +105,41 @@ PYBIND11_MODULE(runtime_sta_cxx, module) {
 
 #undef AUTOCOG_BIND_STORE
 
+    // ===== evaluate an expression =====
+    // The Python side resolves call arguments, and an argument may be an
+    // expression that only a running engine can finish -- `zero_index use
+    // __syntax__.prompt_zero_index`, whose value is a property of the run.
+    // The expression semantics are not reimplemented here: this is a door onto
+    // the same evaluator the compiler and the instantiator use.
+    module.def("eval_expr",
+        [](py::object expr, py::dict bindings) -> py::object {
+            data::Expr e;
+            codec::from_py(expr, e);
+            auto const v = data::evaluate(e, [&bindings](std::string const & ref)
+                    -> std::optional<autocog::types::Value> {
+                auto const dot = ref.find('.');
+                if (dot == std::string::npos) return std::nullopt;
+                auto const ns = ref.substr(0, dot);
+                auto const field = ref.substr(dot + 1);
+                if (!bindings.contains(py::str(ns))) return std::nullopt;
+                py::object table = bindings[py::str(ns)];
+                if (!py::isinstance<py::dict>(table)) return std::nullopt;
+                py::dict d = table.cast<py::dict>();
+                if (!d.contains(py::str(field)))
+                    throw autocog::ConfigError(
+                        "'" + ref + "': " + ns + " has no field '" + field + "'", ref);
+                data::Expr bound;
+                codec::from_py(d[py::str(field)], bound);
+                return bound.as_value();
+            });
+            return codec::to_py(data::Expr::lit(v));
+        },
+        "Evaluate an expression against a {namespace: {field: value}} table.\n\n"
+        "An expression that is already a literal is returned as it is; a "
+        "reference to a namespace the table does not carry is an error naming "
+        "the reference, never a silent None.",
+        py::arg("expr"), py::arg("bindings"));
+
     // ===== instantiate (STA -> FTA) =====
     module.def("instantiate",
         [](std::string const & program_id, std::string const & prompt_name,

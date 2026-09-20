@@ -401,17 +401,6 @@
             }
           ]
         },
-        "system": {
-          "description": "Dotted system reference read at call time, e.g. '__syntax__.prompt_zero_index'. Not a literal: a syntax is chosen at instantiation, so a compiled program cannot carry its value.",
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "path": {
           "$ref": "#/$defs/path_steps"
         },
@@ -420,6 +409,10 @@
           "items": {
             "$ref": "#/$defs/clause"
           }
+        },
+        "value": {
+          "$ref": "#/$defs/expr",
+          "description": "The argument's value when it is not read from the document: `is <expr>` or `use <namespace>.<field>`. Resolved when the call is made, after a syntax has been chosen."
         }
       },
       "required": [

@@ -19,7 +19,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "b9b0fd285f277aad86209b494a17f1d4a5423b0e70d9081cee0cc5905f788c4e",
+    "hash": "22f02cc038213489577b9ede243458bbacbe9614bc31c96309d3bb848021d439",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -68,7 +68,6 @@
                 }
               ],
               "prompt": null,
-              "system": null,
               "value": null
             }
           ],

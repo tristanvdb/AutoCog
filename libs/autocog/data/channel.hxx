@@ -1,6 +1,7 @@
 #ifndef AUTOCOG_DATA_CHANNEL_HXX
 #define AUTOCOG_DATA_CHANNEL_HXX
 
+#include "autocog/data/expr.hxx"
 #include "autocog/data/path.hxx"
 
 #include <optional>
@@ -33,11 +34,13 @@ struct ChannelKwarg {
   bool is_input = false;
   std::optional<std::string> prompt;   ///< source prompt (null = self)
   std::vector<PathStep> path;
-  std::optional<std::string> value;    ///< literal value (null = none)
-  ///< dotted system reference, e.g. "__syntax__.prompt_zero_index" -- read at
-  ///< call time, because a syntax is chosen at instantiation and a compiled
-  ///< program cannot know it
-  std::optional<std::string> system;
+  ///< The argument's VALUE, when it is not read from the document: an
+  ///< expression, so a literal (`zero_index is 0`) and a reference to
+  ///< something the program cannot know yet (`zero_index use
+  ///< __syntax__.prompt_zero_index`) are the same kind of thing rather than
+  ///< two fields. Resolved when the call is made, which is after a syntax has
+  ///< been chosen.
+  std::optional<Expr> value;
   std::vector<Clause> clauses;
   std::string hash() const;
 };

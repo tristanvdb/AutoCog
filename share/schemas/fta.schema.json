@@ -51,14 +51,7 @@
       "description": "Scheduling config carried into the FTA (e.g. the best-path metric).",
       "properties": {
         "stop": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/expr"
-            },
-            {
-              "type": "null"
-            }
-          ],
+          "$ref": "#/$defs/expr",
           "description": "Early-termination predicate, as far as it could be resolved before the model was bound."
         }
       }

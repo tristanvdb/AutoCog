@@ -169,7 +169,12 @@ static json channel_to_json(ir::Channel const & channel) {
                 json kj;
                 kj["is_input"] = kwarg.is_input;
                 kj["prompt"] = kwarg.prompt.has_value() ? json(kwarg.prompt.value()) : json(nullptr);
-                kj["system"] = kwarg.system.has_value() ? json(kwarg.system.value()) : json(nullptr);
+                // The argument's value, when it is not read from the document.
+                // Was never dumped while it was a bare string; it is an
+                // expression now, and a program that defers one is exactly the
+                // program whose IR someone needs to read.
+                kj["value"] = kwarg.value.has_value()
+                            ? autocog::codec::to_json(*kwarg.value) : json(nullptr);
                 kj["path"] = json::array();
                 for (auto const & step : kwarg.path) {
                     kj["path"].push_back(pathstep_to_json(step));

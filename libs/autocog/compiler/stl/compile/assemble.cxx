@@ -1114,26 +1114,44 @@ static void assemble_prompts(
                         // which would look for a prompt called __syntax__.
                         if (ks.data.prompt) {
                             auto const & ns = ks.data.prompt->data.name.data.name;
-                            if (ns.size() >= 4 && ns.compare(0, 2, "__") == 0
-                                    && ns.compare(ns.size() - 2, 2, "__") == 0) {
+                            if (autocog::data::namespaces::is_namespace_word(ns)) {
                                 auto steps = convert_path(ks.data.field, evaluator,
                                                           scope, node.context);
                                 std::string ref = ns;
                                 for (auto const & st : steps) ref += "." + st.name;
-                                irk.system = ref;
+                                try {
+                                    autocog::data::namespaces::check(ref, kwarg.location);
+                                    if (autocog::data::namespaces::stage_of(ref)
+                                            > autocog::data::Stage::Instantiate)
+                                        throw CompileError(
+                                            "`" + ref + "` is bound at execute time, "
+                                            "and a call argument is resolved when the "
+                                            "call is made", kwarg.location);
+                                    irk.value = ir::Expr::reference(ref);
+                                } catch (CompileError const & e) {
+                                    driver.emit_error(e.message,
+                                        e.location ? e.location : kwarg.location);
+                                }
                                 return;
                             }
                             irk.prompt = resolve_prompt_ref(ns);
                         }
                         irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
                     } else if constexpr (std::is_same_v<KS, ast::Expression>) {
-                        auto val = evaluator.evaluate_expression(scope, ks, node.context);
-                        if (auto * sv = std::get_if<std::string>(&val)) {
-                            irk.value = *sv;
-                        } else if (auto * iv = std::get_if<int>(&val)) {
-                            irk.value = std::to_string(*iv);
-                        } else if (auto * fv = std::get_if<float>(&val)) {
-                            irk.value = std::to_string(*fv);
+                        // A call argument is resolved when the call is made,
+                        // which is after a syntax has been chosen: it may
+                        // therefore ask about the rendering, and `is 4` and
+                        // `use __syntax__.prompt_zero_index` are the same kind
+                        // of thing. Values keep their TYPE here (they used to
+                        // be stringified); a resolver receives the int 4, not
+                        // the string "4".
+                        try {
+                            irk.value = evaluator.residualize(
+                                scope, ks, node.context,
+                                autocog::data::Stage::Instantiate);
+                        } catch (CompileError const & e) {
+                            driver.emit_error(e.message,
+                                e.location ? e.location : kwarg.location);
                         }
                     }
                 }, kwarg.data.source);
