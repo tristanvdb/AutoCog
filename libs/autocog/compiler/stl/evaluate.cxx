@@ -16,82 +16,14 @@ Evaluator::Evaluator(std::list<autocog::data::Diagnostic> & diagnostics_, Symbol
 {}
 
 ir::Value Evaluator::evaluate(std::string const & scope, ast::Unary const & op, ir::VarMap & varmap) {
-  ir::Value operand_val = evaluate(scope, *op.data.operand, varmap);
-  
-  switch (op.data.kind) {
-    case ast::OpKind::Neg:
-      return std::visit([&op](auto const & v) -> ir::Value {
-        using V = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<V, int>) {
-          return -v;
-        } else if constexpr (std::is_same_v<V, float>) {
-          return -v;
-        } else {
-          throw CompileError("Cannot negate non-numeric value", op.location);
-        }
-      }, operand_val);
-      
-    case ast::OpKind::Not:
-      return std::visit([&op](auto const & v) -> ir::Value {
-        using V = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<V, bool>) {
-          return !v;
-        } else {
-          throw CompileError("Cannot apply 'not' to non-boolean value", op.location);
-        }
-      }, operand_val);
-      
-    default:
-      throw autocog::utilities::InternalError("Invalid unary operator kind: " + ast::opKindToString(op.data.kind));
-  }
+  return autocog::data::apply_unary(
+      op.data.kind, evaluate(scope, *op.data.operand, varmap), op.location);
 }
 
 ir::Value Evaluator::evaluate(std::string const & scope, ast::Binary const & op, ir::VarMap & varmap) {
   ir::Value lhs_val = evaluate(scope, *op.data.lhs, varmap);
   ir::Value rhs_val = evaluate(scope, *op.data.rhs, varmap);
-  
-  switch (op.data.kind) {
-    // Arithmetic operators
-    case ast::OpKind::Add:
-      return eval_utils::evaluateArithmetic<ast::OpKind::Add>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Sub:
-      return eval_utils::evaluateArithmetic<ast::OpKind::Sub>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Mul:
-      return eval_utils::evaluateArithmetic<ast::OpKind::Mul>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Div:
-      return eval_utils::evaluateArithmetic<ast::OpKind::Div>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Mod:
-      return eval_utils::evaluateArithmetic<ast::OpKind::Mod>(lhs_val, rhs_val, op.location);
-      
-    // Comparison operators
-    case ast::OpKind::Eq:
-      return eval_utils::evaluateComparison<ast::OpKind::Eq>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Neq:
-      return eval_utils::evaluateComparison<ast::OpKind::Neq>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Lt:
-      return eval_utils::evaluateComparison<ast::OpKind::Lt>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Lte:
-      return eval_utils::evaluateComparison<ast::OpKind::Lte>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Gt:
-      return eval_utils::evaluateComparison<ast::OpKind::Gt>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Gte:
-      return eval_utils::evaluateComparison<ast::OpKind::Gte>(lhs_val, rhs_val, op.location);
-      
-    // Logical operators
-    case ast::OpKind::And:
-      return eval_utils::evaluateLogical<ast::OpKind::And>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::Or:
-      return eval_utils::evaluateLogical<ast::OpKind::Or>(lhs_val, rhs_val, op.location);
-
-    // Bitwise operators (integer operands only)
-    case ast::OpKind::BOr:
-      return eval_utils::evaluateBitwise<ast::OpKind::BOr>(lhs_val, rhs_val, op.location);
-    case ast::OpKind::BAnd:
-      return eval_utils::evaluateBitwise<ast::OpKind::BAnd>(lhs_val, rhs_val, op.location);
-
-    default:
-      throw autocog::utilities::InternalError("Invalid binary operator kind");
-  }
+  return autocog::data::apply_binary(op.data.kind, lhs_val, rhs_val, op.location);
 }
 
 ir::Value Evaluator::evaluate(std::string const & scope, ast::Conditional const & op, ir::VarMap & varmap) {
@@ -171,31 +103,10 @@ ir::Value Evaluator::evaluate(std::string const & scope, ast::String const & fst
       // Look up variable
       ir::Value value = retrieve_value(scope, var_name, varmap, fstring.location);
       
-      // Convert value to string and append
-      result += std::visit([](auto const & v) -> std::string {
-        using V = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<V, int>) {
-          return std::to_string(v);
-        } else if constexpr (std::is_same_v<V, float>) {
-          // Format float to avoid unnecessary trailing zeros
-          std::string s = std::to_string(v);
-          // Remove trailing zeros after decimal point
-          if (s.find('.') != std::string::npos) {
-            s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-            // Remove decimal point if it's the last character
-            if (s.back() == '.') {
-              s.pop_back();
-            }
-          }
-          return s;
-        } else if constexpr (std::is_same_v<V, bool>) {
-          return v ? "true" : "false";
-        } else if constexpr (std::is_same_v<V, std::string>) {
-          return v;
-        } else {
-          return "<unknown>";
-        }
-      }, value);
+      // Convert value to string and append. Shared with every other stage: an
+      // interpolated value must read the same whether it was folded here or
+      // rendered at instantiation.
+      result += autocog::data::stringify(value);
       
       i = j + 1;
     } else if (fmt[i] == '}') {

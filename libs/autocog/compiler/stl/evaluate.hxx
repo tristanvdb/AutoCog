@@ -83,6 +83,4 @@ class Evaluator {
 
 }
 
-#include "autocog/compiler/stl/eval-utils.txx"
-
 #endif // AUTOCOG_COMPILER_STL_INSTANTIATE_HXX
