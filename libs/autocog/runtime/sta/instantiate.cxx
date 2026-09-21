@@ -1155,7 +1155,23 @@ autocog::data::FTA instantiate(autocog::data::Prompt const & prompt, Doc const &
         if (sit != qit->second.end()
                 && !(sit->second.kind == autocog::data::Expr::Kind::Ref
                      && sit->second.ref == "__search__.queue.stop"))
-            stop = autocog::data::residual(sit->second, b.refs());
+            stop = sit->second;
+    }
+    if (stop) {
+        // Both sources go through the same fold. The config's predicate used
+        // to be copied verbatim, which meant a `__syntax__` reference written
+        // there travelled to xfta unresolved -- past the only stage that could
+        // have answered it.
+        *stop = autocog::data::residual(*stop, b.refs());
+        // The boundary, checked rather than assumed: an FTA carries only what
+        // execution can bind. Anything a rendering knob or a search parameter
+        // should have answered is answered by now, or it is an error here --
+        // where the syntax is in hand and the message can say so.
+        if (auto left = autocog::data::unbound_before(*stop, autocog::data::Stage::Execute))
+            throw autocog::SchemaError(
+                "queue.stop still references '" + *left + "' after instantiation: "
+                "it is bound at " + autocog::data::stage_word(autocog::data::ref_stage(*left))
+                + " time and nothing bound it", *left);
     }
 
     autocog::data::FTA fta;

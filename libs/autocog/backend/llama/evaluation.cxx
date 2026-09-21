@@ -65,12 +65,13 @@ static MetricKey parse_metric_key(std::string const & name) {
 static void validate_stop(data::Expr const & e) {
   std::vector<std::string> refs;
   e.collect_refs(refs);
-  for (auto const & ref : refs) {
+  for (auto const & ref : refs)
     data::namespaces::check(ref);                 // unknown field -> throws
-    if (data::namespaces::stage_of(ref) != data::Stage::Execute)
-      throw autocog::SchemaError("'" + ref + "' should have been bound before "
-                                 "execution", ref);
-  }
+  // The instantiator enforces this; the check stays because an FTA can also
+  // be handed to xfta straight from a file.
+  if (auto left = data::unbound_before(e, data::Stage::Execute))
+    throw autocog::SchemaError("'" + *left + "' should have been bound before "
+                               "execution", *left);
 }
 
 // Fold the model properties (the scalarization boundary): after this the

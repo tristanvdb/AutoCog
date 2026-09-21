@@ -286,6 +286,15 @@ std::string Expr::hash() const {
   return h.hash();
 }
 
+std::optional<std::string> unbound_before(Expr const & e, Stage stage) {
+  std::vector<std::string> refs;
+  e.collect_refs(refs);
+  for (auto const & r : refs)
+    if (static_cast<unsigned>(ref_stage(r)) < static_cast<unsigned>(stage))
+      return r;
+  return std::nullopt;
+}
+
 void hash_put(ContentHasher & h, Expr const & e) {
   auto v = e.as_value();
   if (!v) { h.put(std::string("expr")); h.put(e.hash()); return; }
