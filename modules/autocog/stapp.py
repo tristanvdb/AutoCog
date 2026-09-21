@@ -28,10 +28,18 @@ def _collect_app_files(program, include_paths, stl_path=None):
     from .program import _stdlib_path
     stdlib = _stdlib_path()
 
+    # A program's resolvers normally sit beside it, so its own directory is a
+    # search path whether or not the caller passed it as an include.
+    search_paths = list(include_paths)
+    if stl_path:
+        own_dir = os.path.dirname(os.path.abspath(stl_path))
+        if own_dir not in search_paths:
+            search_paths.insert(0, own_dir)
+
     externals = {}
     for name, info in program.python_imports.items():
         py_file = info["file"]
-        for inc in include_paths:
+        for inc in search_paths:
             candidate = os.path.join(inc, py_file)
             if os.path.isfile(candidate):
                 # Skip stdlib files
@@ -264,5 +272,11 @@ def load_stapp(stapp_path, recompile=False):
         raise ConfigError(
             f"Cannot load .stapp: no STA file and no source to compile"
         )
+
+    # The app vendors its externals and imports; the program it hands back must
+    # know where they were unpacked, or it can only run with the caller's help.
+    for path in reversed(include_paths):
+        if path not in prog.search_paths:
+            prog.search_paths.insert(0, path)
 
     return prog, manifest, temp_dir, include_paths

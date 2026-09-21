@@ -21,11 +21,15 @@ set(SEARCH ${PROJECT_SOURCE_DIR}/share/search/default.json)
 #
 # The syntax list IS the contrast being drawn. complete / index-one /
 # index-none differ from each other by exactly one knob, so any difference
-# between their graphs is attributable to that knob; `special` is in for the
-# special-token rendering, the likeliest place for a gap. Widen the list
-# here, not by editing tests.
-set(INSPECT_SYNTAXES complete index-one index-none special
+# between their graphs is attributable to that knob. `special` (special-token
+# rendering) is deliberately out of scope for now. Widen the list here, not by
+# editing tests.
+set(INSPECT_SYNTAXES complete index-one index-none
     CACHE STRING "Syntaxes rendered by the mcq inspection graphs")
+
+# Also emit the unsimplified FTA (one node per renderer step). For debugging
+# the instantiator; noise when reading a program.
+set(INSPECT_RAW "" CACHE STRING "Also emit unsimplified FTA graphs (set to 1)")
 
 # A CMake list interpolates with semicolons, which `for SYN in ...` reads as
 # command separators.
@@ -109,9 +113,19 @@ json.dump(content, open(out, 'w'), indent=2)
 \" ${INSPECT_CONTENT} ${DEMO_NAME} \$P \$CONTENT
 
                   for SYN in ${INSPECT_SYNTAX_ARGS}; do
+                    # ista simplifies by default, which is the graph worth
+                    # reading: the same automaton with its fixed text gathered
+                    # up (25 actions to 5 on these demos). The unsimplified
+                    # one is one node per renderer step -- useful when the
+                    # instantiator itself is the suspect, and noise otherwise.
                     FTA=\$OUT/\$P.\$SYN.fta.json
                     $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --fta \$FTA 2>/dev/null
                     ${Python_EXECUTABLE} ${FTA2DOT} \$FTA > \$OUT/\$P.\$SYN.fta.dot
+                    if [ -n \"${INSPECT_RAW}\" ]; then
+                      RAW=\$OUT/\$P.\$SYN.raw.fta.json
+                      $<TARGET_FILE:autocog_ista> --sta \$STA --prompt \$P --syntax ${PROJECT_SOURCE_DIR}/share/syntax/\$SYN.json --search ${SEARCH} --content \$CONTENT --simplify none --fta \$RAW 2>/dev/null
+                      ${Python_EXECUTABLE} ${FTA2DOT} \$RAW > \$OUT/\$P.\$SYN.raw.fta.dot
+                    fi
                   done
                 done
 

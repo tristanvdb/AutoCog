@@ -3,7 +3,7 @@
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
 #include "autocog/data/search-registry.hxx"
-#include "autocog/data/term.hxx"
+#include "autocog/data/namespaces.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
@@ -33,167 +33,56 @@ static std::optional<int> eval_opt_int(
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
 
-// --- queue.stop translation --------------------------------------------------
-// A termination predicate is written in the ordinary expression grammar and
-// TRANSLATED (vocab precedent) to data::TermExpr: comparisons whose one side
-// is a `__status__` scalar become leaves (the other side constant-folds, so
-// defines/arguments work); &&/||/! become all/any/not. The result travels
-// compact-serialized in the (scalar) policy value and is parsed back at ista.
-
-// STL name -> backend termination scalar. Entries commented out exist in the
-// design but not yet in the backend.
-static std::optional<std::string> stop_scalar_name(std::string const & dotted) {
-    static std::map<std::string, std::string> const M = {
-        {"__status__.tree.terminals",    "terminals"},
-        {"__status__.tree.tokens",       "tokens"},
-        {"__status__.tree.leaves",       "queue.size"},
-        {"__status__.tree.coverage.fta", "coverage.fta"},
-        {"__status__.tree.coverage.sta", "coverage.sta"},
-        {"__status__.best.proba",        "best.proba"},
-        {"__status__.best.zscore",       "best.zscore"},
-    };
-    auto it = M.find(dotted);
-    if (it == M.end()) return std::nullopt;
-    return it->second;
+// An annotation is an expression that becomes TEXT when it is rendered, and it
+// is rendered at instantiation -- which is what lets one ask about the syntax
+// it will be rendered under. A literal string stays a literal string, which is
+// what every annotation that does not ask was, and still is. A non-string
+// constant is ignored here, as it always has been.
+static std::optional<ir::Expr> annotation_expr(
+        Evaluator & evaluator, std::string const & scope,
+        ast::Expression const & desc, ir::VarMap & ctx, Driver & driver) {
+    try {
+        auto e = evaluator.residualize(scope, desc, ctx,
+                                       autocog::data::Stage::Instantiate);
+        if (e.is_literal() && !std::holds_alternative<std::string>(e.value))
+            return std::nullopt;
+        return e;
+    } catch (CompileError const & err) {
+        driver.emit_error(err.message, err.location);
+        return std::nullopt;
+    }
 }
 
-static bool translate_stop(
-    ast::Expression const & e,
-    Evaluator & evaluator,
-    std::string const & scope,
-    ir::VarMap & ctx,
-    Driver & driver,
-    std::optional<autocog::location::SourceRange> const & loc,
-    autocog::data::TermExpr & out
-);
-
-// The scalar side of a comparison: a dotted __status__ identifier.
-static std::optional<std::string> stop_scalar_of(ast::Expression const & e, Driver & driver,
-        std::optional<autocog::location::SourceRange> const & loc) {
-    if (auto const * id = std::get_if<ast::Identifier>(&e.data.expr)) {
-        auto const & name = id->data.name;
-        if (name.rfind("__status__.", 0) == 0 || name.rfind("__model__.", 0) == 0
-                || name.rfind("__node__.", 0) == 0) {
-            auto mapped = stop_scalar_name(name);
-            if (!mapped) {
-                driver.emit_error("'" + name + "' is not yet available in "
-                                  "termination predicates", loc);
-                return std::nullopt;
-            }
-            return mapped;
-        }
-    }
-    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
-        return stop_scalar_of(*par->data.expr, driver, loc);
-    return std::nullopt;
-}
-
-static bool translate_stop(
-    ast::Expression const & e,
-    Evaluator & evaluator,
-    std::string const & scope,
-    ir::VarMap & ctx,
-    Driver & driver,
-    std::optional<autocog::location::SourceRange> const & loc,
-    autocog::data::TermExpr & out
-) {
-    using TE = autocog::data::TermExpr;
-    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
-        return translate_stop(*par->data.expr, evaluator, scope, ctx, driver, loc, out);
-    if (auto const * un = std::get_if<ast::Unary>(&e.data.expr)) {
-        if (un->data.kind != ast::OpKind::Not) {
-            driver.emit_error("only `!` composes termination predicates", loc);
-            return false;
-        }
-        out.kind = TE::Kind::Not;
-        out.operands.emplace_back();
-        return translate_stop(*un->data.operand, evaluator, scope, ctx, driver, loc,
-                              out.operands.back());
-    }
-    auto const * bin = std::get_if<ast::Binary>(&e.data.expr);
-    if (!bin) {
-        driver.emit_error("queue.stop expects a predicate: comparisons of "
-                          "__status__ scalars composed with &&, ||, !", loc);
-        return false;
-    }
-    switch (bin->data.kind) {
-        case ast::OpKind::And:
-        case ast::OpKind::Or: {
-            out.kind = bin->data.kind == ast::OpKind::And ? TE::Kind::All : TE::Kind::Any;
-            out.operands.emplace_back();
-            if (!translate_stop(*bin->data.lhs, evaluator, scope, ctx, driver, loc,
-                                out.operands.back())) return false;
-            out.operands.emplace_back();
-            return translate_stop(*bin->data.rhs, evaluator, scope, ctx, driver, loc,
-                                  out.operands.back());
-        }
-        case ast::OpKind::Gte:
-        case ast::OpKind::Gt:
-        case ast::OpKind::Lte:
-        case ast::OpKind::Lt: {
-            auto lhs_scalar = stop_scalar_of(*bin->data.lhs, driver, loc);
-            std::optional<std::string> rhs_scalar;
-            if (!lhs_scalar) rhs_scalar = stop_scalar_of(*bin->data.rhs, driver, loc);
-            bool const flipped = !lhs_scalar && rhs_scalar.has_value();
-            auto const & scalar = lhs_scalar.has_value() ? lhs_scalar : rhs_scalar;
-            if (!scalar) {
-                driver.emit_error("one side of a termination comparison must be "
-                                  "a __status__ scalar", loc);
-                return false;
-            }
-            auto const & const_side = lhs_scalar ? *bin->data.rhs : *bin->data.lhs;
-            // The constant side may be a model property, resolved at the
-            // worker when the model loads (e.g. the context-overflow guard
-            // `__status__.tree.tokens >= __model__.n_ctx`).
-            std::string ref;
-            {
-                ast::Expression const * cs = &const_side;
-                while (auto const * par = std::get_if<ast::Parenthesis>(&cs->data.expr))
-                    cs = par->data.expr.get();
-                if (auto const * cid = std::get_if<ast::Identifier>(&cs->data.expr)) {
-                    if (cid->data.name == "__model__.n_ctx") ref = "model.n_ctx";
-                    else if (cid->data.name.rfind("__model__.", 0) == 0) {
-                        driver.emit_error("'" + cid->data.name + "' is not yet "
-                                          "available in termination predicates", loc);
-                        return false;
-                    }
-                }
-            }
-            double num = 0.0;
-            if (ref.empty()) {
-                auto v = evaluator.evaluate_expression(scope, const_side, ctx);
-                if (auto const * f = std::get_if<float>(&v)) num = *f;
-                else if (auto const * i = std::get_if<int>(&v)) num = *i;
-                else {
-                    driver.emit_error("the constant side of a termination comparison "
-                                      "must be numeric", loc);
+// True when an expression can only produce a boolean: a comparison, a logical
+// operator, or a conditional whose arms both do. The type of a bare reference
+// is declared, so `__status__.tree.terminals` (a float) is caught here rather
+// than at the first queue step of a run.
+static bool yields_condition(ir::Expr const & e) {
+    using K = ir::Expr::Kind;
+    switch (e.kind) {
+        case K::Lit: return std::holds_alternative<bool>(e.value);
+        case K::Ref: return autocog::data::namespaces::type_of(e.ref)
+                         == autocog::data::namespaces::FieldType::Bool;
+        case K::Cat: return false;
+        case K::Cond: return yields_condition(e.operands[1])
+                         && yields_condition(e.operands[2]);
+        case K::Op:
+            switch (e.op) {
+                case autocog::data::OpKind::Not:
+                case autocog::data::OpKind::And:
+                case autocog::data::OpKind::Or:
+                case autocog::data::OpKind::Lt:
+                case autocog::data::OpKind::Gt:
+                case autocog::data::OpKind::Lte:
+                case autocog::data::OpKind::Gte:
+                case autocog::data::OpKind::Eq:
+                case autocog::data::OpKind::Neq:
+                    return true;
+                default:
                     return false;
-                }
             }
-            auto k = bin->data.kind;
-            if (flipped) {  // c OP scalar  ==  scalar OP' c
-                if (k == ast::OpKind::Lt)  k = ast::OpKind::Gt;
-                else if (k == ast::OpKind::Gt)  k = ast::OpKind::Lt;
-                else if (k == ast::OpKind::Lte) k = ast::OpKind::Gte;
-                else if (k == ast::OpKind::Gte) k = ast::OpKind::Lte;
-            }
-            switch (k) {
-                case ast::OpKind::Gte: out.kind = TE::Kind::Ge; break;
-                case ast::OpKind::Gt:  out.kind = TE::Kind::Gt; break;
-                case ast::OpKind::Lte: out.kind = TE::Kind::Le; break;
-                case ast::OpKind::Lt:  out.kind = TE::Kind::Lt; break;
-                default: out.kind = TE::Kind::Ge; break;
-            }
-            out.scalar = *scalar;
-            out.value = static_cast<float>(num);
-            out.ref = ref;
-            return true;
-        }
-        default:
-            driver.emit_error("operator not allowed in a termination predicate "
-                              "(use <, <=, >, >=, &&, ||, !)", loc);
-            return false;
     }
+    return false;
 }
 
 // Lower an `ast::Search` block into ir::SearchPolicies. Each param's locator is a
@@ -266,37 +155,28 @@ static void lower_search(
             continue;
         }
         if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
-        // Explicit reference: `text.beams is __search__.text.beams;` pins the
-        // param to tracking its config default (the fill-up value written by
-        // hand). First cut: the reference must name the parameter it sets.
-        if (param.data.values.size() == 1) {
-            if (auto const * id = std::get_if<ast::Identifier>(
-                    &param.data.values.front().data.expr)) {
-                auto const & nm = id->data.name;
-                if (nm.rfind("__search__.", 0) == 0) {
-                    if (nm != "__search__." + category + "." + key) {
-                        driver.emit_error(
-                            "'" + nm + "' must reference the parameter it sets "
-                            "(__search__." + category + "." + key + ")",
-                            param.location);
-                    } else {
-                        out[category][key] = nm;
-                    }
-                    continue;
-                }
-            }
-        }
-        // Predicate params (queue.stop): translate, don't evaluate.
+        // Predicate params (queue.stop) are conditions about a run in progress:
+        // they may name the evaluation's own statistics and the model, and are
+        // resolved when the run reaches them. Everything else in them -- a
+        // define, an argument, a rendering knob -- folds here.
         if (info->kind == reg::Kind::Predicate) {
             if (param.data.values.size() > 1) {
                 driver.emit_error("search parameter '" + category + "." + key
                                   + "' takes a single predicate", param.location);
                 continue;
             }
-            autocog::data::TermExpr te;
-            if (translate_stop(param.data.values.front(), evaluator, scope, ctx,
-                               driver, param.location, te)) {
-                out[category][key] = te.to_compact();
+            try {
+                auto pred = evaluator.residualize(
+                    scope, param.data.values.front(), ctx, autocog::data::Stage::Execute);
+                if (!yields_condition(pred)) {
+                    driver.emit_error("search parameter '" + category + "." + key
+                                      + "' takes a condition, not a value",
+                                      param.location);
+                    continue;
+                }
+                out[category][key] = std::move(pred);
+            } catch (CompileError const & e) {
+                driver.emit_error(e.message, e.location ? e.location : param.location);
             }
             continue;
         }
@@ -334,7 +214,43 @@ static void lower_search(
                 + "' takes a single value", param.location);
             continue;
         }
-        auto val = evaluator.evaluate_expression(scope, param.data.values.front(), ctx);
+        // A search parameter is resolved when the prompt is instantiated, so it
+        // may name a rendering knob or another search parameter
+        // (`text.beams is __search__.text.beams * 2`). A reference that tracks
+        // the config default is now just the identity case of that, rather than
+        // a magic string the instantiator has to recognise.
+        ir::Expr expr;
+        try {
+            expr = evaluator.residualize(scope, param.data.values.front(), ctx,
+                                         autocog::data::Stage::Instantiate);
+        } catch (CompileError const & e) {
+            driver.emit_error(e.message, e.location ? e.location : param.location);
+            continue;
+        }
+        if (!expr.is_literal()) {
+            // Type-check what can be checked: a bare reference declares its
+            // type, so a string knob in an integer parameter fails here.
+            if (expr.kind == ir::Expr::Kind::Ref) {
+                namespace ns = autocog::data::namespaces;
+                auto const rt = ns::type_of(expr.ref, param.location);
+                bool const ok =
+                    (info->type == reg::Type::Float && (rt == ns::FieldType::Float || rt == ns::FieldType::Int))
+                 || (info->type == reg::Type::UInt  && rt == ns::FieldType::Int)
+                 || (info->type == reg::Type::Str   && rt == ns::FieldType::Str);
+                if (!ok) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key + "' expects "
+                        + (info->type == reg::Type::Str ? "a string"
+                           : info->type == reg::Type::UInt ? "an integer" : "a number")
+                        + ", but '" + expr.ref + "' is a "
+                        + ns::type_word(rt), param.location);
+                    continue;
+                }
+            }
+            out[category][key] = std::move(expr);
+            continue;
+        }
+        auto val = *expr.as_value();
         bool const is_null = std::holds_alternative<std::monostate>(val);
         if (!is_null) {
             bool type_ok = false;
@@ -373,7 +289,7 @@ static void lower_search(
                 param.location);
             continue;
         }
-        out[category][key] = val;
+        out[category][key] = ir::Expr::lit(val);
     }
 }
 
@@ -539,7 +455,8 @@ static void fill_default_refs(std::vector<std::unique_ptr<ir::Field>> & fields) 
         auto & params = f.search[cat];
         for (auto const * key : keys) {
             if (!params.count(key))
-                params[key] = std::string("__search__.") + cat + "." + key;
+                params[key] = ir::Expr::reference(
+                    std::string("__search__.") + cat + "." + key);
         }
     };
     for (auto & f : fields) {
@@ -679,7 +596,7 @@ struct FormatResult {
     std::optional<std::string> refname;
     ir::VarMap refargs;
     ir::SearchPolicies own_search;   // the referenced record's own search { }
-    std::vector<std::string> desc;   // annotations from a referenced record
+    std::vector<ir::Expr> desc;      // annotations from a referenced record
 };
 
 static FormatResult generate_format(
@@ -748,7 +665,7 @@ static void generate_fields(
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
-                for (auto & d : res.desc) f->desc.push_back(d);
+                for (auto & d : res.desc) f->format_desc.push_back(d);
                 // The field's policy in scope, plus the referenced record's own
                 // search { } as the innermost layer (only meaningful for a
                 // collapsed self-form record; empty otherwise).
@@ -770,8 +687,9 @@ static void generate_fields(
                         if constexpr (std::is_same_v<C, ast::Annotate>) {
                             for (auto const & ann : c.data.annotations) {
                                 if (!ann.data.path) {
-                                    auto val = evaluator.evaluate_expression(scope, ann.data.description, ctx);
-                                    if (auto * sv = std::get_if<std::string>(&val)) f->desc.push_back(*sv);
+                                    if (auto d = annotation_expr(evaluator, scope,
+                                            ann.data.description, ctx, driver))
+                                        f->desc.push_back(std::move(*d));
                                 }
                             }
                         }
@@ -783,7 +701,7 @@ static void generate_fields(
                     f->format = std::move(res.format);
                     f->refname = res.refname;
                     f->refargs = res.refargs;
-                    for (auto & d : res.desc) f->desc.push_back(d);
+                    for (auto & d : res.desc) f->format_desc.push_back(d);
                     ir::SearchPolicies field_here = merge_search(struct_here, res.own_search);
                     if (f->is_struct()) {
                         f->search = prune_search(field_here, {"branch"});
@@ -912,10 +830,9 @@ static FormatResult generate_format(
                     } else if constexpr (std::is_same_v<C, ast::Annotate>) {
                         for (auto const & ann : c.data.annotations) {
                             if (!ann.data.path) {
-                                auto val = evaluator.evaluate_expression(target_scope, ann.data.description, target_ctx);
-                                if (auto * sv = std::get_if<std::string>(&val)) {
-                                    result.desc.push_back(*sv);
-                                }
+                                if (auto d = annotation_expr(evaluator, target_scope,
+                                        ann.data.description, target_ctx, driver))
+                                    result.desc.push_back(std::move(*d));
                             }
                         }
                     }
@@ -962,6 +879,33 @@ static FormatResult generate_format(
             }, rec_decl.data.record);
 
             builder.expanding_records.pop_back();
+
+            // The record's PER-FIELD annotations. The loop above takes only
+            // its `_` (which becomes the named-format description); these
+            // have to wait until the sub-fields exist. Without this the
+            // record's own documentation is silently dropped the moment it
+            // is used as a format -- `a_choice` annotates `label` and
+            // `value`, and every prompt using it rendered them bare.
+            if (auto * sub = std::get_if<std::vector<std::unique_ptr<ir::Field>>>(&result.format)) {
+                for (auto const & construct : rec_decl.data.constructs) {
+                    auto const * annotate = std::get_if<ast::Annotate>(&construct);
+                    if (!annotate) continue;
+                    for (auto const & ann : annotate->data.annotations) {
+                        if (!ann.data.path) continue;
+                        auto d = annotation_expr(evaluator, target_scope,
+                                                 ann.data.description, target_ctx, driver);
+                        if (!d) continue;
+                        if (auto * target = resolve_annotate_path(*ann.data.path, *sub)) {
+                            target->desc.push_back(std::move(*d));
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of record '" + rec_name + "'",
+                                ann.location);
+                        }
+                    }
+                }
+            }
         }
     }, fref.data.type);
     return result;
@@ -995,7 +939,7 @@ static void assemble_records(
                 f->format = std::move(res.format);
                 f->refname = res.refname;
                 f->refargs = res.refargs;
-                for (auto & d : res.desc) f->desc.push_back(d);
+                for (auto & d : res.desc) f->format_desc.push_back(d);
                 rec->fields.push_back(std::move(f));
             }
         }, decl.data.record);
@@ -1006,13 +950,13 @@ static void assemble_records(
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
-                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        auto * sv = std::get_if<std::string>(&val);
-                        if (!sv) continue;
+                        auto d = annotation_expr(evaluator, scope,
+                                                 ann.data.description, node.context, driver);
+                        if (!d) continue;
                         if (!ann.data.path) {
-                            rec->desc.push_back(*sv);
+                            rec->desc.push_back(std::move(*d));
                         } else if (auto * target = resolve_annotate_path(*ann.data.path, rec->fields)) {
-                            target->desc.push_back(*sv);
+                            target->desc.push_back(std::move(*d));
                         } else {
                             driver.emit_error(
                                 "annotate path '" + annotate_path_text(*ann.data.path)
@@ -1114,9 +1058,107 @@ static void assemble_prompts(
         fill_default_refs(pmt->fields);
         {
             auto & qp = pmt->search["queue"];
-            if (!qp.count("metric")) qp["metric"] = std::string("__search__.queue.metric");
-            if (!qp.count("stop"))   qp["stop"]   = std::string("__search__.queue.stop");
+            if (!qp.count("metric"))
+                qp["metric"] = ir::Expr::reference("__search__.queue.metric");
+            if (!qp.count("stop"))
+                qp["stop"] = ir::Expr::reference("__search__.queue.stop");
         }
+
+        // `call <entry> { ... }` / `call <entry> <path>`: shared by channels
+        // (which run before the prompt) and returns (which run after it), so
+        // both spell a call the same way and resolve through the same code.
+        auto assemble_call = [&](ast::Data<ast::Tag::Call> const & src,
+                                 ir::CallChannel & cc) {
+            auto const & objref = src.entry;
+            auto entry_name = objref.data.name.data.name;
+            auto resolved = builder.resolve(entry_name, node.fileid);
+            if (resolved) {
+                ir::VarMap kwargs;
+                for (auto const & assign : objref.data.config) {
+                    auto k = assign.data.argument.data.name;
+                    auto v = evaluator.evaluate_expression(scope, assign.data.value, node.context);
+                    kwargs[k] = v;
+                }
+                auto target_ctx = builder.eval_context(*resolved, kwargs);
+                auto arguments = builder.extract_arguments(resolved->decl, target_ctx);
+                cc.entry = driver.mangle(resolved->name, arguments);
+            } else if (builder.is_python_symbol(entry_name, node.fileid)) {
+                cc.entry = entry_name;
+                cc.extern_func = entry_name;
+            }
+            if (src.spread) {
+                auto steps = convert_path(*src.spread, evaluator, scope, node.context);
+                // `_` names the root -- an empty path, as `annotate` reads it.
+                if (steps.size() == 1 && steps[0].name == "_") steps.clear();
+                cc.spread = ir::DocPath(std::move(steps), false, std::nullopt);
+                // NOT a return: a call may spread AND name arguments
+                // (`call f _ { k use ... }`), the spread being the default
+                // and a named argument the override.
+            }
+            for (auto const & kwarg : src.arguments) {
+                auto kw_name = kwarg.data.name.data.name;
+                ir::Kwarg irk;
+                std::visit([&](auto const & ks) {
+                    using KS = std::decay_t<decltype(ks)>;
+                    if constexpr (std::is_same_v<KS, ast::Path>) {
+                        irk.is_input = true;
+                        irk.path = convert_path(ks, evaluator, scope, node.context);
+                    } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
+                        // `use __syntax__.prompt_zero_index` parses as a
+                        // prompt-qualified field, and reads as one: a
+                        // namespace and a name. But a system namespace is
+                        // RECORDED, not resolved -- its value does not exist
+                        // until a syntax is chosen at instantiation, and the
+                        // same program renders under sixty-four of them in
+                        // one campaign. Recorded before resolve_prompt_ref,
+                        // which would look for a prompt called __syntax__.
+                        if (ks.data.prompt) {
+                            auto const & ns = ks.data.prompt->data.name.data.name;
+                            if (autocog::data::namespaces::is_namespace_word(ns)) {
+                                auto steps = convert_path(ks.data.field, evaluator,
+                                                          scope, node.context);
+                                std::string ref = ns;
+                                for (auto const & st : steps) ref += "." + st.name;
+                                try {
+                                    autocog::data::namespaces::check(ref, kwarg.location);
+                                    if (autocog::data::namespaces::stage_of(ref)
+                                            > autocog::data::Stage::Instantiate)
+                                        throw CompileError(
+                                            "`" + ref + "` is bound at execute time, "
+                                            "and a call argument is resolved when the "
+                                            "call is made", kwarg.location);
+                                    irk.value = ir::Expr::reference(ref);
+                                } catch (CompileError const & e) {
+                                    driver.emit_error(e.message,
+                                        e.location ? e.location : kwarg.location);
+                                }
+                                return;
+                            }
+                            irk.prompt = resolve_prompt_ref(ns);
+                        }
+                        irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
+                    } else if constexpr (std::is_same_v<KS, ast::Expression>) {
+                        // A call argument is resolved when the call is made,
+                        // which is after a syntax has been chosen: it may
+                        // therefore ask about the rendering, and `is 4` and
+                        // `use __syntax__.prompt_zero_index` are the same kind
+                        // of thing. Values keep their TYPE here (they used to
+                        // be stringified); a resolver receives the int 4, not
+                        // the string "4".
+                        try {
+                            irk.value = evaluator.residualize(
+                                scope, ks, node.context,
+                                autocog::data::Stage::Instantiate);
+                        } catch (CompileError const & e) {
+                            driver.emit_error(e.message,
+                                e.location ? e.location : kwarg.location);
+                        }
+                    }
+                }, kwarg.data.source);
+                irk.clauses = convert_clauses_from_link(kwarg.data.clauses, evaluator, scope, node.context);
+                cc.kwargs[kw_name] = std::move(irk);
+            }
+        };
 
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
@@ -1185,50 +1227,7 @@ static void assemble_prompts(
                                 pmt->channels.push_back(std::move(dc));
                             } else if constexpr (std::is_same_v<S, ast::Call>) {
                                 auto cc = ir::CallChannel(std::move(target_docpath));
-                                auto const & objref = src.data.entry;
-                                auto entry_name = objref.data.name.data.name;
-                                auto resolved = builder.resolve(entry_name, node.fileid);
-                                if (resolved) {
-                                    ir::VarMap kwargs;
-                                    for (auto const & assign : objref.data.config) {
-                                        auto k = assign.data.argument.data.name;
-                                        auto v = evaluator.evaluate_expression(scope, assign.data.value, node.context);
-                                        kwargs[k] = v;
-                                    }
-                                    auto target_ctx = builder.eval_context(*resolved, kwargs);
-                                    auto arguments = builder.extract_arguments(resolved->decl, target_ctx);
-                                    cc.entry = driver.mangle(resolved->name, arguments);
-                                } else if (builder.is_python_symbol(entry_name, node.fileid)) {
-                                    cc.entry = entry_name;
-                                    cc.extern_func = entry_name;
-                                }
-                                for (auto const & kwarg : src.data.arguments) {
-                                    auto kw_name = kwarg.data.name.data.name;
-                                    ir::Kwarg irk;
-                                    std::visit([&](auto const & ks) {
-                                        using KS = std::decay_t<decltype(ks)>;
-                                        if constexpr (std::is_same_v<KS, ast::Path>) {
-                                            irk.is_input = true;
-                                            irk.path = convert_path(ks, evaluator, scope, node.context);
-                                        } else if constexpr (std::is_same_v<KS, ast::FieldRef>) {
-                                            if (ks.data.prompt) {
-                                                irk.prompt = resolve_prompt_ref(ks.data.prompt->data.name.data.name);
-                                            }
-                                            irk.path = convert_path(ks.data.field, evaluator, scope, node.context);
-                                        } else if constexpr (std::is_same_v<KS, ast::Expression>) {
-                                            auto val = evaluator.evaluate_expression(scope, ks, node.context);
-                                            if (auto * sv = std::get_if<std::string>(&val)) {
-                                                irk.value = *sv;
-                                            } else if (auto * iv = std::get_if<int>(&val)) {
-                                                irk.value = std::to_string(*iv);
-                                            } else if (auto * fv = std::get_if<float>(&val)) {
-                                                irk.value = std::to_string(*fv);
-                                            }
-                                        }
-                                    }, kwarg.data.source);
-                                    irk.clauses = convert_clauses_from_link(kwarg.data.clauses, evaluator, scope, node.context);
-                                    cc.kwargs[kw_name] = std::move(irk);
-                                }
+                                assemble_call(src.data, cc);
                                 // Link-level clauses (ravel, bind, etc. on the channel itself)
                                 cc.link_clauses = convert_clauses_from_link(link.data.clauses, evaluator, scope, node.context);
                                 pmt->channels.push_back(std::move(cc));
@@ -1264,6 +1263,15 @@ static void assemble_prompts(
                                     }
                                     ri.fields.push_back(std::move(ret));
                                 }
+                            } else if constexpr (std::is_same_v<S, ast::Call>) {
+                                auto ret = ir::ReturnField(ir::DocPath({}, false, std::nullopt));
+                                if (rf.data.alias) {
+                                    ret.alias = eval_alias(rf.data.alias.value(), evaluator, scope, node.context);
+                                }
+                                auto cc = ir::CallChannel(ir::DocPath({}, false, std::nullopt));
+                                assemble_call(src.data, cc);
+                                ret.call = std::move(cc);
+                                ri.fields.push_back(std::move(ret));
                             }
                         }, rf.data.source);
                     }
@@ -1271,17 +1279,17 @@ static void assemble_prompts(
 
                 } else if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
-                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        auto * sv = std::get_if<std::string>(&val);
-                        if (!sv) continue;
+                        auto d = annotation_expr(evaluator, scope,
+                                                 ann.data.description, node.context, driver);
+                        if (!d) continue;
                         if (!ann.data.path) {
-                            pmt->desc.push_back(*sv);
+                            pmt->desc.push_back(std::move(*d));
                         } else if (auto * target = resolve_annotate_path(*ann.data.path, pmt->fields)) {
                             // Full-path resolution: `annotate { a.b as ...; }`
                             // lands on the nested field (previously only the
                             // first step was matched, silently annotating the
                             // container).
-                            target->desc.push_back(*sv);
+                            target->desc.push_back(std::move(*d));
                         } else {
                             driver.emit_error(
                                 "annotate path '" + annotate_path_text(*ann.data.path)

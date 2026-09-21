@@ -93,6 +93,12 @@ structure is fixed by `share/schemas/fta.schema.json`. Evaluating an FTA produce
 **FTT** (Finite Thought Tree), the model's evaluation tree, which the runtime walks
 back into a frame of field values (see [Runtime Semantics](../compiler/runtime-semantics.md)).
 
+How much of the DAG is a decision depends on the content it was instantiated with:
+a complete frame fills every field, leaving one chain of `text` actions — the single
+path that renders that frame. `simplified` is present when such a chain has been
+collapsed for finetuning export (`ista --simplify`), and marks the FTA as unscorable,
+since merging text actions re-tokenizes across their boundaries.
+
 ## .stapp — Structured Thought App
 
 A zip archive containing everything needed to run an STL program.

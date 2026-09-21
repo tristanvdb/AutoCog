@@ -20,6 +20,10 @@ namespace data = autocog::data;
 
 namespace {
 
+// Defined below with the other IR->STA converters; the flow extractor above
+// them needs it for `alias call f ...` return fields.
+static data::CallChannel convert_call_channel(ir::CallChannel const & c);
+
 // Local helpers over the data field/abstract tables: the data:: types are pure
 // PODs, so the methods/free fns that lived on the runtime types live here.
 static bool is_list(data::Field const & f) { return f.range.has_value(); }
@@ -59,11 +63,9 @@ static data::FieldFormat extract_format(ir::Format const & fmt) {
 // Convert resolved IR search policies to the STA SearchParams shape.
 static data::SearchParams convert_policies(ir::SearchPolicies const & pol) {
     data::SearchParams out;
-    for (auto const & [category, params] : pol) {
-        for (auto const & [key, val] : params) {
-            std::visit([&](auto const & v) { out.categories[category][key] = v; }, val);
-        }
-    }
+    for (auto const & [category, params] : pol)
+        for (auto const & [key, val] : params)
+            out.categories[category][key] = val;
     return out;
 }
 
@@ -89,6 +91,7 @@ static void collect_fields(
         info.flat_index = static_cast<int>(flat.size());
         info.range = f.range;
         info.desc = f.desc;
+        info.format_desc = f.format_desc;  // the record's own `_`, listed once
         info.format_ref = f.refname;       // collapsed self-form record name, if any
         info.search = convert_policies(f.search);
 
@@ -181,6 +184,7 @@ static std::map<std::string, data::Flow> extract_flows(ir::Prompt const & pmt) {
             data::ReturnField srf;
             srf.alias = rf.alias.value_or("_");
             srf.path = rf.source.steps;   // shared PathStep; copy through
+            if (rf.call) srf.call = convert_call_channel(rf.call.value());
             rt.fields.push_back(std::move(srf));
         }
         flows[label] = data::Flow{std::move(rt)};
@@ -215,6 +219,27 @@ static std::vector<data::Clause> convert_clauses(std::vector<ir::Clause> const &
     return out;
 }
 
+static data::CallChannel convert_call_channel(ir::CallChannel const & c) {
+    data::CallChannel cc;
+    cc.target = convert_docpath(c.target);
+    cc.extern_func = c.extern_func;
+    cc.entry = c.entry;
+    for (auto const & [name, kwarg] : c.kwargs) {
+        data::ChannelKwarg ck;
+        ck.name = name;
+        ck.is_input = kwarg.is_input;
+        ck.prompt = kwarg.prompt;
+        ck.path = convert_steps(kwarg.path);
+      ck.value = kwarg.value;
+        ck.clauses = convert_clauses(kwarg.clauses);
+        cc.kwargs.push_back(std::move(ck));
+    }
+    if (c.spread) cc.spread = convert_steps(c.spread.value().steps);
+    // Link-level clauses
+    cc.clauses = convert_clauses(c.link_clauses);
+    return cc;
+}
+
 static std::vector<data::Channel> extract_channels(ir::Prompt const & pmt) {
     std::vector<data::Channel> channels;
     for (auto const & ch : pmt.channels) {
@@ -233,23 +258,7 @@ static std::vector<data::Channel> extract_channels(ir::Prompt const & pmt) {
                 dc.clauses = convert_clauses(c.clauses);
                 channels.push_back(data::Channel{std::move(dc)});
             } else if constexpr (std::is_same_v<T, ir::CallChannel>) {
-                data::CallChannel cc;
-                cc.target = convert_docpath(c.target);
-                cc.extern_func = c.extern_func;
-                cc.entry = c.entry;
-                for (auto const & [name, kwarg] : c.kwargs) {
-                    data::ChannelKwarg ck;
-                    ck.name = name;
-                    ck.is_input = kwarg.is_input;
-                    ck.prompt = kwarg.prompt;
-                    ck.path = convert_steps(kwarg.path);
-                    ck.value = kwarg.value;
-                    ck.clauses = convert_clauses(kwarg.clauses);
-                    cc.kwargs.push_back(std::move(ck));
-                }
-                // Link-level clauses
-                cc.clauses = convert_clauses(c.link_clauses);
-                channels.push_back(data::Channel{std::move(cc)});
+                channels.push_back(data::Channel{convert_call_channel(c)});
             }
         }, ch);
     }
@@ -322,7 +331,11 @@ static void collect_inputs(
             if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
                 // Direct input channel
                 if (ic->source.empty()) continue;
-                std::string name = ic->source.back().name;
+                // The FIRST step: `choices get choice.value` reads the input
+                // named `choice` and takes a field out of it. Naming the
+                // schema after the last step would advertise an input called
+                // `value` that no caller can supply.
+                std::string name = ic->source.front().name;
                 std::string target_name = ic->target.empty() ? name : ic->target.back().name;
 
                 // Find target field format and range
@@ -359,7 +372,7 @@ static void collect_inputs(
                 for (auto const & kw : cc->kwargs) {
                     if (kw.is_input && !kw.value.has_value()) {
                         if (kw.path.empty()) continue;
-                        std::string name = kw.path.back().name;
+                        std::string name = kw.path.front().name;
                         if (inputs.count(name) == 0) {
                             data::SchemaField schema;
                             schema.type = "text";
@@ -399,10 +412,10 @@ static void collect_inputs(
             for (auto const & ch : it->second.channels) {
                 bool found = false;
                 if (auto * ic = std::get_if<data::InputChannel>(&ch.value)) {
-                    if (!ic->source.empty() && ic->source.back().name == name) found = true;
+                    if (!ic->source.empty() && ic->source.front().name == name) found = true;
                 } else if (auto * cc = std::get_if<data::CallChannel>(&ch.value)) {
                     for (auto const & kw : cc->kwargs) {
-                        if (kw.is_input && !kw.path.empty() && kw.path.back().name == name) found = true;
+                        if (kw.is_input && !kw.path.empty() && kw.path.front().name == name) found = true;
                     }
                 }
                 if (found) { schema.required = true; break; }
@@ -495,16 +508,13 @@ std::optional<int> Driver::run_generate() {
         pstas.name = pmt.mangled_name;
         pstas.desc = pmt.desc;
 
-        // Carry the prompt-scope search params verbatim (IR Value -> STA
-        // SearchValue; identical scalar shapes). Per-field/per-state resolution
-        // is applied later at instantiation.
-        for (auto const & [category, params] : pmt.search) {
-            for (auto const & [key, val] : params) {
-                std::visit([&](auto const & v) {
-                    pstas.search.categories[category][key] = v;
-                }, val);
-            }
-        }
+        // Carry the prompt-scope search params verbatim (the IR and the STA
+        // hold the same expressions). Per-field/per-state resolution is applied
+        // later, at instantiation, where the syntax and the search config are
+        // known and most of these fold to a number.
+        for (auto const & [category, params] : pmt.search)
+            for (auto const & [key, val] : params)
+                pstas.search.categories[category][key] = val;
 
         // Carry the vocab table: vocab_<hash> -> resolved expression tree.
         for (auto const & [key, ve] : pmt.vocabs) {
@@ -562,7 +572,7 @@ std::optional<int> Driver::run_generate() {
 
     // Publish exported prompts under their export names: `export main<> as
     // main;` must yield a prompt addressable as "main" by the tools that take
-    // --prompt (ista/efta), not only through the entry-point indirection.
+    // --prompt (ista), not only through the entry-point indirection.
     // The first (sorted) export name wins for a given prompt; a name already
     // taken by a different prompt is left mangled (indirection still works).
     {

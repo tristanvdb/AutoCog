@@ -93,7 +93,7 @@ nlohmann::json to_json(ChannelKwarg const & k) {
   j["path"]     = paths_to_json(k.path);
   j["clauses"]  = clauses_to_json(k.clauses);
   j["prompt"]   = k.prompt ? nlohmann::json(*k.prompt) : nlohmann::json(nullptr);
-  j["value"]    = k.value  ? nlohmann::json(*k.value)  : nlohmann::json(nullptr);
+  j["value"]    = k.value  ? to_json(*k.value)         : nlohmann::json(nullptr);
   return j;
 }
 
@@ -105,7 +105,10 @@ void from_json(nlohmann::json const & dom, ChannelKwarg & k) {
   paths_from_json(dom.at("path"), k.path);
   clauses_from_json(dom.at("clauses"), k.clauses);
   if (dom.contains("prompt") && !dom["prompt"].is_null()) k.prompt = dom["prompt"].get<std::string>();
-  if (dom.contains("value")  && !dom["value"].is_null())  k.value  = dom["value"].get<std::string>();
+  if (dom.contains("value") && !dom["value"].is_null()) {
+    k.value.emplace();
+    from_json(dom["value"], *k.value);
+  }
   });
 }
 
@@ -128,6 +131,9 @@ nlohmann::json to_json(Channel const & c) {
                           {"kwargs", kwargs}, {"clauses", clauses_to_json(x.clauses)}};
       j["extern"] = x.extern_func ? nlohmann::json(*x.extern_func) : nlohmann::json(nullptr);
       j["entry"]  = x.entry       ? nlohmann::json(*x.entry)       : nlohmann::json(nullptr);
+      // Emitted only for the spread form, so `call f { ... }` serializes as it
+      // always has.
+      if (x.spread) j["spread"] = paths_to_json(*x.spread);
       return j;
     },
   }, c.value);
@@ -154,6 +160,10 @@ void from_json(nlohmann::json const & dom, Channel & out) {
     for (auto const & kj : dom.at("kwargs")) { x.kwargs.emplace_back(); from_json(kj, x.kwargs.back()); }
     if (dom.contains("extern") && !dom["extern"].is_null()) x.extern_func = dom["extern"].get<std::string>();
     if (dom.contains("entry")  && !dom["entry"].is_null())  x.entry       = dom["entry"].get<std::string>();
+    if (dom.contains("spread") && !dom["spread"].is_null()) {
+      x.spread.emplace();
+      paths_from_json(dom.at("spread"), *x.spread);
+    }
   } else {
     throw autocog::SchemaError("autocog::data: unknown channel type '" + type + "'", type);
   }

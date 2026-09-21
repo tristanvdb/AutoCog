@@ -133,6 +133,19 @@ int main() {
           "a namespace is not a value");
     autocog::data::namespaces::check("__search__.enum.width");
     check(true, "a search parameter is a known reference");
+
+    // The stage boundary, which is what each stage checks before handing an
+    // expression on: nothing an earlier stage owed may still be outstanding.
+    using autocog::data::unbound_before;
+    auto const syntax_and_status = Expr::binary(
+        OpKind::Gt, Expr::reference("__status__.tree.terminals"), zero_index);
+    check(unbound_before(syntax_and_status, Stage::Execute)
+              == std::optional<std::string>("__syntax__.prompt_zero_index"),
+          "an instantiate-stage reference is caught before execution");
+    check(!unbound_before(mixed, Stage::Execute).has_value(),
+          "an execute-stage one is not");
+    check(!unbound_before(Expr::lit(1), Stage::Execute).has_value(),
+          "and a literal owes nothing");
   }
 
   // --- text forms ----------------------------------------------------------

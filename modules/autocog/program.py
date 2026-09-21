@@ -71,9 +71,12 @@ def _process_diagnostics(program_id):
 class Program:
     """A compiled STL program. Wraps an opaque ProgramID."""
 
-    def __init__(self, program_id):
+    def __init__(self, program_id, search_paths=()):
         self.id = program_id
         self._sta = None
+        #: where this program was compiled from (source dir + includes), so a
+        #: runner can find the .py files it names without being told again
+        self.search_paths = list(search_paths)
 
     @property
     def sta(self):
@@ -195,6 +198,12 @@ def compile(filepath, includes=None, entry_points=None, defines=None):
         raise FileError(f"Cannot find file: {filepath}", path=filepath)
 
     inc = list(includes or [])
+    # The program's own directory is an implicit include — the compiler driver
+    # adds it for STL imports (compile/parse.cxx); mirrored here so the Python
+    # imports it names resolve by the same rule.
+    own_dir = os.path.dirname(os.path.abspath(filepath))
+    if own_dir not in inc:
+        inc.insert(0, own_dir)
     # Add stdlib as implicit include (lowest priority)
     stdlib = _stdlib_path()
     if stdlib and stdlib not in inc:
@@ -208,10 +217,15 @@ def compile(filepath, includes=None, entry_points=None, defines=None):
     # Log diagnostics and raise CompileError if the compile produced errors
     # (this releases the unusable program before raising).
     _process_diagnostics(pid)
-    return Program(pid)
+    # inc already leads with the program's own directory.
+    return Program(pid, search_paths=inc)
 
 
 def load(filepath):
-    """Load a pre-compiled STA JSON file into a Program."""
+    """Load a pre-compiled STA JSON file into a Program.
+
+    The artifact's directory becomes a search path: a program that resolves
+    its own answer names a .py file, and the usual layout puts it alongside.
+    """
     pid = runtime_sta_cxx.load_sta(filepath)
-    return Program(pid)
+    return Program(pid, search_paths=[os.path.dirname(os.path.abspath(filepath))])

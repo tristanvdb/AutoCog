@@ -39,22 +39,18 @@ void paths_from_json(nlohmann::json const & a, std::vector<PathStep> & out) {
   for (auto const & e : a) { out.emplace_back(); from_json(e, out.back()); }
 }
 
-nlohmann::json sv_to_json(autocog::types::Value const & v) {
-  return std::visit(overloaded{
-    [](int x) -> nlohmann::json { return x; },
-    [](float x) -> nlohmann::json { return x; },
-    [](bool x) -> nlohmann::json { return x; },
-    [](std::string const & x) -> nlohmann::json { return x; },
-    [](std::monostate) -> nlohmann::json { return nullptr; },
-  }, v);
+// Descriptions are expressions; a literal one serializes as the bare string it
+// has always been, so an annotation that does not ask about the rendering looks
+// exactly as it did.
+nlohmann::json exprs_to_json(std::vector<Expr> const & v) {
+  nlohmann::json a = nlohmann::json::array();
+  for (auto const & e : v) a.push_back(to_json(e));
+  return a;
 }
-autocog::types::Value sv_from_json(nlohmann::json const & j) {
-  if (j.is_number_integer()) return j.get<int>();
-  if (j.is_number_float())   return j.get<float>();
-  if (j.is_boolean())        return j.get<bool>();
-  if (j.is_string())         return j.get<std::string>();
-  return std::monostate{};
+void exprs_from_json(nlohmann::json const & a, std::vector<Expr> & out) {
+  for (auto const & e : a) { out.emplace_back(); from_json(e, out.back()); }
 }
+
 
 }  // namespace
 
@@ -63,7 +59,7 @@ nlohmann::json to_json(SearchParams const & sp) {
   nlohmann::json sj = nlohmann::json::object();
   for (auto const & [cat, params] : sp.categories) {
     nlohmann::json pj = nlohmann::json::object();
-    for (auto const & [key, val] : params) pj[key] = sv_to_json(val);
+    for (auto const & [key, val] : params) pj[key] = to_json(val);
     sj[cat] = pj;
   }
   return sj;
@@ -73,7 +69,7 @@ void from_json(nlohmann::json const & dom, SearchParams & sp) {
   autocog::codec::read_guarded("SearchParams", [&]{
   for (auto const & [cat, params] : dom.items())
     for (auto const & [key, val] : params.items())
-      sp.categories[cat][key] = sv_from_json(val);
+      from_json(val, sp.categories[cat][key]);
   });
 }
 
@@ -132,6 +128,7 @@ nlohmann::json to_json(Flow const & fl) {
         nlohmann::json rj;
         rj["alias"] = rf.alias;
         rj["path"]  = paths_to_json(rf.path);
+        if (rf.call) rj["call"] = to_json(Channel{*rf.call});
         fields.push_back(rj);
       }
       return {{"type","return"}, {"fields", fields}};
@@ -153,6 +150,11 @@ void from_json(nlohmann::json const & dom, Flow & out) {
       ReturnField & rf = f.fields.back();
       rf.alias = rj.at("alias").get<std::string>();
       paths_from_json(rj.at("path"), rf.path);
+      if (rj.contains("call") && !rj["call"].is_null()) {
+        Channel ch;
+        from_json(rj.at("call"), ch);
+        rf.call = std::get<CallChannel>(ch.value);
+      }
     }
   } else {
     throw autocog::SchemaError("autocog::data: unknown flow type '" + type + "'", type);
@@ -164,11 +166,11 @@ template <>
 nlohmann::json to_json(Field const & fd) {
   nlohmann::json j;
   j["name"] = fd.name; j["depth"] = fd.depth; j["index"] = fd.index; j["flat_index"] = fd.flat_index;
-  j["desc"] = fd.desc;
+  j["desc"] = exprs_to_json(fd.desc);
   j["range"] = fd.range ? nlohmann::json::array({fd.range->first, fd.range->second}) : nlohmann::json(nullptr);
   j["format"] = to_json(fd.format);
   if (fd.format_ref) j["format_ref"] = *fd.format_ref;
-  if (!fd.format_desc.empty()) j["format_desc"] = fd.format_desc;
+  if (!fd.format_desc.empty()) j["format_desc"] = exprs_to_json(fd.format_desc);
   if (!fd.search.empty()) j["search"] = to_json(fd.search);
   return j;
 }
@@ -179,12 +181,12 @@ void from_json(nlohmann::json const & dom, Field & f) {
   f.depth = dom.at("depth").get<int>();
   f.index = dom.at("index").get<int>();
   f.flat_index = dom.at("flat_index").get<int>();
-  f.desc = dom.at("desc").get<std::vector<std::string>>();
+  exprs_from_json(dom.at("desc"), f.desc);
   if (dom.contains("range") && !dom["range"].is_null())
     f.range = std::make_pair(dom["range"].at(0).get<int>(), dom["range"].at(1).get<int>());
   from_json(dom.at("format"), f.format);
   if (dom.contains("format_ref"))  f.format_ref  = dom["format_ref"].get<std::string>();
-  if (dom.contains("format_desc")) f.format_desc = dom["format_desc"].get<std::vector<std::string>>();
+  if (dom.contains("format_desc")) exprs_from_json(dom["format_desc"], f.format_desc);
   if (dom.contains("search"))      from_json(dom["search"], f.search);
   });
 }
@@ -266,7 +268,7 @@ template <>
 nlohmann::json to_json(Prompt const & p) {
   nlohmann::json j;
   j["name"] = p.name;
-  j["desc"] = p.desc;
+  j["desc"] = exprs_to_json(p.desc);
   nlohmann::json farr = nlohmann::json::array();
   for (auto const & f : p.fields) farr.push_back(to_json(f));
   j["fields"] = farr;
@@ -294,7 +296,7 @@ template <>
 void from_json(nlohmann::json const & dom, Prompt & p) {
   autocog::codec::read_guarded("Prompt", [&]{
   p.name = dom.at("name").get<std::string>();
-  p.desc = dom.at("desc").get<std::vector<std::string>>();
+  exprs_from_json(dom.at("desc"), p.desc);
   for (auto const & fj : dom.at("fields")) { p.fields.emplace_back(); from_json(fj, p.fields.back()); }
   for (auto const & aj : dom.at("abstracts")) {
     p.abstracts.emplace_back();

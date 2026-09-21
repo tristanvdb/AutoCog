@@ -1,6 +1,10 @@
 
+from autocog.runtime import extern
+
+
 _store = {}
 
+@extern
 def store(data, pkey="", skey=""):
     global _store
     if pkey not in _store:
@@ -9,6 +13,7 @@ def store(data, pkey="", skey=""):
         _store[pkey][skey] = data
     return { "pkey" : pkey, "skey" : skey }
 
+@extern
 def retrieve(pkey="", skey=""):
     global _store
     if pkey not in _store:

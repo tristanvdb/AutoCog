@@ -13,18 +13,26 @@
 
 #include "autocog/runtime/fta/vocab.hxx"   // VocabExpr (still the runtime rep; unified later)
 #include "autocog/utilities/types.hxx"     // Value
+#include "autocog/data/expr.hxx"           // Expr (a binding is an expression)
 #include "autocog/data/path.hxx"           // PathStep, StepRange
 #include "autocog/data/channel.hxx"        // clause leaf structs
 #include "autocog/data/sta.hxx"            // CompletionFormat, EnumFormat, ChoiceFormat
 
 namespace autocog::compiler::stl::ir {
 
-// A resolved STL scalar value. Identical to the runtime's SearchValue (all STL
-// expressions are constexpr, so values are concrete by IR time); shared so the
-// IR->STA carry needs no re-wrap. The distinct names mark role (compiler value
-// vs search param), not a distinct shape.
+// A resolved STL scalar value. Identical to the runtime's SearchValue; shared
+// so the IR->STA carry needs no re-wrap. The distinct names mark role (compiler
+// value vs search param), not a distinct shape.
 using Value = ::autocog::types::Value;
-using VarMap = std::unordered_map<std::string, Value>;
+
+// What a name is bound to. NOT a Value: an STL expression is constexpr only as
+// far as what it names is known, and `__syntax__` is not -- the syntax is
+// chosen when a prompt is instantiated, long after the program is compiled. So
+// a binding is an Expr, which is a Value in the overwhelming majority of cases
+// (Expr::is_literal) and a residual tree in the few that defer. Everything that
+// needs a constant here asks for one and says so when it does not get it.
+using Expr = ::autocog::data::Expr;
+using VarMap = std::unordered_map<std::string, Expr>;
 
 // Search policies carried from `search { <category>.<param> is <expr>; }`.
 // Keyed by category (text/enum/branch/flow/queue), each holding an OPEN map of
@@ -83,7 +91,12 @@ struct DocPath {
 // Base class for all named IR objects
 struct Object {
   std::string name;
-  std::vector<std::string> desc;  // Annotations for LLM prompt engineering
+  // Annotations for LLM prompt engineering. Expressions, because an annotation
+  // is the one place where the rendering that the text describes is not known
+  // yet: `annotate f"the choice{index_label}"` where index_label reads
+  // __syntax__.prompt_zero_index has to wait for the syntax. Literal for every
+  // annotation that does not ask about the rendering, which is most of them.
+  std::vector<Expr> desc;
 
   Object(std::string name_) :
     name(std::move(name_)),
@@ -141,6 +154,13 @@ struct Field : public Object {
                                           // struct -> branch only.
   std::optional<std::string> refname;     // Original record name (e.g. "Thought"), if any
   VarMap refargs;                         // Record instantiation args (empty if none)
+  std::vector<Expr> format_desc;          // The referenced record's own `_`
+                                          // annotation. NOT this field's desc:
+                                          // it documents the FORMAT, and the
+                                          // header lists it once under the
+                                          // named formats rather than
+                                          // repeating it on every field that
+                                          // uses the record.
 
   Field(std::string name_, int depth_, int index_) :
     Object(std::move(name_)),
@@ -219,7 +239,10 @@ struct Kwarg {
   bool is_input;                          // True if source is external input
   std::optional<std::string> prompt;      // For cross-prompt dataflow
   std::vector<PathStep> path;             // Source path
-  std::optional<std::string> value;       // Literal value (from "is" keyword)
+  // The argument's value when it is not read from the document: an
+  // expression, so `zero_index is 0` and `zero_index use
+  // __syntax__.prompt_zero_index` are one field. Resolved at call time.
+  std::optional<Expr> value;
   std::vector<Clause> clauses;            // Transformation clauses
 
   Kwarg() :
@@ -261,6 +284,7 @@ struct CallChannel {
   std::optional<std::string> extern_func;  // "module.function" for Python calls
   std::optional<std::string> entry;        // For prompt calls
   std::unordered_map<std::string, Kwarg> kwargs;
+  std::optional<DocPath> spread;           // `call f <path>`: spread a record as the arguments
   std::vector<Clause> link_clauses;        // Clauses on the link itself (ravel, bind, etc.)
 
   CallChannel(DocPath target_) :
@@ -268,6 +292,7 @@ struct CallChannel {
     extern_func(std::nullopt),
     entry(std::nullopt),
     kwargs(),
+    spread(std::nullopt),
     link_clauses()
   {}
 };
@@ -292,12 +317,14 @@ struct ReturnField {
   DocPath source;                         // Which field to return
   std::optional<std::string> alias;       // Optional alias for the field
   std::optional<std::string> constant;    // Compile-time constant value (from Expression source)
+  std::optional<CallChannel> call;        // `alias call f ...`: computed, not read
   std::vector<Clause> clauses;            // Transformation clauses
 
   ReturnField(DocPath source_) :
     source(std::move(source_)),
     alias(std::nullopt),
     constant(std::nullopt),
+    call(std::nullopt),
     clauses()
   {}
 };

@@ -38,7 +38,9 @@ std::string ChannelKwarg::hash() const {
   h.put(name).put(is_input);
   put_paths(h, path);
   put_clauses(h, clauses);
-  h.put(prompt).put(value);
+  h.put(prompt);
+  h.put(value.has_value());
+  if (value) hash_put(h, *value);
   return h.hash();
 }
 
@@ -58,6 +60,9 @@ std::string Channel::hash() const {
       for (auto const & kw : c.kwargs) h.put(kw.hash());
       put_clauses(h, c.clauses);
       h.put(c.extern_func).put(c.entry);
+      // Hashed only when present, so every call that names its arguments keeps
+      // the identity it had before the spread form existed.
+      if (c.spread) put_paths(h, *c.spread);
     },
   }, value);
   return h.hash();

@@ -43,7 +43,15 @@ enum class MetricKey {
 };
 
 struct EvaluationConfig {
-  bool evaluate_text{true};
+  /// Score every text action, not only those the FTA marked `evaluate`.
+  ///
+  /// Generation never needs this: fixed text is a prefix the model is going
+  /// to be conditioned on anyway, and decoding it to learn a logprob nobody
+  /// reads is pure cost. It is on when the logprobs themselves are the
+  /// measurement — an FTA instantiated from a complete frame is one forced
+  /// path, and scoring all of it yields P(token | prefix) for every token the
+  /// model did not choose. That is constraint friction.
+  bool score_all{false};
 };
 
 // Coarse-grain performance counters, accumulated during advance(). Cheap
@@ -119,10 +127,10 @@ class Evaluation {
 
     void on_terminal(data::FTTNode const & node, ActionID action);
     double scalar_value(std::string const & name) const;
-    bool eval_stop(data::TermExpr const & e) const;
+    bool eval_stop(data::Expr const & e) const;
     /// The FTA's stop predicate, model-bound: refs (e.g. model.n_ctx) folded
     /// to constants at construction.
-    std::optional<data::TermExpr> stop_;
+    std::optional<data::Expr> stop_;
 
   protected:
     // Restore the branch prefix into the state's context; tokens decoded doing

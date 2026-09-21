@@ -34,26 +34,22 @@ py::list paths_to_py(std::vector<PathStep> const & v) {
   for (auto const & p : v) l.append(to_py(p));
   return l;
 }
+py::list exprs_to_py(std::vector<Expr> const & v) {
+  py::list l;
+  for (auto const & e : v) l.append(to_py(e));
+  return l;
+}
+void exprs_from_py(py::handle h, std::vector<Expr> & out) {
+  for (auto const & e : h) {
+    out.emplace_back();
+    from_py(py::reinterpret_borrow<py::object>(e), out.back());
+  }
+}
+
 void paths_from_py(py::object const & obj, std::vector<PathStep> & out) {
   for (auto const & e : obj.cast<py::list>()) { out.emplace_back(); from_py(py::reinterpret_borrow<py::object>(e), out.back()); }
 }
 
-py::object sv_to_py(autocog::types::Value const & v) {
-  return std::visit(overloaded{
-    [](int x) -> py::object { return py::cast(x); },
-    [](float x) -> py::object { return py::cast(x); },
-    [](bool x) -> py::object { return py::cast(x); },
-    [](std::string const & x) -> py::object { return py::cast(x); },
-    [](std::monostate) -> py::object { return py::none(); },
-  }, v);
-}
-autocog::types::Value sv_from_py(py::handle h) {
-  if (py::isinstance<py::bool_>(h))  return h.cast<bool>();   // bool before int
-  if (py::isinstance<py::int_>(h))   return h.cast<int>();
-  if (py::isinstance<py::float_>(h)) return h.cast<float>();
-  if (py::isinstance<py::str>(h))    return h.cast<std::string>();
-  return std::monostate{};
-}
 
 }  // namespace
 
@@ -62,7 +58,7 @@ pybind11::object to_py(SearchParams const & sp) {
   py::dict d;
   for (auto const & [cat, params] : sp.categories) {
     py::dict pj;
-    for (auto const & [key, val] : params) pj[py::str(key)] = sv_to_py(val);
+    for (auto const & [key, val] : params) pj[py::str(key)] = to_py(val);
     d[py::str(cat)] = pj;
   }
   return d;
@@ -73,7 +69,8 @@ void from_py(pybind11::object const & obj, SearchParams & sp) {
   for (auto const & cat_item : d) {
     std::string cat = cat_item.first.cast<std::string>();
     for (auto const & p : cat_item.second.cast<py::dict>())
-      sp.categories[cat][p.first.cast<std::string>()] = sv_from_py(p.second);
+      from_py(py::reinterpret_borrow<py::object>(p.second),
+              sp.categories[cat][p.first.cast<std::string>()]);
   }
 }
 
@@ -126,7 +123,11 @@ pybind11::object to_py(Flow const & fl) {
     [](FlowReturn const & f) -> py::object {
       py::dict d; d["type"]="return";
       py::list fields;
-      for (auto const & rf : f.fields) { py::dict rj; rj["alias"]=rf.alias; rj["path"]=paths_to_py(rf.path); fields.append(rj); }
+      for (auto const & rf : f.fields) {
+        py::dict rj; rj["alias"]=rf.alias; rj["path"]=paths_to_py(rf.path);
+        if (rf.call) rj["call"] = to_py(Channel{*rf.call});
+        fields.append(rj);
+      }
       d["fields"]=fields;
       return d;
     },
@@ -148,6 +149,10 @@ void from_py(pybind11::object const & obj, Flow & out) {
       ReturnField & rf = f.fields.back();
       rf.alias = rd["alias"].cast<std::string>();
       paths_from_py(rd["path"], rf.path);
+      if (rd.contains("call") && !rd["call"].is_none()) {
+        Channel ch; from_py(rd["call"], ch);
+        rf.call = std::get<CallChannel>(ch.value);
+      }
     }
   } else {
     throw autocog::SchemaError("autocog::data: unknown flow type '" + type + "'", type);
@@ -157,11 +162,11 @@ void from_py(pybind11::object const & obj, Flow & out) {
 template <>
 pybind11::object to_py(Field const & fd) {
   py::dict d;
-  d["name"]=fd.name; d["depth"]=fd.depth; d["index"]=fd.index; d["flat_index"]=fd.flat_index; d["desc"]=fd.desc;
+  d["name"]=fd.name; d["depth"]=fd.depth; d["index"]=fd.index; d["flat_index"]=fd.flat_index; d["desc"]=exprs_to_py(fd.desc);
   if (fd.range) { py::list r; r.append(fd.range->first); r.append(fd.range->second); d["range"]=r; } else d["range"]=py::none();
   d["format"]=to_py(fd.format);
   if (fd.format_ref) d["format_ref"]=*fd.format_ref;
-  if (!fd.format_desc.empty()) d["format_desc"]=fd.format_desc;
+  if (!fd.format_desc.empty()) d["format_desc"]=exprs_to_py(fd.format_desc);
   if (!fd.search.empty()) d["search"]=to_py(fd.search);
   return d;
 }
@@ -172,14 +177,14 @@ void from_py(pybind11::object const & obj, Field & f) {
   f.depth = d["depth"].cast<int>();
   f.index = d["index"].cast<int>();
   f.flat_index = d["flat_index"].cast<int>();
-  f.desc = d["desc"].cast<std::vector<std::string>>();
+  exprs_from_py(d["desc"], f.desc);
   if (d.contains("range") && !d["range"].is_none()) {
     py::list r = d["range"].cast<py::list>();
     f.range = std::make_pair(r[0].cast<int>(), r[1].cast<int>());
   }
   from_py(d["format"], f.format);
   if (d.contains("format_ref"))  f.format_ref  = d["format_ref"].cast<std::string>();
-  if (d.contains("format_desc")) f.format_desc = d["format_desc"].cast<std::vector<std::string>>();
+  if (d.contains("format_desc")) exprs_from_py(d["format_desc"], f.format_desc);
   if (d.contains("search"))      from_py(d["search"], f.search);
 }
 
@@ -255,7 +260,7 @@ void from_py(pybind11::object const & obj, PythonImport & p) {
 template <>
 pybind11::object to_py(Prompt const & p) {
   py::dict d;
-  d["name"] = p.name; d["desc"] = p.desc;
+  d["name"] = p.name; d["desc"] = exprs_to_py(p.desc);
   py::list farr; for (auto const & f : p.fields) farr.append(to_py(f)); d["fields"] = farr;
   py::list aarr;
   for (auto const & a : p.abstracts) { py::dict aj; aj["field"]=a.field; aj["flow"]=a.flow; aj["exit"]=a.exit_; aarr.append(aj); }
@@ -270,7 +275,7 @@ template <>
 void from_py(pybind11::object const & obj, Prompt & p) {
   py::dict d = obj.cast<py::dict>();
   p.name = d["name"].cast<std::string>();
-  p.desc = d["desc"].cast<std::vector<std::string>>();
+  exprs_from_py(d["desc"], p.desc);
   for (auto const & fj : d["fields"].cast<py::list>()) { p.fields.emplace_back(); from_py(py::reinterpret_borrow<py::object>(fj), p.fields.back()); }
   for (auto const & aj : d["abstracts"].cast<py::list>()) {
     py::dict ad = py::reinterpret_borrow<py::object>(aj).cast<py::dict>();

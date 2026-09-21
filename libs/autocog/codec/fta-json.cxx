@@ -102,6 +102,7 @@ nlohmann::json to_json(FTA const & s) {
     for (auto const & [k, ve] : s.vocabs) vj[k] = to_json(ve);
     j["vocabs"] = vj;
   }
+  if (s.simplified) j["simplified"] = *s.simplified;
   if (s.metadata) j["metadata"] = to_json(*s.metadata);
   j["provenance"] = s.provenance;
   return j;
@@ -128,6 +129,8 @@ void from_json(nlohmann::json const & dom, FTA & s) {
   }
   if (dom.contains("vocabs"))
     for (auto const & [k, vj] : dom["vocabs"].items()) from_json(vj, s.vocabs[k]);
+  if (dom.contains("simplified") && !dom["simplified"].is_null())
+    s.simplified = dom.at("simplified").get<std::string>();
   if (dom.contains("metadata")) { s.metadata.emplace(); from_json(dom.at("metadata"), *s.metadata); }
   if (dom.contains("provenance"))
     s.provenance = dom.at("provenance").get<std::map<std::string, std::string>>();

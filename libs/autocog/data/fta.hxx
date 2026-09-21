@@ -2,7 +2,7 @@
 #define AUTOCOG_DATA_FTA_HXX
 
 #include "autocog/data/base.hxx"
-#include "autocog/data/term.hxx"
+#include "autocog/data/expr.hxx"
 #include "autocog/data/vocab.hxx"
 
 #include <map>
@@ -74,8 +74,16 @@ class FTA : public Base<FTA> {
 
     std::vector<Action> actions;                ///< actions[0] is the entry point.
     std::vector<std::string> queue_metric;      ///< Lexicographic ordering keys (see QueueSearch).
-    std::optional<TermExpr> queue_stop;         ///< Early-termination predicate.
+    std::optional<Expr> queue_stop;         ///< Early-termination predicate.
     std::map<std::string, VocabExpr> vocabs;    ///< ref -> expression tree.
+
+    /// Set when this FTA is the collapsed form of another ("limited"/"full",
+    /// see runtime/fta/simplify.hxx). Not provenance: simplification is a
+    /// transform of THIS artifact's actions, not a parent artifact. It is
+    /// load-bearing rather than cosmetic — the evaluator refuses to score a
+    /// simplified FTA, because merging text actions re-tokenizes across their
+    /// boundaries.
+    std::optional<std::string> simplified;
 
   public:
     std::string content_hash() const;

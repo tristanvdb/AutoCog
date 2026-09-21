@@ -4,6 +4,7 @@
 #include "autocog/data/base.hxx"
 #include "autocog/data/path.hxx"
 #include "autocog/data/channel.hxx"
+#include "autocog/data/expr.hxx"
 #include "autocog/data/vocab.hxx"
 #include "autocog/utilities/types.hxx"
 
@@ -22,8 +23,11 @@ namespace autocog::data {
 // --- SearchParams: open dict category -> key -> scalar -----------------------
 
 struct SearchParams {
-  // category -> key -> resolved scalar (monostate = null).
-  std::map<std::string, std::map<std::string, autocog::types::Value>> categories;
+  // category -> key -> expression (monostate = null). Usually a literal; a
+  // reference when the parameter tracks something chosen later -- its own
+  // config default (__search__.<cat>.<key>), a rendering knob, or, for
+  // queue.stop, the running evaluation.
+  std::map<std::string, std::map<std::string, autocog::data::Expr>> categories;
 
   bool empty() const { return categories.empty(); }
 
@@ -50,7 +54,16 @@ struct FieldFormat {
 
 // --- Flow --------------------------------------------------------------------
 
-struct ReturnField { std::string alias; std::vector<PathStep> path; };
+/// A returned entry: `alias use <path>` reads the frame, `alias call f ...`
+/// computes it. The call carries the same shape a channel's does, so one code
+/// path resolves both; the difference is when it runs — a channel before the
+/// prompt, a return after, once the frame is stored and `use .x` can see what
+/// the model emitted.
+struct ReturnField {
+  std::string alias;
+  std::vector<PathStep> path;
+  std::optional<CallChannel> call;
+};
 struct FlowControl { std::string prompt; std::optional<int> limit; };
 struct FlowReturn  { std::vector<ReturnField> fields; };
 
@@ -72,11 +85,14 @@ struct Field {
   int depth = 0;
   int index = 0;
   int flat_index = 0;
-  std::vector<std::string> desc;
+  // Descriptions are expressions: an annotation may ask about the rendering
+  // (`__syntax__.prompt_zero_index`), which is not chosen until the prompt is
+  // instantiated. Literal for every annotation that does not.
+  std::vector<Expr> desc;
   std::optional<std::pair<int,int>> range;   // null = scalar
   FieldFormat format;
   std::optional<std::string> format_ref;
-  std::vector<std::string> format_desc;
+  std::vector<Expr> format_desc;
   SearchParams search;
 
   std::string hash() const;
@@ -93,7 +109,7 @@ struct Field {
 
 struct Prompt {
   std::string name;
-  std::vector<std::string> desc;
+  std::vector<Expr> desc;
   std::vector<Field> fields;
   std::vector<Abstract> abstracts;
   std::map<std::string, Flow> flows;

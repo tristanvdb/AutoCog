@@ -196,6 +196,15 @@ std::string render(Expr const & e, Resolver const & resolve,
 /// like when it lands in a prompt.
 std::string stringify(Value const & v);
 
+/// The first reference in @p e that @p stage should already have bound -- one
+/// whose own stage is EARLIER than @p stage. nullopt when every reference left
+/// belongs to @p stage or later.
+///
+/// This is how a stage boundary is checked rather than assumed: an artifact
+/// handed to a later stage must not still be carrying questions that an
+/// earlier one was supposed to answer.
+std::optional<std::string> unbound_before(Expr const & e, Stage stage);
+
 /// Append an expression to a content hash: its VALUE when it is a literal, its
 /// structure when it is not. Every artifact that holds expressions hashes them
 /// this way, so identity depends on what an expression MEANS rather than on how

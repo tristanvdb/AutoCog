@@ -193,11 +193,26 @@ class TestMainHelpers:
         assert "not found in include paths" in capsys.readouterr().err
 
         # Module present but the function is missing -> warning.
-        (tmp_path / "mod.py").write_text("def other():\n    return 1\n")
+        (tmp_path / "mod.py").write_text(
+            "from autocog.runtime import extern\n\n\n"
+            "@extern\n"
+            "def other():\n    return 1\n\n\n"
+            "def bare():\n    return 2\n")
         prog = SimpleNamespace(python_imports={
             "f": {"file": "mod.py", "target": "f"}})
         assert load_externals(prog, [str(tmp_path)]) == {}
         assert "not found in 'mod.py'" in capsys.readouterr().err
+
+        # Present but UNDECORATED -> an error, not a warning. The decorator
+        # is where a resolver declares what it may do beyond returning a
+        # value, so a missing one is a contract violation rather than a
+        # program legitimately inspected without its resolvers.
+        from autocog.errors import ConfigError
+
+        prog = SimpleNamespace(python_imports={
+            "bare": {"file": "mod.py", "target": "bare"}})
+        with pytest.raises(ConfigError, match="missing @autocog.runtime.extern"):
+            load_externals(prog, [str(tmp_path)])
 
         # And the happy path through the same loader.
         prog = SimpleNamespace(python_imports={

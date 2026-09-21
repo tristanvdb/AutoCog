@@ -1,6 +1,7 @@
 #ifndef AUTOCOG_DATA_CHANNEL_HXX
 #define AUTOCOG_DATA_CHANNEL_HXX
 
+#include "autocog/data/expr.hxx"
 #include "autocog/data/path.hxx"
 
 #include <optional>
@@ -33,7 +34,13 @@ struct ChannelKwarg {
   bool is_input = false;
   std::optional<std::string> prompt;   ///< source prompt (null = self)
   std::vector<PathStep> path;
-  std::optional<std::string> value;    ///< literal value (null = none)
+  ///< The argument's VALUE, when it is not read from the document: an
+  ///< expression, so a literal (`zero_index is 0`) and a reference to
+  ///< something the program cannot know yet (`zero_index use
+  ///< __syntax__.prompt_zero_index`) are the same kind of thing rather than
+  ///< two fields. Resolved when the call is made, which is after a syntax has
+  ///< been chosen.
+  std::optional<Expr> value;
   std::vector<Clause> clauses;
   std::string hash() const;
 };
@@ -54,6 +61,9 @@ struct CallChannel {
   std::optional<std::string> extern_func;  ///< Python callable (null = none)
   std::optional<std::string> entry;        ///< prompt entry point (null = none)
   std::vector<ChannelKwarg> kwargs;
+  /// `call f <path>` instead of `call f { ... }`: spread the record at <path>
+  /// as the arguments. An empty path is the root. Excludes `kwargs`.
+  std::optional<std::vector<PathStep>> spread;
   std::vector<Clause> clauses;
 };
 

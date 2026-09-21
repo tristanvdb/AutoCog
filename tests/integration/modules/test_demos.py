@@ -4,39 +4,40 @@ The demos are the stdlib's showcase: each must compile against the installed
 stdlib and execute through the Python orchestration — channels, flows, and
 sub-prompt calls (the C++ tool pipeline exercises none of the orchestration,
 so this is the only place a demo is proven to actually run).
+
+Two families, named for what the model is choosing among. Both take the SAME
+input — the labelled records a converted dataset produces — and the strings-*
+family pulls `choice.value` out of them through a channel. That is the entire
+difference, and it is expressed in the program rather than in whoever feeds it.
 """
 
 import pytest
 
-MCQ_INPUTS = {
-    "topic": "Science",
-    "question": "What is H2O?",
-    "choices": ["Water", "Fire", "Air", "Earth"],
-}
+CHOICES = ["Water", "Fire", "Air", "Earth"]
+LABELS = ["A", "B", "C", "D"]
 
-# Demos whose result is a bare answer: it must be one of the input choices
-# (select maps the picked index back to the choice; repeat emits it verbatim
-# under a choice-constrained token mask).
-ANSWER_IS_CHOICE = {"select", "repeat", "select-cot", "repeat-cot",
-                    "select-hyp", "repeat-hyp"}
+INPUTS = {"topic": "Science", "question": "What is H2O?",
+          "choice": [{"label": l, "value": v} for l, v in zip(LABELS, CHOICES)]}
+
+# Demos whose result is a bare answer: it must be one of the choice texts.
+ANSWER_IS_CHOICE = {"strings-select", "strings-repeat",
+                    "strings-select-cot", "strings-repeat-cot",
+                    "strings-select-hyp", "strings-repeat-hyp",
+                    "record-index", "record-value", "record-label",
+                    "record-index-annot", "record-value-annot"}
 
 # The iter demos return a labeled struct; the answer field must be a choice.
 # (Their literal `status` field currently orchestrates to None — a known
 # runtime gap with literal return fields, deliberately not pinned here.)
-ANSWER_IN_STRUCT = {"select-iter", "repeat-iter"}
+ANSWER_IN_STRUCT = {"strings-select-iter", "strings-repeat-iter"}
 
 MCQ_DEMOS = [
-    "select", "select-cot", "select-annot", "select-hyp", "select-iter",
-    "repeat", "repeat-cot",
-    # repeat-annot needs choices[].value populated by the annotator calls,
-    # but multi-field call returns currently collapse to a single unnamed
-    # value (the literal-return-fields runtime gap), so the repeat source
-    # correctly resolves to zero candidates. select-annot only survives
-    # because select candidates are indices that never read the values.
-    pytest.param("repeat-annot", marks=pytest.mark.xfail(
-        reason="multi-field call returns do not populate struct arrays yet",
-        strict=True)),
-    "repeat-hyp", "repeat-iter",
+    "strings-select", "strings-select-cot", "strings-select-hyp",
+    "strings-select-iter",
+    "strings-repeat", "strings-repeat-cot",
+    "strings-repeat-hyp", "strings-repeat-iter",
+    "record-index", "record-value", "record-label",
+    "record-index-annot", "record-value-annot",
 ]
 
 
@@ -44,21 +45,17 @@ MCQ_DEMOS = [
 def test_mcq_demo_runs_rng(demo, engine, repo_root):
     import autocog
     prog = autocog.compile(str(repo_root / f"share/demos/mcq/{demo}.stl"))
-    result = engine.run(prog, **MCQ_INPUTS)
+    result = engine.run(prog, **INPUTS)
     assert result is not None
     if demo in ANSWER_IS_CHOICE:
-        assert result in MCQ_INPUTS["choices"], f"{demo}: unexpected answer {result!r}"
+        assert result in CHOICES, f"{demo}: unexpected answer {result!r}"
     elif demo in ANSWER_IN_STRUCT:
-        assert result["answer"] in MCQ_INPUTS["choices"], f"{demo}: {result!r}"
+        assert result["answer"] in CHOICES, f"{demo}: {result!r}"
     else:
-        # The -annot demos: select/repeat over a struct-valued choices array
-        # currently resolves to a sub-field of the picked struct rather than
-        # identifying the choice — asserted loosely until those semantics are
-        # settled (select over struct arrays is a flagged follow-up).
         assert isinstance(result, dict) and result, f"{demo}: {result!r}"
 
 
-@pytest.mark.parametrize("demo", ["repeat-cot", "select-iter"])
+@pytest.mark.parametrize("demo", ["strings-repeat-cot", "strings-select-iter"])
 def test_mcq_demo_runs_real(demo, real_engine, repo_root):
     """Free-text-heavy demos on the real tokenizer.
 
@@ -69,5 +66,5 @@ def test_mcq_demo_runs_real(demo, real_engine, repo_root):
     """
     import autocog
     prog = autocog.compile(str(repo_root / f"share/demos/mcq/{demo}.stl"))
-    result = real_engine.run(prog, **MCQ_INPUTS)
+    result = real_engine.run(prog, **INPUTS)
     assert result is not None

@@ -1,4 +1,8 @@
 
+from autocog.runtime import extern
+
+
+@extern
 def write(book):
     """Format a book dict into readable text."""
     if not isinstance(book, dict):

@@ -36,6 +36,11 @@ PreparedFTA prepare(ModelID const model, data::FTA const & fta);
 
 /// Fill every node's detokenized `text` from its `tokens`, in place. Run once
 /// after generation completes.
+///
+/// There is no inverse and no standalone scorer: an FTT is always produced by
+/// evaluating an FTA, so its tokens come from prepare() and its logprobs from
+/// the evaluation. Forced-path scoring is that same evaluation over an FTA
+/// instantiated from a complete frame, with EvaluationConfig::score_all.
 void detokenize(ModelID const model, data::FTT & ftt);
 
 }

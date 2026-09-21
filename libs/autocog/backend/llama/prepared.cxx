@@ -3,6 +3,7 @@
 #include "autocog/backend/llama/model.hxx"
 
 #include "autocog/utilities/errors.hxx"
+#include "autocog/utilities/utf8.hxx"
 
 #include <chrono>
 #include <functional>
@@ -61,8 +62,14 @@ PreparedFTA prepare(ModelID const id, data::FTA const & fta) {
 void detokenize(ModelID const id, data::FTT & ftt) {
   Model & model = Manager::get_model(id);
   std::function<void(data::FTTNode &)> walk = [&](data::FTTNode & node) {
+    // Tokens are authoritative; text is a view and must be valid UTF-8 for
+    // every consumer (JSON dump, py::str). Real tokenizers have byte-fallback
+    // tokens, so a completion's token budget can cut a multi-byte character
+    // short — sanitize drops such an incomplete tail and replaces any
+    // interior invalid bytes with U+FFFD.
     node.text = node.tokens.empty() ? std::string{}
-                                    : model.detokenize(node.tokens, false, false);
+                                    : autocog::utilities::utf8_sanitize(
+                                          model.detokenize(node.tokens, false, false));
     for (auto & child : node.children) walk(child);
   };
   walk(ftt.root);

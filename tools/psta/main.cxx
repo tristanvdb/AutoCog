@@ -32,6 +32,11 @@ static void print_usage(char const * prog) {
               << "  --ftt <file>           Input FTT JSON\n"
               << "  --prompt <name>        Prompt the FTT corresponds to\n"
               << "  --frame <file>         Output frame JSON (/dev/stdout for stdout)\n"
+              << "  --content <file|json>  The channel-resolved content the prompt was\n"
+              << "                         instantiated with -- the SAME document given to\n"
+              << "                         ista. Seeds the frame, so fields a simplified FTA\n"
+              << "                         merged away are still present; the FTT overwrites\n"
+              << "                         whatever it recorded. Never wrong to pass.\n"
               << "  --metric <name>        Scoring metric: best (default)\n"
               << "  --verbose [LEVEL]      Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  --version              Show version\n"
@@ -40,7 +45,7 @@ static void print_usage(char const * prog) {
 }
 
 static int run(int argc, char ** argv) {
-    std::string sta_file, prompt_name, ftt_file, frame_file;
+    std::string sta_file, prompt_name, ftt_file, frame_file, content_arg;
     std::string metric = "best";
 
     autocog::init_console_logger();
@@ -54,6 +59,7 @@ static int run(int argc, char ** argv) {
         if (arg == "--ftt"    && i + 1 < argc) { ftt_file    = argv[++i]; continue; }
         if (arg == "--prompt" && i + 1 < argc) { prompt_name = argv[++i]; continue; }
         if (arg == "--frame"  && i + 1 < argc) { frame_file  = argv[++i]; continue; }
+        if (arg == "--content" && i + 1 < argc) { content_arg = argv[++i]; continue; }
         if (arg == "--metric" && i + 1 < argc) { metric      = argv[++i]; continue; }
         if (arg == "--verbose") {
           spdlog::level::level_enum lvl = spdlog::level::debug;
@@ -91,13 +97,18 @@ static int run(int argc, char ** argv) {
     // Read FTT (file path).
     auto ftt = codec::from_file<data::FTT>(ftt_file);
 
-    // Build the frame via the canonical FTT->frame walker. psta has no input
-    // content and historically kept raw select indices, so select-resolution
-    // is disabled here (resolve_selects=false), preserving its output. The
-    // --metric selects which completed path becomes the frame.
-    autocog::types::Document empty{ autocog::types::Document::Object{} };
-    auto result = sta::walk_ftt_to_frame(*ftt, *program, prompt_name,
-                                         empty, /*resolve_selects=*/false, metric);
+    // Build the frame via the canonical FTT->frame walker. The frame records
+    // what the model emitted, so a select field keeps its index. The --metric
+    // selects which completed path becomes the frame.
+    //
+    // --content seeds it: a simplified FTA has no node for a field its content
+    // supplied, so those come from the seed and the FTT overwrites the rest.
+    autocog::types::Document content{ autocog::types::Document::Object{} };
+    if (!content_arg.empty())
+        codec::from_json(codec::json_from_file_or_string(content_arg), content);
+
+    auto result = sta::walk_ftt_to_frame(*ftt, *program, prompt_name, metric,
+                                         content);
 
     // Write frame JSON to --frame (/dev/stdout for stdout).
     std::ostream * out = &std::cout;

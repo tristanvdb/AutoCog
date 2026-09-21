@@ -16,16 +16,11 @@ void put_paths(ContentHasher & h, std::vector<PathStep> const & v) {
   for (auto const & p : v) h.put(p.hash());
 }
 
-void put_sv(ContentHasher & h, autocog::types::Value const & v) {
-  h.put(static_cast<unsigned>(v.index()));
-  std::visit(overloaded{
-    [&](int x){ h.put(static_cast<std::int32_t>(x)); },
-    [&](float x){ h.put(x); },
-    [&](bool x){ h.put(x); },
-    [&](std::string const & x){ h.put(x); },
-    [&](std::monostate){ },
-  }, v);
+void put_exprs(ContentHasher & h, std::vector<autocog::data::Expr> const & v) {
+  h.put(static_cast<unsigned>(v.size()));
+  for (auto const & e : v) hash_put(h, e);
 }
+
 
 }  // namespace
 
@@ -35,7 +30,7 @@ std::string SearchParams::hash() const {
   for (auto const & [cat, params] : categories) {
     h.put(cat);
     h.put(static_cast<unsigned>(params.size()));
-    for (auto const & [key, val] : params) { h.put(key); put_sv(h, val); }
+    for (auto const & [key, val] : params) { h.put(key); hash_put(h, val); }
   }
   return h.hash();
 }
@@ -59,7 +54,11 @@ std::string Flow::hash() const {
     [&](FlowControl const & f){ h.put(f.prompt); h.put(f.limit); },
     [&](FlowReturn const & f){
       h.put(static_cast<unsigned>(f.fields.size()));
-      for (auto const & rf : f.fields) { h.put(rf.alias); put_paths(h, rf.path); }
+      for (auto const & rf : f.fields) {
+        h.put(rf.alias); put_paths(h, rf.path);
+        // Only when present: a `use` return keeps the identity it always had.
+        if (rf.call) h.put(Channel{*rf.call}.hash());
+      }
     },
   }, value);
   return h.hash();
@@ -68,12 +67,13 @@ std::string Flow::hash() const {
 std::string Field::hash() const {
   ContentHasher h;
   h.put(name).put(static_cast<std::int32_t>(depth)).put(static_cast<std::int32_t>(index))
-   .put(static_cast<std::int32_t>(flat_index)).put(desc);
+   .put(static_cast<std::int32_t>(flat_index));
+  put_exprs(h, desc);
   h.put(range.has_value());
   if (range) { h.put(static_cast<std::int32_t>(range->first)).put(static_cast<std::int32_t>(range->second)); }
   h.put(format.hash());
   h.put(format_ref);
-  h.put(format_desc);
+  put_exprs(h, format_desc);
   h.put(search.hash());
   return h.hash();
 }
@@ -110,7 +110,8 @@ std::string PythonImport::hash() const { ContentHasher h; h.put(file).put(target
 
 std::string Prompt::hash() const {
   ContentHasher h;
-  h.put(name).put(desc);
+  h.put(name);
+  put_exprs(h, desc);
   h.put(static_cast<unsigned>(fields.size()));
   for (auto const & f : fields) h.put(f.hash());
   h.put(static_cast<unsigned>(abstracts.size()));

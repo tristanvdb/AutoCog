@@ -40,8 +40,12 @@ TRAVERSE_CHILDREN(Kwarg, name, source, clauses)
 DATA(Call) {
   NODE(ObjectRef) entry; //< Could resolve to a python symbol
   NODES(Kwarg) arguments;
+  //< `call f <path>` instead of `call f { ... }`: spread the record at <path>
+  //< as the call's keyword arguments. `_` names the root — for a return, the
+  //< whole frame. Mutually exclusive with `arguments`.
+  ONODE(Path) spread;
 };
-TRAVERSE_CHILDREN(Call, entry, arguments)
+TRAVERSE_CHILDREN(Call, entry, arguments, spread)
 
 DATA(Link) {
   NODE(Path) target;

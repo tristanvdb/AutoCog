@@ -139,8 +139,9 @@
         "desc": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "$ref": "#/$defs/expr"
+          },
+          "description": "Descriptions, as expressions: a plain string for an annotation that does not ask about the rendering, which is most of them, and a tree for one that does."
         },
         "fields": {
           "type": "array",
@@ -166,12 +167,7 @@
           "additionalProperties": {
             "type": "object",
             "additionalProperties": {
-              "type": [
-                "number",
-                "string",
-                "boolean",
-                "null"
-              ]
+              "$ref": "#/$defs/expr"
             }
           }
         },
@@ -220,8 +216,9 @@
         "desc": {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "$ref": "#/$defs/expr"
+          },
+          "description": "Descriptions, as expressions: a plain string for an annotation that does not ask about the rendering, which is most of them, and a tree for one that does."
         },
         "format": {
           "$ref": "#/$defs/field_format"
@@ -241,7 +238,7 @@
             {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/expr"
               }
             },
             {
@@ -451,6 +448,9 @@
             ],
             "additionalProperties": false
           }
+        },
+        "call": {
+          "$ref": "#/$defs/channel"
         }
       },
       "required": [
@@ -517,6 +517,9 @@
           "items": {
             "$ref": "#/$defs/channel_clause"
           }
+        },
+        "spread": {
+          "$ref": "#/$defs/path_steps"
         }
       },
       "required": [
@@ -582,7 +585,10 @@
             }
           ]
         },
-        "value": {},
+        "value": {
+          "$ref": "#/$defs/expr",
+          "description": "The argument's value when it is not read from the document: `is <expr>` or `use <namespace>.<field>`. An expression, resolved when the call is made -- which is after a syntax has been chosen, so it may name one."
+        },
         "clauses": {
           "type": "array",
           "items": {
@@ -626,16 +632,11 @@
     },
     "search_policy": {
       "type": "object",
+      "description": "Search policy: category -> parameter -> expression (OPEN). Usually a number or a string; a reference when the parameter tracks something chosen later, such as its own config default (__search__.<category>.<key>).",
       "additionalProperties": {
         "type": "object",
         "additionalProperties": {
-          "type": [
-            "number",
-            "integer",
-            "string",
-            "boolean",
-            "null"
-          ]
+          "$ref": "#/$defs/expr"
         }
       }
     },
@@ -690,6 +691,184 @@
         "kind"
       ],
       "additionalProperties": false
+    },
+    "expr": {
+      "description": "An expression. A literal is the bare value -- which is what every expression that resolves at compile time serializes as, so most of these are just a number or a string. Anything that could not be resolved yet is a one-key object: a reference, a conditional, a concatenation, or an operator over its operands.",
+      "oneOf": [
+        {
+          "type": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "A namespaced reference: __syntax__.<knob>, __search__.<category>.<key>, __model__.<property>, __status__.<statistic>."
+            },
+            "cond": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "condition ? then : else."
+            },
+            "cat": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Concatenation of the stringified operands (an f-string)."
+            },
+            "not": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "neg": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "sub": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mul": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "div": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "mod": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "and": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "or": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "band": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "bor": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "lt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "gt": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "le": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ge": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "eq": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "ne": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1
+            },
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `and`."
+            },
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/expr"
+              },
+              "minItems": 1,
+              "description": "Deprecated spelling of `or`."
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

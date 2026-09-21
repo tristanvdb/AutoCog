@@ -6,7 +6,8 @@ namespace autocog::compiler::stl {
 
 template <>
 void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::Retfield> & data) {
-  if (!state.check(TokenType::USE) && !state.check(TokenType::IS)) {
+  if (!state.check(TokenType::USE) && !state.check(TokenType::IS)
+                                  && !state.check(TokenType::CALL)) {
     data.alias.emplace();
     parse(state, data.alias.value().data);
   }
@@ -16,6 +17,9 @@ void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::
   } else if (state.match(TokenType::IS)) {
     data.source.emplace<2>();
     parse(state, std::get<2>(data.source).data);
+  } else if (state.match(TokenType::CALL)) {
+    data.source.emplace<3>();
+    parse(state, std::get<3>(data.source).data);
   }
 
   while (!state.match(TokenType::SEMICOLON)) {
@@ -48,12 +52,14 @@ void Parser::parse<ast::Tag::Retfield>(ParserState & state, ast::Data<ast::Tag::
 template <>
 void Parser::parse<ast::Tag::Return>(ParserState & state, ast::Data<ast::Tag::Return> & data) {
   state.expect(TokenType::RETURN, "when parsing Return statement.");
-  if (!state.check(TokenType::LBRACE) && !state.check(TokenType::USE) && !state.check(TokenType::SEMICOLON)) {
+  if (!state.check(TokenType::LBRACE) && !state.check(TokenType::USE)
+                                     && !state.check(TokenType::CALL)
+                                     && !state.check(TokenType::SEMICOLON)) {
     data.label.emplace();
     parse(state, data.label.value().data);
   }
 
-  if (state.check(TokenType::USE)) {
+  if (state.check(TokenType::USE) || state.check(TokenType::CALL)) {
     data.short_form = true;
     data.fields.emplace_back();
     auto & rfld = data.fields.back().data;
