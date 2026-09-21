@@ -12,6 +12,20 @@ namespace autocog::data { struct VocabExpr; }
 
 namespace autocog::backend::llama {
 
+// Decode-level cost split, reported by xfta --perf. On CPU a llama_decode
+// call streams the full weights whatever its size, so `calls` is the cost
+// driver; `sample_seconds` and `score_seconds` isolate the CPU-side
+// O(vocab) logits sweeps, which do NOT shrink when decode moves to a GPU:
+// `sample` is the masked top-k of completion search, `score` the forced
+// scoring of imposed tokens (P(token|prefix) in eval_sequences). Real
+// models only (the RNG model decodes nothing).
+struct DecodeStats {
+  unsigned calls = 0;            ///< llama_decode invocations
+  double   decode_seconds = 0.0; ///< wall time inside llama_decode
+  double   sample_seconds = 0.0; ///< wall time in top-k candidate sweeps
+  double   score_seconds = 0.0;  ///< wall time in forced-scoring sweeps
+};
+
 // Counters for the KV sequence-slot pool, reported by xfta --perf. Each
 // set_tokens call resolves to exactly one of exact/extend/trim/fork.
 struct KvStats {
@@ -32,6 +46,9 @@ struct FrontierResult {
 class Model {
   public:
     ModelID const id;
+    /// Context size the model was created with (rng model: the requested
+    /// value). Exposed as the __model__.n_ctx termination-predicate property.
+    unsigned context_size = 0;
 
     // RNG model (id=0): byte-level character model with random logprobs
     static constexpr size_t RNG_VOCAB_SIZE = 258;  // 256 byte values + BOS + EOS
@@ -62,6 +79,7 @@ class Model {
     int live_logits_ith_ = -1;   ///< batch index of that final position's logits row
     uint64_t slot_clock_ = 0;
     KvStats kv_stats_;
+    DecodeStats decode_stats_;
 
     // Decode `n` tokens into `slot` starting at position `pos0`, requesting
     // logits at the final position (or, with `all_logits`, at every position —
@@ -91,7 +109,8 @@ class Model {
 
   public:
     Model();
-    Model(ModelID const id, std::string const & model_path, int n_ctx);
+    Model(ModelID const id, std::string const & model_path, int n_ctx,
+          int ngl = -1, int kv_slots = -1);
     ~Model();
 
     // Move-only: a Model owns raw llama_model*/llama_context* handles, so a copy
@@ -123,7 +142,15 @@ class Model {
     std::string sha256() const;
 
     KvStats const & kv_stats() const { return kv_stats_; }
+    DecodeStats const & decode_stats() const { return decode_stats_; }
     size_t kv_slots() const { return slots_.size(); }
+
+    /// Zero the accumulated model-level counters (kv + decode stats).
+    void reset_stats() { kv_stats_ = {}; decode_stats_ = {}; }
+
+    /// Drop every KV slot (worker isolation between measured evaluations:
+    /// the next evaluation starts from a cold cache, not a warm sibling's).
+    void clear_kv();
 
     // Route `tokens` to a KV slot (see the slot-pool comment above), returning
     // the number of tokens decoded doing so. With `prime_logits`, guarantees

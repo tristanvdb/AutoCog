@@ -1,10 +1,24 @@
 """bench quality — MCQ accuracy / token overhead / constraint friction.
 
-The benchmarks/quality/run.py semantics through the in-process worker:
-one model load per model (not per syntax), scoring via Engine.score_frame
-(no efta subprocess), datapoints via --data + --formatter.
+One model load per model (not per syntax), scoring via score_frame,
+datapoints via --data + --formatter.
+
+With --worker, samples run through EnginePools (one per syntax, sharing
+a per-tag LaneLedger): the run_samples scheduler keeps every worker lane
+primed with sample executions, whose prompt chains and mapped calls
+dispatch per-FTA to free lanes. Resume is per SAMPLE: existing result
+lines are indexed by (syntax, program, question) and only the gaps run —
+a partial file is data, not a completion marker. Results order follows
+completion, not the matrix; consumers group by keys.
+
+Seeding: real-model evaluation is deterministic (the only RNG consumer
+is the rng pseudo-model), so worker runs seed once per run and rng runs
+are not bit-reproducible under pooled dispatch (plumbing instrument).
 """
 
+import asyncio
+import glob
+import math
 import json
 import os
 import tempfile
@@ -14,21 +28,46 @@ import autocog
 from autocog.recorder import Recorder
 
 from . import results
+from . import reuse
 from .formatters import load_formatter, load_questions
 from .perf import find_root
-from .workers import LocalWorker, pick_worker
+from .workers import LocalWorker, model_tag
 
-SYNTAXES = ["complete", "indent-index", "indent", "stripped",
-            "chatml", "llama2chat", "llama3chat", "special"]
-DEMOS = ["select", "select-cot", "select-hyp", "repeat", "repeat-cot", "repeat-hyp"]
+#: samples kept in flight per worker lane by the scheduler (keeps the
+#: lane's queue primed without materializing whole runs)
+WINDOW_PER_LANE = 2
 
 
 def extract_answer(result):
+    """The answer text out of whatever a program returned.
+
+    A single-field return yields the value directly. A multi-field one
+    yields a record, keyed by the names the program used: `answer` when it
+    named one, else `value`."""
     if isinstance(result, str):
         return result
     if isinstance(result, dict):
-        return result.get("answer")
+        for key in ("answer", "value"):
+            if isinstance(result.get(key), str):
+                return result[key]
     return None
+
+
+def score_answer(raw, q):
+    """(recorded answer, correct) for a program's output.
+
+    Every mechanism returns the same thing: the choice it settled on. A
+    program that commits on something else — an index, a letter — resolves it
+    itself on the return, so nothing here has to know which one it was. (This
+    used to hold the letter arithmetic for the `label` mechanism, which is why
+    an out-of-range letter had to be special-cased as a miss; a label is now
+    ranked against the labels the data carries, and cannot be out of range.)
+
+    Only a genuinely absent answer scores None.
+    """
+    if raw is None:
+        return None, None
+    return raw, raw == q["answer"]
 
 
 def walk_tokens(node, depth, acc):
@@ -42,81 +81,607 @@ def walk_tokens(node, depth, acc):
         walk_tokens(child, depth + 1, acc)
 
 
+def decision_stats(ftt):
+    """How committed the model was at each choice it made.
+
+    A choose keeps EVERY candidate as a sibling in the tree -- pruning marks a
+    node (`pruned`) rather than dropping it, and ranking had to score them all
+    anyway -- so the whole candidate distribution is present at the default
+    enum.width=1, for free. That is the raw material for asking whether a
+    configuration deserves more samples: accuracy at small N is noisy, whereas
+    "the model was indifferent between all four choices" is visible in a single
+    evaluation.
+
+    NOTE the field called `logprobs` holds NLL: positive is cost, and the
+    winner is the SMALLEST. Softmaxing it directly inverts the ranking, which
+    is an easy mistake and a silent one.
+
+    Returns a list, outermost decision first, of
+        {uid, field, n, top1, margin, entropy, chosen}
+    over the normalised exp(-NLL); entropy is in nats, 0 = certain and
+    log(n) = indifferent.
+    """
+    out = []
+
+    def visit(node):
+        kids = node.get("children") or []
+        groups = {}
+        for k in kids:
+            groups.setdefault(k["uid"], []).append(k)
+        for uid, sibs in groups.items():
+            if len(sibs) < 2:
+                continue            # not a choose, or a single-candidate one
+            nlls = [sum(s["logprobs"]) for s in sibs]
+            lo = min(nlls)
+            # Shift before exp: raw NLLs run to tens of nats and exp(-x)
+            # underflows to zero, which would make every margin 0.
+            weights = [math.exp(-(n - lo)) for n in nlls]
+            total = sum(weights) or 1.0
+            per = [w / total for w in weights]
+            probs = sorted(per, reverse=True)
+            # The un-pruned sibling is the one the BACKEND ranked first, using
+            # its own sign convention. Recording its probability under ours
+            # makes the two checkable against each other: if this ever stops
+            # equalling top1, one of the two has the sign inverted.
+            idx = next((i for i, s in enumerate(sibs) if not s.get("pruned")), 0)
+            chosen = sibs[idx]
+            out.append({
+                "uid": uid,
+                "field": chosen.get("field"),
+                "n": len(sibs),
+                "p_chosen": round(per[idx], 6),
+                "top1": round(probs[0], 6),
+                "margin": round(probs[0] - (probs[1] if len(probs) > 1 else 0.0), 6),
+                "entropy": round(-sum(p * math.log(p) for p in probs if p > 0), 6),
+                "chosen": chosen.get("text"),
+            })
+        for k in kids:
+            visit(k)
+
+    visit(ftt)
+    return out
+
+
+def decision_fields(decisions):
+    """Event fields for the decision distributions.
+
+    The PRIMARY decision -- the last one carrying a schema field, which is the
+    answer commitment -- gets flat scalars, because that is what a triage
+    metric will reach for first. The full list rides alongside so a later
+    analysis is not limited to the choice made today: dropping it would mean
+    re-running to ask a different question, which is the expensive mistake.
+    """
+    if not decisions:
+        return {}
+    valued = [d for d in decisions if d.get("field") is not None]
+    primary = (valued or decisions)[-1]
+    return {
+        "autocog.bench.decision.n": primary["n"],
+        "autocog.bench.decision.top1": primary["top1"],
+        "autocog.bench.decision.margin": primary["margin"],
+        "autocog.bench.decision.entropy": primary["entropy"],
+        # log(n) is the indifference ceiling; normalising makes decisions with
+        # different candidate counts comparable, which they otherwise are not.
+        "autocog.bench.decision.entropy_norm":
+            round(primary["entropy"] / math.log(primary["n"]), 6)
+            if primary["n"] > 1 else None,
+        "autocog.bench.decisions": decisions,
+    }
+
+
+def existing_samples(out_dir):
+    """Index (syntax, program, question) triples already MEASURED under an
+    output directory — any results file, any host, torn lines tolerated.
+
+    Returns {triple: set of fingerprints}, the fingerprint being None for
+    rows written before it existed. The caller decides what counts: a row
+    whose fingerprint disagrees with the one the run would produce is a
+    measurement of a DIFFERENT configuration that happens to occupy the
+    same cell — edit a syntax file and resume, and this is the difference
+    between re-measuring and silently shipping the old numbers.
+
+    Rows carrying error.message do not count: a sample that failed
+    because its worker died, or the box ran out of memory, is not a
+    measurement, and treating it as one makes a transient failure
+    permanent — the rerun skips it and the run ships with a hole. The
+    error rows stay in the file as the record of what happened; a later
+    successful row for the same sample simply supersedes them (consumers
+    group by these same keys)."""
+    have = {}
+    for path in glob.glob(os.path.join(out_dir, "results-*.ndjson")):
+        for line in open(path):
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("error.message"):
+                continue
+            key = (ev.get("autocog.bench.syntax"), ev.get("autocog.bench.program"),
+                   ev.get("autocog.bench.question"))
+            if all(k is not None for k in key):
+                have.setdefault(key, set()).add(
+                    ev.get("autocog.bench.fingerprint"))
+    return have
+
+
+def resolve_programs(programs, workdir=None):
+    """Compile the programs a run names. Returns {name: (Program, labels)}.
+
+    `programs` maps a name to `{"filepath": ..., "options": [...],
+    "labels": [...]}` — the shape a campaign descriptor carries. `filepath` is
+    absolute or relative to `workdir` (default: the process's cwd). `options`
+    are compiler flags, the same spellings stlc takes:
+
+        -I <dir>        add an include path
+        -D <name>=<v>   override a program argument
+        -e <name>       request an entry point
+
+    `labels` are free-form tags, opaque here: they travel with every event so
+    analysis can slice by them. Nothing in this module knows or cares what
+    "select" or "record" mean — that is the point of carrying them rather than
+    parsing the name.
+
+    A bare list of paths is also accepted, naming each program after its
+    filename, for ad-hoc runs from the CLI.
+    """
+    if isinstance(programs, (list, tuple)):
+        programs = {os.path.splitext(os.path.basename(p))[0]: {"filepath": p}
+                    for p in programs}
+
+    base = workdir or os.getcwd()
+    out = {}
+    for name, spec in programs.items():
+        if isinstance(spec, str):
+            spec = {"filepath": spec}
+        path = spec.get("filepath")
+        if not path:
+            raise autocog.errors.ConfigError(f"program {name!r} has no filepath")
+        if not os.path.isabs(path):
+            path = os.path.join(base, path)
+        if not os.path.isfile(path):
+            raise autocog.errors.ConfigError(
+                f"program {name!r}: no such file {path!r}")
+
+        includes, defines, entries = [], {}, []
+        opts = list(spec.get("options") or [])
+        i = 0
+        while i < len(opts):
+            opt = opts[i]
+            if opt in ("-I", "-D", "-e"):
+                if i + 1 >= len(opts):
+                    raise autocog.errors.ConfigError(
+                        f"program {name!r}: {opt} needs a value")
+                value, i = opts[i + 1], i + 2
+            elif opt[:2] in ("-I", "-D", "-e") and len(opt) > 2:
+                opt, value, i = opt[:2], opt[2:], i + 1
+            else:
+                raise autocog.errors.ConfigError(
+                    f"program {name!r}: unknown option {opt!r}")
+            if opt == "-I":
+                includes.append(value if os.path.isabs(value)
+                                else os.path.join(base, value))
+            elif opt == "-e":
+                entries.append(value)
+            else:
+                key, _, val = value.partition("=")
+                defines[key] = val
+
+        out[name] = (autocog.compile(path, includes=includes,
+                                     entry_points=entries or None,
+                                     defines=defines or None),
+                     list(spec.get("labels") or []))
+    return out
+
+
+class QualityRun:
+    """One quality run as sample state: the ordered sample list, the
+    have-index from existing results, lazily opened writer, compiled
+    programs. Drives no scheduling itself — run_samples does."""
+
+    def __init__(self, tag, data, out, root, formatter="", questions=0,
+                 syntaxes=None, programs=None, workdir=None,
+                 syntax_paths=None, syntax_labels=None, log=print):
+        self.tag = tag
+        self.root = root
+        self.syntax_paths = dict(syntax_paths or {})
+        #: free-form tags per syntax NAME, the rendering counterpart of a
+        #: program's labels. Kept in their own event key: `index` is both a
+        #: program label and the obvious name for an index knob, and one
+        #: merged list would make grouping by it mix the two.
+        self.syntax_labels = dict(syntax_labels or {})
+        self.out = out
+        self.log = log
+        self.syntaxes = syntaxes or ["complete", "stripped"]
+        self.qs = load_questions(data, load_formatter(formatter),
+                                 limit=questions)
+        self.programs = resolve_programs(programs, workdir)
+        self.search = os.path.join(root, "share", "search", "default.json")
+        self.samples = [(syntax, name, q)
+                        for syntax in self.syntaxes
+                        for name in self.programs
+                        for q in self.qs]
+        self.base = {
+            "log.logger": "autocog.bench.quality",
+            "event.action": "quality.run",
+            "autocog.bench.model": tag,
+        }
+        self._writer = None
+
+        # Sample identity, which decides what this directory already
+        # holds. See bench/reuse.py for what the digest does and does not
+        # cover. (Which QUESTIONS a campaign draws is decided above this
+        # layer, and arrives here as the contents of `data`.)
+        search_d = reuse.json_digest(self.search)
+        syntax_d = {s: reuse.json_digest(self.syntax_path(s))
+                    for s in self.syntaxes}
+        program_d = {n: reuse.program_hash(p)
+                     for n, (p, _) in self.programs.items()}
+        self.fingerprints = {
+            (syntax, name, q["id"]): reuse.fingerprint(
+                tag, syntax_d[syntax], search_d, program_d[name], q)
+            for syntax, name, q in self.samples}
+        self.question_digests = {q["id"]: reuse.question_digest(q)
+                                 for q in self.qs}
+
+        have = existing_samples(out)
+        stale = 0
+        pending = []
+        for s in self.samples:
+            key = (s[0], s[1], s[2]["id"])
+            seen = have.get(key)
+            if seen is None:
+                pending.append(s)
+            elif None in seen or self.fingerprints[key] in seen:
+                pass                    # measured here, under this config
+            else:
+                stale += 1              # same cell, different experiment
+                pending.append(s)
+        if stale:
+            self.log(f"{stale} existing sample(s) were measured under a "
+                     f"different configuration — re-running them")
+
+        self.pending = pending
+
+    def syntax_path(self, syntax):
+        """Where a syntax NAME's JSON lives.
+
+        A campaign resolves its syntaxes up front (base file + overrides)
+        and passes the paths, so the name is free to be whatever names the
+        arm. Without that mapping, a name is a shipped syntax — which is
+        what `bench quality --syntaxes complete,stripped` relies on."""
+        path = self.syntax_paths.get(syntax)
+        if path:
+            return path
+        return os.path.join(self.root, "share", "syntax", f"{syntax}.json")
+
+    def make_pools(self, urls, ledger):
+        """One EnginePool per syntax, all sharing the tag's lane ledger."""
+        from autocog.remote import EnginePool
+
+        return {syntax: EnginePool(urls, model_tag=self.tag,
+                                   syntax=self.syntax_path(syntax),
+                                   search=self.search, ledger=ledger)
+                for syntax in self.syntaxes}
+
+    async def eval_sample(self, pools, syntax, name, q):
+        """Execute one sample (chain + score walk) through the pools;
+        every failure is an error datapoint, never an exception."""
+        pool = pools[syntax]
+        prog, labels = self.programs[name]
+        ev = results.base_event("autocog.bench.quality", "quality.run",
+                                dict(self.base))
+        ev.update({
+            "autocog.bench.syntax": syntax,
+            "autocog.bench.program": name,
+            "autocog.bench.labels": labels,
+            "autocog.bench.syntax.labels": self.syntax_labels.get(syntax, []),
+            "autocog.bench.question": q["id"],
+            "autocog.bench.n_choices": len(q["choice"]),
+            # Carried on every row, error rows included. The fingerprint
+            # is what a resume compares against; the question digest is
+            # what the NEXT campaign subtracts when it draws its own
+            # datapoints -- error rows included there too, since a question
+            # that was spent on is spent whether or not it produced a
+            # number.
+            "autocog.bench.fingerprint": self.fingerprints[(syntax, name, q["id"])],
+            "autocog.bench.question.digest": self.question_digests[q["id"]],
+        })
+        t0 = time.time()
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
+                result = await pool.run_async(
+                    prog, recorder=rec, topic=q.get("topic", ""),
+                    question=q["question"], choice=q["choice"])
+                wall = time.time() - t0
+                answer, correct = score_answer(extract_answer(result), q)
+
+                # Score the canonical forced path of every recorded step.
+                # Scoring is AUXILIARY: it yields the token/friction
+                # metrics, not the answer. A program whose frame cannot be
+                # re-encoded (select over a record array, today) still
+                # produced an answer, so the accuracy datapoint stands and
+                # only the metrics go missing -- recorded, not swallowed.
+                acc = {"tokens.value": 0, "tokens.structure": 0,
+                       "nll.value": 0.0, "nll.structure": 0.0}
+                steps = 0
+                score_error = None
+                decisions = []
+                for walk_dir, _, files in os.walk(tmp):
+                    for f in sorted(files):
+                        if not f.endswith(".frame.json"):
+                            continue
+                        step = f[: -len(".frame.json")]
+                        frame = json.load(open(os.path.join(walk_dir, f)))
+                        input_file = os.path.join(walk_dir, f"{step}.input.json")
+                        content = (json.load(open(input_file))
+                                   if os.path.exists(input_file) else {})
+                        prompt = os.path.basename(walk_dir)
+
+                        # How committed the model was, read off the GENERATION
+                        # tree -- the scored one is a forced path and has no
+                        # alternatives to compare against.
+                        ftt_file = os.path.join(walk_dir, f"{step}.ftt.json")
+                        if os.path.exists(ftt_file):
+                            decisions += decision_stats(json.load(open(ftt_file)))
+
+                        try:
+                            scored = await pool.score_frame_async(
+                                prog, prompt, frame, content)
+                        except Exception as e:  # noqa: BLE001
+                            score_error = f"{type(e).__name__}: {e}"
+                            continue
+                        walk_tokens(scored, 0, acc)
+                        steps += 1
+        except Exception as e:  # noqa: BLE001 — a failing sample is a datapoint
+            ev.update({
+                "autocog.bench.wall_seconds": round(time.time() - t0, 3),
+                "autocog.bench.answer": None,
+                "autocog.bench.correct": None,
+                "error.message": f"{type(e).__name__}: {e}",
+            })
+            self.log(f"[{syntax}/{name}/{q['id']}] ERROR "
+                     f"{ev['error.message'][:80]}")
+            return ev
+
+        if score_error:
+            ev["autocog.bench.score_error"] = score_error[:300]
+        ev.update({
+            "autocog.bench.wall_seconds": round(wall, 3),
+            "autocog.bench.answer": answer,
+            "autocog.bench.correct": correct,
+            "autocog.bench.steps": steps,
+            "autocog.bench.tokens.value": acc["tokens.value"],
+            "autocog.bench.tokens.structure": acc["tokens.structure"],
+            "autocog.bench.friction.value":
+                round(acc["nll.value"] / acc["tokens.value"], 4)
+                if acc["tokens.value"] else None,
+            "autocog.bench.friction.structure":
+                round(acc["nll.structure"] / acc["tokens.structure"], 4)
+                if acc["tokens.structure"] else None,
+            **decision_fields(decisions),
+        })
+        self.log(f"[{syntax}/{name}/{q['id']}] correct={ev['autocog.bench.correct']} "
+                 f"tok(v/s)={acc['tokens.value']}/{acc['tokens.structure']} "
+                 f"friction(v/s)={ev['autocog.bench.friction.value']}/"
+                 f"{ev['autocog.bench.friction.structure']} {wall:.1f}s")
+        return ev
+
+    def emit(self, ev):
+        if self._writer is None:
+            stamp = f"{results.host_name()}-{self.tag}"
+            self._writer = results.NdjsonWriter(
+                os.path.join(self.out, f"results-{stamp}.ndjson"),
+                atomic=False)
+        self._writer.emit(ev)
+
+    def finish(self):
+        """Close the writer and regenerate the markdown summary from ALL
+        result lines (resumed runs span files/appends)."""
+        if self._writer is not None:
+            self._writer.close()
+        events = []
+        for path in glob.glob(os.path.join(self.out, "results-*.ndjson")):
+            for line in open(path):
+                try:
+                    ev = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if all(ev.get(f"autocog.bench.{k}") is not None
+                       for k in ("syntax", "program", "question")):
+                    events.append(ev)
+        if events:
+            md = os.path.join(
+                self.out, f"results-{results.host_name()}-{self.tag}.md")
+            results.quality_md(md, f"{results.host_name()} — {self.tag}", events)
+            self.log(f"results: {self.out}")
+
+
+async def run_samples(entries, ledgers, log=print, window=WINDOW_PER_LANE,
+                      on_start=None, on_end=None):
+    """The sample scheduler: whenever the window has space, scan the
+    entries in order for samples that have no data, whose tag group has
+    capacity, and are not in flight — then await completions one-for-one.
+
+    entries: ordered [(QualityRun, pools)]; ledgers: {tag: LaneLedger}.
+    on_start/on_end(index): run lifecycle hooks (first sample scheduled /
+    last sample landed)."""
+    pending = {i: list(qr.pending) for i, (qr, _) in enumerate(entries)}
+    remaining = {i: len(p) for i, p in pending.items()}
+    inflight = {}                       # task -> entry index
+    group = {tag: 0 for tag in ledgers}
+    started = set()
+
+    def capacity(tag):
+        return window * ledgers[tag].total_lanes() - group[tag]
+
+    while True:
+        for i, (qr, pools) in enumerate(entries):
+            while pending[i] and capacity(qr.tag) > 0:
+                syntax, name, q = pending[i].pop(0)
+                if i not in started:
+                    started.add(i)
+                    if on_start:
+                        on_start(i)
+                task = asyncio.ensure_future(
+                    qr.eval_sample(pools, syntax, name, q))
+                inflight[task] = i
+                group[qr.tag] += 1
+        if not inflight:
+            break
+        done, _ = await asyncio.wait(set(inflight),
+                                     return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            i = inflight.pop(task)
+            qr = entries[i][0]
+            group[qr.tag] -= 1
+            qr.emit(task.result())      # eval_sample never raises
+            remaining[i] -= 1
+            if remaining[i] == 0:
+                qr.finish()
+                if on_end:
+                    on_end(i)
+
+
+def compatible_urls(workers, tag):
+    """The worker URLs hosting a tag (capability-probed, fail-fast)."""
+    from autocog.bench.workers import RemoteWorker
+
+    probed = [RemoteWorker(u) for u in workers]
+    urls = [w.url for w in probed if tag in w.capabilities()["models"]]
+    if not urls:
+        hosted = {w.url: w.capabilities()["models"] for w in probed}
+        raise autocog.errors.ConfigError(
+            f"no worker hosts model {tag!r}: {hosted}")
+    return urls
+
+
 def run_quality(model=None, data=None, formatter="", questions=0,
-                syntaxes=None, demos=None, out=".", root=None, seed=42,
-                n_ctx=2048, workers=None, log=print):
-    """Run the quality matrix; returns the list of events."""
+                syntaxes=None, programs=None, out=".", root=None, seed=42,
+                n_ctx=2048, workers=None, workdir=None, syntax_paths=None,
+                syntax_labels=None, log=print):
+    """Run the quality matrix; returns the list of events.
+
+    `programs` names what to run: see resolve_programs. Paths in it resolve
+    against `workdir`. Nothing here knows where programs live or what kind of
+    task they perform — a run is program x syntax x sample, and the program's
+    labels travel with every event for the analysis to slice on.
+
+    WHICH questions run is not decided here: `data` is taken as given. A
+    campaign draws its question set once per dataset, up front, so that
+    every arm sees the same datapoints and a later campaign can draw from
+    what is left — see share/experiments/campaign/samples.py."""
     root = root or find_root(os.getcwd())
     if root is None:
         raise autocog.errors.ConfigError("cannot locate the repo root (share/syntax)")
-    data = data or os.path.join(root, "benchmarks", "quality", "questions.json")
-    qs = load_questions(data, load_formatter(formatter), limit=questions)
-    syntaxes = syntaxes or ["complete", "stripped"]
-    demos = demos or ["select"]
-
-    mcq_dir = os.path.join(root, "share", "demos", "mcq")
-    search = os.path.join(root, "share", "search", "default.json")
-    model_tag = os.path.splitext(os.path.basename(model))[0] if model else "rng"
+    data = data or os.path.join(root, "share", "benchmarks", "quality", "questions.json")
+    tag = model_tag(model)
     os.makedirs(out, exist_ok=True)
-    stamp = f"{results.host_name()}-{model_tag}"
-    nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
     if workers:
-        worker = pick_worker(workers, model)
-        log(f"worker: {worker.url} hosts {worker.capabilities()['models']}")
-    else:
-        worker = LocalWorker(model=model, n_ctx=n_ctx)
-    programs = {demo: autocog.compile(os.path.join(mcq_dir, f"{demo}.stl"),
-                                      includes=[mcq_dir])
-                for demo in demos}
+        from autocog.remote import lane_ledger
+
+        urls = compatible_urls(workers, tag)
+        log(f"workers: {len(urls)} hosting {tag!r}")
+        qrun = QualityRun(tag, data, out, root, formatter=formatter,
+                          questions=questions, syntaxes=syntaxes,
+                          programs=programs, workdir=workdir,
+                          syntax_paths=syntax_paths,
+                          syntax_labels=syntax_labels, log=log)
+        if not qrun.pending:
+            log("all samples present — nothing to do")
+            return []
+        ledger = lane_ledger(urls)
+        pools = qrun.make_pools(urls, ledger)
+        for pool in pools.values():
+            pool.set_seed(seed)         # rng runs; real models are deterministic
+        asyncio.run(run_samples([(qrun, pools)], {tag: ledger}, log=log))
+        return [ev for ev in (qrun._writer.events if qrun._writer else [])]
+
+    if model and not os.path.isfile(model):
+        raise autocog.errors.ConfigError(
+            f"model {model!r} is a tag, not a file — tags need --worker")
+
+    # Local in-process path: one lane, the original sequential matrix.
+    worker = LocalWorker(model=model, n_ctx=n_ctx)
+    qs = load_questions(data, load_formatter(formatter), limit=questions)
+    syntaxes = syntaxes or ["complete", "stripped"]
+    paths = dict(syntax_paths or {})
+    tags = dict(syntax_labels or {})
+    def syntax_file(name):
+        return paths.get(name) or os.path.join(root, "share", "syntax",
+                                               f"{name}.json")
+    search = os.path.join(root, "share", "search", "default.json")
+    stamp = f"{results.host_name()}-{tag}"
+    nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"),
+                              atomic=False)
+    compiled = resolve_programs(programs, workdir)
+
+    # Identity, on the local path too: an unidentified row is invisible to
+    # a later campaign's question selection, and this path's output is data
+    # like any other. (This path does not resume -- an ad-hoc run that
+    # quietly measured nothing because the directory already held the
+    # numbers would be a surprise.)
+    search_d = reuse.json_digest(search)
+    syntax_d = {s: reuse.json_digest(syntax_file(s)) for s in syntaxes}
+    program_d = {n: reuse.program_hash(p) for n, (p, _) in compiled.items()}
 
     base = {
         "log.logger": "autocog.bench.quality",
         "event.action": "quality.run",
-        "autocog.bench.model": model_tag,
+        "autocog.bench.model": tag,
     }
 
     for syntax in syntaxes:
-        engine = worker.engine(os.path.join(root, "share", "syntax", f"{syntax}.json"),
-                               search)
-        for demo in demos:
-            prog = programs[demo]
+        engine = worker.engine(syntax_file(syntax), search)
+        for name, (prog, labels) in compiled.items():
             for q in qs:
+                fp = reuse.fingerprint(tag, syntax_d[syntax], search_d,
+                                       program_d[name], q)
                 worker.set_seed(seed)
                 with tempfile.TemporaryDirectory() as tmp:
-                    rec = Recorder(kinds={"input", "frame"}, path=tmp)
+                    rec = Recorder(kinds={"input", "frame", "ftt"}, path=tmp)
                     t0 = time.time()
                     error = None
                     try:
-                        result = engine.run(prog, recorder=rec, topic=q.get("topic", ""),
-                                            question=q["question"], choices=q["choices"])
+                        result = engine.run(prog, recorder=rec,
+                                            topic=q.get("topic", ""),
+                                            question=q["question"],
+                                            choice=q["choice"])
                     except Exception as e:  # a failing pair is a datapoint
                         result, error = None, f"{type(e).__name__}: {e}"
                     wall = time.time() - t0
 
-                    answer = extract_answer(result)
+                    answer, correct = score_answer(extract_answer(result), q)
                     ev = results.base_event("autocog.bench.quality", "quality.run", dict(base))
                     ev.update({
                         "autocog.bench.syntax": syntax,
-                        "autocog.bench.demo": demo,
+                        "autocog.bench.program": name,
+                        "autocog.bench.labels": labels,
+                        "autocog.bench.syntax.labels": tags.get(syntax, []),
                         "autocog.bench.question": q["id"],
-                        "autocog.bench.n_choices": len(q["choices"]),
+                        "autocog.bench.n_choices": len(q["choice"]),
+                        "autocog.bench.fingerprint": fp,
+                        "autocog.bench.question.digest": reuse.question_digest(q),
                         "autocog.bench.wall_seconds": round(wall, 3),
                         "autocog.bench.answer": answer,
-                        "autocog.bench.correct":
-                            (answer == q["answer"]) if answer is not None else None,
+                        "autocog.bench.correct": correct,
                     })
                     if error:
                         ev["error.message"] = error
                         nd.emit(ev)
-                        log(f"[{syntax}/{demo}/{q['id']}] ERROR {error[:80]}")
+                        log(f"[{syntax}/{name}/{q['id']}] ERROR {error[:80]}")
                         continue
 
-                    # Score the canonical forced path of every recorded step
-                    # in-process (the efta --score semantics).
+                    # Re-render every recorded step as a forced path and
+                    # score it in-process. Auxiliary: see eval_sample — a
+                    # frame that cannot be re-rendered costs the metrics,
+                    # not the answer.
                     acc = {"tokens.value": 0, "tokens.structure": 0,
                            "nll.value": 0.0, "nll.structure": 0.0}
                     steps = 0
+                    score_error = None
+                    decisions = []
                     for walk_dir, _, files in os.walk(tmp):
                         for f in sorted(files):
                             if not f.endswith(".frame.json"):
@@ -127,9 +692,21 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                             content = (json.load(open(input_file))
                                        if os.path.exists(input_file) else {})
                             prompt = os.path.basename(walk_dir)
-                            scored = engine.score_frame(prog, prompt, frame, content)
+
+                            ftt_file = os.path.join(walk_dir, f"{step}.ftt.json")
+                            if os.path.exists(ftt_file):
+                                decisions += decision_stats(
+                                    json.load(open(ftt_file)))
+
+                            try:
+                                scored = engine.score_frame(prog, prompt, frame, content)
+                            except Exception as e:  # noqa: BLE001
+                                score_error = f"{type(e).__name__}: {e}"
+                                continue
                             walk_tokens(scored, 0, acc)
                             steps += 1
+                    if score_error:
+                        ev["autocog.bench.score_error"] = score_error[:300]
 
                 ev.update({
                     "autocog.bench.steps": steps,
@@ -141,15 +718,16 @@ def run_quality(model=None, data=None, formatter="", questions=0,
                     "autocog.bench.friction.structure":
                         round(acc["nll.structure"] / acc["tokens.structure"], 4)
                         if acc["tokens.structure"] else None,
+                    **decision_fields(decisions),
                 })
                 nd.emit(ev)
-                log(f"[{syntax}/{demo}/{q['id']}] correct={ev['autocog.bench.correct']} "
+                log(f"[{syntax}/{name}/{q['id']}] correct={ev['autocog.bench.correct']} "
                     f"tok(v/s)={acc['tokens.value']}/{acc['tokens.structure']} "
                     f"friction(v/s)={ev['autocog.bench.friction.value']}/"
                     f"{ev['autocog.bench.friction.structure']} {wall:.1f}s")
 
     nd.close()
     md = os.path.join(out, f"results-{stamp}.md")
-    results.quality_md(md, f"{results.host_name()} — {model_tag}", nd.events)
+    results.quality_md(md, f"{results.host_name()} — {tag}", nd.events)
     log(f"\nresults: {nd.path}\n         {md}")
     return nd.events

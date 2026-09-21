@@ -1,0 +1,163 @@
+[
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 1,
+  "label": "slots1 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 1,
+  "label": "slots1 b4a1w2"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 4,
+  "label": "slots4 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 4,
+  "label": "slots4 b4a1w2"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 16,
+  "label": "slots16 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 16,
+  "label": "slots16 b4a1w2"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 64,
+  "label": "slots64 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 64,
+  "label": "slots64 b4a1w2"
+ },
+ {
+  "beams": 8,
+  "ahead": 2,
+  "width": 1,
+  "slots": 128,
+  "label": "slots128 b8a2w1"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "slots": 128,
+  "label": "slots128 b4a1w2"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "metric": [
+   "fifo"
+  ],
+  "label": "metric-fifo b4a1w2"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "metric": [
+   "perplexity"
+  ],
+  "label": "metric-perplexity b4a1w2"
+ },
+ {
+  "beams": 4,
+  "ahead": 1,
+  "width": 2,
+  "metric": [
+   "longest",
+   "perplexity"
+  ],
+  "label": "metric-longest-perplexity b4a1w2"
+ },
+ {
+  "beams": 2,
+  "topk": 2,
+  "ahead": 2,
+  "width": 1,
+  "label": "b2 k2 a2w1"
+ },
+ {
+  "beams": 2,
+  "topk": 4,
+  "ahead": 2,
+  "width": 1,
+  "label": "b2 k4 a2w1"
+ },
+ {
+  "beams": 2,
+  "topk": 8,
+  "ahead": 2,
+  "width": 1,
+  "label": "b2 k8 a2w1"
+ },
+ {
+  "beams": 4,
+  "topk": 2,
+  "ahead": 2,
+  "width": 1,
+  "label": "b4 k2 a2w1"
+ },
+ {
+  "beams": 4,
+  "topk": 4,
+  "ahead": 2,
+  "width": 1,
+  "label": "b4 k4 a2w1"
+ },
+ {
+  "beams": 4,
+  "topk": 8,
+  "ahead": 2,
+  "width": 1,
+  "label": "b4 k8 a2w1"
+ },
+ {
+  "beams": 8,
+  "topk": 2,
+  "ahead": 2,
+  "width": 1,
+  "label": "b8 k2 a2w1"
+ },
+ {
+  "beams": 8,
+  "topk": 4,
+  "ahead": 2,
+  "width": 1,
+  "label": "b8 k4 a2w1"
+ },
+ {
+  "beams": 8,
+  "topk": 8,
+  "ahead": 2,
+  "width": 1,
+  "label": "b8 k8 a2w1"
+ }
+]

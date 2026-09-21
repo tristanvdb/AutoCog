@@ -37,8 +37,25 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
 
     module.def("build_info", &autocog::build_info, "Build configuration info");
 
+    module.def("build_options", []() {
+        py::dict d;
+        d["build_type"] = AUTOCOG_BUILD_TYPE;
+        d["cuda"] = static_cast<bool>(AUTOCOG_CUDA);
+        d["rocm"] = static_cast<bool>(AUTOCOG_ROCM);
+        d["blas"] = static_cast<bool>(AUTOCOG_BLAS);
+        d["vulkan"] = static_cast<bool>(AUTOCOG_VULKAN);
+        d["metal"] = static_cast<bool>(AUTOCOG_METAL);
+        d["native"] = static_cast<bool>(AUTOCOG_NATIVE);
+        d["tuned"] = static_cast<bool>(AUTOCOG_TUNED);
+        return d;
+    }, "Build configuration as a dict (backend acceleration flags)");
+
     module.def("create",
         [](std::string const & model_path, int n_ctx, int ngl, int kv_slots) {
+            // Weight loading is seconds to minutes of pure C++ — a worker
+            // hosting several models would otherwise block its own startup
+            // (and any concurrent load) on the GIL.
+            py::gil_scoped_release nogil;
             return Manager::add_model(model_path, n_ctx, ngl, kv_slots);
         },
         "Load a GGUF model and return a ModelID. ngl/kv_slots: -1 = fall "
@@ -62,6 +79,18 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     module.def("vocab_size", [](ModelID model) {
         return Manager::get_model(model).vocab_size();
     }, "Get vocabulary size");
+
+    module.def("kv_slots", [](ModelID model) {
+        return Manager::get_model(model).kv_slots();
+    },
+    "KV sequence slots this model was loaded with -- the EFFECTIVE count, "
+    "after the per-model value, AUTOCOG_KV_SLOTS and the built-in default "
+    "have been resolved. Slot count changes free-text sampling and shifts "
+    "every logprob slightly (see tests/integration/modules/test_kv_slots.py), "
+    "so it is an experimental variable and a campaign has to record it. "
+    "Asking the model is the only way to learn it: the request may have said "
+    "nothing at all.",
+    py::arg("model"));
 
     module.def("tokenize",
         [](ModelID model, std::string const & text, bool add_bos, bool special) {
@@ -91,65 +120,67 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     );
 
     module.def("evaluate",
-        [](ModelID model, std::string const & fta_id) -> py::tuple {
+        [](ModelID model, std::string const & fta_id, bool score_all) -> py::tuple {
             // Evaluate the stored FTA, detokenize the resulting FTT with the
             // model (only possible here, where it is loaded), and hand it to the
             // store. The Manager's working evaluation is a transient: once the
             // FTT is materialized we release it (resuming is not implemented).
-            auto const & fta = data::datastore().fta.get(fta_id);
-            // Model-level stats accumulate across evaluations on a shared
-            // model: snapshot here so the returned perf holds per-eval deltas.
-            DecodeStats const ds_base = Manager::get_model(model).decode_stats();
-            KvStats const kv_base = Manager::get_model(model).kv_stats();
-            EvalID eval_id = Manager::add_eval(model, fta);
-            Manager::advance(eval_id, std::nullopt);
-            std::string const perf_json = perf_fields(
-                Manager::get_model(model), Manager::get_eval(eval_id),
-                ds_base, kv_base).dump();
-            data::FTT ftt = Manager::retrieve(eval_id);
-            detokenize(model, ftt);
-            Manager::rm_eval(eval_id);
+            //
+            // The GIL is released across the evaluation itself: it is the long
+            // pole (up to seconds), touches no Python object, and holding it
+            // starves the whole interpreter. In a level-3 worker that means
+            // the HTTP server goes dark for the duration of every evaluation
+            // -- /status and /stats time out, so a monitor reports a healthy
+            // busy worker as unreachable, and RequestQueue lanes
+            // (max_workers > 1) cannot overlap because the threads serialize
+            // on the GIL instead. Everything inside the guard is pure C++;
+            // the Python tuple is built after it is dropped.
+            std::string ftt_handle;
+            std::string perf_json;
+            {
+                py::gil_scoped_release nogil;
 
-            // The FTT is a derived artifact: it inherits the FTA's provenance
-            // (sta/syntax/search), adds the FTA itself, and records the
-            // evaluating model by its full GGUF hash. datastore().ftt.add then
-            // finalizes it, keying the store on its content hash.
-            ftt.provenance = fta.provenance;
-            ftt.provenance["fta"]   = fta.metadata ? fta.metadata->hash : std::string{};
-            ftt.provenance["model"] = Manager::get_model(model).sha256();
+                auto const & fta = data::datastore().fta.get(fta_id);
+                // Model-level stats accumulate across evaluations on a shared
+                // model: snapshot here so the returned perf holds per-eval deltas.
+                DecodeStats const ds_base = Manager::get_model(model).decode_stats();
+                KvStats const kv_base = Manager::get_model(model).kv_stats();
+                EvaluationConfig config;
+                config.score_all = score_all;
+                EvalID eval_id = Manager::add_eval(model, fta, config);
+                Manager::advance(eval_id, std::nullopt);
+                perf_json = perf_fields(
+                    Manager::get_model(model), Manager::get_eval(eval_id),
+                    ds_base, kv_base).dump();
+                data::FTT ftt = Manager::retrieve(eval_id);
+                detokenize(model, ftt);
+                Manager::rm_eval(eval_id);
 
-            auto handle = data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
-            return py::make_tuple(handle, perf_json);
+                // The FTT is a derived artifact: it inherits the FTA's provenance
+                // (sta/syntax/search), adds the FTA itself, and records the
+                // evaluating model by its full GGUF hash. datastore().ftt.add then
+                // finalizes it, keying the store on its content hash.
+                ftt.provenance = fta.provenance;
+                ftt.provenance["fta"]   = fta.metadata ? fta.metadata->hash : std::string{};
+                ftt.provenance["model"] = Manager::get_model(model).sha256();
+
+                ftt_handle = data::datastore().ftt.add(
+                    std::make_unique<data::FTT>(std::move(ftt)));
+            }
+            return py::make_tuple(ftt_handle, perf_json);
         },
         "Evaluate a stored FTA (by handle) with a model; detokenizes the FTT and "
         "stores it. Returns (ftt_handle, perf_json): the same autocog.perf.* "
         "field map xfta --perf emits, as per-evaluation deltas. Read the FTT "
         "back via the runtime-sta FTT verbs (get_ftt / dump_ftt / "
-        "walk_ftt_to_frame), which need no model.",
+        "walk_ftt_to_frame), which need no model.\n\n"
+        "score_all=True scores every text action instead of only the ones the "
+        "FTA marks. On an FTA instantiated from a complete frame — one forced "
+        "path — that fills P(token | prefix) for every token the model did not "
+        "choose: constraint friction. It is pure cost during generation.",
         py::arg("model"),
-        py::arg("fta_id")
-    );
-
-    module.def("score",
-        [](ModelID model, std::string const & ftt_id) -> std::string {
-            // Score a stored (typically encoder-produced) FTT: every node's
-            // logprobs become P(token | prefix) under this model — the efta
-            // --score semantics. The input artifact is immutable in the store,
-            // so the scored tree is stored as a new artifact.
-            data::FTT ftt = data::datastore().ftt.get(ftt_id);   // copy
-            // Encoder output is text-level; tokenization needs the model
-            // (same pipeline as efta: encode -> tokenize -> score).
-            autocog::backend::llama::tokenize(model, ftt);
-            autocog::backend::llama::score(model, ftt);
-            detokenize(model, ftt);
-            ftt.provenance["model"] = Manager::get_model(model).sha256();
-            ftt.metadata.reset();   // scored content differs: re-finalize fresh
-            return data::datastore().ftt.add(std::make_unique<data::FTT>(std::move(ftt)));
-        },
-        "Score a stored FTT against the model (forced P(token|prefix) on every "
-        "node, the efta --score semantics); returns the scored FTT's handle.",
-        py::arg("model"),
-        py::arg("ftt_id")
+        py::arg("fta_id"),
+        py::arg("score_all") = false
     );
 
     module.def("reset",

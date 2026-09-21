@@ -3,6 +3,7 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/backend/llama/manager.hxx"
 #include "autocog/backend/llama/prepared.hxx"
+#include "autocog/backend/llama/perf-fields.hxx"
 
 #include "autocog/codec/json.hxx"
 #include "autocog/data/fta.hxx"
@@ -39,6 +40,11 @@ void print_usage(const char* program_name) {
               << "  --model <file>        Path to GGUF model file\n"
               << "  --rng                 Use built-in RNG model (no model file needed)\n"
               << "  --ftt <file>          Output FTT JSON (required; /dev/stdout for stdout)\n"
+              << "  --score-all           Score every text action, not only the ones\n"
+              << "                        the FTA marks. On an FTA instantiated from a\n"
+              << "                        complete frame — one forced path — this fills\n"
+              << "                        P(token | prefix) for every token the model did\n"
+              << "                        not choose: constraint friction.\n"
               << "  --seed N              RNG seed (default: 42)\n"
               << "  --ctx N               Maximum context size for the model\n"
               << "  --perf <file>         Write coarse-grain performance events\n"
@@ -126,22 +132,13 @@ struct PerfEmitter {
   }
 };
 
-static nlohmann::json kind_fields(std::string const & kind,
-                                  PerfCounters::KindStats const & st) {
-  std::string p = "autocog.perf." + kind + ".";
-  return {
-    {p + "calls", st.calls},
-    {p + "seconds", st.seconds},
-    {p + "tokens.restore", st.tokens_restore},
-    {p + "tokens.eval", st.tokens_eval},
-  };
-}
 
 static int run(int argc, char** argv) {
   std::string fta_file, ftt_file, model_path, perf_file;
   unsigned ctx_size = 4096;
   unsigned seed = 42;
   bool use_rng = false;
+  EvaluationConfig eval_config;
 
   autocog::init_console_logger();
 
@@ -151,6 +148,7 @@ static int run(int argc, char** argv) {
     if (arg == "--version") { std::cout << "xfta " << autocog::version() << "\n"; return 0; }
     if (arg == "--build-info") { std::cout << autocog::build_info(); return 0; }
     if (arg == "--rng") { use_rng = true; continue; }
+    if (arg == "--score-all") { eval_config.score_all = true; continue; }
     if (arg == "--fta"   && i + 1 < argc) { fta_file = argv[++i]; continue; }
     if (arg == "--ftt"   && i + 1 < argc) { ftt_file = argv[++i]; continue; }
     if (arg == "--model" && i + 1 < argc) { model_path = argv[++i]; continue; }
@@ -208,40 +206,11 @@ static int run(int argc, char** argv) {
 
   SPDLOG_LOGGER_DEBUG(autocog::log(), "FTA: \"{}\"", fta_file);
   auto fta = codec::from_file<data::FTA>(fta_file);
-  EvalID eval_id = Manager::add_eval(model_id, *fta);
+  EvalID eval_id = Manager::add_eval(model_id, *fta, eval_config);
   Manager::advance(eval_id, std::nullopt);
 
-  PerfCounters const & pc = Manager::get_eval(eval_id).perf();
   {
-    // Bind each kind_fields() result to a named json before iterating:
-    // items() returns a proxy referencing its json, and a temporary in a
-    // range-for initializer is destroyed before the loop body runs (pre-C++23).
-    nlohmann::json f = kind_fields("text", pc.text);
-    nlohmann::json const fcomplete = kind_fields("complete", pc.complete);
-    for (auto const & [k, v] : fcomplete.items()) f[k] = v;
-    nlohmann::json const fchoose = kind_fields("choose", pc.choose);
-    for (auto const & [k, v] : fchoose.items()) f[k] = v;
-    f["autocog.perf.complete.tokens.lookahead"] = pc.lookahead_tokens;
-    f["autocog.perf.prepare_seconds"] = pc.prepare_seconds;
-    f["autocog.perf.advance_seconds"] = pc.advance_seconds;
-    f["autocog.perf.tokens.restore"] =
-        pc.text.tokens_restore + pc.complete.tokens_restore + pc.choose.tokens_restore;
-    f["autocog.perf.tokens.eval"] =
-        pc.text.tokens_eval + pc.complete.tokens_eval + pc.choose.tokens_eval;
-    KvStats const & kv = Manager::get_model(model_id).kv_stats();
-    f["autocog.perf.kv.slots"] = Manager::get_model(model_id).kv_slots();
-    f["autocog.perf.kv.exact"] = kv.exact;
-    f["autocog.perf.kv.extends"] = kv.extends;
-    f["autocog.perf.kv.trims"] = kv.trims;
-    f["autocog.perf.kv.forks"] = kv.forks;
-    f["autocog.perf.kv.evictions"] = kv.evictions;
-    f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
-    SearchStats const st = Manager::get_eval(eval_id).search_stats();
-    f["autocog.perf.search.terminals"] = st.terminals;
-    f["autocog.perf.search.coverage.fta"] = st.coverage_fta;
-    f["autocog.perf.search.coverage.sta"] = st.coverage_sta;
-    f["autocog.perf.search.stopped"] = st.stopped;
-    f["autocog.perf.search.abandoned"] = st.abandoned;
+    nlohmann::json f = perf_fields(Manager::get_model(model_id), Manager::get_eval(eval_id));
     perf.emit("eval.summary", "evaluation complete", std::move(f));
   }
 

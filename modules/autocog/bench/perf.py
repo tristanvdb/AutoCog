@@ -1,7 +1,7 @@
 """bench perf — computational cells through the in-process worker.
 
-The benchmarks/compute/sweep.py semantics (same cells JSON, same event
-shape, same budget behavior) with evaluation through the bindings: no
+A cell is one point in the search-parameter space; the cell files live in
+share/benchmarks/compute/. Evaluation runs through the bindings: no
 per-cell process spawn, no per-cell model reload unless the cell changes
 load-time parameters (slots/ctx), and the perf fields taken from the
 evaluation response itself.
@@ -16,12 +16,16 @@ import autocog
 from autocog.errors import ConfigError
 
 from . import results
-from .workers import LocalWorker, pick_worker
+from .workers import LocalWorker, model_tag, pick_worker
 
 DEFAULT_CONTENT = {
     "topic": "Science",
     "question": "What is H2O?",
+    # both shapes: a cell's program takes one or the other, and an unused
+    # input is ignored
     "choices": ["Water", "Fire", "Air", "Earth"],
+    "choice": [{"label": l, "value": v}
+               for l, v in zip("ABCD", ["Water", "Fire", "Air", "Earth"])],
 }
 
 FULL_MATRIX = {"beams": [1, 2, 4, 8], "ahead": [1, 2, 4], "width": [1, 2]}
@@ -41,6 +45,12 @@ def cell_content(cell):
 
 
 def search_config(cell):
+    queue = {"metric": cell.get("metric", ["perplexity"])}
+    # Termination predicate, in the expression form the search codec accepts
+    # (e.g. {"ge": [{"ref": "__status__.tree.terminals"}, 8]}); reaches the FTA
+    # as queue.stop, so cells can sweep early-termination policies.
+    if cell.get("stop") is not None:
+        queue["stop"] = cell["stop"]
     return {
         "text": {
             "threshold": cell.get("threshold", 0.1),
@@ -54,7 +64,7 @@ def search_config(cell):
         "enum":   {"threshold": 0.1, "width": 1},
         "branch": {"threshold": 0.1, "width": 1},
         "flow":   {"threshold": 0.1, "width": 1},
-        "queue":  {"metric": cell.get("metric", ["perplexity"])},
+        "queue":  queue,
     }
 
 
@@ -91,7 +101,7 @@ def resolve(path, bases):
 
 
 CELL_KEYS = ("label", "beams", "ahead", "width", "topk", "threshold",
-             "repetition", "metric", "slots", "stl", "syntax", "ctx")
+             "repetition", "metric", "stop", "slots", "stl", "syntax", "ctx")
 
 
 def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
@@ -112,8 +122,8 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
     if root is None:
         raise ConfigError("cannot locate share/syntax from cwd or the cells file")
 
-    model_tag = os.path.splitext(os.path.basename(model))[0] if model else "rng"
-    stamp = f"{results.host_name()}-{model_tag}" + (f"-{tag}" if tag else "")
+    tag_ = model_tag(model)
+    stamp = f"{results.host_name()}-{tag_}" + (f"-{tag}" if tag else "")
     os.makedirs(out, exist_ok=True)
     nd = results.NdjsonWriter(os.path.join(out, f"results-{stamp}.ndjson"))
 
@@ -138,6 +148,9 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
                     f"cell wants ctx={cell['ctx']} but worker loaded n_ctx={caps.get('n_ctx')}")
             return remote
         if key not in local_workers:
+            if model and not os.path.isfile(model):
+                raise ConfigError(
+                    f"model {model!r} is a tag, not a file — tags need --worker")
             local_workers[key] = LocalWorker(model=model, n_ctx=key[1],
                                              kv_slots=key[0])
         return local_workers[key]
@@ -153,12 +166,14 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
     t_start = time.time()
     for i, cell in enumerate(cell_list):
         if budget_seconds and (time.time() - t_start) > budget_seconds:
-            log(f"[budget] {budget_seconds:.0f}s exhausted — skipping "
+            # "dropping", not "skipping": a resume skip means the work is
+            # already done, this means it never will be.
+            log(f"[budget] {budget_seconds:.0f}s exhausted — dropping "
                 f"{len(cell_list) - i} remaining cell(s): "
                 + ", ".join(cell_name(c) for c in cell_list[i:]))
             break
         try:
-            stl = resolve(cell.get("stl") or "benchmarks/compute/benchmark.stl", bases)
+            stl = resolve(cell.get("stl") or "share/benchmarks/compute/benchmark.stl", bases)
             syntax = resolve(cell.get("syntax") or "share/syntax/complete.json", bases)
             wk = worker_for(cell)
             engine = wk.engine_for_search_config(syntax, search_config(cell))
@@ -184,7 +199,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
             for k, v in (("beams", 4), ("ahead", 1), ("width", 1)):
                 summary.setdefault(f"autocog.bench.{k}", v)
             summary["autocog.bench.wall_seconds"] = round(wall, 3)
-            summary["autocog.bench.model"] = model_tag
+            summary["autocog.bench.model"] = tag_
             summaries.append(summary)
             nd.emit(summary)
             log(f"[{i + 1}/{len(cell_list)}] {cell_name(cell)} -> "
@@ -201,7 +216,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
         log(f"[failed] {len(failed)} cell(s): " + ", ".join(failed))
     if summaries:
         md = os.path.join(out, f"results-{stamp}.md")
-        results.perf_md(md, f"{results.host_name()} — {model_tag}"
+        results.perf_md(md, f"{results.host_name()} — {tag_}"
                         + (f" — {tag}" if tag else ""),
                         summaries, os.environ.get("AUTOCOG_NGL", "0"))
         log(f"\nresults: {nd.path}\n         {md}")

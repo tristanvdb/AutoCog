@@ -1,0 +1,70 @@
+# The test campaign: rng for plumbing, the tiny model for a real load.
+{
+  "models": [
+    {
+      "tag": "rng",
+      "file": "rng",
+      "ctx": 1024
+    },
+    {
+      "tag": "tiny-llama3-test-Q2_K",
+      "file": "tiny-llama3-test-Q2_K.gguf",
+      "ctx": 1024
+    }
+  ],
+  "datasets": [
+    {
+      "name": "questions",
+      "samples": 2
+    }
+  ],
+  "programs": {
+    "strings-select": {
+      "filepath": "demos/mcq/strings-select.stl",
+      "labels": [
+        "select",
+        "strings"
+      ]
+    },
+    "strings-repeat": {
+      "filepath": "demos/mcq/strings-repeat.stl",
+      "labels": [
+        "repeat",
+        "strings"
+      ]
+    },
+    "record-label": {
+      "filepath": "demos/mcq/record-label.stl",
+      "labels": [
+        "repeat",
+        "record",
+        "label"
+      ]
+    }
+  },
+  "defaults": {
+    "syntaxes": [
+      "complete"
+    ]
+  },
+  "runs": [
+    {
+      "name": "rng-mechanism",
+      "model": "rng",
+      "dataset": "questions",
+      "programs": [
+        "strings-select",
+        "strings-repeat"
+      ]
+    },
+    {
+      "name": "tiny-shape",
+      "model": "tiny-llama3-test-Q2_K",
+      "dataset": "questions",
+      "programs": [
+        "strings-select",
+        "record-label"
+      ]
+    }
+  ]
+}

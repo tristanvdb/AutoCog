@@ -1,0 +1,34 @@
+// Computational benchmark, length-100 variant (context-depth scaling): one complex single-prompt program exercising every
+// evaluation path — forced text scoring (header + inputs), repeated bounded
+// completions (work), a long completion (summary), and choice scoring
+// (answer) — under whatever search parameters the sweep supplies.
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    work[1:8] is text<length=100>;
+    summary is text<length=200>;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is correct";
+    work as "show your work step-by-step";
+    summary as "summarize your reasoning in one sentence";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+export main;

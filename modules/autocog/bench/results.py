@@ -1,8 +1,8 @@
 """Result emission: ECS-flavored NDJSON (incremental append) + markdown.
 
-Same event shapes as benchmarks/compute/sweep.py and benchmarks/quality/
-run.py so existing consumers (summarize/compare/plot, the SIEM pipeline)
-read bench output unchanged.
+One event per cell or per sample, appended as it completes so a killed run
+leaves usable data. The ECS field names (`host.name`, `@timestamp`, the
+`autocog.*` namespaces) are what a SIEM pipeline ingests unchanged.
 """
 
 import datetime
@@ -33,14 +33,40 @@ def timestamp():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-class NdjsonWriter:
-    """Appends one event per line as soon as it is recorded — an interrupted
-    run keeps everything it measured."""
+_stream_log = None
 
-    def __init__(self, path):
+
+def stream_event(event):
+    """Mirror a bench event through the `autocog.bench` logger. With --json
+    (ECSFormatter) every event becomes one NDJSON line on the configured
+    sink — the live feed a campaign monitor tails. Without --json the
+    events stay silent (human logs keep their shape)."""
+    global _stream_log
+    if _stream_log is None:
+        import logging
+
+        _stream_log = logging.getLogger("autocog.bench.stream")
+    _stream_log.info(event.get("event.action", "bench.event"),
+                     extra={"autocog_bench": event})
+
+
+class NdjsonWriter:
+    """Writes one event per line as soon as it is recorded.
+
+    atomic=True (default): write into `<path>.part`, rename on close — an
+    interrupted run keeps its data without looking complete to resume
+    checks that glob for the final name. Used where completion is
+    all-or-nothing (perf runs: budget-bounded, no per-sample identity).
+
+    atomic=False: append directly to the final path — used where resume
+    is per-sample (quality runs index existing lines and re-run only the
+    gaps, so a partial file is not mistaken for anything)."""
+
+    def __init__(self, path, atomic=True):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         self.path = path
-        self._f = open(path, "a")
+        self._part = (path + ".part") if atomic else None
+        self._f = open(self._part or path, "w" if atomic else "a")
         self.events = []
 
     def emit(self, event):
@@ -48,9 +74,12 @@ class NdjsonWriter:
         self.events.append(event)
         self._f.write(json.dumps(event) + "\n")
         self._f.flush()
+        stream_event(event)
 
     def close(self):
         self._f.close()
+        if self._part:
+            os.replace(self._part, self.path)
 
 
 PERF_COLS = ["cell", "eval s", "wall s", "tok restore", "tok eval",
@@ -89,14 +118,14 @@ def perf_md(path, title, events, ngl):
 def quality_md(path, title, events):
     cells = {}
     for ev in events:
-        key = (ev["autocog.bench.syntax"], ev["autocog.bench.demo"])
+        key = (ev["autocog.bench.syntax"], ev["autocog.bench.program"])
         cells.setdefault(key, []).append(ev)
     with open(path, "w") as f:
         f.write(f"# Quality benchmark — {title}\n\n")
-        f.write("| syntax | demo | accuracy | tok value | tok structure "
+        f.write("| syntax | program | accuracy | tok value | tok structure "
                 "| friction value | friction structure |\n")
         f.write("|---|---|---|---|---|---|---|\n")
-        for (syntax, demo), evs in sorted(cells.items()):
+        for (syntax, program), evs in sorted(cells.items()):
             n = len(evs)
             acc = sum(1 for e in evs if e.get("autocog.bench.correct")) / n
             def mean(key):
@@ -107,5 +136,5 @@ def quality_md(path, title, events):
             fv = mean("autocog.bench.friction.value")
             fs = mean("autocog.bench.friction.structure")
             fmt = lambda v: f"{v:.2f}" if v is not None else "-"
-            f.write(f"| {syntax} | {demo} | {acc:.0%} | {fmt(tv)} | {fmt(ts)} "
+            f.write(f"| {syntax} | {program} | {acc:.0%} | {fmt(tv)} | {fmt(ts)} "
                     f"| {fmt(fv)} | {fmt(fs)} |\n")

@@ -1,5 +1,6 @@
 
 #include "autocog/backend/llama/model.hxx"
+#include "autocog/backend/llama/sampling.hxx"
 #include "autocog/logging.hxx"
 
 #include "autocog/data/vocab.hxx"
@@ -9,6 +10,7 @@
 
 #include <llama.h>
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -26,19 +28,24 @@ namespace autocog::backend::llama {
 // prefix cells between them, so the cost is only the divergent suffixes.
 // The default covers a full beams=8 lookahead wave (8 beams x 8 candidates):
 // measured on Llama-3.2-1B, beams=8/ahead=2 drops from 20410 to 269 restored
-// tokens going from 16 to 64 slots. Overridable for experiments
-// (AUTOCOG_KV_SLOTS=1 reproduces the historical single-sequence behavior).
-static size_t kv_slot_count() {
+// tokens going from 16 to 64 slots. Explicit per-model values (multi-model
+// workers) win over the env; AUTOCOG_KV_SLOTS=1 reproduces the historical
+// single-sequence behavior.
+static size_t kv_slot_count(int explicit_slots) {
   size_t n = 64;
+  if (explicit_slots >= 1 && explicit_slots <= 256) {  // LLAMA_MAX_SEQ = 256
+    return static_cast<size_t>(explicit_slots);
+  }
   if (char const * env = std::getenv("AUTOCOG_KV_SLOTS")) {
     long v = std::strtol(env, nullptr, 10);
-    if (v >= 1 && v <= 256) n = static_cast<size_t>(v);  // LLAMA_MAX_SEQ = 256
+    if (v >= 1 && v <= 256) n = static_cast<size_t>(v);
   }
   return n;
 }
 
 Model::Model() :
   id(0),
+  context_size(1u << 20),  // rng model: effectively unbounded
   model(nullptr),
   contexts(),
   rng(42)
@@ -47,15 +54,27 @@ Model::Model() :
   tokens.emplace_back();
 }
 
-Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
+Model::Model(ModelID const id_, std::string const & model_path, int n_ctx,
+             int ngl, int kv_slots) :
   id(id_),
+  context_size(static_cast<unsigned>(n_ctx)),
   model(nullptr),
   contexts(),
   rng(0),
   source_(model_path)
 {
-  // Load model
+  // Load model. GPU offload is opt-in — per-model `ngl` if given (multi-model
+  // workers load each model with its own parameters), else AUTOCOG_NGL, else
+  // CPU-only — so benchmarks state their hardware explicitly.
   llama_model_params model_params = llama_model_default_params();
+  if (ngl > 0) {
+    model_params.n_gpu_layers = ngl;
+  } else if (ngl < 0) {  // unset: fall back to the environment
+    if (char const * env = std::getenv("AUTOCOG_NGL")) {
+      long v = std::strtol(env, nullptr, 10);
+      if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
+    }
+  }
   this->model = llama_model_load_from_file(model_path.c_str(), model_params);
   if (!this->model) {
     throw autocog::ModelError("Failed to load model from: " + model_path, id, "load");
@@ -68,8 +87,18 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   llama_context_params ctx_params = llama_context_default_params();
   ctx_params.n_ctx = n_ctx;
   ctx_params.n_batch = n_ctx;
-  ctx_params.n_seq_max = kv_slot_count();
+  size_t const n_slots = kv_slot_count(kv_slots);
+  ctx_params.n_seq_max = n_slots;
   ctx_params.kv_unified = true;
+  // CPU-pinned workers must not spawn hardware_concurrency threads onto a
+  // two-CPU affinity mask; AUTOCOG_THREADS caps the llama thread pools.
+  if (char const * env = std::getenv("AUTOCOG_THREADS")) {
+    int const n = std::atoi(env);
+    if (n > 0) {
+      ctx_params.n_threads = n;
+      ctx_params.n_threads_batch = n;
+    }
+  }
 
   // Create single context with ID=0 (and associated token sequence)
   llama_context * ctx = llama_init_from_model(this->model, ctx_params);
@@ -79,7 +108,7 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx) :
   }
   this->contexts.push_back(ctx);
   this->tokens.emplace_back();
-  this->slots_.resize(kv_slot_count());
+  this->slots_.resize(n_slots);
 }
 
 Model::~Model() {
@@ -103,6 +132,7 @@ Model::Model(Model && o) noexcept
     live_logits_slot_(o.live_logits_slot_),
     slot_clock_(o.slot_clock_),
     kv_stats_(o.kv_stats_),
+    decode_stats_(o.decode_stats_),
     source_(std::move(o.source_)),
     sha_cache_(std::move(o.sha_cache_)),
     vocab_mask_cache_(std::move(o.vocab_mask_cache_)),
@@ -251,52 +281,26 @@ size_t Model::vocab_size() const {
   return llama_vocab_n_tokens(this->get_vocab());
 }
 
-static float logit_to_log_sum_exp(float const * logit, unsigned vocab_size) {
-  // Find max logit for numerical stability
-  float max_logit = *std::max_element(logit, logit + vocab_size);
-
-  // Compute log-sum-exp for normalization
-  float log_sum_exp = 0.0f;
-  for (unsigned i = 0; i < vocab_size; ++i) {
-    log_sum_exp += std::exp(logit[i] - max_logit);
-  }
-  return max_logit + std::log(log_sum_exp);
-}
-
-static void sample_logprobs(float const * logits, std::vector<bool> const & mask, std::vector<std::pair<TokenID, float>> & candidates) {
-  float log_sum_exp = logit_to_log_sum_exp(logits, mask.size());
-
-  for (unsigned tok = 0; tok < mask.size(); tok++) {
-    if (mask[tok]) {
-      candidates.emplace_back(tok, log_sum_exp - logits[tok]);
-    }
-  }
-}
-
-// -log P(token) from one logits row.
-static float row_logprob(float const * logits, unsigned vocab_size, TokenID token) {
-  return logit_to_log_sum_exp(logits, vocab_size) - logits[token];
-}
+using sampling::log_sum_exp;
+using sampling::row_logprob;
+using sampling::topk_masked;
 
 // Masked top-k candidates (ascending -log P) from one logits row.
 static void topk_from_row(float const * row, std::vector<bool> const & mask,
                           size_t k, FrontierResult & out, ModelID model_id) {
-  std::vector<std::pair<TokenID, float>> candidates;
-  sample_logprobs(row, mask, candidates);
-  if (candidates.empty()) {
+  std::vector<std::pair<unsigned, float>> top;
+  topk_masked(row, mask, k, top);
+  if (top.empty()) {
     throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", model_id, "vocab_mask");
   }
-  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-    return a.second < b.second;
-  });
-  size_t const kk = std::min(k, candidates.size());
+  float const lse = log_sum_exp(row, mask.size());
   out.tokens.clear();
   out.logprobs.clear();
-  out.tokens.reserve(kk);
-  out.logprobs.reserve(kk);
-  for (size_t i = 0; i < kk; ++i) {
-    out.tokens.push_back(candidates[i].first);
-    out.logprobs.push_back(candidates[i].second);
+  out.tokens.reserve(top.size());
+  out.logprobs.reserve(top.size());
+  for (auto const & [tok, logit] : top) {
+    out.tokens.push_back(static_cast<TokenID>(tok));
+    out.logprobs.push_back(lse - logit);
   }
 }
 
@@ -338,7 +342,9 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     batch.logits[i] = all_logits || (i + 1 == n);
   }
 
+  auto const t_dec = std::chrono::steady_clock::now();
   int ret = llama_decode(ctx, batch);
+  ++decode_stats_.calls;
   if (ret != 0) {
     // KV cells exhausted (divergent suffixes accumulate across slots): drop
     // every other slot, discard any partial insertion, and retry once.
@@ -350,7 +356,10 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     }
     llama_memory_seq_rm(mem, static_cast<llama_seq_id>(slot), pos0, -1);
     ret = llama_decode(ctx, batch);
+    ++decode_stats_.calls;
   }
+  decode_stats_.decode_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
   llama_batch_free(batch);
   if (ret != 0) {
     throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
@@ -491,17 +500,23 @@ unsigned Model::eval_sequences(TokenSequence const & new_tokens, ProbaSequence &
   if (n == 0) return 0;
 
   size_t constexpr CHUNK = 256;
+  auto t_smp = std::chrono::steady_clock::now();
   logprobs.push_back(row_logprob(live_row(id), vocab, new_tokens[0]));
+  decode_stats_.score_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   for (size_t done = 0; done < n; done += CHUNK) {
     size_t const len = std::min(CHUNK, n - done);
     decode_extension(active_slot_, pos0 + static_cast<int>(done),
                      new_tokens.data() + done, len, id, /*all_logits=*/true);
+    t_smp = std::chrono::steady_clock::now();
     for (size_t j = 0; j < len; ++j) {
       size_t const scored = done + j + 1;  // row j predicts the next token
       if (scored < n)
         logprobs.push_back(row_logprob(llama_get_logits_ith(ctx, static_cast<int>(j)),
                                        vocab, new_tokens[scored]));
     }
+    decode_stats_.score_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
   }
   slot.tokens.insert(slot.tokens.end(), new_tokens.begin(), new_tokens.end());
   slot.last_used = ++slot_clock_;
@@ -574,27 +589,14 @@ unsigned Model::eval_topk_tokens(
   topk_tokens.clear();
   topk_lobprobs.clear();
 
-  std::vector<std::pair<TokenID, float>> candidates;
-  sample_logprobs(live_row(id), vocab_mask, candidates);
+  auto const t_smp = std::chrono::steady_clock::now();
+  FrontierResult top;
+  topk_from_row(live_row(id), vocab_mask, max_candidates, top, this->id);
+  topk_tokens = std::move(top.tokens);
+  topk_lobprobs = std::move(top.logprobs);
+  decode_stats_.sample_seconds +=
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
 
-  // Handle edge case: no valid candidates
-  if (candidates.empty()) {
-    throw autocog::ModelError("Failed to find candidate token: empty vocabulary mask", id, "vocab_mask");
-  }
-    
-  std::sort(candidates.begin(), candidates.end(), [](const auto& a, const auto& b) {
-    return a.second < b.second;
-  });
-    
-  size_t k = std::min(max_candidates, candidates.size());
-  topk_tokens.reserve(k);
-  topk_lobprobs.reserve(k);
-    
-  for (size_t i = 0; i < k; ++i) {
-    topk_tokens.push_back(candidates[i].first);
-    topk_lobprobs.push_back(candidates[i].second);
-  }
-    
   return 1;
 }
 
@@ -752,7 +754,9 @@ unsigned Model::topk_frontier(
       batch.seq_id[i][0] = static_cast<llama_seq_id>(items[i].slot);
       batch.logits[i] = items[i].want_row;
     }
+    auto const t_dec = std::chrono::steady_clock::now();
     int ret = llama_decode(ctx, batch);
+    ++decode_stats_.calls;
     if (ret != 0) {
       // KV cells exhausted: drop unpinned slots, discard any partial
       // insertion of the pending ranges, and retry once.
@@ -765,21 +769,49 @@ unsigned Model::topk_frontier(
       for (auto const & [s, from] : pending_from)
         llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), static_cast<llama_pos>(from), -1);
       ret = llama_decode(ctx, batch);
+      ++decode_stats_.calls;
     }
+    decode_stats_.decode_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
     llama_batch_free(batch);
     if (ret != 0) {
       throw autocog::ModelError("Failed to decode tokens", this->id, "decode");
     }
     decoded_total += static_cast<unsigned>(items.size());
 
+    auto const t_smp = std::chrono::steady_clock::now();
     for (Planned const & p : planned) {
       topk_from_row(llama_get_logits_ith(ctx, p.final_idx), vocab_mask,
                     max_candidates, results[p.target], this->id);
     }
+    decode_stats_.sample_seconds +=
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t_smp).count();
     live_logits_slot_ = static_cast<int>(planned.back().slot);
     live_logits_ith_ = planned.back().final_idx;
   }
   return decoded_total;
+}
+
+void Model::clear_kv() {
+  if (this->id == 0) {          // RNG model: token records only, no KV cache
+    for (auto & t : this->tokens) t.clear();
+    return;
+  }
+  for (size_t c = 0; c < contexts.size(); ++c) {
+    llama_memory_t mem = llama_get_memory(get_context(static_cast<ContextID>(c)));
+    for (size_t s = 0; s < slots_.size(); ++s) {
+      if (!slots_[s].tokens.empty())
+        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
+    }
+  }
+  // Full pool reset, including per-slot LRU stamps: stale last_used values
+  // against a rewound slot_clock_ would perturb victim choice relative to a
+  // freshly constructed model (observed as fork-count drift between an
+  // in-process re-run and a fresh xfta process).
+  for (auto & slot : slots_) { slot.tokens.clear(); slot.last_used = 0; }
+  live_logits_slot_ = -1;
+  active_slot_ = 0;
+  slot_clock_ = 0;
 }
 
 std::string Model::sha256() const {

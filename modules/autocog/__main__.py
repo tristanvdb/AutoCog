@@ -41,57 +41,7 @@ def setup_logging(args):
         log.propagate = False
 
 
-def load_externals(program, include_paths):
-    """Auto-load Python externals referenced by the program.
-
-    Scans python_imports in the STA, finds the .py files in include paths
-    (and the stdlib), and loads the functions.
-    """
-    import importlib.util
-    from .program import _stdlib_path
-
-    # Build search paths: explicit includes, then stdlib
-    search_paths = list(include_paths)
-    stdlib = _stdlib_path()
-    if stdlib and stdlib not in search_paths:
-        search_paths.append(stdlib)
-
-    externals = {}
-    loaded_modules = {}
-
-    for extern_name, info in program.python_imports.items():
-        py_file = info["file"]
-        target_func = info["target"]
-
-        # Find the .py file in search paths
-        module_path = None
-        for inc in search_paths:
-            candidate = os.path.join(inc, py_file)
-            if os.path.isfile(candidate):
-                module_path = candidate
-                break
-
-        if module_path is None:
-            print(f"Warning: Python file '{py_file}' not found in include paths", file=sys.stderr)
-            continue
-
-        # Load the module (cache by path)
-        if module_path not in loaded_modules:
-            mod_name = os.path.splitext(os.path.basename(py_file))[0]
-            spec = importlib.util.spec_from_file_location(mod_name, module_path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            loaded_modules[module_path] = mod
-
-        mod = loaded_modules[module_path]
-        func = getattr(mod, target_func, None)
-        if func is None:
-            print(f"Warning: function '{target_func}' not found in '{py_file}'", file=sys.stderr)
-            continue
-
-        externals[extern_name] = func
-
-    return externals
+from .externals import load_externals  # re-exported: the CLI's historical home
 
 
 def _load_program(args):
@@ -233,12 +183,15 @@ def cmd_bench(args):
         run_quality(model=args.model, data=args.data, formatter=args.formatter,
                     questions=args.questions,
                     syntaxes=args.syntaxes.split(",") if args.syntaxes else None,
-                    demos=args.demos.split(",") if args.demos else None,
+                    programs=args.program, workdir=args.workdir,
                     out=args.out, seed=args.seed, n_ctx=args.ctx,
                     workers=args.worker)
     elif args.bench_command == "campaign":
         from .bench.campaign import run_campaign
-        run_campaign(args.manifest)
+        _, failures = run_campaign(args.descriptor, phases=args.phase,
+                                   workers=args.worker)
+        if failures:
+            sys.exit(1)
 
 
 def cmd_serve(args):
@@ -512,8 +465,15 @@ def main():
 
     p_bench = subparsers.add_parser("bench", help="Run benchmarks")
     bench_sub = p_bench.add_subparsers(dest="bench_command", required=True)
+    bench_json = argparse.ArgumentParser(add_help=False)
+    bench_json.add_argument("--json", action="store_true",
+                            help="Emit the bench event stream as ECS NDJSON")
+    bench_json.add_argument("--json-log-file", default=None,
+                            help="Append the NDJSON stream to this file "
+                                 "(default: stderr)")
 
-    pb_perf = bench_sub.add_parser("perf", help="Computational cells (share/benchmarks/compute semantics)")
+    pb_perf = bench_sub.add_parser("perf", parents=[bench_json],
+                                   help="Computational cells (share/benchmarks/compute semantics)")
     pb_perf.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_perf.add_argument("--cells", default=None, help="Cells JSON (default: the classic matrix)")
     pb_perf.add_argument("--quick", action="store_true", help="Reduced classic matrix")
@@ -526,7 +486,8 @@ def main():
                         help="Remote level-3 worker host:port (repeatable; "
                              "routed by model tag)")
 
-    pb_quality = bench_sub.add_parser("quality", help="MCQ accuracy / friction matrix")
+    pb_quality = bench_sub.add_parser("quality", parents=[bench_json],
+                                       help="MCQ accuracy / friction matrix")
     pb_quality.add_argument("--model", default=None, help="GGUF model (default: RNG)")
     pb_quality.add_argument("--data", default=None,
                             help="Questions .json/.jsonl (default: share/benchmarks/quality/questions.json)")
@@ -534,7 +495,14 @@ def main():
                             help="file.py:fn applied to each datapoint (raw -> question; None = skip)")
     pb_quality.add_argument("--questions", type=int, default=0, help="Stratified sample size (0 = all)")
     pb_quality.add_argument("--syntaxes", default=None, help="Comma list (default: complete,stripped)")
-    pb_quality.add_argument("--demos", default=None, help="Comma list (default: select)")
+    pb_quality.add_argument("--program", action="append", required=True,
+                            help="STL program to run (repeatable). Named after "
+                                 "its filename; relative paths resolve against "
+                                 "--workdir. A campaign passes the descriptor's "
+                                 "programs section instead.")
+    pb_quality.add_argument("--workdir", default=None,
+                            help="Base for relative program/data paths "
+                                 "(default: the current directory)")
     pb_quality.add_argument("--out", default=".", help="Results directory")
     pb_quality.add_argument("--ctx", type=int, default=2048)
     pb_quality.add_argument("--seed", type=int, default=42)
@@ -542,8 +510,17 @@ def main():
                         help="Remote level-3 worker host:port (repeatable; "
                              "routed by model tag)")
 
-    pb_campaign = bench_sub.add_parser("campaign", help="Run a campaign manifest")
-    pb_campaign.add_argument("manifest", help="Campaign manifest JSON")
+    pb_campaign = bench_sub.add_parser(
+        "campaign", parents=[bench_json],
+        help="Execute a campaign descriptor against workers")
+    pb_campaign.add_argument("descriptor", help="Campaign descriptor JSON")
+    pb_campaign.add_argument("--phase", action="append", default=None,
+                             help="Only these phase(s) (repeatable; "
+                                  "default: all, in order)")
+    pb_campaign.add_argument("--worker", action="append", default=None,
+                             help="Level-3 worker host:port (repeatable, "
+                                  "REQUIRED — workers are preassigned "
+                                  "with models by the campaign launcher)")
 
     args = parser.parse_args()
 

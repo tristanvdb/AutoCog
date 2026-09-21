@@ -1,29 +1,34 @@
-"""Sample identity, and reusing a measurement a previous campaign paid for.
+"""Sample identity, and keeping two campaigns from measuring the same thing.
 
-A quality sample costs GPU time, so running the same one twice is money
-spent on an answer already in hand. This module decides when two samples
-are THE SAME sample, and hands back the event that was already recorded.
+Two separate jobs live here, at two different granularities, and the
+distinction is the whole point:
 
-The whole feature rests on the fingerprint, and the fingerprint is the
-only part worth being paranoid about. `(syntax, program, question)` —
-the triple the per-run resume uses — is not identity: it names a CELL of
-the matrix, and the same cell measures something different the moment
-the syntax file is edited, a program's source changes, or the search
-config moves. Reusing across campaigns on the cell name alone would
-silently mix two configurations into one dataset, which is exactly the
-failure that makes a campaign's results unusable after the money is
-spent. So the key is a digest of everything the descriptor determines:
+**The sample fingerprint** identifies one measurement — this question,
+under this syntax, by this program, on this model. It is what a run's
+own resume uses to decide whether the rows already in its output
+directory describe the experiment it is about to run. The per-run resume
+keys it used to use, `(syntax, program, question)`, name a CELL of the
+matrix, and the same cell measures something different the moment the
+syntax file is edited. Edit a syntax, re-run, and the old numbers used
+to survive.
 
-    model tag       the arm being measured
-    syntax          the JSON's CONTENT, canonicalised (reindenting a
-                    syntax file is not a new experiment)
-    search          same
-    program         the STA's own hash — the compiled artifact, so it
-                    covers the source, its imports, and the compile
-                    options together. Hashing the .stl path or the
-                    option list would miss an edited import.
-    question        the datapoint's content, not its id: two datasets
-                    can both call something `q17`.
+**The question digest** identifies a datapoint, and nothing else. It is
+what a CAMPAIGN uses to pick its questions: a campaign draws N of them
+per dataset, once, and every experiment in it sees the same N. Given an
+earlier campaign's questions, the next one draws from what is left.
+
+Why the question and not the sample. Disjointness has to be decided at
+the level a campaign chooses at, which is the dataset. If it were
+decided per sample, a campaign that adds one syntax arm to last month's
+matrix would be told to avoid last month's questions for the arms they
+share — and then the new arm could not be compared to the old ones,
+which is the only reason to add it. Choosing the question set once, at
+the top, keeps the comparison inside a campaign exact and the sample
+sets between campaigns disjoint.
+
+Nothing is ever copied forward. Results are read by unioning campaign
+directories, and a row sitting in two of them is counted twice by every
+consumer that does.
 
 WHAT THE FINGERPRINT DOES NOT COVER, stated because a digest invites
 more trust than it earns:
@@ -36,14 +41,8 @@ more trust than it earns:
     deterministic, but any two counts disagree on free-text logprobs
     (drift up to ~3e-3) while agreeing on tree shape. That makes it an
     experimental variable, and one the launcher MEASURES rather than
-    declares — putting it in the key would void every reuse whenever
-    the box's worker layout changed. It is recorded on each event
-    instead, so an analysis can group by it.
-
-A mismatch always means RE-MEASURE. There is no "close enough" branch:
-the point of the feature is to save money, and a fingerprint that
-resolves doubt in favour of reuse saves money by producing a dataset
-that cannot be trusted.
+    declares. It is recorded on each event instead, so an analysis can
+    group by it.
 """
 
 import glob
@@ -73,6 +72,17 @@ def json_digest(path):
         return digest(json.load(f))
 
 
+def question_digest(question):
+    """A datapoint's identity: its CONTENT, not its id.
+
+    Two datasets can both call something `q17`, and one dataset rebuilt
+    with a different converter can call the same id something else. Content
+    also means a question cannot be excluded from one dataset by having
+    appeared in an unrelated one — the digests simply never collide.
+    """
+    return digest({"v": FINGERPRINT_VERSION, "question": question})
+
+
 def program_hash(program):
     """The compiled STA's own hash.
 
@@ -87,7 +97,7 @@ def program_hash(program):
 
 
 def fingerprint(model, syntax, search, program, question):
-    """The sample's identity. `syntax`/`search`/`program` are digests."""
+    """One measurement's identity. `syntax`/`search`/`program` are digests."""
     return digest({
         "v": FINGERPRINT_VERSION,
         "model": model,
@@ -98,75 +108,42 @@ def fingerprint(model, syntax, search, program, question):
     })
 
 
-class PriorIndex:
-    """Fingerprint -> the event that measured it, over previous results.
+def prior_questions(dirs, log=None):
+    """Every question digest an earlier campaign used, over its results.
 
-    Built by scanning directories RECURSIVELY for `results-*.ndjson`. The
-    fingerprint is complete, so which campaign or run directory a row came
-    from does not matter — which is what lets a prior campaign be reused
-    even though its phases, run labels and worker layout were different.
+    Two sources, because they fail in different ways. `samples-*.json` is
+    the selection a campaign committed to up front — authoritative, and
+    present even for arms that never ran. `results-*.ndjson` rows are the
+    backstop for anything produced outside a campaign, or whose selection
+    file was lost; error rows count here, unlike in a resume, because the
+    question was still SPENT on and the point is not to draw it twice.
 
-    Only offsets are held. A campaign's worth of quality events is ~65 KiB
-    apiece (the full candidate distribution rides on every one), so an
-    index that kept the events would be gigabytes; this one is ~100 bytes
-    per sample and seeks for the few that are actually reused.
-
-    Rows carrying `error.message` are skipped, for the same reason the
-    per-run resume skips them: a sample whose worker died is not a
-    measurement, and adopting it would make a transient failure permanent.
+    Directories are scanned recursively: the digest says nothing about
+    which campaign, phase or run directory it came from, which is what
+    lets an earlier campaign with a different layout be excluded at all.
     """
-
-    def __init__(self, dirs=(), log=None):
-        self.dirs = list(dirs)
-        self.offsets = {}
-        self.files = 0
-        self.rows = 0
-        for d in self.dirs:
-            self._scan(d)
-        if log:
-            log(f"prior: {len(self.offsets)} fingerprinted sample(s) from "
-                f"{self.rows} row(s) in {self.files} file(s) over "
-                f"{len(self.dirs)} director{'y' if len(self.dirs) == 1 else 'ies'}")
-
-    def _scan(self, root):
+    seen, files = set(), 0
+    for root in dirs:
+        for path in sorted(glob.glob(os.path.join(root, "**", "samples-*.json"),
+                                     recursive=True)):
+            files += 1
+            with open(path) as f:
+                for q in json.load(f):
+                    seen.add(question_digest(q))
         for path in sorted(glob.glob(os.path.join(root, "**", "results-*.ndjson"),
                                      recursive=True)):
-            self.files += 1
+            files += 1
             with open(path, "rb") as f:
-                offset = 0
                 for raw in f:
-                    start, offset = offset, offset + len(raw)
                     try:
                         ev = json.loads(raw)
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         continue        # torn last line of a killed run
-                    if ev.get("error.message"):
-                        continue
-                    fp = ev.get("autocog.bench.fingerprint")
-                    if not fp:
-                        continue        # pre-fingerprint vintage: not reusable
-                    self.rows += 1
-                    # Last writer wins: a re-measured sample supersedes.
-                    self.offsets[fp] = (path, start)
-
-    def __contains__(self, fp):
-        return fp in self.offsets
-
-    def __len__(self):
-        return len(self.offsets)
-
-    def get(self, fp):
-        """The recorded event, stamped with where it was adopted from."""
-        located = self.offsets.get(fp)
-        if located is None:
-            return None
-        path, offset = located
-        with open(path, "rb") as f:
-            f.seek(offset)
-            ev = json.loads(f.readline())
-        # The measurement keeps its original @timestamp -- that is when it
-        # was measured, and rewriting it would erase the only evidence that
-        # this row was not produced by the run it now sits in.
-        ev["autocog.bench.reused.from"] = path
-        ev["autocog.bench.reused.at"] = ev.get("@timestamp")
-        return ev
+                    fp = ev.get("autocog.bench.question.digest")
+                    if fp:
+                        seen.add(fp)
+    if log:
+        log(f"prior: {len(seen)} question(s) already used, from {files} "
+            f"file(s) over {len(dirs)} "
+            f"director{'y' if len(dirs) == 1 else 'ies'}")
+    return seen

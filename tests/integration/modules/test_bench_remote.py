@@ -6,6 +6,7 @@ hosting the requested model; a spawned worker honors --cpus.
 """
 
 import json
+import pathlib
 import os
 import subprocess
 import sys
@@ -31,7 +32,7 @@ def from_repo_root(repo_root, monkeypatch):
 def rng_worker():
     from autocog.server.backend import create_app
 
-    with running_server(create_app(model_path=None)) as port:
+    with running_server(create_app(models=[])) as port:
         yield f"localhost:{port}"
 
 
@@ -64,12 +65,15 @@ def test_perf_remote_matches_local(rng_worker, tmp_path):
 
 
 def test_quality_remote_matches_local(rng_worker, tmp_path):
-    kwargs = dict(questions=2, syntaxes=["complete"], demos=["select"],
+    """One question: the pooled worker path seeds once per run (real
+    models are deterministic; rng consumes a stream), so only the first
+    question is bit-comparable to the local path's per-question seeding."""
+    kwargs = dict(questions=1, syntaxes=["complete"], programs=["share/demos/mcq/strings-select.stl"],
                   log=lambda *_: None)
     local = run_quality(out=str(tmp_path / "local"), **kwargs)
     remote = run_quality(out=str(tmp_path / "remote"), workers=[rng_worker],
                          **kwargs)
-    assert len(local) == len(remote) == 2
+    assert len(local) == len(remote) == 1
     for l, r in zip(local, remote):
         for key in ("autocog.bench.answer", "autocog.bench.correct",
                     "autocog.bench.steps", "autocog.bench.tokens.value",
@@ -78,14 +82,12 @@ def test_quality_remote_matches_local(rng_worker, tmp_path):
             assert l.get(key) == r.get(key), key
 
 
-def test_routing(repo_root, rng_worker, tmp_path):
+def test_routing(repo_root, rng_worker, tmp_path, llama3_model_path):
     """Two workers, one hosting the tiny model: jobs route by model tag."""
-    model = repo_root / "models" / "tiny-llama3-test-Q2_K.gguf"
-    if not model.exists():
-        pytest.skip("tiny model not present")
+    model = pathlib.Path(llama3_model_path)
     from autocog.server.backend import create_app
 
-    with running_server(create_app(model_path=str(model), n_ctx=2048)) as tiny_port:
+    with running_server(create_app(models=[{"path": str(model)}], n_ctx=2048)) as tiny_port:
         urls = [rng_worker, f"localhost:{tiny_port}"]
 
         w = pick_worker(urls, str(model))

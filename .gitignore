@@ -3,7 +3,7 @@
 /models
 /Pipfile
 /modules/autocog/*.so
-/build/
+/build*/
 ftt.svg
 venv/
 .venv/
@@ -22,3 +22,11 @@ tests/coverage*.json
 
 # Planning / scratch docs — never tracked
 docs/_planning/
+.ccache/
+/datasets
+
+results/
+share/benchmarks/campaigns/datasets
+share/benchmarks/campaigns/models
+share/benchmarks/campaigns/results
+Testing/

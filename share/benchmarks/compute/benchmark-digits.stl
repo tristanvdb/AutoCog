@@ -1,0 +1,36 @@
+// Computational benchmark, digits-vocab variant (tiny sampling mask): one complex single-prompt program exercising every
+// evaluation path — forced text scoring (header + inputs), repeated bounded
+// completions (work), a long completion (summary), and choice scoring
+// (answer) — under whatever search parameters the sweep supplies.
+
+vocab digit = tokenize("0", "1", "2", "3", "4", "5", "6", "7", "8", "9");
+
+prompt main {
+  is {
+    topic is text<length=20>;
+    question is text<length=50>;
+    choices[4] is text<length=40>;
+    work[1:8] is text<length=25, vocab=digit, stop="">;
+    summary is text<length=50, vocab=digit, stop="">;
+    answer is select(choices);
+  }
+  channel {
+    topic get topic;
+    question get question;
+    choices get choices;
+  }
+  return {
+    use answer;
+  }
+  annotate {
+    _ as "You are answering a multiple choice questionnaire.";
+    topic as "the general category from which the question was taken";
+    question as "the question that you have to answer";
+    choices as "the four possible choices to answer the question, only one is correct";
+    work as "show your work step-by-step";
+    summary as "summarize your reasoning in one sentence";
+    answer as "you pick the index of the choice that best answer the question";
+  }
+}
+
+export main;
