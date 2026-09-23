@@ -1,0 +1,7 @@
+// Error: a channel feeding a fixed-size array from a scalar source.
+// expect-error: requires at least 3 element(s) but its source 'single' provides at most 1
+prompt main {
+  is { single is text<length=4>; items[3:5] is text<length=4>; }
+  channel { single get single; items use .single; }
+  return { use items; }
+}

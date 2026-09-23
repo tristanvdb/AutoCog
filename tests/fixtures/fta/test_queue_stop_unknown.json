@@ -49,7 +49,9 @@
     ],
     "stop": {
       "ge": [
-        "not_a_scalar",
+        {
+          "ref": "__status__.not_a_scalar"
+        },
         1
       ]
     }

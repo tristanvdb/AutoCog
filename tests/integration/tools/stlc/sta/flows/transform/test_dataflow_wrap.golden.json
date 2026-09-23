@@ -25,7 +25,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "42f21f4c839150df63311915f1330dcf8464064c7d6d267c3bbc555e39d78803",
+    "hash": "ad7caa58e8904278fabd98ece63c42175a3f28ce05e49eeb572e57dd9015f544",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -90,7 +90,32 @@
           "range": [
             1,
             1
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -102,7 +127,32 @@
           },
           "index": 1,
           "name": "result",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -136,7 +186,17 @@
           "type": "return"
         }
       },
-      "name": "consumer"
+      "name": "consumer",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     },
     "producer": {
       "abstracts": [
@@ -201,7 +261,32 @@
           },
           "index": 0,
           "name": "topic",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -213,7 +298,32 @@
           },
           "index": 1,
           "name": "title",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -238,7 +348,17 @@
           "type": "control"
         }
       },
-      "name": "producer"
+      "name": "producer",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

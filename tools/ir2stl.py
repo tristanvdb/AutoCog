@@ -11,6 +11,7 @@ Usage:
     stlc --ir /dev/stdout program.stl | python ir2stl.py
     python ir2stl.py program.ir.json [prompt_name]
 """
+from exprtext import expr_text
 import json
 import sys
 
@@ -33,6 +34,10 @@ def _num(v):
 def _value(v):
     if isinstance(v, str):
         return '"' + v.replace('"', '\\"') + '"'
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if v is None:
+        return "null"
     return _num(v)
 
 
@@ -43,13 +48,22 @@ def unparse_search(search, level):
     if not search:
         return []
     lines = [_indent(level) + "search {"]
+    emitted = 0
     for category in sorted(search.keys()):
         params = search[category]
         for param in sorted(params.keys()):
+            value = params[param]
+            # Fill-up references ({"ref": "__search__.<cat>.<key>"}) are the
+            # materialized defaults: recompiling regenerates them, so they are
+            # omitted rather than written back out.
+            if isinstance(value, dict) and \
+                    str(value.get("ref", "")).startswith("__search__."):
+                continue
             loc = f"{category}.{param}" if category else param
-            lines.append(f"{_indent(level + 1)}{loc} is {_value(params[param])};")
+            lines.append(f"{_indent(level + 1)}{loc} is {expr_text(value)};")
+            emitted += 1
     lines.append(_indent(level) + "}")
-    return lines
+    return lines if emitted else []
 
 
 def unparse_format(fmt):
@@ -98,7 +112,7 @@ def unparse_field(field, level):
 
     # Field annotations.
     for d in field.get("desc", []):
-        lines.append(f'{_indent(inner)}annotate is "{d}";')
+        lines.append(f'{_indent(inner)}annotate is {expr_text(d)};')
 
     fmt = field.get("format") or {}
     if fmt.get("type") == "struct":

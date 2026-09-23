@@ -147,6 +147,10 @@ template <>
 void SymbolScanner::pre<ast::Tag::Define>(ast::Define const & node) {
   this->shortcut_flag = true;
   auto name = node.data.name.data.name;
+  if (is_reserved_dunder(name)) {
+    this->driver.emit_error("'" + name + "' uses the reserved __...__ shape (system namespaces); user-defined symbols cannot use it.", node.data.name.location);
+    return;
+  }
   auto scope = this->scope();
   auto alias = scope + "::" + name;
   auto sym = DefineSymbol(node, alias);
@@ -162,6 +166,10 @@ void SymbolScanner::pre<ast::Tag::Record>(ast::Record const & node) {
   auto scope = this->scope();
   auto name = node.data.name.data.name;
   this->scopes.push_back(name);
+  if (is_reserved_dunder(name)) {
+    this->driver.emit_error("'" + name + "' uses the reserved __...__ shape (system namespaces); user-defined symbols cannot use it.", node.data.name.location);
+    return;
+  }
   auto alias = this->scope();
   RecordSymbol sym(node, alias);
   if (!this->driver.tables.symbols.emplace(alias, sym).second) {
@@ -180,6 +188,10 @@ void SymbolScanner::pre<ast::Tag::Prompt>(ast::Prompt const & node) {
   auto scope = this->scope();
   auto name = node.data.name.data.name;
   this->scopes.push_back(name);
+  if (is_reserved_dunder(name)) {
+    this->driver.emit_error("'" + name + "' uses the reserved __...__ shape (system namespaces); user-defined symbols cannot use it.", node.data.name.location);
+    return;
+  }
   auto alias = this->scope();
   PromptSymbol sym(node, alias);
   if (!this->driver.tables.symbols.emplace(alias, sym).second) {

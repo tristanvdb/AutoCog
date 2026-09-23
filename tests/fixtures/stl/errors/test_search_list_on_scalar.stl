@@ -1,0 +1,8 @@
+// Error: a comma-list RHS on a scalar-valued search parameter.
+// expect-error: search parameter 'text.beams' takes a single value
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is 2, 4; }
+  channel { q get q; }
+  return { use q; }
+}

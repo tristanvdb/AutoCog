@@ -181,5 +181,35 @@
     "code": "flow 123prompt;",
     "should_pass": false,
     "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
+  },
+  {
+    "description": "Edge: bare prompt",
+    "tag": "Edge",
+    "code": "next;",
+    "should_pass": true
+  },
+  {
+    "description": "Edge: with trip limit",
+    "tag": "Edge",
+    "code": "next[3];",
+    "should_pass": true
+  },
+  {
+    "description": "Edge: with label",
+    "tag": "Edge",
+    "code": "next as retry;",
+    "should_pass": true
+  },
+  {
+    "description": "Edge: limit and label",
+    "tag": "Edge",
+    "code": "next[2] as retry;",
+    "should_pass": true
+  },
+  {
+    "description": "Edge: unclosed limit is an error",
+    "tag": "Edge",
+    "code": "next[2 as x;",
+    "should_pass": false
   }
 ]

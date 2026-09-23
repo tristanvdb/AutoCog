@@ -2,9 +2,13 @@
 #include "autocog/compiler/stl/driver.hxx"
 #include "autocog/compiler/stl/evaluate.hxx"
 #include "autocog/compiler/stl/instantiation-graph.hxx"
+#include "autocog/data/search-registry.hxx"
+#include "autocog/data/term.hxx"
 #include "autocog/logging.hxx"
 
 #include <algorithm>
+#include <map>
+#include <set>
 
 namespace autocog::compiler::stl {
 
@@ -28,6 +32,169 @@ static std::optional<int> eval_opt_int(
 
 // Structural scope of a `search { }` block, for category-placement rules.
 enum class SearchScope { File, Prompt, Record };
+
+// --- queue.stop translation --------------------------------------------------
+// A termination predicate is written in the ordinary expression grammar and
+// TRANSLATED (vocab precedent) to data::TermExpr: comparisons whose one side
+// is a `__status__` scalar become leaves (the other side constant-folds, so
+// defines/arguments work); &&/||/! become all/any/not. The result travels
+// compact-serialized in the (scalar) policy value and is parsed back at ista.
+
+// STL name -> backend termination scalar. Entries commented out exist in the
+// design but not yet in the backend.
+static std::optional<std::string> stop_scalar_name(std::string const & dotted) {
+    static std::map<std::string, std::string> const M = {
+        {"__status__.tree.terminals",    "terminals"},
+        {"__status__.tree.tokens",       "tokens"},
+        {"__status__.tree.leaves",       "queue.size"},
+        {"__status__.tree.coverage.fta", "coverage.fta"},
+        {"__status__.tree.coverage.sta", "coverage.sta"},
+        {"__status__.best.proba",        "best.proba"},
+        {"__status__.best.zscore",       "best.zscore"},
+    };
+    auto it = M.find(dotted);
+    if (it == M.end()) return std::nullopt;
+    return it->second;
+}
+
+static bool translate_stop(
+    ast::Expression const & e,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    Driver & driver,
+    std::optional<autocog::location::SourceRange> const & loc,
+    autocog::data::TermExpr & out
+);
+
+// The scalar side of a comparison: a dotted __status__ identifier.
+static std::optional<std::string> stop_scalar_of(ast::Expression const & e, Driver & driver,
+        std::optional<autocog::location::SourceRange> const & loc) {
+    if (auto const * id = std::get_if<ast::Identifier>(&e.data.expr)) {
+        auto const & name = id->data.name;
+        if (name.rfind("__status__.", 0) == 0 || name.rfind("__model__.", 0) == 0
+                || name.rfind("__node__.", 0) == 0) {
+            auto mapped = stop_scalar_name(name);
+            if (!mapped) {
+                driver.emit_error("'" + name + "' is not yet available in "
+                                  "termination predicates", loc);
+                return std::nullopt;
+            }
+            return mapped;
+        }
+    }
+    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
+        return stop_scalar_of(*par->data.expr, driver, loc);
+    return std::nullopt;
+}
+
+static bool translate_stop(
+    ast::Expression const & e,
+    Evaluator & evaluator,
+    std::string const & scope,
+    ir::VarMap & ctx,
+    Driver & driver,
+    std::optional<autocog::location::SourceRange> const & loc,
+    autocog::data::TermExpr & out
+) {
+    using TE = autocog::data::TermExpr;
+    if (auto const * par = std::get_if<ast::Parenthesis>(&e.data.expr))
+        return translate_stop(*par->data.expr, evaluator, scope, ctx, driver, loc, out);
+    if (auto const * un = std::get_if<ast::Unary>(&e.data.expr)) {
+        if (un->data.kind != ast::OpKind::Not) {
+            driver.emit_error("only `!` composes termination predicates", loc);
+            return false;
+        }
+        out.kind = TE::Kind::Not;
+        out.operands.emplace_back();
+        return translate_stop(*un->data.operand, evaluator, scope, ctx, driver, loc,
+                              out.operands.back());
+    }
+    auto const * bin = std::get_if<ast::Binary>(&e.data.expr);
+    if (!bin) {
+        driver.emit_error("queue.stop expects a predicate: comparisons of "
+                          "__status__ scalars composed with &&, ||, !", loc);
+        return false;
+    }
+    switch (bin->data.kind) {
+        case ast::OpKind::And:
+        case ast::OpKind::Or: {
+            out.kind = bin->data.kind == ast::OpKind::And ? TE::Kind::All : TE::Kind::Any;
+            out.operands.emplace_back();
+            if (!translate_stop(*bin->data.lhs, evaluator, scope, ctx, driver, loc,
+                                out.operands.back())) return false;
+            out.operands.emplace_back();
+            return translate_stop(*bin->data.rhs, evaluator, scope, ctx, driver, loc,
+                                  out.operands.back());
+        }
+        case ast::OpKind::Gte:
+        case ast::OpKind::Gt:
+        case ast::OpKind::Lte:
+        case ast::OpKind::Lt: {
+            auto lhs_scalar = stop_scalar_of(*bin->data.lhs, driver, loc);
+            std::optional<std::string> rhs_scalar;
+            if (!lhs_scalar) rhs_scalar = stop_scalar_of(*bin->data.rhs, driver, loc);
+            bool const flipped = !lhs_scalar && rhs_scalar.has_value();
+            auto const & scalar = lhs_scalar.has_value() ? lhs_scalar : rhs_scalar;
+            if (!scalar) {
+                driver.emit_error("one side of a termination comparison must be "
+                                  "a __status__ scalar", loc);
+                return false;
+            }
+            auto const & const_side = lhs_scalar ? *bin->data.rhs : *bin->data.lhs;
+            // The constant side may be a model property, resolved at the
+            // worker when the model loads (e.g. the context-overflow guard
+            // `__status__.tree.tokens >= __model__.n_ctx`).
+            std::string ref;
+            {
+                ast::Expression const * cs = &const_side;
+                while (auto const * par = std::get_if<ast::Parenthesis>(&cs->data.expr))
+                    cs = par->data.expr.get();
+                if (auto const * cid = std::get_if<ast::Identifier>(&cs->data.expr)) {
+                    if (cid->data.name == "__model__.n_ctx") ref = "model.n_ctx";
+                    else if (cid->data.name.rfind("__model__.", 0) == 0) {
+                        driver.emit_error("'" + cid->data.name + "' is not yet "
+                                          "available in termination predicates", loc);
+                        return false;
+                    }
+                }
+            }
+            double num = 0.0;
+            if (ref.empty()) {
+                auto v = evaluator.evaluate_expression(scope, const_side, ctx);
+                if (auto const * f = std::get_if<float>(&v)) num = *f;
+                else if (auto const * i = std::get_if<int>(&v)) num = *i;
+                else {
+                    driver.emit_error("the constant side of a termination comparison "
+                                      "must be numeric", loc);
+                    return false;
+                }
+            }
+            auto k = bin->data.kind;
+            if (flipped) {  // c OP scalar  ==  scalar OP' c
+                if (k == ast::OpKind::Lt)  k = ast::OpKind::Gt;
+                else if (k == ast::OpKind::Gt)  k = ast::OpKind::Lt;
+                else if (k == ast::OpKind::Lte) k = ast::OpKind::Gte;
+                else if (k == ast::OpKind::Gte) k = ast::OpKind::Lte;
+            }
+            switch (k) {
+                case ast::OpKind::Gte: out.kind = TE::Kind::Ge; break;
+                case ast::OpKind::Gt:  out.kind = TE::Kind::Gt; break;
+                case ast::OpKind::Lte: out.kind = TE::Kind::Le; break;
+                case ast::OpKind::Lt:  out.kind = TE::Kind::Lt; break;
+                default: out.kind = TE::Kind::Ge; break;
+            }
+            out.scalar = *scalar;
+            out.value = static_cast<float>(num);
+            out.ref = ref;
+            return true;
+        }
+        default:
+            driver.emit_error("operator not allowed in a termination predicate "
+                              "(use <, <=, >, >=, &&, ||, !)", loc);
+            return false;
+    }
+}
 
 // Lower an `ast::Search` block into ir::SearchPolicies. Each param's locator is a
 // dotted path: the FIRST segment is the category (text/enum/branch/flow/queue,
@@ -79,7 +246,133 @@ static void lower_search(
                 param.location);
             continue;
         }
-        auto val = evaluator.evaluate_expression(scope, param.data.value, ctx);
+        // Registry validation: unknown category/key, wrong value type, or an
+        // out-of-domain string is a compile error — never a silently dropped
+        // policy.
+        namespace reg = autocog::data::registry;
+        if (!reg::known_category(category)) {
+            driver.emit_error(
+                "search category '" + category + "' is not known "
+                "(text, enum, branch, flow, queue)",
+                param.location);
+            continue;
+        }
+        auto const * info = reg::find(category, key);
+        if (!info) {
+            driver.emit_error(
+                "'" + key + "' is not a parameter of search category '"
+                + category + "'",
+                param.location);
+            continue;
+        }
+        if (param.data.values.empty()) continue;  // unreachable: parser requires >= 1
+        // Explicit reference: `text.beams is __search__.text.beams;` pins the
+        // param to tracking its config default (the fill-up value written by
+        // hand). First cut: the reference must name the parameter it sets.
+        if (param.data.values.size() == 1) {
+            if (auto const * id = std::get_if<ast::Identifier>(
+                    &param.data.values.front().data.expr)) {
+                auto const & nm = id->data.name;
+                if (nm.rfind("__search__.", 0) == 0) {
+                    if (nm != "__search__." + category + "." + key) {
+                        driver.emit_error(
+                            "'" + nm + "' must reference the parameter it sets "
+                            "(__search__." + category + "." + key + ")",
+                            param.location);
+                    } else {
+                        out[category][key] = nm;
+                    }
+                    continue;
+                }
+            }
+        }
+        // Predicate params (queue.stop): translate, don't evaluate.
+        if (info->kind == reg::Kind::Predicate) {
+            if (param.data.values.size() > 1) {
+                driver.emit_error("search parameter '" + category + "." + key
+                                  + "' takes a single predicate", param.location);
+                continue;
+            }
+            autocog::data::TermExpr te;
+            if (translate_stop(param.data.values.front(), evaluator, scope, ctx,
+                               driver, param.location, te)) {
+                out[category][key] = te.to_compact();
+            }
+            continue;
+        }
+        // List-valued params (registry Kind::List, e.g. queue.metric) take a
+        // comma-separated RHS; every element is validated against the string
+        // domain and the list is carried comma-joined in the (scalar) policy
+        // value. Scalar params reject a list.
+        if (info->kind == reg::Kind::List) {
+            std::string joined;
+            bool ok = true;
+            for (auto const & vexpr : param.data.values) {
+                auto v = evaluator.evaluate_expression(scope, vexpr, ctx);
+                auto const * sv = std::get_if<std::string>(&v);
+                if (!sv) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "' takes string values", param.location);
+                    ok = false; break;
+                }
+                if (!reg::in_domain(*info, *sv)) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "': invalid value '" + *sv + "' (allowed: "
+                        + reg::domain_text(*info) + ")", param.location);
+                    ok = false; break;
+                }
+                joined += (joined.empty() ? "" : ",") + *sv;
+            }
+            if (ok) out[category][key] = joined;
+            continue;
+        }
+        if (param.data.values.size() > 1) {
+            driver.emit_error(
+                "search parameter '" + category + "." + key
+                + "' takes a single value", param.location);
+            continue;
+        }
+        auto val = evaluator.evaluate_expression(scope, param.data.values.front(), ctx);
+        bool const is_null = std::holds_alternative<std::monostate>(val);
+        if (!is_null) {
+            bool type_ok = false;
+            switch (info->type) {
+                case reg::Type::Float:
+                    type_ok = std::holds_alternative<float>(val)
+                           || std::holds_alternative<int>(val);
+                    break;
+                case reg::Type::UInt:
+                    type_ok = std::holds_alternative<int>(val);
+                    break;
+                case reg::Type::Str:
+                    type_ok = std::holds_alternative<std::string>(val);
+                    break;
+            }
+            if (!type_ok) {
+                driver.emit_error(
+                    "search parameter '" + category + "." + key
+                    + "' has the wrong value type",
+                    param.location);
+                continue;
+            }
+            if (auto const * s = std::get_if<std::string>(&val)) {
+                if (!reg::in_domain(*info, *s)) {
+                    driver.emit_error(
+                        "search parameter '" + category + "." + key
+                        + "': invalid value '" + *s + "' (allowed: "
+                        + reg::domain_text(*info) + ")",
+                        param.location);
+                    continue;
+                }
+            }
+        } else if (!info->nullable) {
+            driver.emit_error(
+                "search parameter '" + category + "." + key + "' cannot be null",
+                param.location);
+            continue;
+        }
         out[category][key] = val;
     }
 }
@@ -113,22 +406,176 @@ static ir::SearchPolicies prune_search(
     return out;
 }
 
+// Resolve an annotate path (names only) against a field tree, descending
+// struct sub-fields. Returns the terminal field or nullptr.
+static ir::Field * resolve_annotate_path(
+    ast::Path const & path,
+    std::vector<std::unique_ptr<ir::Field>> & fields
+) {
+    auto * level = &fields;
+    ir::Field * hit = nullptr;
+    for (auto const & step : path.data.steps) {
+        auto const & name = step.data.field.data.name;
+        hit = nullptr;
+        if (!level) return nullptr;  // walked past a leaf
+        for (auto & f : *level) {
+            if (f && f->name == name) { hit = f.get(); break; }
+        }
+        if (!hit) return nullptr;
+        level = std::get_if<std::vector<std::unique_ptr<ir::Field>>>(&hit->format);
+    }
+    return hit;
+}
+
+static std::string annotate_path_text(ast::Path const & path) {
+    std::string out;
+    for (auto const & step : path.data.steps) {
+        if (!out.empty()) out += ".";
+        out += step.data.field.data.name;
+    }
+    return out;
+}
+
 // Collect an inline struct's own `search { }` constructs into a SearchPolicies
 // (merged in document order). Constructs live on ast::Struct.constructs as a
 // variant of Annotate|Search; only Search contributes here.
+// A lowered search block aimed at specific fields by an `on` clause:
+// (target path, lowered policies), applied once the field tree exists.
+using TargetedSearch = std::vector<std::pair<ast::Path const *, ir::SearchPolicies>>;
+
+// `_` (one bare step named "_") targets the enclosing scope.
+static bool is_scope_target(ast::Path const & p) {
+    return p.data.steps.size() == 1
+        && p.data.steps.front().data.field.data.name == "_"
+        && !p.data.steps.front().data.lower
+        && !p.data.steps.front().data.upper;
+}
+
+// Route one search block by its `on` clause: no clause or `_` -> the scope
+// policies (today's cascade); a path -> the targeted list (applied above the
+// cascade once fields exist). Scopes without fields pass targeted=nullptr and
+// reject path targets.
+static void route_search(
+    ast::Search const & c,
+    ir::SearchPolicies const & pol,
+    ir::SearchPolicies & scope_out,
+    TargetedSearch * targeted,
+    Driver & driver
+) {
+    if (c.data.targets.empty()) {
+        scope_out = merge_search(std::move(scope_out), pol);
+        return;
+    }
+    for (auto const & t : c.data.targets) {
+        if (is_scope_target(t)) {
+            scope_out = merge_search(std::move(scope_out), pol);
+        } else if (targeted) {
+            targeted->push_back({&t, pol});
+        } else {
+            driver.emit_error(
+                "search target paths require prompt or record scope "
+                "(only `_` is meaningful here)", t.location);
+        }
+    }
+}
+
+// Apply targeted blocks onto a resolved field tree. Targeting sits ABOVE the
+// scope cascade: applied after Field.search is populated, so its params win
+// over everything the field inherited (including a record's own blocks).
+// Placement mirrors the scope rules: leaf fields take text/enum/branch,
+// containers take branch only.
+static void apply_targeted(
+    TargetedSearch const & targeted,
+    std::vector<std::unique_ptr<ir::Field>> & fields,
+    std::string const & scope_desc,
+    Driver & driver
+) {
+    for (auto const & [tpath, pol] : targeted) {
+        bool selector = false;
+        for (auto const & st : tpath->data.steps)
+            if (st.data.is_range || st.data.lower || st.data.upper) selector = true;
+        if (selector) {
+            driver.emit_error(
+                "search target '" + annotate_path_text(*tpath)
+                + "' cannot carry indices or ranges", tpath->location);
+            continue;
+        }
+        auto * f = resolve_annotate_path(*tpath, fields);
+        if (!f) {
+            driver.emit_error(
+                "search target '" + annotate_path_text(*tpath)
+                + "' does not name a field of " + scope_desc, tpath->location);
+            continue;
+        }
+        bool const container =
+            std::holds_alternative<std::vector<std::unique_ptr<ir::Field>>>(f->format);
+        for (auto const & [cat, params] : pol) {
+            bool const ok = container ? (cat == "branch")
+                                      : (cat == "text" || cat == "enum" || cat == "branch");
+            if (!ok) {
+                driver.emit_error(
+                    "search category '" + cat + "' cannot target field '"
+                    + annotate_path_text(*tpath) + "' ("
+                    + (container ? "container fields take only branch"
+                                 : "leaf fields take text/enum/branch") + ")",
+                    tpath->location);
+                continue;
+            }
+            for (auto const & [key, val] : params) f->search[cat][key] = val;
+        }
+    }
+}
+
+// Fill-up (defaults as references): every search param the cascade left
+// unspecified IS the reference "__search__.<cat>.<key>", substituted from the
+// engine config at ista. Materialized only for the categories the field's
+// format consumes (text on completion leaves, enum on enum/choice leaves;
+// branch is carried but not consumed by ista, flow only via the synthetic
+// next field). The STA thereby records which values the program pinned and
+// which track the config.
+static void fill_default_refs(std::vector<std::unique_ptr<ir::Field>> & fields) {
+    auto fill = [](ir::Field & f, char const * cat,
+                   std::initializer_list<char const *> keys) {
+        auto & params = f.search[cat];
+        for (auto const * key : keys) {
+            if (!params.count(key))
+                params[key] = std::string("__search__.") + cat + "." + key;
+        }
+    };
+    for (auto & f : fields) {
+        if (!f) continue;
+        std::visit([&](auto & fmt) {
+            using F = std::decay_t<decltype(fmt)>;
+            if constexpr (std::is_same_v<F, ir::Completion>) {
+                fill(*f, "text", {"threshold", "beams", "topk", "ahead",
+                                  "width", "repetition", "diversity"});
+            } else if constexpr (std::is_same_v<F, ir::Enum>
+                              || std::is_same_v<F, ir::Choice>) {
+                fill(*f, "enum", {"threshold.value", "threshold.metric",
+                                  "ranking.metric", "width"});
+            } else if constexpr (std::is_same_v<F, std::vector<std::unique_ptr<ir::Field>>>) {
+                fill_default_refs(fmt);
+            }
+        }, f->format);
+    }
+}
+
 static ir::SearchPolicies collect_struct_search(
     ast::Struct const & s,
     Evaluator & evaluator,
     std::string const & scope,
     ir::VarMap & ctx,
-    Driver & driver
+    Driver & driver,
+    TargetedSearch * targeted = nullptr
 ) {
     ir::SearchPolicies out;
     for (auto const & construct : s.data.constructs) {
         std::visit([&](auto const & c) {
             using T = std::decay_t<decltype(c)>;
             if constexpr (std::is_same_v<T, ast::Search>) {
-                lower_search(c, evaluator, scope, ctx, SearchScope::Record, driver, out);
+                ir::SearchPolicies pol;
+                lower_search(c, evaluator, scope, ctx, SearchScope::Record, driver, pol);
+                route_search(c, pol, out, targeted, driver);
             }
         }, construct);
     }
@@ -262,14 +709,28 @@ static void generate_fields(
 ) {
     // The policy in scope for this struct's fields = enclosing (file/prompt/
     // outer structs) merged with this struct's own search { } (innermost wins).
+    TargetedSearch targeted;
     ir::SearchPolicies here = merge_search(enclosing,
-        collect_struct_search(s, evaluator, scope, ctx, driver));
+        collect_struct_search(s, evaluator, scope, ctx, driver, &targeted));
 
     int index = 0;
+    std::set<std::string> sibling_names;
     for (auto const & field_ptr : s.data.fields) {
         if (!field_ptr) continue;
         auto const & field = *field_ptr;
         auto name = field.data.name.data.name;
+        // C2: a duplicate sibling would silently shadow its twin at runtime.
+        if (!sibling_names.insert(name).second) {
+            driver.emit_error("Duplicate field '" + name + "' in this scope.",
+                              field.data.name.location);
+            continue;
+        }
+        if (is_reserved_dunder(name)) {
+            driver.emit_error("'" + name + "' uses the reserved __...__ shape "
+                              "(system namespaces); field names cannot use it.",
+                              field.data.name.location);
+            continue;
+        }
         auto f = std::make_unique<ir::Field>(name, depth, index++);
 
         auto lower = eval_opt_int(field.data.lower, evaluator, scope, ctx);
@@ -343,6 +804,9 @@ static void generate_fields(
 
         out.push_back(std::move(f));
     }
+
+    // `on`-targeted blocks of this struct, applied above the cascade.
+    apply_targeted(targeted, out, "this scope", driver);
 }
 
 static FormatResult generate_format(
@@ -536,24 +1000,36 @@ static void assemble_records(
             }
         }, decl.data.record);
 
+        TargetedSearch rec_targeted;
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
+                        auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
+                        auto * sv = std::get_if<std::string>(&val);
+                        if (!sv) continue;
                         if (!ann.data.path) {
-                            auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                            if (auto * sv = std::get_if<std::string>(&val)) {
-                                rec->desc.push_back(*sv);
-                            }
+                            rec->desc.push_back(*sv);
+                        } else if (auto * target = resolve_annotate_path(*ann.data.path, rec->fields)) {
+                            target->desc.push_back(*sv);
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of record '" + node.base_name + "'",
+                                ann.location);
                         }
                     }
                 } else if constexpr (std::is_same_v<T, ast::Search>) {
-                    lower_search(c, evaluator, scope, node.context, SearchScope::Record, driver, rec->search);
+                    ir::SearchPolicies pol;
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Record, driver, pol);
+                    route_search(c, pol, rec->search, &rec_targeted, driver);
                 }
             }, construct);
         }
 
+        apply_targeted(rec_targeted, rec->fields,
+                       "record '" + node.base_name + "'", driver);
         driver.records[mangled] = std::move(rec);
     }
 }
@@ -581,7 +1057,11 @@ static void assemble_prompts(
                 using T = std::decay_t<decltype(s)>;
                 if constexpr (std::is_same_v<T, ast::Search>) {
                     // File scope is outside any record; flow/queue are allowed.
-                    lower_search(s, evaluator, fscope, fctx, SearchScope::File, driver, file_policies[fid]);
+                    {
+                        ir::SearchPolicies pol;
+                        lower_search(s, evaluator, fscope, fctx, SearchScope::File, driver, pol);
+                        route_search(s, pol, file_policies[fid], nullptr, driver);
+                    }
                 }
             }, stmt);
         }
@@ -609,11 +1089,14 @@ static void assemble_prompts(
         ir::SearchPolicies prompt_policy;
         auto fit = file_policies.find(node.fileid);
         if (fit != file_policies.end()) prompt_policy = fit->second;
+        TargetedSearch prompt_targeted;
         for (auto const & construct : decl.data.constructs) {
             std::visit([&](auto const & c) {
                 using T = std::decay_t<decltype(c)>;
                 if constexpr (std::is_same_v<T, ast::Search>) {
-                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, prompt_policy);
+                    ir::SearchPolicies pol;
+                    lower_search(c, evaluator, scope, node.context, SearchScope::Prompt, driver, pol);
+                    route_search(c, pol, prompt_policy, &prompt_targeted, driver);
                 }
             }, construct);
         }
@@ -622,6 +1105,17 @@ static void assemble_prompts(
 
         if (decl.data.fields) {
             generate_fields(decl.data.fields.value(), evaluator, scope, node.context, node.fileid, builder, driver, 1, pmt->fields, field_enclosing, pmt->vocabs);
+        }
+        // Prompt-level `on` targets: closest to the use site, strongest --
+        // applied last, over everything the fields inherited.
+        apply_targeted(prompt_targeted, pmt->fields,
+                       "prompt '" + node.base_name + "'", driver);
+        // Fill-up: unspecified params become explicit config references.
+        fill_default_refs(pmt->fields);
+        {
+            auto & qp = pmt->search["queue"];
+            if (!qp.count("metric")) qp["metric"] = std::string("__search__.queue.metric");
+            if (!qp.count("stop"))   qp["stop"]   = std::string("__search__.queue.stop");
         }
 
         for (auto const & construct : decl.data.constructs) {
@@ -778,21 +1272,21 @@ static void assemble_prompts(
                 } else if constexpr (std::is_same_v<T, ast::Annotate>) {
                     for (auto const & ann : c.data.annotations) {
                         auto val = evaluator.evaluate_expression(scope, ann.data.description, node.context);
-                        if (auto * sv = std::get_if<std::string>(&val)) {
-                            if (!ann.data.path) {
-                                pmt->desc.push_back(*sv);
-                            } else {
-                                auto const & path = ann.data.path.value();
-                                if (!path.data.steps.empty()) {
-                                    auto field_name = path.data.steps.front().data.field.data.name;
-                                    for (auto & f : pmt->fields) {
-                                        if (f->name == field_name) {
-                                            f->desc.push_back(*sv);
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
+                        auto * sv = std::get_if<std::string>(&val);
+                        if (!sv) continue;
+                        if (!ann.data.path) {
+                            pmt->desc.push_back(*sv);
+                        } else if (auto * target = resolve_annotate_path(*ann.data.path, pmt->fields)) {
+                            // Full-path resolution: `annotate { a.b as ...; }`
+                            // lands on the nested field (previously only the
+                            // first step was matched, silently annotating the
+                            // container).
+                            target->desc.push_back(*sv);
+                        } else {
+                            driver.emit_error(
+                                "annotate path '" + annotate_path_text(*ann.data.path)
+                                + "' does not name a field of prompt '" + node.base_name + "'",
+                                ann.location);
                         }
                     }
                 }

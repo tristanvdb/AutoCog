@@ -1,0 +1,8 @@
+// Error: a select() source that names no field becomes an empty choice
+// list and used to die in the backend as an internal error.
+// expect-error: select source 'nonexistent' (field 'a') does not name a field
+prompt main {
+  is { q is text<length=4>; a is select(nonexistent); }
+  channel { q get q; }
+  return { use a; }
+}

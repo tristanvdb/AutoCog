@@ -3,6 +3,7 @@
 
 #include "autocog/compiler/stl/token.hxx"
 #include "autocog/utilities/location.hxx"
+#include "autocog/data/expr.hxx"
 
 #include <string>
 #include <list>

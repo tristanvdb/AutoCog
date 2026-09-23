@@ -28,7 +28,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "52ecbbf4019ed69d279fe988a15311a857c4a43372e75303d55b3a9ef1ebc68c",
+    "hash": "50097d50343992f8b78b8910e7bdbb648a76904dde2d507ee328c6a8cc7d4773",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -87,7 +87,32 @@
           "range": [
             3,
             3
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -121,7 +146,17 @@
           "type": "return"
         }
       },
-      "name": "consumer"
+      "name": "consumer",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     },
     "producer": {
       "abstracts": [
@@ -171,7 +206,32 @@
           "range": [
             6,
             6
-          ]
+          ],
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -196,7 +256,17 @@
           "type": "control"
         }
       },
-      "name": "producer"
+      "name": "producer",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

@@ -5,14 +5,20 @@ namespace autocog::compiler::stl::ast {
 
 DATA(Param) {
   NODES(Identifier) locator;
-  NODE(Expression)  value;
+  /// One value for scalar params; several (comma-separated) for
+  /// registry-marked list params such as queue.metric.
+  NODES(Expression) values;
 };
-TRAVERSE_CHILDREN(Param, locator, value)
+TRAVERSE_CHILDREN(Param, locator, values)
 
 DATA(Search) {
   NODES(Param) params;
+  /// Postfix `on` clause: `search { ... } on a.b, c, _;` — each target is a
+  /// field path or `_` (a one-step path named "_", the enclosing scope).
+  /// Empty = plain block, sugar for `on _;`.
+  NODES(Path) targets;
 };
-TRAVERSE_CHILDREN(Search, params)
+TRAVERSE_CHILDREN(Search, params, targets)
 
 }
 

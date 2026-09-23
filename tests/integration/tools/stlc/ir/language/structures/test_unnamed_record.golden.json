@@ -22,7 +22,32 @@
                 },
                 "index": 0,
                 "name": "left",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": {
+                      "ref": "__search__.text.ahead"
+                    },
+                    "beams": {
+                      "ref": "__search__.text.beams"
+                    },
+                    "diversity": {
+                      "ref": "__search__.text.diversity"
+                    },
+                    "repetition": {
+                      "ref": "__search__.text.repetition"
+                    },
+                    "threshold": {
+                      "ref": "__search__.text.threshold"
+                    },
+                    "topk": {
+                      "ref": "__search__.text.topk"
+                    },
+                    "width": {
+                      "ref": "__search__.text.width"
+                    }
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -32,7 +57,32 @@
                 },
                 "index": 1,
                 "name": "right",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": {
+                      "ref": "__search__.text.ahead"
+                    },
+                    "beams": {
+                      "ref": "__search__.text.beams"
+                    },
+                    "diversity": {
+                      "ref": "__search__.text.diversity"
+                    },
+                    "repetition": {
+                      "ref": "__search__.text.repetition"
+                    },
+                    "threshold": {
+                      "ref": "__search__.text.threshold"
+                    },
+                    "topk": {
+                      "ref": "__search__.text.topk"
+                    },
+                    "width": {
+                      "ref": "__search__.text.width"
+                    }
+                  }
+                }
               }
             ],
             "type": "struct"
@@ -55,7 +105,23 @@
           },
           "index": 1,
           "name": "operation",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": {
+                "ref": "__search__.enum.ranking.metric"
+              },
+              "threshold.metric": {
+                "ref": "__search__.enum.threshold.metric"
+              },
+              "threshold.value": {
+                "ref": "__search__.enum.threshold.value"
+              },
+              "width": {
+                "ref": "__search__.enum.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -70,7 +136,32 @@
                 },
                 "index": 0,
                 "name": "value",
-                "range": null
+                "range": null,
+                "search": {
+                  "text": {
+                    "ahead": {
+                      "ref": "__search__.text.ahead"
+                    },
+                    "beams": {
+                      "ref": "__search__.text.beams"
+                    },
+                    "diversity": {
+                      "ref": "__search__.text.diversity"
+                    },
+                    "repetition": {
+                      "ref": "__search__.text.repetition"
+                    },
+                    "threshold": {
+                      "ref": "__search__.text.threshold"
+                    },
+                    "topk": {
+                      "ref": "__search__.text.topk"
+                    },
+                    "width": {
+                      "ref": "__search__.text.width"
+                    }
+                  }
+                }
               },
               {
                 "depth": 2,
@@ -85,7 +176,23 @@
                 },
                 "index": 1,
                 "name": "confidence",
-                "range": null
+                "range": null,
+                "search": {
+                  "enum": {
+                    "ranking.metric": {
+                      "ref": "__search__.enum.ranking.metric"
+                    },
+                    "threshold.metric": {
+                      "ref": "__search__.enum.threshold.metric"
+                    },
+                    "threshold.value": {
+                      "ref": "__search__.enum.threshold.value"
+                    },
+                    "width": {
+                      "ref": "__search__.enum.width"
+                    }
+                  }
+                }
               }
             ],
             "type": "struct"
@@ -115,6 +222,16 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
       }
     }
   },

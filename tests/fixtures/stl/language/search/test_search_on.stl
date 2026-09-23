@@ -1,0 +1,21 @@
+record Message {
+  is text<length=50>;
+  search { text.beams is 4; }
+}
+
+prompt main {
+  is {
+    question is text<length=20>;
+    answer is Message;
+    details is {
+      note is text<length=10>;
+      scored is text<length=10>;
+    }
+  }
+  search { text.threshold is 0.2; }
+  search { text.threshold is 0.3; } on _;
+  search { text.beams is 8; } on answer;
+  search { text.beams is 2; text.ahead is 3; } on details.scored, question;
+  channel { question get question; }
+  return { use answer; }
+}

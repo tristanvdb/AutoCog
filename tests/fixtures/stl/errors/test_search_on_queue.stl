@@ -1,0 +1,8 @@
+// Error: flow/queue are prompt-global and cannot target a field.
+// expect-error: search category 'queue' cannot target field 'q'
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.metric is "probability"; } on q;
+  channel { q get q; }
+  return { use q; }
+}

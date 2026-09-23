@@ -118,8 +118,11 @@ class Evaluation {
     unsigned abandoned_ = 0;
 
     void on_terminal(data::FTTNode const & node, ActionID action);
-    double scalar_value(std::string const & name, double seconds_now) const;
-    bool eval_stop(data::TermExpr const & e, double seconds_now) const;
+    double scalar_value(std::string const & name) const;
+    bool eval_stop(data::TermExpr const & e) const;
+    /// The FTA's stop predicate, model-bound: refs (e.g. model.n_ctx) folded
+    /// to constants at construction.
+    std::optional<data::TermExpr> stop_;
 
   protected:
     // Restore the branch prefix into the state's context; tokens decoded doing

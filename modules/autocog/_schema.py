@@ -101,11 +101,19 @@ def validate_artifact(artifact, filepath="<unknown>"):
     try:
         from referencing import Registry, Resource
         from referencing.jsonschema import DRAFT202012
-        registry = Registry().with_resources([
-            (sid, Resource.from_contents(s, default_specification=DRAFT202012))
-            for sid, s in store.items()
-        ])
-        validator = jsonschema.Draft202012Validator(schema, registry=registry)
+    except ImportError:
+        # referencing is a hard dependency of jsonschema>=4.18; without it the
+        # cross-file $refs (every schema pulls common/metadata) cannot resolve,
+        # so a ref-less validator would die on the first $ref rather than
+        # validate anything. Degrade to no validation, like missing jsonschema.
+        return
+
+    registry = Registry().with_resources([
+        (sid, Resource.from_contents(s, default_specification=DRAFT202012))
+        for sid, s in store.items()
+    ])
+    validator = jsonschema.Draft202012Validator(schema, registry=registry)
+    try:
         validator.validate(artifact)
     except jsonschema.ValidationError as e:
         from .errors import ConfigError
@@ -113,14 +121,3 @@ def validate_artifact(artifact, filepath="<unknown>"):
         raise ConfigError(
             f"Schema violation in {fmt.upper()} at $.{path}: {e.message}",
         )
-    except ImportError:
-        # referencing not installed, fall back to basic validation
-        try:
-            validator = jsonschema.Draft202012Validator(schema)
-            validator.validate(artifact)
-        except jsonschema.ValidationError as e:
-            from .errors import ConfigError
-            path = ".".join(str(p) for p in e.absolute_path) or "$"
-            raise ConfigError(
-                f"Schema violation in {fmt.upper()} at $.{path}: {e.message}",
-            )

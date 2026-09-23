@@ -1,0 +1,4 @@
+// Error: search parameter value of the wrong type
+// expect-error: search parameter 'text.beams' has the wrong value type
+search { text.beams is "lots"; }
+prompt main { is { q is text<length=4>; } channel { q get q; } return { use q; } }

@@ -1,0 +1,9 @@
+// The context-overflow guard: terminate the search cleanly before the KV
+// context is exhausted. __model__.n_ctx travels as a ref and is folded at
+// the worker when the model loads.
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.stop is (__status__.tree.tokens >= __model__.n_ctx); }
+  channel { q get q; }
+  return { use q; }
+}

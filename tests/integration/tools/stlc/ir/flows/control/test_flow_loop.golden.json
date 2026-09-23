@@ -36,7 +36,32 @@
           "index": 0,
           "name": "problem",
           "range": null,
-          "refname": "Problem"
+          "refname": "Problem",
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -46,7 +71,32 @@
           },
           "index": 1,
           "name": "attempt",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -60,7 +110,23 @@
           },
           "index": 2,
           "name": "success",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": {
+                "ref": "__search__.enum.ranking.metric"
+              },
+              "threshold.metric": {
+                "ref": "__search__.enum.threshold.metric"
+              },
+              "threshold.value": {
+                "ref": "__search__.enum.threshold.value"
+              },
+              "width": {
+                "ref": "__search__.enum.width"
+              }
+            }
+          }
         }
       ],
       "flows": [
@@ -89,6 +155,16 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
       }
     }
   },

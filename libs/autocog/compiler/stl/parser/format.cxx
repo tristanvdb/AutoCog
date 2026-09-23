@@ -26,7 +26,9 @@ void Parser::parse<ast::Tag::Text>(ParserState & state, [[maybe_unused]] ast::Da
 
 template <>
 void Parser::parse<ast::Tag::Choice>(ParserState & state, ast::Data<ast::Tag::Choice> & type) {
-  if (state.current.type == TokenType::REPEAT) {
+  // FormatRef consumed the `repeat`/`select` keyword before dispatching here,
+  // so the discriminant is the *previous* token.
+  if (state.previous.type == TokenType::REPEAT) {
     type.mode = ast::ChoiceKind::Repeat;
   } else {
     type.mode = ast::ChoiceKind::Select;

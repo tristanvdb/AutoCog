@@ -52,17 +52,39 @@ static MetricKey parse_metric_key(std::string const & name) {
   throw autocog::SchemaError("Unknown queue metric '" + name + "'", name);
 }
 
+// Wall time is deliberately NOT a stop scalar: a time-based stop makes runs
+// nondeterministic and machine-dependent, and termination is part of program
+// identity (hashed into the FTA). Wall-clock limits belong to the engine /
+// bench budget layer.
 static bool known_stop_scalar(std::string const & name) {
   return name == "terminals" || name == "coverage.fta" || name == "coverage.sta"
       || name == "best.proba" || name == "mean.proba" || name == "std.proba"
-      || name == "best.zscore" || name == "tokens" || name == "queue.size"
-      || name == "seconds";
+      || name == "best.zscore" || name == "tokens" || name == "queue.size";
 }
 
 static void validate_stop(data::TermExpr const & e) {
   if (!e.scalar.empty() && !known_stop_scalar(e.scalar))
     throw autocog::SchemaError("Unknown stop scalar '" + e.scalar + "'", e.scalar);
+  if (!e.ref.empty())
+    throw autocog::SchemaError("Unresolved model reference '" + e.ref
+                               + "' in stop predicate", e.ref);
   for (auto const & op : e.operands) validate_stop(op);
+}
+
+// Fold model-property references (the scalarization boundary): after this,
+// the predicate is pure scalars-vs-constants and the hot loop never sees a
+// ref. Unknown refs throw here, before any model work.
+static void fold_stop_refs(data::TermExpr & e, Model const & model) {
+  if (!e.ref.empty()) {
+    if (e.ref == "model.n_ctx") {
+      e.value = static_cast<float>(model.context_size);
+      e.ref.clear();
+    } else {
+      throw autocog::SchemaError("Unknown model reference '" + e.ref
+                                 + "' in stop predicate", e.ref);
+    }
+  }
+  for (auto & op : e.operands) fold_stop_refs(op, model);
 }
 
 Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, data::FTA const & fta_) :
@@ -78,7 +100,11 @@ Evaluation::Evaluation(EvaluationConfig const & config_, ModelID const model_, d
   for (auto const & name : fta_.queue_metric) metric_.push_back(parse_metric_key(name));
   metric_.push_back(MetricKey::Fifo);  // total, deterministic order
 
-  if (fta_.queue_stop) validate_stop(*fta_.queue_stop);  // fail before model work
+  if (fta_.queue_stop) {
+    stop_ = *fta_.queue_stop;                       // model-bound copy
+    fold_stop_refs(*stop_, Manager::get_model(model_));
+    validate_stop(*stop_);                          // fail before decode work
+  }
   visited_actions_.assign(prepared.actions.size(), false);
   std::set<int> fields;
   for (auto const & a : fta_.actions) if (a.field) fields.insert(*a.field);
@@ -174,7 +200,7 @@ void Evaluation::on_terminal(data::FTTNode const & node, ActionID action) {
   }
 }
 
-double Evaluation::scalar_value(std::string const & name, double seconds_now) const {
+double Evaluation::scalar_value(std::string const & name) const {
   double const n = static_cast<double>(terminals_);
   double const mean = terminals_ ? proba_sum_ / n : 0.0;
   if (name == "terminals")    return n;
@@ -196,29 +222,28 @@ double Evaluation::scalar_value(std::string const & name, double seconds_now) co
     double const sd = var > 0.0 ? std::sqrt(var) : 0.0;
     if (name == "std.proba") return sd;
     if (terminals_ < 3 || sd <= 0.0) return 0.0;   // undefined on a tiny field
-    return (scalar_value("best.proba", seconds_now) - mean) / sd;
+    return (scalar_value("best.proba") - mean) / sd;
   }
   if (name == "tokens")     return static_cast<double>(tokens_total_);
   if (name == "queue.size") return static_cast<double>(queue.size());
-  if (name == "seconds")    return seconds_now;
   return 0.0;  // unreachable: validated at construction
 }
 
-bool Evaluation::eval_stop(data::TermExpr const & e, double seconds_now) const {
+bool Evaluation::eval_stop(data::TermExpr const & e) const {
   using Kind = data::TermExpr::Kind;
   switch (e.kind) {
     case Kind::All:
-      for (auto const & op : e.operands) if (!eval_stop(op, seconds_now)) return false;
+      for (auto const & op : e.operands) if (!eval_stop(op)) return false;
       return true;
     case Kind::Any:
-      for (auto const & op : e.operands) if (eval_stop(op, seconds_now)) return true;
+      for (auto const & op : e.operands) if (eval_stop(op)) return true;
       return false;
     case Kind::Not:
-      return e.operands.empty() ? true : !eval_stop(e.operands[0], seconds_now);
-    case Kind::Ge: return scalar_value(e.scalar, seconds_now) >= e.value;
-    case Kind::Gt: return scalar_value(e.scalar, seconds_now) >  e.value;
-    case Kind::Le: return scalar_value(e.scalar, seconds_now) <= e.value;
-    case Kind::Lt: return scalar_value(e.scalar, seconds_now) <  e.value;
+      return e.operands.empty() ? true : !eval_stop(e.operands[0]);
+    case Kind::Ge: return scalar_value(e.scalar) >= e.value;
+    case Kind::Gt: return scalar_value(e.scalar) >  e.value;
+    case Kind::Le: return scalar_value(e.scalar) <= e.value;
+    case Kind::Lt: return scalar_value(e.scalar) <  e.value;
   }
   return false;
 }
@@ -226,8 +251,8 @@ bool Evaluation::eval_stop(data::TermExpr const & e, double seconds_now) const {
 SearchStats Evaluation::search_stats() const {
   SearchStats s;
   s.terminals = terminals_;
-  s.coverage_fta = scalar_value("coverage.fta", 0.0);
-  s.coverage_sta = scalar_value("coverage.sta", 0.0);
+  s.coverage_fta = scalar_value("coverage.fta");
+  s.coverage_sta = scalar_value("coverage.sta");
   s.stopped = stopped_;
   s.abandoned = abandoned_;
   return s;
@@ -275,10 +300,8 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
     // terminal exists, so a stopped run always has a complete path). Pending
     // subtrees are abandoned: their roots are marked pruned so the FTT stays
     // well-formed, distinguishable from threshold/width rejection.
-    if (prepared.fta.queue_stop && terminals_ >= 1) {
-      double const seconds_now = perf_.advance_seconds
-          + std::chrono::duration<double>(clock::now() - advance_start).count();
-      if (eval_stop(*prepared.fta.queue_stop, seconds_now)) {
+    if (stop_ && terminals_ >= 1) {
+      if (eval_stop(*stop_)) {
         for (auto const & pending : queue) pending->parent.pruned = data::Pruned::Abandoned;
         abandoned_ = static_cast<unsigned>(queue.size());
         queue.clear();

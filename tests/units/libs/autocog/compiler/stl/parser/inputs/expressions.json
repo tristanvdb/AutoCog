@@ -274,5 +274,41 @@
     "code": "(!)",
     "should_pass": false,
     "error_contains": "Unary operator expects primary or parenthesized operand"
+  },
+  {
+    "description": "Identifier: simple",
+    "tag": "Identifier",
+    "code": "foo",
+    "should_pass": true
+  },
+  {
+    "description": "Identifier: dots belong to Expression, not Identifier",
+    "tag": "Identifier",
+    "code": "foo.bar",
+    "should_pass": false
+  },
+  {
+    "description": "Identifier: dotted chain is not a bare Identifier",
+    "tag": "Identifier",
+    "code": "foo.bar.baz",
+    "should_pass": false
+  },
+  {
+    "description": "Assign: literal value",
+    "tag": "Assign",
+    "code": "x = 5",
+    "should_pass": true
+  },
+  {
+    "description": "Assign: vocab keyword as key",
+    "tag": "Assign",
+    "code": "vocab = v",
+    "should_pass": true
+  },
+  {
+    "description": "Assign: missing equals is an error",
+    "tag": "Assign",
+    "code": "x 5",
+    "should_pass": false
   }
 ]

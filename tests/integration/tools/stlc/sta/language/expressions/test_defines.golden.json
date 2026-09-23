@@ -13,7 +13,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "4df719e0034a050d8587926802dc621e2af5dda2db05b083e88b3716674c0227",
+    "hash": "77d82f25d565a23ac40b5e5d7d633331dcd44d18cb23599601f0b27943f523f7",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -44,11 +44,46 @@
           "format_ref": "Item",
           "index": 0,
           "name": "item",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         }
       ],
       "flows": {},
-      "name": "test"
+      "name": "test",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

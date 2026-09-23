@@ -34,16 +34,42 @@ template <>
 pybind11::object to_py(ChoiceSearch const & c) {
   namespace py = pybind11;
   py::dict d;
-  d["threshold"] = c.threshold;
-  d["width"]     = c.width;
+  if (c.threshold_metric != "mean") {
+    py::dict th;
+    th["value"]  = c.threshold;
+    th["metric"] = c.threshold_metric;
+    d["threshold"] = th;
+  } else {
+    d["threshold"] = c.threshold;
+  }
+  d["width"] = c.width;
+  if (c.ranking != "mean") {
+    py::dict r;
+    r["metric"] = c.ranking;
+    d["ranking"] = r;
+  }
   return d;
 }
 template <>
 void from_py(pybind11::object const & obj, ChoiceSearch & out) {
   namespace py = pybind11;
   py::dict c = obj.cast<py::dict>();
-  out.threshold = c["threshold"].cast<float>();
-  out.width     = c["width"].cast<unsigned>();
+  py::object th = c["threshold"];
+  if (py::isinstance<py::dict>(th)) {
+    py::dict td = th.cast<py::dict>();
+    out.threshold = td["value"].cast<float>();
+    if (td.contains("metric") && !td["metric"].is_none())
+      out.threshold_metric = td["metric"].cast<std::string>();
+  } else {
+    out.threshold = th.cast<float>();
+  }
+  out.width = c["width"].cast<unsigned>();
+  if (c.contains("ranking") && !c["ranking"].is_none()) {
+    py::object r = c["ranking"];
+    out.ranking = py::isinstance<py::dict>(r)
+        ? r.cast<py::dict>()["metric"].cast<std::string>()
+        : r.cast<std::string>();
+  }
 }
 
 template <>

@@ -34,6 +34,11 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
 
         const auto& value = bindings.at(key);
 
+        // A binding is an expression; almost always a literal, and mangled by
+        // its value so a mangled name stays readable. A residual one is mangled
+        // by its structure: two instantiations that defer the SAME expression
+        // are the same prompt, and two that defer different ones are not.
+        if (auto v = value.as_value()) {
         std::visit([&result](auto&& val) {
             using T = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<T, int>) {
@@ -51,7 +56,10 @@ std::string Driver::mangle(std::string const & name, ir::VarMap const & bindings
             } else if constexpr (std::is_same_v<T, std::monostate>) {
                 result += "null";
             }
-        }, value);
+        }, *v);
+        } else {
+            result += value.hash().substr(0, 16);
+        }
     }
 
     return result;
@@ -152,7 +160,11 @@ std::optional<int> Driver::compile_stages() {
     if (auto e = run_assemble()) return e;
     if (stage == CompilationStage::Assemble) return std::nullopt;
 
-    // Stage 6: Generate STA
+    // Stage 6: Check (semantic validation over the assembled IR)
+    if (auto e = run_check()) return e;
+    if (stage == CompilationStage::Check) return std::nullopt;
+
+    // Stage 7: Generate STA
     if (auto e = run_generate()) return e;
 
     return std::nullopt;

@@ -77,7 +77,8 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
     module.def("compile",
         [](std::string const & filepath,
            std::vector<std::string> includes,
-           std::vector<std::string> entry_points) -> std::string {
+           std::vector<std::string> entry_points,
+           py::dict defines) -> std::string {
 
             using namespace autocog::compiler::stl;
 
@@ -87,6 +88,19 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
             for (auto & inc : includes) driver.includes.push_back(std::move(inc));
             driver.entry_points.clear();
             for (auto & ep : entry_points) driver.entry_points.push_back(std::move(ep));
+            // Program-argument overrides (the CLI's -D name=value).
+            for (auto item : defines) {
+                auto const name = item.first.cast<std::string>();
+                auto const & v = item.second;
+                if (py::isinstance<py::bool_>(v))
+                    driver.defines[name] = v.cast<bool>();
+                else if (py::isinstance<py::int_>(v))
+                    driver.defines[name] = v.cast<int>();
+                else if (py::isinstance<py::float_>(v))
+                    driver.defines[name] = v.cast<float>();
+                else
+                    driver.defines[name] = v.cast<std::string>();
+            }
 
             try {
                 driver.compile();
@@ -111,7 +125,8 @@ PYBIND11_MODULE(compiler_stl_cxx, module) {
         "Compile an STL file and return a program handle",
         py::arg("filepath"),
         py::arg("includes") = std::vector<std::string>{},
-        py::arg("entry_points") = std::vector<std::string>{}
+        py::arg("entry_points") = std::vector<std::string>{},
+        py::arg("defines") = py::dict{}
     );
 
     module.def("get_diagnostics",

@@ -1,0 +1,132 @@
+{
+  "defines": {},
+  "entry_points": {
+    "main": "main"
+  },
+  "prompts": {
+    "main": {
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "q"
+            }
+          ],
+          "target": {
+            "is_input": false,
+            "prompt": null,
+            "steps": [
+              {
+                "name": "q"
+              }
+            ]
+          },
+          "type": "input"
+        }
+      ],
+      "context": {},
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "q",
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
+        }
+      ],
+      "flows": [],
+      "mangled_name": "main",
+      "name": "main",
+      "return": {
+        "fields": [
+          {
+            "alias": null,
+            "clauses": [],
+            "source": {
+              "is_input": false,
+              "prompt": null,
+              "steps": [
+                {
+                  "name": "q"
+                }
+              ]
+            }
+          }
+        ],
+        "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": "perplexity",
+          "stop": {
+            "or": [
+              {
+                "ge": [
+                  {
+                    "ref": "__status__.tree.terminals"
+                  },
+                  5
+                ]
+              },
+              {
+                "and": [
+                  {
+                    "ge": [
+                      {
+                        "ref": "__status__.best.proba"
+                      },
+                      0.8999999761581421
+                    ]
+                  },
+                  {
+                    "not": [
+                      {
+                        "gt": [
+                          {
+                            "ref": "__status__.tree.tokens"
+                          },
+                          1000
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "records": {}
+}

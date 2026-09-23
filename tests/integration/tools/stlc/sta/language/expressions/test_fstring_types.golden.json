@@ -14,7 +14,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "cdb5c8821e1af3ebc3b19a0eab1a42239634366508d417f31ed0c83a14b37b0b",
+    "hash": "15f50a21ebc07f6d7bbdcde4bac197273c416f6cbc176985a06e727056b5c6ea",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -52,7 +52,32 @@
           },
           "index": 0,
           "name": "out",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -86,7 +111,17 @@
           "type": "return"
         }
       },
-      "name": "test"
+      "name": "test",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

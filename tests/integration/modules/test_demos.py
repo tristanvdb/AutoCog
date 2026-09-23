@@ -27,7 +27,16 @@ ANSWER_IN_STRUCT = {"select-iter", "repeat-iter"}
 
 MCQ_DEMOS = [
     "select", "select-cot", "select-annot", "select-hyp", "select-iter",
-    "repeat", "repeat-cot", "repeat-annot", "repeat-hyp", "repeat-iter",
+    "repeat", "repeat-cot",
+    # repeat-annot needs choices[].value populated by the annotator calls,
+    # but multi-field call returns currently collapse to a single unnamed
+    # value (the literal-return-fields runtime gap), so the repeat source
+    # correctly resolves to zero candidates. select-annot only survives
+    # because select candidates are indices that never read the values.
+    pytest.param("repeat-annot", marks=pytest.mark.xfail(
+        reason="multi-field call returns do not populate struct arrays yet",
+        strict=True)),
+    "repeat-hyp", "repeat-iter",
 ]
 
 

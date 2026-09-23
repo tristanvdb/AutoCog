@@ -1,0 +1,8 @@
+// Explicit config reference: pins the param to tracking its engine default
+// (the fill-up value, written by hand).
+prompt main {
+  is { q is text<length=8>; }
+  search { text.beams is __search__.text.beams; }
+  channel { q get q; }
+  return { use q; }
+}

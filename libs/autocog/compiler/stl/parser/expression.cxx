@@ -2,6 +2,8 @@
 #include "autocog/compiler/stl/parser.hxx"
 #include "autocog/logging.hxx"
 
+#include <cctype>
+
 
 namespace autocog::compiler::stl {
 
@@ -59,6 +61,21 @@ void Parser::parse_primary(ParserState & state, ast::Data<ast::Tag::Expression> 
     case TokenType::IDENTIFIER: {
       expr.expr.emplace<1>();
       parse(state, std::get<1>(expr.expr));
+      // Dotted names: `__status__.tree.terminals`, `__model__.n_ctx`, ...
+      // Folded into one Identifier whose name contains dots (the locator
+      // convention); multi-segment names resolve against system namespace
+      // roots, never against user symbols.
+      while (state.match(TokenType::DOT)) {
+        // Segments may be keywords (`__search__.text.beams`): accept any
+        // word-shaped token, mirroring the search-locator rule.
+        if (state.current.text.empty()
+            || !(std::isalpha(static_cast<unsigned char>(state.current.text[0]))
+                 || state.current.text[0] == '_')) {
+          state.throw_error("Expected a name after '.' in qualified name.");
+        }
+        state.advance();
+        std::get<1>(expr.expr).data.name += "." + state.previous.text;
+      }
       break;
     }
     

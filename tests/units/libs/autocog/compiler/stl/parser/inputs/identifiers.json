@@ -192,10 +192,10 @@
     "should_pass": false
   },
   {
-    "description": "Identifier with dot - fails",
+    "description": "Dotted identifier - qualified name (system namespaces)",
     "tag": "Expression",
     "code": "my.var",
-    "should_pass": false
+    "should_pass": true
   },
   {
     "description": "Identifier with special character - fails",

@@ -1,0 +1,4 @@
+// Error: the __...__ shape is reserved for system namespaces
+// expect-error: '__magic__' uses the reserved __...__ shape
+define __magic__ = 3;
+prompt main { is { q is text<length=4>; } channel { q get q; } return { use q; } }

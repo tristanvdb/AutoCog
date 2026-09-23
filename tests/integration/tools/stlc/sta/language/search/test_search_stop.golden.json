@@ -1,0 +1,178 @@
+{
+  "entry_points": {
+    "main": {
+      "inputs": {
+        "q": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "outputs": {
+        "_": {
+          "max_length": 4,
+          "required": true,
+          "type": "text"
+        }
+      },
+      "prompt": "main"
+    }
+  },
+  "metadata": {
+    "format": "sta",
+    "hash": "f1b6c2f8f4eb27d96762bf8e7f80a5321c4fbb7c0393a5b290b03e314de1e815",
+    "timestamp": "1970-01-01T00:00:00Z",
+    "version": "0.0.0"
+  },
+  "prompts": {
+    "main": {
+      "abstracts": [
+        {
+          "exit": -1,
+          "field": -1,
+          "flow": 1
+        },
+        {
+          "exit": 2,
+          "field": 0,
+          "flow": -1
+        },
+        {
+          "exit": 0,
+          "field": 1,
+          "flow": -1
+        }
+      ],
+      "channels": [
+        {
+          "source": [
+            {
+              "name": "q"
+            }
+          ],
+          "target": [
+            {
+              "name": "q"
+            }
+          ],
+          "type": "input"
+        }
+      ],
+      "desc": [],
+      "fields": [
+        {
+          "depth": 1,
+          "desc": [],
+          "flat_index": 0,
+          "format": {
+            "length": 4,
+            "type": "completion"
+          },
+          "index": 0,
+          "name": "q",
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
+        },
+        {
+          "depth": 1,
+          "desc": [
+            "the next step"
+          ],
+          "flat_index": 1,
+          "format": {
+            "type": "enum",
+            "values": [
+              "return"
+            ]
+          },
+          "index": 1,
+          "name": "next",
+          "range": null
+        }
+      ],
+      "flows": {
+        "return": {
+          "fields": [
+            {
+              "alias": "_",
+              "path": [
+                {
+                  "name": "q"
+                }
+              ]
+            }
+          ],
+          "type": "return"
+        }
+      },
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": "perplexity",
+          "stop": {
+            "or": [
+              {
+                "ge": [
+                  {
+                    "ref": "__status__.tree.terminals"
+                  },
+                  5
+                ]
+              },
+              {
+                "and": [
+                  {
+                    "ge": [
+                      {
+                        "ref": "__status__.best.proba"
+                      },
+                      0.8999999761581421
+                    ]
+                  },
+                  {
+                    "not": [
+                      {
+                        "gt": [
+                          {
+                            "ref": "__status__.tree.tokens"
+                          },
+                          1000
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "provenance": {},
+  "python_imports": {}
+}

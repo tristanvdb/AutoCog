@@ -1,0 +1,8 @@
+// Error: choice ranking metric outside the registry domain
+// expect-error: invalid value 'median'
+prompt main {
+  is { q is text<length=4>; }
+  search { enum.ranking.metric is "median"; }
+  channel { q get q; }
+  return { use q; }
+}

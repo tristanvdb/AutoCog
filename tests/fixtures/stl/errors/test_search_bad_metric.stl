@@ -1,0 +1,8 @@
+// Error: queue.metric value outside the registry domain
+// expect-error: invalid value 'mean_logprob'
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.metric is "mean_logprob"; }
+  channel { q get q; }
+  return { use q; }
+}

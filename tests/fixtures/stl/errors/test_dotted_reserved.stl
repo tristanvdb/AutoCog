@@ -1,0 +1,8 @@
+// Error: the knob does not exist (it is spelled prompt_indent).
+// expect-error: '__syntax__' has no field 'indent'
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is __syntax__.indent; }
+  channel { q get q; }
+  return { use q; }
+}

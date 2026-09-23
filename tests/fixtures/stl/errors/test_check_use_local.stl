@@ -1,0 +1,15 @@
+// Error: a `use` source naming no local field (leading-dot form) must not silently drop the
+// channel.
+// expect-error: does not name a field of prompt 'helper'
+prompt helper {
+  is { h is text<length=4>; w is text<length=4>; }
+  channel { h get h; w use .missing; }
+  return { use h; }
+}
+prompt main {
+  is { q is text<length=4>; }
+  channel { q get q; }
+  return { use q; }
+}
+export helper;
+export main;

@@ -30,7 +30,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "6b37f0e87aeff376ded871f50a1973f95bac27a50b50c8abf9bffbbc559a0c46",
+    "hash": "97ce2eeb7768333e7d781a5e89852af3eaef960f473146e6ba46e069301e6a8b",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -108,48 +108,126 @@
       "fields": [
         {
           "depth": 1,
-          "desc": [
-            "A formal message."
-          ],
+          "desc": [],
           "flat_index": 0,
           "format": {
             "length": 10,
             "type": "completion"
           },
+          "format_desc": [
+            "A formal message."
+          ],
           "format_ref": "SimpleMessage",
           "index": 0,
           "name": "simple",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
-          "desc": [
-            "A casual message."
-          ],
+          "desc": [],
           "flat_index": 1,
           "format": {
             "length": 50,
             "type": "completion"
           },
+          "format_desc": [
+            "A casual message."
+          ],
           "format_ref": "LongCasualMessage",
           "index": 1,
           "name": "long",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
-          "desc": [
-            "A technical message."
-          ],
+          "desc": [],
           "flat_index": 2,
           "format": {
             "length": 20,
             "type": "completion"
           },
+          "format_desc": [
+            "A technical message."
+          ],
           "format_ref": "TechnicalMessage",
           "index": 2,
           "name": "tech",
-          "range": null
+          "range": null,
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -199,7 +277,17 @@
           "type": "return"
         }
       },
-      "name": "main"
+      "name": "main",
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
+      }
     }
   },
   "provenance": {},

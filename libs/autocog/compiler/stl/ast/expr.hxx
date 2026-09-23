@@ -3,15 +3,12 @@
 
 namespace autocog::compiler::stl::ast {
 
-enum class OpKind {
-    NOP,                         // Not an operator
-    Not, Neg,                    // Unary
-    Add, Sub, Mul, Div, Mod,     // Arithmetic
-    And, Or,                     // Logical
-    BAnd, BOr,                   // Set/bitwise (vocab: intersection, union)
-    Lt, Gt, Lte, Gte, Eq, Neq    // Comparison
-};
-std::string opKindToString(ast::OpKind op);
+// The operator set is the shared one (autocog::data): the AST is a way of
+// SPELLING an expression, not a second expression language, and the semantics
+// that go with these operators live with the representation that outlives the
+// compiler.
+using OpKind = autocog::data::OpKind;
+using autocog::data::opKindToString;
 
 DATA(Identifier) {
   std::string name;

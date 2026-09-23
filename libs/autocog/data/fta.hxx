@@ -39,11 +39,16 @@ struct CompleteAction {
                                       ///< completion runs to exactly `length` tokens.
 };
 
-/// Constrained selection among a fixed list of choices.
+/// Constrained selection among a fixed list of choices. Candidates are
+/// scored per metric ("mean" per-token geometric mean, "sum" joint
+/// log-probability, "bytes" per-byte): `ranking` orders them,
+/// `threshold`+`threshold_metric` prune them (independent knobs).
 struct ChooseAction {
   std::vector<std::string> choices;
   float threshold = 0.0f;
   unsigned width = 0;
+  std::string ranking = "mean";
+  std::string threshold_metric = "mean";
 };
 
 /// One action (node) of the FTA DAG: the common fields plus a typed body. The

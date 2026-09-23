@@ -1,0 +1,9 @@
+// Error: a search parameter is resolved at instantiation, before any run:
+// it cannot name a statistic of a run in progress.
+// expect-error: is bound at execute time
+prompt main {
+  is { q is text<length=4>; }
+  search { text.beams is __status__.tree.terminals; }
+  channel { q get q; }
+  return { use q; }
+}

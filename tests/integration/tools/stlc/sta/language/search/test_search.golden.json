@@ -25,7 +25,7 @@
   },
   "metadata": {
     "format": "sta",
-    "hash": "fc09f1ed69ea9abd58b0c8295ca8757d7e367dc48024fcb2c25fffeaa24c6231",
+    "hash": "12154dc6bf85454cd7cbdce1dbc6f97f33645c4988f9e6ad34fcc54037a9acca",
     "timestamp": "1970-01-01T00:00:00Z",
     "version": "0.0.0"
   },
@@ -115,12 +115,26 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
               "ahead": 2,
               "beams": 4,
-              "threshold": 0.20000000298023224
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": 0.20000000298023224,
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -142,10 +156,27 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 3
             },
             "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
               "threshold": 0.20000000298023224,
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
               "width": 1
             }
           }
@@ -184,10 +215,30 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 2
             },
             "text": {
-              "threshold": 0.30000001192092896
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": 0.30000001192092896,
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -207,11 +258,28 @@
               "width": 2
             },
             "enum": {
+              "ranking.metric": "sum",
+              "threshold.metric": "mean",
               "width": 2
             },
             "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
               "beams": 2,
-              "threshold": 0.30000001192092896
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": 0.30000001192092896,
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
             }
           }
         },
@@ -261,7 +329,10 @@
           "threshold": 0.05000000074505806
         },
         "queue": {
-          "metric": "mean_logprob"
+          "metric": "probability",
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
         }
       }
     }

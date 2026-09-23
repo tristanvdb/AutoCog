@@ -23,6 +23,10 @@ std::string Action::hash() const {
     },
     [&](ChooseAction const & a) {
       h.put(a.choices).put(a.threshold).put(a.width);
+      // Hashed only when non-default so pre-knob artifacts keep their ids
+      // (explicit "mean" is identical to absent).
+      if (a.ranking != "mean")          h.put(a.ranking);
+      if (a.threshold_metric != "mean") h.put(a.threshold_metric);
     },
   }, body);
   h.put(field).put(indices).put(successors);

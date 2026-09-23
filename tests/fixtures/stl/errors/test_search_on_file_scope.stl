@@ -1,0 +1,8 @@
+// Error: file scope has no fields; only `_` is meaningful in an `on` clause.
+// expect-error: search target paths require prompt or record scope
+search { text.beams is 2; } on q;
+prompt main {
+  is { q is text<length=4>; }
+  channel { q get q; }
+  return { use q; }
+}

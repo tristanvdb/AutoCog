@@ -11,7 +11,7 @@ add_custom_command(
 
 add_library(autocog_compiler_stl_lib STATIC
     driver.cxx
-    token.cxx ast.cxx ast/expr.cxx
+    token.cxx ast.cxx
     parser.cxx parser-state.cxx
     parser/annotate.cxx parser/call.cxx parser/channel.cxx
     parser/define.cxx parser/alias.cxx parser/expression.cxx
@@ -29,6 +29,7 @@ add_library(autocog_compiler_stl_lib STATIC
     compile/globals.cxx
     compile/instantiate.cxx
     compile/assemble.cxx
+    compile/check.cxx
     compile/generate.cxx
     ${CMAKE_CURRENT_BINARY_DIR}/autocog_compiler_stl_lexer.cxx
 )

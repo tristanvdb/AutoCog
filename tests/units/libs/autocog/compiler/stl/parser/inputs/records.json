@@ -149,5 +149,29 @@
     "code": "record 123Data { is text; }",
     "should_pass": false,
     "error_contains": "Expected token `identifier` but found `integer literal`  when parsing identifier."
+  },
+  {
+    "description": "Record: struct body",
+    "tag": "Record",
+    "code": "record R { is { a is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record: format body",
+    "tag": "Record",
+    "code": "record R { is text<length=8>; }",
+    "should_pass": true
+  },
+  {
+    "description": "Record: annotate then struct",
+    "tag": "Record",
+    "code": "record R { annotate \"d\"; is { a is text; } }",
+    "should_pass": true
+  },
+  {
+    "description": "Record: flow is not allowed",
+    "tag": "Record",
+    "code": "record R { flow x; }",
+    "should_pass": false
   }
 ]

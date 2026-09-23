@@ -187,5 +187,53 @@
     "code": "[0].field",
     "should_pass": false,
     "error_contains": "Expected token `identifier` but found `'['`  when parsing path field."
+  },
+  {
+    "description": "FieldRef: local field (leading dot)",
+    "tag": "FieldRef",
+    "code": ".field",
+    "should_pass": true
+  },
+  {
+    "description": "FieldRef: prompt-qualified",
+    "tag": "FieldRef",
+    "code": "other.field",
+    "should_pass": true
+  },
+  {
+    "description": "FieldRef: bare name is an error (needs a dot)",
+    "tag": "FieldRef",
+    "code": "field",
+    "should_pass": false
+  },
+  {
+    "description": "ObjectRef: bare name",
+    "tag": "ObjectRef",
+    "code": "name",
+    "should_pass": true
+  },
+  {
+    "description": "ObjectRef: one compile argument",
+    "tag": "ObjectRef",
+    "code": "name<x=1>",
+    "should_pass": true
+  },
+  {
+    "description": "ObjectRef: several compile arguments",
+    "tag": "ObjectRef",
+    "code": "name<x=1, y=2>",
+    "should_pass": true
+  },
+  {
+    "description": "ObjectRef: empty argument list",
+    "tag": "ObjectRef",
+    "code": "name<>",
+    "should_pass": true
+  },
+  {
+    "description": "ObjectRef: unclosed argument list is an error",
+    "tag": "ObjectRef",
+    "code": "name<x=1",
+    "should_pass": false
   }
 ]

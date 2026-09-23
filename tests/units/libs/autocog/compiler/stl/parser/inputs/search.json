@@ -168,5 +168,36 @@
     "code": "search { data[1:5] is \"subset\"; }",
     "should_pass": false,
     "error_contains": "Expected token `is` but found `'['`  to set value of search parameter."
+  },
+  {
+    "description": "Param: dotted locator, integer value",
+    "tag": "Param",
+    "code": "text.beams is 2;",
+    "should_pass": true
+  },
+  {
+    "description": "Param: comma-list of strings",
+    "tag": "Param",
+    "code": "queue.metric is \"longest\", \"perplexity\";",
+    "should_pass": true
+  },
+  {
+    "description": "Param: bare locator, identifier value",
+    "tag": "Param",
+    "code": "custom is x;",
+    "should_pass": true
+  },
+  {
+    "description": "Param: missing `is` is an error",
+    "tag": "Param",
+    "code": "text.beams 2;",
+    "should_pass": false,
+    "error_contains": "set value"
+  },
+  {
+    "description": "Param: dangling dot is an error",
+    "tag": "Param",
+    "code": "text. is 2;",
+    "should_pass": false
   }
 ]

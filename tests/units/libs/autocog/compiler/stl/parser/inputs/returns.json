@@ -206,5 +206,29 @@
     "code": "return { items use data mapped; }",
     "should_pass": false,
     "error_contains": "Return clauses can only be `bind`, `ravel`, `wrap`, or `prune`. Found mapped`."
+  },
+  {
+    "description": "Retfield: use a field",
+    "tag": "Retfield",
+    "code": "use q;",
+    "should_pass": true
+  },
+  {
+    "description": "Retfield: aliased use",
+    "tag": "Retfield",
+    "code": "answer use q;",
+    "should_pass": true
+  },
+  {
+    "description": "Retfield: aliased literal",
+    "tag": "Retfield",
+    "code": "label is 5;",
+    "should_pass": true
+  },
+  {
+    "description": "Retfield: missing semicolon is an error",
+    "tag": "Retfield",
+    "code": "use q",
+    "should_pass": false
   }
 ]

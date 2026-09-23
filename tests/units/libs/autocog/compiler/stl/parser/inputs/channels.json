@@ -197,5 +197,42 @@
     "code": "channel { result use data mapped bind(_, target); }",
     "should_pass": false,
     "error_contains": "Expected token `'.'` but found `mapped`  after prompt in field reference."
+  },
+  {
+    "description": "Link: use source (local field reference)",
+    "tag": "Link",
+    "code": "x use .y;",
+    "should_pass": true
+  },
+  {
+    "description": "Link: get source",
+    "tag": "Link",
+    "code": "x get y;",
+    "should_pass": true
+  },
+  {
+    "description": "Link: is source",
+    "tag": "Link",
+    "code": "x is 5;",
+    "should_pass": true
+  },
+  {
+    "description": "Link: call source",
+    "tag": "Link",
+    "code": "x call f { };",
+    "should_pass": true
+  },
+  {
+    "description": "Link: unknown source keyword is an error",
+    "tag": "Link",
+    "code": "x of y;",
+    "should_pass": false,
+    "error_contains": "use"
+  },
+  {
+    "description": "Link: use source (prompt-qualified)",
+    "tag": "Link",
+    "code": "x use other.y;",
+    "should_pass": true
   }
 ]

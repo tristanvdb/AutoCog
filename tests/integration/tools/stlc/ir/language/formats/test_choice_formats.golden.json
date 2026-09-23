@@ -20,7 +20,32 @@
           "range": [
             4
           ],
-          "refname": "Option"
+          "refname": "Option",
+          "search": {
+            "text": {
+              "ahead": {
+                "ref": "__search__.text.ahead"
+              },
+              "beams": {
+                "ref": "__search__.text.beams"
+              },
+              "diversity": {
+                "ref": "__search__.text.diversity"
+              },
+              "repetition": {
+                "ref": "__search__.text.repetition"
+              },
+              "threshold": {
+                "ref": "__search__.text.threshold"
+              },
+              "topk": {
+                "ref": "__search__.text.topk"
+              },
+              "width": {
+                "ref": "__search__.text.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
@@ -36,13 +61,29 @@
           },
           "index": 1,
           "name": "selected",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": {
+                "ref": "__search__.enum.ranking.metric"
+              },
+              "threshold.metric": {
+                "ref": "__search__.enum.threshold.metric"
+              },
+              "threshold.value": {
+                "ref": "__search__.enum.threshold.value"
+              },
+              "width": {
+                "ref": "__search__.enum.width"
+              }
+            }
+          }
         },
         {
           "depth": 1,
           "desc": [],
           "format": {
-            "mode": "select",
+            "mode": "repeat",
             "path": [
               {
                 "name": "options"
@@ -52,7 +93,23 @@
           },
           "index": 2,
           "name": "repeated",
-          "range": null
+          "range": null,
+          "search": {
+            "enum": {
+              "ranking.metric": {
+                "ref": "__search__.enum.ranking.metric"
+              },
+              "threshold.metric": {
+                "ref": "__search__.enum.threshold.metric"
+              },
+              "threshold.value": {
+                "ref": "__search__.enum.threshold.value"
+              },
+              "width": {
+                "ref": "__search__.enum.width"
+              }
+            }
+          }
         }
       ],
       "flows": [],
@@ -88,6 +145,16 @@
           }
         ],
         "label": null
+      },
+      "search": {
+        "queue": {
+          "metric": {
+            "ref": "__search__.queue.metric"
+          },
+          "stop": {
+            "ref": "__search__.queue.stop"
+          }
+        }
       }
     }
   },

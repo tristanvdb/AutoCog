@@ -1,0 +1,8 @@
+// Error: a termination predicate is a condition, not a value.
+// expect-error: takes a condition
+prompt main {
+  is { q is text<length=4>; }
+  search { queue.stop is __status__.tree.terminals; }
+  channel { q get q; }
+  return { use q; }
+}

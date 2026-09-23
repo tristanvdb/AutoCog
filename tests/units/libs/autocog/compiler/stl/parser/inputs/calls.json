@@ -1,0 +1,57 @@
+[
+  {
+    "description": "Call: no arguments",
+    "tag": "Call",
+    "code": "f { }",
+    "should_pass": true
+  },
+  {
+    "description": "Call: literal and channel arguments (use needs a field reference)",
+    "tag": "Call",
+    "code": "f { a is 1; b use .x; c get y; }",
+    "should_pass": true
+  },
+  {
+    "description": "Call: entry with compile arguments",
+    "tag": "Call",
+    "code": "store<k=2> { a is 1; }",
+    "should_pass": true
+  },
+  {
+    "description": "Call: missing braces is an error",
+    "tag": "Call",
+    "code": "f a is 1;",
+    "should_pass": false
+  },
+  {
+    "description": "Kwarg: is source",
+    "tag": "Kwarg",
+    "code": "a is 1;",
+    "should_pass": true
+  },
+  {
+    "description": "Kwarg: use source (local field reference)",
+    "tag": "Kwarg",
+    "code": "a use .x;",
+    "should_pass": true
+  },
+  {
+    "description": "Kwarg: get source",
+    "tag": "Kwarg",
+    "code": "a get y;",
+    "should_pass": true
+  },
+  {
+    "description": "Kwarg: unknown source keyword is an error",
+    "tag": "Kwarg",
+    "code": "a of x;",
+    "should_pass": false,
+    "error_contains": "use"
+  },
+  {
+    "description": "Kwarg: use source (prompt-qualified)",
+    "tag": "Kwarg",
+    "code": "a use other.x;",
+    "should_pass": true
+  }
+]

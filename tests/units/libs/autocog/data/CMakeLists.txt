@@ -35,3 +35,18 @@ add_test(
     COMMAND data_registry_driver
 )
 set_tests_properties(data_registry PROPERTIES LABELS "units;data")
+
+add_executable(data_expr_driver expr_driver.cxx)
+target_include_directories(data_expr_driver PRIVATE
+  ${PROJECT_SOURCE_DIR}/libs
+  ${PROJECT_SOURCE_DIR}/vendors/headers
+)
+target_link_libraries(data_expr_driver PUBLIC
+  autocog_data_lib
+  autocog_utilities_lib
+)
+add_test(
+    NAME data_expr
+    COMMAND data_expr_driver
+)
+set_tests_properties(data_expr PROPERTIES LABELS "units;data")
