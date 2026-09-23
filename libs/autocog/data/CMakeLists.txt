@@ -20,6 +20,12 @@ target_include_directories(autocog_data_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/vendors/headers
 )
 
+# The expression evaluator raises AutoCog errors like everything else --
+# CompileError and SchemaError are header-only, but InternalError is not, so
+# the dependency is real and was being satisfied by accident through whoever
+# else happened to be on the link line.
+target_link_libraries(autocog_data_lib PUBLIC autocog_utilities_lib)
+
 set_property(TARGET autocog_data_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # The process-wide artifact pool behind the Python bindings. It MUST be a single
