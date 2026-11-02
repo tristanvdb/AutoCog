@@ -35,7 +35,7 @@ def fetch_models(descriptor, layout, log=print):
                 f"{layout.models} — add a catalog entry or put the file there")
         log(f"fetching: {model['file']}")
         part = dest + ".part"
-        r = subprocess.run(["curl", "-L", "--fail", "--retry", "3",
+        r = subprocess.run(["curl", "-L", "-C", "-", "--fail", "--retry", "3",
                             "-o", part, url])
         if r.returncode != 0:
             raise ProvisionError(f"download failed: {model['file']}")

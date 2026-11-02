@@ -600,7 +600,7 @@ def run_quality(model=None, data=None, formatter="", questions=0,
 
     if model and not os.path.isfile(model):
         raise autocog.errors.ConfigError(
-            f"model {model!r} is a tag, not a file — tags need --worker")
+            f"model file not found: {model!r} (a bare tag needs --worker)")
 
     # Local in-process path: one lane, the original sequential matrix.
     worker = LocalWorker(model=model, n_ctx=n_ctx)

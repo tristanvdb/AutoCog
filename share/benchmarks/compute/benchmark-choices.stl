@@ -2,7 +2,7 @@
 // over 32 padded choices concentrates the work in eval_sequences (forced
 // scoring of imposed tokens). Text actions carry evaluate=false, so choice
 // scoring is the production path that exercises scoring — pad the choices
-// via sweep.py content_pad to scale it.
+// via the cell's content_pad to scale it.
 
 prompt main {
   is {

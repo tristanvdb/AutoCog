@@ -1,11 +1,16 @@
 ARG BUILD_IMAGE=ubuntu:24.04
 ARG PROD_IMAGE=ubuntu:24.04
+# ON tunes to the CPU of the machine that builds. OFF is portable: use it for
+# any image that runs elsewhere.
+ARG AUTOCOG_TUNED=ON
 
 # =============================================================================
 # Builder — compiles everything, produces /opt with venv + installed autocog
 # =============================================================================
 
 FROM ${BUILD_IMAGE} AS builder
+
+ARG AUTOCOG_TUNED
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -59,6 +64,7 @@ RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
           -DLLAMA_BUILD_TESTS=OFF \
           -DLLAMA_BUILD_APP=OFF \
           -DLLAMA_BUILD_SERVER=OFF \
+          -DGGML_NATIVE=${AUTOCOG_TUNED} \
           -DLLAMA_CUDA=${LLAMA_CUDA} && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
@@ -67,6 +73,7 @@ RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
 
 RUN pip install "/tmp/autocog[server]" \
         --config-settings="cmake.define.CMAKE_PREFIX_PATH=/opt" \
+        --config-settings="cmake.define.AUTOCOG_TUNED=${AUTOCOG_TUNED}" \
         --config-settings="cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=ccache" \
         --config-settings="cmake.define.CMAKE_C_COMPILER_LAUNCHER=ccache" && \
     rm -rf /tmp/autocog

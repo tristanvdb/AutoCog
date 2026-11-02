@@ -150,7 +150,7 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
         if key not in local_workers:
             if model and not os.path.isfile(model):
                 raise ConfigError(
-                    f"model {model!r} is a tag, not a file — tags need --worker")
+                    f"model file not found: {model!r} (a bare tag needs --worker)")
             local_workers[key] = LocalWorker(model=model, n_ctx=key[1],
                                              kv_slots=key[0])
         return local_workers[key]

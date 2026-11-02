@@ -295,9 +295,10 @@ jobs:
           file: dockerfiles/ubuntu.df
           target: ${{ matrix.variant }}
           push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.variant }}
-            ${{ env.IMAGE_NAME }}:latest-${{ matrix.variant }}
+          # Published images run on CPUs other than this runner's.
+          build-args: AUTOCOG_TUNED=OFF
+          # latest-* moves in containers-latest, once the release has succeeded.
+          tags: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.variant }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -379,6 +380,31 @@ jobs:
             artifacts/sdist/*.tar.gz
             artifacts/demo-stapp/*.stapp
             artifacts/coverage-report/coverage.md
+
+  # ===========================================================================
+  # containers-latest — retag the release's images, only after it has succeeded.
+  # ===========================================================================
+  containers-latest:
+    needs: release
+    runs-on: ubuntu-latest
+    if: success()
+    strategy:
+      matrix:
+        variant: [run, serve, rpc, backend]
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move latest tag
+        run: |
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker buildx imagetools create \
+            -t "$IMAGE_NAME:latest-${{ matrix.variant }}" \
+            "$IMAGE_NAME:$GITHUB_REF_NAME-${{ matrix.variant }}"
 
   # ===========================================================================
   # publish-badges — stamp the "latest release" badges, only after the whole
@@ -513,7 +539,9 @@ jobs:
   # the version, green only if every needed release job succeeded.
   # ===========================================================================
   release-status:
-    needs: [coverage-gate, wheels, sdist, demo, containers, release]
+    # verify must be listed: when it fails, everything downstream is skipped,
+    # and skipped results alone would color the badge green.
+    needs: [verify, coverage-gate, wheels, sdist, demo, containers, release]
     if: always()
     runs-on: ubuntu-latest
     steps:
