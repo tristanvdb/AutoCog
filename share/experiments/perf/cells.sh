@@ -30,6 +30,9 @@ elif [ -n "${1:-}" ] && [ -f "${1:-}" ]; then
     MODEL_ARGS=(--model "$1"); shift
 fi
 
+# Offload is opt-in in the library; AUTOCOG_NGL=0 measures the CPU.
+export AUTOCOG_NGL="${AUTOCOG_NGL:-99}"
+
 OUT="${OUT:-$WORKDIR/results/perf}"
 mkdir -p "$OUT"
 echo "=== perf: $(basename "$CELLS") -> $OUT ==="

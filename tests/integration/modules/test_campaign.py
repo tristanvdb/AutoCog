@@ -404,3 +404,14 @@ def test_build_options_binding():
     # Coherence with the human-readable form.
     info = b.build_info()
     assert (("cuda:        yes" in info) == opts["cuda"])
+
+
+def test_devices_binding():
+    """Vendor-neutral device inventory (calibration's silent-CPU gate)."""
+    from autocog.backend.llama import backend_llama_cxx as b
+
+    devices = list(b.devices())
+    assert devices, "at least the CPU device"
+    for d in devices:
+        assert d["type"] in ("cpu", "gpu", "igpu", "accel", "meta")
+        assert d["name"] and d["memory_total"] >= d["memory_free"] >= 0

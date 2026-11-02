@@ -23,6 +23,7 @@
 
 ## Development
 
+- [Strix Halo](./strix-halo.md) — Running on AMD Ryzen AI Max unified memory (Vulkan, ROCm)
 - [Developer Guide](../DEVEL.md) — Test-driven workflow, building, containers
 - [Test Structure](../tests/README.md) — Test framework, fixtures, coverage, CI/release pipeline
 

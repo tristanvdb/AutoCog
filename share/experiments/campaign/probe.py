@@ -21,6 +21,7 @@ do they vary? Seconds to run, before any money is spent.
 """
 
 import collections
+import glob
 import json
 import os
 import subprocess
@@ -28,15 +29,59 @@ import subprocess
 
 def scan_machine():
     """GPU inventory. Returns {"gpus": [{"index", "name", "total_bytes"}]}."""
+    return _scan_nvidia() or {"gpus": _scan_amd()}
+
+
+def _scan_amd(drm="/sys/class/drm"):
+    """AMD GPUs from sysfs, which needs no vendor tool. On unified memory what
+    the GPU can reach is the VRAM carve-out plus GTT."""
+    def read(path):
+        try:
+            with open(path) as f:
+                return f.read().strip()
+        except OSError:
+            return None
+
+    gpus = []
+    for card in sorted(glob.glob(os.path.join(drm, "card[0-9]*"))):
+        device = os.path.join(card, "device")
+        if read(os.path.join(device, "vendor")) != "0x1002":
+            continue
+        total = sum(int(read(os.path.join(device, f"mem_info_{kind}_total")) or 0)
+                    for kind in ("vram", "gtt"))
+        gpus.append({"index": len(gpus),
+                     "name": f"amd:{read(os.path.join(device, 'device'))}",
+                     "total_bytes": total})
+    return gpus
+
+
+def offload_problem(machine, devices=None):
+    """Why a campaign would silently run on the CPU, or None. The machine has a
+    GPU, but the installed autocog cannot see one at runtime."""
+    if not machine.get("gpus"):
+        return None
+    if devices is None:
+        from autocog.backend.llama import backend_llama_cxx
+        devices = backend_llama_cxx.devices()
+    if any(d["type"] in ("gpu", "igpu") for d in devices):
+        return None
+    return (f"{len(machine['gpus'])} GPU(s) present but autocog sees none at "
+            "runtime, so this would run on the CPU: check AUTOCOG_GPU_BACKEND "
+            "and the driver (on AMD, `vulkaninfo --summary` or `rocminfo`, and "
+            "access to /dev/dri)")
+
+
+def _scan_nvidia():
+    """{"gpus": [...]} from nvidia-smi, or None when it finds no GPU."""
     try:
         out = subprocess.run(
             ["nvidia-smi", "--query-gpu=index,name,memory.total",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.SubprocessError):
-        return {"gpus": []}
+        return None
     if out.returncode != 0:
-        return {"gpus": []}
+        return None
     gpus = []
     for line in out.stdout.strip().splitlines():
         parts = [p.strip() for p in line.split(",")]
@@ -47,7 +92,7 @@ def scan_machine():
                          "total_bytes": int(float(parts[2])) * 1024 * 1024})
         except ValueError:
             continue
-    return {"gpus": gpus}
+    return {"gpus": gpus} if gpus else None
 
 
 def load_profile(layout):

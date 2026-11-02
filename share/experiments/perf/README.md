@@ -19,6 +19,8 @@ autocog/share/experiments/perf/cells.sh bottleneck models/Llama-3.2-1B-Instruct-
 autocog/share/experiments/perf/cells.sh termination --rng
 ```
 
+These offload to the GPU unless `AUTOCOG_NGL=0`; state which when reporting.
+
 Cell files live in `share/benchmarks/compute/` alongside the programs they
 run. A cell is one point in the search-parameter space; see that directory
 for what the fields mean.

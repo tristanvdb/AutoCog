@@ -67,13 +67,13 @@ Model::Model(ModelID const id_, std::string const & model_path, int n_ctx,
   // workers load each model with its own parameters), else AUTOCOG_NGL, else
   // CPU-only — so benchmarks state their hardware explicitly.
   llama_model_params model_params = llama_model_default_params();
-  if (ngl > 0) {
+  // llama.cpp defaults to -1 (ALL layers), so CPU must be requested explicitly.
+  model_params.n_gpu_layers = 0;
+  if (ngl >= 0) {
     model_params.n_gpu_layers = ngl;
-  } else if (ngl < 0) {  // unset: fall back to the environment
-    if (char const * env = std::getenv("AUTOCOG_NGL")) {
-      long v = std::strtol(env, nullptr, 10);
-      if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
-    }
+  } else if (char const * env = std::getenv("AUTOCOG_NGL")) {  // unset: environment
+    long v = std::strtol(env, nullptr, 10);
+    if (v > 0) model_params.n_gpu_layers = static_cast<int>(v);
   }
   this->model = llama_model_load_from_file(model_path.c_str(), model_params);
   if (!this->model) {
@@ -123,6 +123,7 @@ Model::~Model() {
 
 Model::Model(Model && o) noexcept
   : id(o.id),
+    context_size(o.context_size),
     model(o.model),
     contexts(std::move(o.contexts)),
     tokens(std::move(o.tokens)),
@@ -130,6 +131,7 @@ Model::Model(Model && o) noexcept
     slots_(std::move(o.slots_)),
     active_slot_(o.active_slot_),
     live_logits_slot_(o.live_logits_slot_),
+    live_logits_ith_(o.live_logits_ith_),
     slot_clock_(o.slot_clock_),
     kv_stats_(o.kv_stats_),
     decode_stats_(o.decode_stats_),
@@ -358,6 +360,9 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     ret = llama_decode(ctx, batch);
     ++decode_stats_.calls;
   }
+  // A GPU backend returns before the graph has finished. Wait here so that the
+  // compute time is not charged to whoever reads the logits first.
+  llama_synchronize(ctx);
   decode_stats_.decode_seconds +=
       std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
   llama_batch_free(batch);
@@ -771,6 +776,7 @@ unsigned Model::topk_frontier(
       ret = llama_decode(ctx, batch);
       ++decode_stats_.calls;
     }
+    llama_synchronize(ctx);  // see decode_extension
     decode_stats_.decode_seconds +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
     llama_batch_free(batch);

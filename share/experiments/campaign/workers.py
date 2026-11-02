@@ -56,7 +56,10 @@ class Workers:
             cmd += ["--model", _spec(self.layout, model, self.ngl)]
         env = dict(os.environ)
         if slot.gpu is not None:
+            # Each GPU backend reads its own variable; the others ignore it.
             env["CUDA_VISIBLE_DEVICES"] = str(slot.gpu)
+            env["HIP_VISIBLE_DEVICES"] = str(slot.gpu)
+            env["GGML_VK_VISIBLE_DEVICES"] = str(slot.gpu)
         log_path = os.path.join(self.layout.results, "workers",
                                 f"worker-{slot.index}.log")
         os.makedirs(os.path.dirname(log_path), exist_ok=True)

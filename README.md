@@ -74,7 +74,7 @@ language reference.
 ## How to get it
 
 AutoCog builds a native llama.cpp backend, so the **preferred install is from
-source** — it tunes the build to your CPU (and autodetects CUDA) for the best
+source** — it tunes the build to your CPU (and autodetects a GPU backend) for the best
 inference performance. You need a C++17 toolchain and CMake; RE-flex and
 llama.cpp are built automatically if not found on the system.
 

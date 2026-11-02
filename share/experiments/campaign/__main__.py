@@ -95,6 +95,10 @@ def main(argv=None):
             f"syntaxes={run['syntaxes']} samples={samples or 'all'}")
     if missing:
         sys.exit(f"no worker can host {missing} — the campaign would stall")
+    if args.ngl > 0 and not args.skip_gate:
+        problem = probing.offload_problem(machine)
+        if problem:
+            sys.exit(f"offload: {problem}. --skip-gate runs anyway.")
 
     for d in prior_dirs:
         log(f"  prior: {d}")

@@ -56,7 +56,7 @@ RUN LLAMA_CUDA=$(command -v nvcc >/dev/null 2>&1 && echo ON || echo OFF) && \
           -DLLAMA_BUILD_TESTS=OFF \
           -DLLAMA_BUILD_APP=OFF \
           -DLLAMA_BUILD_SERVER=OFF \
-          -DLLAMA_CUDA=${LLAMA_CUDA} && \
+          -DGGML_CUDA=${LLAMA_CUDA} && \
     cmake --build build --parallel $(nproc) && \
     cmake --install build
 

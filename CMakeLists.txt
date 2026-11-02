@@ -90,57 +90,75 @@ endif()
 # ===========================================================================
 # Backend selection: AUTOCOG_TUNED + individual flags
 # ===========================================================================
-# AUTOCOG_TUNED (default ON): autodetect available hardware backends.
-# Individual AUTOCOG_* flags can override. Set AUTOCOG_TUNED=OFF for portable builds.
+# AUTOCOG_TUNED (default ON): native CPU tuning + autodetection. Backends are
+# ON, OFF or AUTO (the default). At most one GPU backend is autodetected, in the
+# order CUDA, ROCm, Vulkan, and only if its whole toolchain is present (a partial
+# one would fail the build inside ggml). An explicit ON disables autodetection
+# of the other GPU backends. AUTOCOG_TUNED=OFF turns AUTO into OFF.
 #
 # Usage:
 #   cmake -B build                           # TUNED=ON, autodetect
 #   cmake -B build -DAUTOCOG_TUNED=OFF       # portable
 #   cmake -B build -DAUTOCOG_CUDA=OFF        # autodetect but skip CUDA
+#   cmake -B build -DAUTOCOG_VULKAN=ON       # Vulkan, even with ROCm installed
 #   pip install .                             # TUNED=ON (building from source)
 #   pip install . --config-settings="cmake.define.AUTOCOG_TUNED=OFF"  # portable
 
 option(AUTOCOG_TUNED  "Autodetect and enable available backends" ON)
 option(AUTOCOG_NATIVE "Use native CPU instructions (-march=native)" OFF)
-option(AUTOCOG_BLAS   "Use system BLAS (OpenBLAS, MKL, Accelerate)" OFF)
-option(AUTOCOG_CUDA   "Enable NVIDIA CUDA" OFF)
-option(AUTOCOG_ROCM   "Enable AMD ROCm/HIP" OFF)
-option(AUTOCOG_VULKAN "Enable Vulkan compute" OFF)
 option(AUTOCOG_METAL  "Enable Apple Metal" OFF)
 option(AUTOCOG_SYCL   "Enable Intel SYCL/oneAPI" OFF)
+set(AUTOCOG_BLAS   AUTO CACHE STRING "Use system BLAS (ON|OFF|AUTO)")
+set(AUTOCOG_CUDA   AUTO CACHE STRING "Enable NVIDIA CUDA (ON|OFF|AUTO)")
+set(AUTOCOG_ROCM   AUTO CACHE STRING "Enable AMD ROCm/HIP (ON|OFF|AUTO)")
+set(AUTOCOG_VULKAN AUTO CACHE STRING "Enable Vulkan compute (ON|OFF|AUTO)")
+
+set(_autocog_gpu_chosen OFF)
+foreach(_b CUDA ROCM VULKAN)
+  if(AUTOCOG_${_b} AND NOT AUTOCOG_${_b} STREQUAL "AUTO")
+    set(_autocog_gpu_chosen ON)
+  endif()
+endforeach()
 
 if(AUTOCOG_TUNED)
   set(AUTOCOG_NATIVE ON)
 
-  if(NOT AUTOCOG_CUDA)
+  if(AUTOCOG_CUDA STREQUAL "AUTO" AND NOT _autocog_gpu_chosen)
     find_package(CUDAToolkit QUIET)
     if(CUDAToolkit_FOUND)
       set(AUTOCOG_CUDA ON)
+      set(_autocog_gpu_chosen ON)
       message(STATUS "AutoCog: CUDA detected (${CUDAToolkit_VERSION})")
     endif()
   endif()
 
-  if(NOT AUTOCOG_ROCM)
-    find_package(hip QUIET)
-    if(hip_FOUND)
+  if(AUTOCOG_ROCM STREQUAL "AUTO" AND NOT _autocog_gpu_chosen)
+    set(_rocm_hints "$ENV{ROCM_PATH}" /opt/rocm)
+    find_package(hip QUIET HINTS ${_rocm_hints})
+    find_package(hipblas QUIET HINTS ${_rocm_hints})
+    find_package(rocblas QUIET HINTS ${_rocm_hints})
+    if(hip_FOUND AND hipblas_FOUND AND rocblas_FOUND)
       set(AUTOCOG_ROCM ON)
+      set(_autocog_gpu_chosen ON)
       message(STATUS "AutoCog: ROCm/HIP detected")
     endif()
   endif()
 
-  if(NOT AUTOCOG_BLAS)
+  if(AUTOCOG_VULKAN STREQUAL "AUTO" AND NOT _autocog_gpu_chosen)
+    find_package(Vulkan COMPONENTS glslc QUIET)
+    find_package(SPIRV-Headers QUIET)
+    if(Vulkan_FOUND AND Vulkan_glslc_FOUND AND SPIRV-Headers_FOUND)
+      set(AUTOCOG_VULKAN ON)
+      set(_autocog_gpu_chosen ON)
+      message(STATUS "AutoCog: Vulkan detected")
+    endif()
+  endif()
+
+  if(AUTOCOG_BLAS STREQUAL "AUTO")
     find_package(BLAS QUIET)
     if(BLAS_FOUND)
       set(AUTOCOG_BLAS ON)
       message(STATUS "AutoCog: BLAS detected")
-    endif()
-  endif()
-
-  if(NOT AUTOCOG_VULKAN)
-    find_package(Vulkan QUIET)
-    if(Vulkan_FOUND)
-      set(AUTOCOG_VULKAN ON)
-      message(STATUS "AutoCog: Vulkan detected")
     endif()
   endif()
 
@@ -150,6 +168,13 @@ if(AUTOCOG_TUNED)
   endif()
 endif()
 
+# Whatever is still AUTO was not detected (or TUNED is OFF).
+foreach(_b BLAS CUDA ROCM VULKAN)
+  if(AUTOCOG_${_b} STREQUAL "AUTO")
+    set(AUTOCOG_${_b} OFF)
+  endif()
+endforeach()
+
 message(STATUS "AutoCog backends: tuned=${AUTOCOG_TUNED} native=${AUTOCOG_NATIVE} cuda=${AUTOCOG_CUDA} rocm=${AUTOCOG_ROCM} blas=${AUTOCOG_BLAS} vulkan=${AUTOCOG_VULKAN} metal=${AUTOCOG_METAL} sycl=${AUTOCOG_SYCL}")
 
 # Map AUTOCOG_* -> GGML_* flags (consumed by llama.cpp)
@@ -158,18 +183,13 @@ if(AUTOCOG_NATIVE)
 else()
   set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
 endif()
-if(AUTOCOG_CUDA)
-  set(GGML_CUDA ON CACHE BOOL "" FORCE)
-endif()
-if(AUTOCOG_ROCM)
-  set(GGML_HIP ON CACHE BOOL "" FORCE)
-endif()
+# Forced both ways: a reconfigure may switch the GPU backend in place.
+set(GGML_CUDA ${AUTOCOG_CUDA} CACHE BOOL "" FORCE)
+set(GGML_HIP ${AUTOCOG_ROCM} CACHE BOOL "" FORCE)
 if(AUTOCOG_BLAS)
   set(GGML_BLAS ON CACHE BOOL "" FORCE)
 endif()
-if(AUTOCOG_VULKAN)
-  set(GGML_VULKAN ON CACHE BOOL "" FORCE)
-endif()
+set(GGML_VULKAN ${AUTOCOG_VULKAN} CACHE BOOL "" FORCE)
 if(AUTOCOG_METAL)
   set(GGML_METAL ON CACHE BOOL "" FORCE)
 endif()

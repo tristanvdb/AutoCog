@@ -40,8 +40,9 @@ ctest --test-dir build -j4
 ```
 
 RE-flex and llama.cpp are built from the vendored submodules if not found on the
-system. CUDA is autodetected (`find_package(CUDAToolkit)`); force it with
-`-DAUTOCOG_CUDA=ON|OFF`. For faster iteration, install `ccache` and/or prebuild
+system. One GPU backend is autodetected (CUDA, then ROCm, then Vulkan); choose
+with `-DAUTOCOG_CUDA|ROCM|VULKAN=ON|OFF`. For AMD unified memory, see
+[docs/strix-halo.md](docs/strix-halo.md). For faster iteration, install `ccache` and/or prebuild
 the vendored deps to a prefix and point `-DCMAKE_PREFIX_PATH` at it (see the
 option block in `CMakeLists.txt`). To install into your own environment, use the
 README's install instructions (e.g. `pip install ".[server,validate]"`).

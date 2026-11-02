@@ -10,6 +10,8 @@
 
 #include "autocog/build_info.hxx"
 
+#include <ggml-backend.h>
+
 #include <pybind11/pybind11.h>
 #include "errors.hxx"
 #include <pybind11/stl.h>
@@ -49,6 +51,32 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
         d["tuned"] = static_cast<bool>(AUTOCOG_TUNED);
         return d;
     }, "Build configuration as a dict (backend acceleration flags)");
+
+    module.def("devices", []() {
+        py::list out;
+        for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+            ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+            size_t free = 0, total = 0;
+            ggml_backend_dev_memory(dev, &free, &total);
+            char const * type = "accel";
+            switch (ggml_backend_dev_type(dev)) {
+                case GGML_BACKEND_DEVICE_TYPE_CPU:   type = "cpu";  break;
+                case GGML_BACKEND_DEVICE_TYPE_GPU:   type = "gpu";  break;
+                case GGML_BACKEND_DEVICE_TYPE_IGPU:  type = "igpu"; break;
+                case GGML_BACKEND_DEVICE_TYPE_META:  type = "meta"; break;
+                default: break;
+            }
+            py::dict d;
+            d["name"] = ggml_backend_dev_name(dev);
+            d["description"] = ggml_backend_dev_description(dev);
+            d["type"] = type;
+            d["memory_total"] = total;
+            d["memory_free"] = free;
+            out.append(d);
+        }
+        return out;
+    }, "Devices visible at runtime, whatever the vendor; a GPU build with no "
+       "gpu/igpu entry here silently runs on CPU");
 
     module.def("create",
         [](std::string const & model_path, int n_ctx, int ngl, int kv_slots) {
