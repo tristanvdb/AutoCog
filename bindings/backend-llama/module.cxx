@@ -4,6 +4,7 @@
 #include "autocog/backend/llama/manager.hxx"
 #include "autocog/backend/llama/prepared.hxx"
 #include "autocog/backend/llama/perf-fields.hxx"
+#include "autocog/utilities/profiling.hxx"
 
 #include "autocog/codec/json.hxx"
 #include "autocog/data/store.hxx"
@@ -38,6 +39,34 @@ PYBIND11_MODULE(backend_llama_cxx, module) {
     autocog::binding::register_exception_translator();
 
     module.def("build_info", &autocog::build_info, "Build configuration info");
+
+    module.def("drain_profile", []() -> py::object {
+        // Fine-grain records collected since the last drain, as ECS-flavored
+        // field maps ready to be emitted next to the autocog.perf.* aggregates.
+        // Always present so callers need no build-time branch; an empty list
+        // is what a build without -DAUTOCOG_PROFILE=ON returns.
+        py::list out;
+#if AUTOCOG_PROF_ENABLED
+        auto [events, scopes] = autocog::profiling::Registry::instance().drain();
+        for (auto const & [action, fields] : events) {
+            py::dict d = py::module_::import("json").attr("loads")(fields.dump());
+            d["event.action"] = action;
+            out.append(std::move(d));
+        }
+        for (auto const & [name, st] : scopes) {
+            py::dict d;
+            d["event.action"] = "profile.scope";
+            d["autocog.profile.scope"] = name;
+            d["autocog.profile.calls"] = st.calls;
+            d["autocog.profile.nanoseconds"] = st.nanoseconds;
+            out.append(std::move(d));
+        }
+#endif
+        return out;
+    }, "Drain fine-grain profiling records (empty unless built with AUTOCOG_PROFILE=ON)");
+
+    module.def("profile_enabled", []() { return AUTOCOG_PROF_ENABLED != 0; },
+               "Whether this build collects fine-grain profiling records");
 
     module.def("build_options", []() {
         py::dict d;

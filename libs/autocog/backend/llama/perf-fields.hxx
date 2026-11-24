@@ -26,12 +26,17 @@ inline DecodeStats operator-(DecodeStats a, DecodeStats const & b) {
 }
 
 inline KvStats operator-(KvStats a, KvStats const & b) {
-    a.exact         -= b.exact;
-    a.extends       -= b.extends;
-    a.trims         -= b.trims;
-    a.forks         -= b.forks;
-    a.evictions     -= b.evictions;
-    a.tokens_primed -= b.tokens_primed;
+    a.exact           -= b.exact;
+    a.extends         -= b.extends;
+    a.trims           -= b.trims;
+    a.forks           -= b.forks;
+    a.forks_evicted   -= b.forks_evicted;
+    a.forks_pinned    -= b.forks_pinned;
+    a.evictions       -= b.evictions;
+    a.logit_redecodes -= b.logit_redecodes;
+    a.tokens_target   -= b.tokens_target;
+    a.tokens_reused   -= b.tokens_reused;
+    a.tokens_evicted  -= b.tokens_evicted;
     return a;
 }
 
@@ -67,12 +72,27 @@ inline nlohmann::json perf_fields(Model const & model, Evaluation const & eval,
         pc.text.tokens_eval + pc.complete.tokens_eval + pc.choose.tokens_eval;
     KvStats const kv = model.kv_stats() - kv_base;
     f["autocog.perf.kv.slots"] = model.kv_slots();
+    // The four classes partition every slot-pool access.
+    f["autocog.perf.kv.accesses"] = kv.exact + kv.extends + kv.trims + kv.forks;
     f["autocog.perf.kv.exact"] = kv.exact;
     f["autocog.perf.kv.extends"] = kv.extends;
     f["autocog.perf.kv.trims"] = kv.trims;
     f["autocog.perf.kv.forks"] = kv.forks;
+    // Why the fork happened: capacity pressure (a bigger pool would help)
+    // versus a slot pinned to the pending batch (it would not).
+    f["autocog.perf.kv.forks.evicted"] = kv.forks_evicted;
+    f["autocog.perf.kv.forks.pinned"] = kv.forks_pinned;
     f["autocog.perf.kv.evictions"] = kv.evictions;
-    f["autocog.perf.kv.tokens.primed"] = kv.tokens_primed;
+    f["autocog.perf.kv.logit_redecodes"] = kv.logit_redecodes;
+    // Reuse, at token granularity. This is the cache's efficiency; the class
+    // counts above are only which mechanism ran. `reuse` is the fraction of
+    // requested context served from a resident slot rather than re-decoded.
+    f["autocog.perf.kv.tokens.target"] = kv.tokens_target;
+    f["autocog.perf.kv.tokens.reused"] = kv.tokens_reused;
+    f["autocog.perf.kv.tokens.decoded"] = kv.tokens_target - kv.tokens_reused;
+    f["autocog.perf.kv.tokens.evicted"] = kv.tokens_evicted;
+    f["autocog.perf.kv.reuse"] =
+        kv.tokens_target ? static_cast<double>(kv.tokens_reused) / static_cast<double>(kv.tokens_target) : 0.0;
     DecodeStats const ds = model.decode_stats() - ds_base;
     f["autocog.perf.decode.calls"] = ds.calls;
     f["autocog.perf.decode.seconds"] = ds.decode_seconds;

@@ -68,6 +68,28 @@ def search_config(cell):
     }
 
 
+def emit_profile(nd, summary):
+    """Drain the backend's fine-grain profiling records into the same stream.
+
+    Empty unless the extension was built with -DAUTOCOG_PROFILE=ON, so this is
+    a no-op on a normal build. Each record is tagged with the cell it belongs
+    to, since one NDJSON file holds every cell of a run.
+    """
+    from autocog.backend.llama import backend_llama_cxx
+
+    records = backend_llama_cxx.drain_profile()
+    if not records or nd is None:
+        return
+    label = summary.get("autocog.bench.label") or summary.get("autocog.bench.model")
+    for rec in records:
+        ev = results.base_event("autocog.bench.perf", rec.pop("event.action"))
+        ev["event.kind"] = "event"
+        ev["autocog.bench.label"] = label
+        ev["autocog.bench.model"] = summary.get("autocog.bench.model")
+        ev.update(rec)
+        nd.emit(ev)
+
+
 def cell_name(cell):
     if cell.get("label"):
         return cell["label"]
@@ -202,12 +224,16 @@ def run_perf(model=None, cells=None, out=".", tag="", budget_seconds=0,
             summary["autocog.bench.model"] = tag_
             summaries.append(summary)
             nd.emit(summary)
+            emit_profile(nd, summary)
             log(f"[{i + 1}/{len(cell_list)}] {cell_name(cell)} -> "
                 f"{summary['autocog.perf.advance_seconds']:.2f}s eval, "
                 f"restore={summary['autocog.perf.tokens.restore']} "
                 f"eval={summary['autocog.perf.tokens.eval']} "
                 f"decode_calls={summary.get('autocog.perf.decode.calls', '-')}")
         except Exception as e:  # noqa: BLE001 — a failed cell must not stop the run
+            # Drop whatever the failed cell collected: leaving it in the
+            # registry would attribute it to the next cell.
+            emit_profile(None, None)
             failed.append(cell_name(cell))
             log(f"[{i + 1}/{len(cell_list)}] {cell_name(cell)} FAILED: {e}")
 

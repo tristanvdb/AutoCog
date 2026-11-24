@@ -82,9 +82,17 @@ class NdjsonWriter:
             os.replace(self._part, self.path)
 
 
+# `kv reuse` is the fraction of requested context served from a resident slot
+# instead of being decoded again. The access-class counts (exact/extend/trim)
+# are not a hit rate: an extend is a path continuing in place and a trim is a
+# rewind, so counting them as hits reads far better than the cache behaves.
+# `fork ev` and `fork pin` separate the two reasons a fork had to happen --
+# capacity pressure, which a larger slot pool fixes, and a slot pinned to the
+# pending batch, which it does not.
 PERF_COLS = ["cell", "eval s", "wall s", "tok restore", "tok eval",
              "decode calls", "decode s", "sample s", "score s", "other s",
-             "kv forks", "complete s", "choose s"]
+             "kv reuse", "kv forks", "fork ev", "fork pin", "logit redec",
+             "complete s", "choose s"]
 
 
 def perf_md(path, title, events, ngl):
@@ -109,7 +117,12 @@ def perf_md(path, title, events, ngl):
                    f"{r.get('autocog.perf.sample.seconds', 0):.2f}",
                    f"{r.get('autocog.perf.score.seconds', 0):.2f}",
                    f"{other:.2f}",
+                   (f"{r['autocog.perf.kv.reuse']:.1%}"
+                    if r.get("autocog.perf.kv.reuse") is not None else "-"),
                    str(r.get("autocog.perf.kv.forks", "-")),
+                   str(r.get("autocog.perf.kv.forks.evicted", "-")),
+                   str(r.get("autocog.perf.kv.forks.pinned", "-")),
+                   str(r.get("autocog.perf.kv.logit_redecodes", "-")),
                    f"{r['autocog.perf.complete.seconds']:.2f}",
                    f"{r['autocog.perf.choose.seconds']:.2f}"]
             f.write("| " + " | ".join(row) + " |\n")

@@ -40,8 +40,17 @@ set(INSPECT_CONTENT ${CMAKE_CURRENT_SOURCE_DIR}/inspect/content.json)
 set(FTA2DOT ${PROJECT_SOURCE_DIR}/tools/fta2dot.py)
 set(STA2DOT ${PROJECT_SOURCE_DIR}/tools/sta2dot.py)
 
+# Rendering the .dot files to SVG is optional: without graphviz the graphs are
+# still emitted, just not rendered. Resolve that here rather than in the test's
+# shell -- a missing program leaves DOT_EXECUTABLE holding the literal string
+# `DOT_EXECUTABLE-NOTFOUND`, which CMake's if() knows is false but `test -n`
+# does not, so interpolating it into a shell conditional runs the sentinel as a
+# command. DOT_RENDER is either a complete render loop or nothing at all.
 find_program(DOT_EXECUTABLE dot)
-if(NOT DOT_EXECUTABLE)
+if(DOT_EXECUTABLE)
+  set(DOT_RENDER "for D in \$OUT/*.dot; do ${DOT_EXECUTABLE} -Tsvg \$D -o \${D%.dot}.svg; done")
+else()
+  set(DOT_RENDER ":")
   message(STATUS "graphviz `dot` not found: inspection graphs emit .dot only")
 endif()
 
@@ -129,11 +138,7 @@ json.dump(content, open(out, 'w'), indent=2)
                   done
                 done
 
-                if [ -n \"${DOT_EXECUTABLE}\" ]; then
-                  for D in \$OUT/*.dot; do
-                    ${DOT_EXECUTABLE} -Tsvg \$D -o \${D%.dot}.svg
-                  done
-                fi
+                ${DOT_RENDER}
             "
     )
     set_tests_properties(inspect-mcq-${DEMO_NAME} PROPERTIES

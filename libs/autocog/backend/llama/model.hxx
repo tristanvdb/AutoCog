@@ -3,6 +3,7 @@
 
 #include "autocog/backend/llama/types.hxx"
 
+#include <cstdint>
 #include <map>
 #include <random>
 #include <string>
@@ -26,15 +27,37 @@ struct DecodeStats {
   double   score_seconds = 0.0;  ///< wall time in forced-scoring sweeps
 };
 
-// Counters for the KV sequence-slot pool, reported by xfta --perf. Each
-// set_tokens call resolves to exactly one of exact/extend/trim/fork.
+// Counters for the KV sequence-slot pool, reported by xfta --perf and the
+// Python bindings. Each slot-pool access resolves to exactly one of
+// exact/extend/trim/fork, so those four partition `accesses`.
+//
+// The class counts say which mechanism ran, not how well the cache did: an
+// `extend` is a path continuing in place and a `trim` is a rewind, neither of
+// which is a cache win in the way a reader of "hit rate" would assume. The
+// token counters below are the efficiency measure — `tokens_reused /
+// tokens_target` is the fraction of context served from the cache rather than
+// re-decoded, and it is the number to quote.
 struct KvStats {
-  unsigned exact = 0;          ///< target fully cached in a slot, zero decode
+  unsigned exact = 0;          ///< target fully cached in a slot, zero content decode
   unsigned extends = 0;        ///< slot was a strict prefix, appended in place
   unsigned trims = 0;          ///< slot was a strict extension, tail removed
   unsigned forks = 0;          ///< shared prefix copied (llama_memory_seq_cp), suffix decoded
+
+  // Why a fork had to happen. A fork that discarded a live slot is capacity
+  // pressure (a bigger pool would help); one forced by a slot pinned to the
+  // pending batch is a batching conflict (a bigger pool would not).
+  unsigned forks_evicted = 0;  ///< subset of forks that discarded a live slot
+  unsigned forks_pinned = 0;   ///< subset of forks forced by a pinned best slot
+
   unsigned evictions = 0;      ///< slots dropped (LRU victim reuse or KV-full recovery)
-  unsigned tokens_primed = 0;  ///< single-token re-decodes refreshing final-position logits
+  unsigned logit_redecodes = 0; ///< single-token re-decodes refreshing final-position logits
+
+  // Token-level reuse. `tokens_reused` is the longest-common-prefix actually
+  // served from a resident slot; `tokens_target - tokens_reused` is what had
+  // to be decoded to reach the requested state.
+  uint64_t tokens_target = 0;  ///< Σ requested sequence length over all accesses
+  uint64_t tokens_reused = 0;  ///< Σ prefix served from cache
+  uint64_t tokens_evicted = 0; ///< Σ tokens discarded with an evicted slot
 };
 
 // Masked top-k candidates at one frontier position (see Model::topk_frontier).

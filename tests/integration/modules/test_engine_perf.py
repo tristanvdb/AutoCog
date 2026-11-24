@@ -37,6 +37,10 @@ INT_KEYS = [
     "autocog.perf.choose.tokens.eval",
     "autocog.perf.tokens.restore", "autocog.perf.tokens.eval",
     "autocog.perf.kv.slots", "autocog.perf.kv.forks",
+    "autocog.perf.kv.accesses", "autocog.perf.kv.forks.evicted",
+    "autocog.perf.kv.forks.pinned", "autocog.perf.kv.logit_redecodes",
+    "autocog.perf.kv.tokens.target", "autocog.perf.kv.tokens.reused",
+    "autocog.perf.kv.tokens.decoded",
     "autocog.perf.decode.calls",
     "autocog.perf.search.terminals",
 ]
@@ -53,6 +57,13 @@ class TestPerfSurface:
         for key in INT_KEYS:
             assert key in perf, key
         assert perf["autocog.perf.tokens.eval"] > 0
+        # The four access classes partition every slot-pool access.
+        assert perf["autocog.perf.kv.accesses"] == (
+            perf["autocog.perf.kv.exact"] + perf["autocog.perf.kv.extends"]
+            + perf["autocog.perf.kv.trims"] + perf["autocog.perf.kv.forks"])
+        # Reuse is a fraction of the requested context, not a class count.
+        assert perf["autocog.perf.kv.tokens.reused"] <= perf["autocog.perf.kv.tokens.target"]
+        assert 0.0 <= perf["autocog.perf.kv.reuse"] <= 1.0
         assert perf["autocog.perf.advance_seconds"] > 0
 
     def test_reset_and_deltas(self, engine, repo_root):

@@ -40,6 +40,14 @@ if(COVERAGE)
   add_link_options(--coverage)
 endif()
 
+# Fine-grain profiling: per-event records (kv.access) and function-scope
+# timers, emitted alongside the always-on autocog.perf.* aggregates. Off by
+# default and compiled out entirely when off -- see
+# libs/autocog/utilities/profiling.hxx. Never enable for a release artifact:
+# the per-access records are unbounded in the number of KV accesses.
+option(AUTOCOG_PROFILE "Fine-grain profiling events and scope timers" OFF)
+add_compile_definitions(AUTOCOG_PROFILE=$<BOOL:${AUTOCOG_PROFILE}>)
+
 set(COMMON_CXX_FLAGS "-Wall -Wextra")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS_DEBUG "-g  -O0 -rdynamic -fno-omit-frame-pointer ${COMMON_CXX_FLAGS}")

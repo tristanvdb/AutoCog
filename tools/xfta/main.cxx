@@ -26,6 +26,7 @@
 
 #include "autocog/build_info.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/profiling.hxx"
 
 using namespace autocog::backend::llama;
 namespace data  = autocog::data;
@@ -48,7 +49,10 @@ void print_usage(const char* program_name) {
               << "  --seed N              RNG seed (default: 42)\n"
               << "  --ctx N               Maximum context size for the model\n"
               << "  --perf <file>         Write coarse-grain performance events\n"
-              << "                        (ECS-flavored NDJSON; /dev/stdout for stdout)\n"
+              << "                        (ECS-flavored NDJSON; /dev/stdout for stdout).\n"
+              << "                        A build configured with -DAUTOCOG_PROFILE=ON\n"
+              << "                        adds fine-grain kv.access and profile.scope\n"
+              << "                        records to the same stream.\n"
               << "  --verbose [LEVEL]     Log level (trace,debug,info,warn,error; default: debug)\n"
               << "  --version             Show version\n"
               << "  --build-info          Show build configuration\n"
@@ -129,6 +133,37 @@ struct PerfEmitter {
     j["message"] = message;
     for (auto const & [k, v] : fields.items()) j[k] = v;
     *out << j.dump() << "\n";
+  }
+
+  /// A fine-grain record: same stream and the same base fields, but
+  /// `event.kind` is "event" rather than "metric" and there is no per-record
+  /// message. One of these exists per occurrence, so a consumer filters on
+  /// `event.action` and the volume stays as small as the shape allows.
+  void emit_fine(std::string const & action, nlohmann::json const & fields) {
+    if (!out) return;
+    nlohmann::json j = base;
+    j["event.kind"] = "event";
+    j["@timestamp"] = ecs_timestamp();
+    j["event.action"] = action;
+    for (auto const & [k, v] : fields.items()) j[k] = v;
+    *out << j.dump() << "\n";
+  }
+
+  /// Drain the profiling registry into the stream. Compiled to nothing
+  /// without -DAUTOCOG_PROFILE=ON, where the registry does not exist.
+  void emit_profile() {
+#if AUTOCOG_PROF_ENABLED
+    if (!out) return;
+    auto [events, scopes] = autocog::profiling::Registry::instance().drain();
+    for (auto const & [action, fields] : events) emit_fine(action, fields);
+    for (auto const & [name, st] : scopes) {
+      emit_fine("profile.scope", {
+        {"autocog.profile.scope", name},
+        {"autocog.profile.calls", st.calls},
+        {"autocog.profile.nanoseconds", st.nanoseconds},
+      });
+    }
+#endif
   }
 };
 
@@ -212,6 +247,7 @@ static int run(int argc, char** argv) {
   {
     nlohmann::json f = perf_fields(Manager::get_model(model_id), Manager::get_eval(eval_id));
     perf.emit("eval.summary", "evaluation complete", std::move(f));
+    perf.emit_profile();
   }
 
   // The backend grows the tree with tokens during evaluation; fill each node's

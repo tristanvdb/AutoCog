@@ -9,12 +9,10 @@ This used to assert that the two produce identical output, and xfailed. The
 assertion was false, and not because slot recycling is wrong:
 
   * every slot count is internally DETERMINISTIC (16 twice gives 16);
-  * every slot count disagrees with every other on free text -- 1 vs 2, 2 vs 8
-    and 8 vs 16 all differ, so 1 is not a reference that 16 fails to match, it
-    is one point in a family;
   * the tree SHAPE is identical across all of them: same nodes, same uids,
     same order. The cache changes nothing about what gets evaluated;
-  * where the tokens agree the logprobs still drift, by up to ~3e-3.
+  * free text MAY disagree between slot counts, and where the tokens agree
+    the logprobs may still drift, by up to ~3e-3.
 
 That is the signature of a decode path that is not bit-reproducible across
 different batchings, which is what caching necessarily changes: the same token
@@ -23,13 +21,22 @@ as part of a long fresh decode in another, and a quantized matmul does not
 promise those agree to the last bit. The drift then occasionally flips a
 near-tie in a free-text beam.
 
+Whether it actually does so is a property of the backend, the model and the
+hardware, not of the slot pool: on a ROCm/gfx1151 build the tiny fixture below
+produces byte-identical output at every slot count, while other combinations
+disagree. So neither agreement nor disagreement is an invariant, and nothing
+here asserts one. What is asserted is where a difference is permitted to
+appear: free text only.
+
 So the invariants asserted here are the ones the cache actually owes, and
 free-text token identity is explicitly not among them.
 
 CONSEQUENCE FOR MEASUREMENT, which is the reason this is worth a test at all:
 slot count is an experimental variable. Two workers configured differently can
 answer the same question differently, and every logprob -- so every friction
-number -- shifts a little. It has to be pinned and recorded per campaign.
+number -- shifts a little. It has to be pinned and recorded per campaign. That
+a given machine happens to agree across slot counts is not a licence to leave
+it unpinned: the agreement is not portable to the next backend.
 
 The variable is read at model load, so each setting runs in its own subprocess
 against the real tiny model.
@@ -179,14 +186,12 @@ class TestSlotPool:
         assert worst <= LOGPROB_TOLERANCE, (
             f"logprob drift {worst:.2e} at {where}, over {LOGPROB_TOLERANCE}")
 
-    def test_free_text_may_differ_and_only_free_text(self, slot_runs):
-        """The documented non-guarantee, pinned so it stays documented.
-
-        If this ever starts passing with zero differing nodes the backend has
-        become reproducible across batchings and the note above -- and the
-        campaign's need to pin slot count -- should be revisited. If a node
-        OTHER than a free-text completion differs, the cache is changing
-        constrained decisions and that is a defect.
+    def test_only_free_text_differs(self, slot_runs):
+        """Whether the configurations differ at all is environment-dependent;
+        WHERE they may differ is not. Any token disagreement between slot
+        counts must be confined to a free-text completion. A non-value action
+        differing means the cache changed a constrained decision, which is a
+        defect regardless of how reproducible the decode path happens to be.
         """
         ref = slot_runs[1]
         differing = set()
@@ -194,10 +199,6 @@ class TestSlotPool:
             for i, t in enumerate(run["tokens"]):
                 if t != ref["tokens"][i]:
                     differing.add(ref["shape"][i][1])
-        assert differing, (
-            "no configuration differed: if the backend is now reproducible "
-            "across batchings, update this module's docstring and revisit "
-            "whether campaigns still need to pin AUTOCOG_KV_SLOTS")
         for uid in differing:
             assert uid.startswith("field."), \
                 f"a non-value action differed between slot counts: {uid}"

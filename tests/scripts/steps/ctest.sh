@@ -23,7 +23,11 @@ find . -name "*.gcda" -delete
 # set -o pipefail ensures a ctest failure is not swallowed by tee.
 ctest -j"$(nproc)" --timeout 120 --output-on-failure 2>&1 | tee ctest.log
 
-PASSED=$(grep -E "tests failed out of" ctest.log | tail -1 \
-    | sed -E 's/.* ([0-9]+) tests failed out of ([0-9]+).*/\2 \1/' \
-    | awk '{print $1 - $2}')
-echo "ctest: ${PASSED:-?} passed"
+SUMMARY=$(grep -E "tests passed.*out of" ctest.log | tail -1 || true)
+if [ -n "${SUMMARY:-}" ]; then
+    TOTAL=$(sed -nE 's/.*out of ([0-9]+).*/\1/p' <<<"$SUMMARY")
+    FAILED=$(sed -nE 's/.*[,;] ([0-9]+) tests failed.*/\1/p' <<<"$SUMMARY")
+    echo "ctest: $((TOTAL - ${FAILED:-0})) passed out of ${TOTAL}"
+else
+    echo "ctest: summary line not found in ctest.log"
+fi

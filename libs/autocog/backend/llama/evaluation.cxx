@@ -4,6 +4,7 @@
 #include "autocog/data/namespaces.hxx"
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/profiling.hxx"
 #include "autocog/utilities/errors.hxx"
 
 #include <algorithm>
@@ -288,18 +289,21 @@ unsigned Evaluation::advance(std::optional<unsigned> max_token_eval) {
     auto const t0 = clock::now();
     switch (prepared.fta.actions[state.action].body.index()) {
       case 0: {  // TextAction
+        AUTOCOG_PROF_SCOPE("Evaluation::evaluate_text");
         num_token_eval += this->evaluate_text(state);
         perf_.text.calls += 1;
         perf_.text.seconds += std::chrono::duration<double>(clock::now() - t0).count();
         break;
       }
       case 1: {  // CompleteAction
+        AUTOCOG_PROF_SCOPE("Evaluation::evaluate_completion");
         num_token_eval += this->evaluate_completion(state);
         perf_.complete.calls += 1;
         perf_.complete.seconds += std::chrono::duration<double>(clock::now() - t0).count();
         break;
       }
       case 2: {  // ChooseAction
+        AUTOCOG_PROF_SCOPE("Evaluation::evaluate_choice");
         num_token_eval += this->evaluate_choice(state);
         perf_.choose.calls += 1;
         perf_.choose.seconds += std::chrono::duration<double>(clock::now() - t0).count();

@@ -2,6 +2,7 @@
 #include "autocog/backend/llama/model.hxx"
 #include "autocog/backend/llama/sampling.hxx"
 #include "autocog/logging.hxx"
+#include "autocog/utilities/profiling.hxx"
 
 #include "autocog/data/vocab.hxx"
 
@@ -345,11 +346,16 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
   }
 
   auto const t_dec = std::chrono::steady_clock::now();
-  int ret = llama_decode(ctx, batch);
+  int ret;
+  {
+    AUTOCOG_PROF_SCOPE("llama_decode");
+    ret = llama_decode(ctx, batch);
+  }
   ++decode_stats_.calls;
   if (ret != 0) {
     // KV cells exhausted (divergent suffixes accumulate across slots): drop
     // every other slot, discard any partial insertion, and retry once.
+    AUTOCOG_PROF_SCOPE("Model::decode_extension.retry");
     for (size_t s = 0; s < slots_.size(); ++s) {
       if (s == slot || slots_[s].tokens.empty()) continue;
       llama_memory_seq_rm(mem, static_cast<llama_seq_id>(s), -1, -1);
@@ -361,8 +367,12 @@ unsigned Model::decode_extension(size_t slot, int pos0, TokenID const * toks, si
     ++decode_stats_.calls;
   }
   // A GPU backend returns before the graph has finished. Wait here so that the
-  // compute time is not charged to whoever reads the logits first.
-  llama_synchronize(ctx);
+  // compute time is not charged to whoever reads the logits first. Timed
+  // apart from llama_decode: the split is submit versus wait-for-GPU.
+  {
+    AUTOCOG_PROF_SCOPE("llama_synchronize");
+    llama_synchronize(ctx);
+  }
   decode_stats_.decode_seconds +=
       std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
   llama_batch_free(batch);
@@ -409,17 +419,31 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
   }
   SPDLOG_LOGGER_TRACE(autocog::log(), " > common_prefix =");
 
+  kv_stats_.tokens_target += target_tokens.size();
+  kv_stats_.tokens_reused += best_cp;
+
+  // Routing outcome, for the kv.access record. The aggregate counters say how
+  // often each class fired; only the per-access record says how *deep* the
+  // reuse was and whether it still cost a decode.
+  [[maybe_unused]] char const * kv_class = "exact";
+  [[maybe_unused]] size_t kv_victim = best;
+  [[maybe_unused]] uint64_t kv_victim_age = 0;
+  [[maybe_unused]] size_t kv_victim_len = 0;
+
   unsigned num_token_eval = 0;
   if (best_cp == target_tokens.size()) {
     // Fully cached. A longer slot is trimmed in place: its tail (a rolled-out
     // or superseded continuation) is never needed once we return here.
     if (slots_[best].tokens.size() > best_cp) {
+      AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
       llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
       slots_[best].tokens.resize(best_cp);
       if (live_logits_slot_ == static_cast<int>(best)) live_logits_slot_ = -1;
       ++kv_stats_.trims;
+      kv_class = "trim";
     } else {
       ++kv_stats_.exact;
+      kv_class = "exact";
     }
     active_slot_ = best;
   } else if (best_cp == slots_[best].tokens.size()) {
@@ -429,28 +453,43 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
                                        target_tokens.size() - best_cp, id);
     slots_[best].tokens = target_tokens;
     ++kv_stats_.extends;
+    kv_class = "extend";
     active_slot_ = best;
   } else {
     // Divergent target: fork. Keep the source resident (a sibling branch will
     // come back to it), copy the shared prefix into an LRU victim — metadata
     // only under kv_unified — and decode just the divergent suffix.
     size_t victim = pick_victim(best);
+    kv_class = "fork";
+    kv_victim = victim;
+    // Distance since the victim was last touched: the LRU stack depth the
+    // exploration policy achieved, and the direct measure of whether a wider
+    // slot pool would have kept it.
+    kv_victim_age = slot_clock_ - slots_[victim].last_used;
+    kv_victim_len = slots_[victim].tokens.size();
     if (victim == best) {
       // Single-slot pool: legacy behavior, trim the divergence point and redecode.
+      AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
       llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
       slots_[best].tokens.resize(best_cp);
       if (live_logits_slot_ == static_cast<int>(best)) live_logits_slot_ = -1;
       victim = best;
     } else {
       if (!slots_[victim].tokens.empty()) {
+        AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
+        kv_stats_.tokens_evicted += slots_[victim].tokens.size();
         llama_memory_seq_rm(mem, static_cast<llama_seq_id>(victim), -1, -1);
         slots_[victim].tokens.clear();
         ++kv_stats_.evictions;
+        ++kv_stats_.forks_evicted;
+        kv_class = "fork_evict";
       }
       if (live_logits_slot_ == static_cast<int>(victim)) live_logits_slot_ = -1;
-      if (best_cp > 0)
+      if (best_cp > 0) {
+        AUTOCOG_PROF_SCOPE("llama_memory_seq_cp");
         llama_memory_seq_cp(mem, static_cast<llama_seq_id>(best), static_cast<llama_seq_id>(victim),
                             0, static_cast<llama_pos>(best_cp));
+      }
       slots_[victim].tokens.assign(target_tokens.begin(), target_tokens.begin() + best_cp);
     }
     num_token_eval += decode_extension(victim, static_cast<int>(best_cp),
@@ -464,13 +503,38 @@ unsigned Model::set_tokens(TokenSequence const & target_tokens, ContextID const 
 
   // The zero-decode paths leave the live logits belonging to some other
   // sequence; re-decode the final token in place to regenerate them.
+  [[maybe_unused]] bool kv_primed = false;
   if (prime_logits && live_logits_slot_ != static_cast<int>(active_slot_)
       && !target_tokens.empty()) {
     llama_pos last = static_cast<llama_pos>(target_tokens.size()) - 1;
-    llama_memory_seq_rm(mem, static_cast<llama_seq_id>(active_slot_), last, -1);
+    {
+      AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
+      llama_memory_seq_rm(mem, static_cast<llama_seq_id>(active_slot_), last, -1);
+    }
     num_token_eval += decode_extension(active_slot_, last, &target_tokens.back(), 1, id);
-    ++kv_stats_.tokens_primed;
+    ++kv_stats_.logit_redecodes;
+    kv_primed = true;
   }
+
+  // One record per cache access. `lcp` against `target_len` is the reuse
+  // depth: a fork that kept 99% of its prefix and one that kept none are the
+  // same `kv_stats_.forks` increment but are not the same event. `decoded`
+  // carries the cost, including the single-token re-decode a fully-cached hit
+  // still needs when the live logits belong to another sequence.
+  AUTOCOG_PROF_EVENT("kv.access", nlohmann::json({
+      {"autocog.kv.class", kv_class},
+      {"autocog.kv.lcp", best_cp},
+      {"autocog.kv.target_len", target_tokens.size()},
+      {"autocog.kv.slot", active_slot_},
+      {"autocog.kv.slots", slots_.size()},
+      {"autocog.kv.source", best},
+      {"autocog.kv.victim", kv_victim},
+      {"autocog.kv.victim_age", kv_victim_age},
+      {"autocog.kv.victim_len", kv_victim_len},
+      {"autocog.kv.decoded", num_token_eval},
+      {"autocog.kv.primed", kv_primed},
+      {"autocog.kv.clock", slot_clock_},
+  }));
   return num_token_eval;
 }
 
@@ -682,14 +746,27 @@ unsigned Model::topk_frontier(
         }
       }
 
+      kv_stats_.tokens_target += target.size();
+      kv_stats_.tokens_reused += best_cp;
+
       size_t dest;
+      // Routing outcome for the kv.access record; mirrors set_tokens, plus
+      // the frontier-only case where the best slot is pinned by tokens
+      // already in the pending batch.
+      [[maybe_unused]] char const * kv_class = "exact";
+      [[maybe_unused]] size_t kv_victim = best;
+      [[maybe_unused]] uint64_t kv_victim_age = 0;
+      [[maybe_unused]] size_t kv_victim_len = 0;
+      [[maybe_unused]] size_t const items_before = items.size();
       if (best_cp == target.size() && !pinned.count(best)) {
         // Fully cached in an unpinned slot: reuse in place; the final token is
         // re-decoded to produce this target's logits row.
-        if (slots_[best].tokens.size() > best_cp) ++kv_stats_.trims; else ++kv_stats_.exact;
-        llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp - 1), -1);
+        if (slots_[best].tokens.size() > best_cp) { ++kv_stats_.trims; kv_class = "trim"; }
+        else { ++kv_stats_.exact; kv_class = "exact"; }
+        { AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
+          llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp - 1), -1); }
         slots_[best].tokens = target;
-        ++kv_stats_.tokens_primed;
+        ++kv_stats_.logit_redecodes;
         pending_from[best] = best_cp - 1;
         items.push_back({target.back(), static_cast<int>(best_cp - 1), best, true});
         dest = best;
@@ -702,6 +779,7 @@ unsigned Model::topk_frontier(
         if (!pending_from.count(best)) pending_from[best] = best_cp;
         slots_[best].tokens = target;
         ++kv_stats_.extends;
+        kv_class = "extend";
         dest = best;
       } else {
         // Divergent target (or fully cached in a pinned slot): fork the
@@ -714,35 +792,65 @@ unsigned Model::topk_frontier(
         if (victim == slots_.size()) {
           if (!planned.empty()) break;  // out of unpinned slots: flush, continue
           // Single-slot pool, nothing planned: legacy in-place trim+redecode.
-          llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1);
+          { AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
+            llama_memory_seq_rm(mem, static_cast<llama_seq_id>(best), static_cast<llama_pos>(best_cp), -1); }
           slots_[best].tokens.resize(best_cp);
           push_extension(best, best_cp, target);
           pending_from[best] = best_cp;
           slots_[best].tokens = target;
           ++kv_stats_.trims;
+          kv_class = "trim_inplace";
           dest = best;
         } else {
+          bool const forced_by_pin = pinned.count(best) > 0;
+          if (forced_by_pin) ++kv_stats_.forks_pinned;
+          kv_class = forced_by_pin ? "fork_pinned" : "fork";
+          kv_victim = victim;
+          kv_victim_age = slot_clock_ - slots_[victim].last_used;
+          kv_victim_len = slots_[victim].tokens.size();
           if (!slots_[victim].tokens.empty()) {
+            AUTOCOG_PROF_SCOPE("llama_memory_seq_rm");
+            kv_stats_.tokens_evicted += slots_[victim].tokens.size();
             llama_memory_seq_rm(mem, static_cast<llama_seq_id>(victim), -1, -1);
             ++kv_stats_.evictions;
+            ++kv_stats_.forks_evicted;
+            kv_class = forced_by_pin ? "fork_pinned_evict" : "fork_evict";
           }
           // Copy only cells the fork can use; a fully-cached target still
           // re-decodes its final token for the logits row.
           size_t const copy_to = std::min(best_cp, target.size() - 1);
-          if (copy_to > 0)
+          if (copy_to > 0) {
+            AUTOCOG_PROF_SCOPE("llama_memory_seq_cp");
             llama_memory_seq_cp(mem, static_cast<llama_seq_id>(best), static_cast<llama_seq_id>(victim),
                                 0, static_cast<llama_pos>(copy_to));
+          }
           push_extension(victim, copy_to, target);
           pending_from[victim] = copy_to;
           slots_[victim].tokens = target;
           ++kv_stats_.forks;
-          if (best_cp == target.size()) ++kv_stats_.tokens_primed;
+          if (best_cp == target.size()) ++kv_stats_.logit_redecodes;
           dest = victim;
         }
       }
       pinned.insert(dest);
       slots_[dest].last_used = slot_clock_;
       planned.push_back({t, dest, static_cast<int>(items.size()) - 1});
+
+      AUTOCOG_PROF_EVENT("kv.access", nlohmann::json({
+          {"autocog.kv.class", kv_class},
+          {"autocog.kv.lcp", best_cp},
+          {"autocog.kv.target_len", target.size()},
+          {"autocog.kv.slot", dest},
+          {"autocog.kv.slots", slots_.size()},
+          {"autocog.kv.source", best},
+          {"autocog.kv.victim", kv_victim},
+          {"autocog.kv.victim_age", kv_victim_age},
+          {"autocog.kv.victim_len", kv_victim_len},
+          {"autocog.kv.decoded", items.size() - items_before},
+          {"autocog.kv.primed", false},
+          {"autocog.kv.clock", slot_clock_},
+          {"autocog.kv.frontier", true},
+      }));
     }
 
     if (t == batch_start) {
@@ -760,7 +868,11 @@ unsigned Model::topk_frontier(
       batch.logits[i] = items[i].want_row;
     }
     auto const t_dec = std::chrono::steady_clock::now();
-    int ret = llama_decode(ctx, batch);
+    int ret;
+    {
+      AUTOCOG_PROF_SCOPE("llama_decode");
+      ret = llama_decode(ctx, batch);
+    }
     ++decode_stats_.calls;
     if (ret != 0) {
       // KV cells exhausted: drop unpinned slots, discard any partial
@@ -776,7 +888,10 @@ unsigned Model::topk_frontier(
       ret = llama_decode(ctx, batch);
       ++decode_stats_.calls;
     }
-    llama_synchronize(ctx);  // see decode_extension
+    {
+      AUTOCOG_PROF_SCOPE("llama_synchronize");
+      llama_synchronize(ctx);  // see decode_extension
+    }
     decode_stats_.decode_seconds +=
         std::chrono::duration<double>(std::chrono::steady_clock::now() - t_dec).count();
     llama_batch_free(batch);
@@ -786,6 +901,7 @@ unsigned Model::topk_frontier(
     decoded_total += static_cast<unsigned>(items.size());
 
     auto const t_smp = std::chrono::steady_clock::now();
+    AUTOCOG_PROF_SCOPE("Model::topk_frontier.sample");
     for (Planned const & p : planned) {
       topk_from_row(llama_get_logits_ith(ctx, p.final_idx), vocab_mask,
                     max_candidates, results[p.target], this->id);

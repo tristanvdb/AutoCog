@@ -244,6 +244,13 @@ jobs:
         with:
           submodules: recursive
 
+      # Pinned because the wheel installed below is cp312-specific: the runner
+      # image's default interpreter moves with the image, and a cp312 wheel is
+      # "not a supported wheel on this platform" on any other version.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - uses: actions/download-artifact@v4
         with:
           name: wheels-ubuntu-latest
@@ -354,7 +361,7 @@ jobs:
 
           **From the wheel** (no build toolchain needed):
           \`\`\`bash
-          pip install ${BASE}/autocog-${TAG}-cp312-cp312-manylinux_2_28_x86_64.whl
+          pip install ${BASE}/autocog-${TAG}-cp312-cp312-linux_x86_64.whl
           \`\`\`
 
           **From the source distribution** (builds the native extensions; needs a C++ toolchain + CMake):
